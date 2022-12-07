@@ -9,18 +9,6 @@ defmodule Ecto.Query.Builder.PreloadTest do
   import Ecto.Query
   import Support.EvalHelpers
 
-  test "raises on invalid preloads" do
-    assert_raise Ecto.Query.CompileError, ~r"`1` is not a valid preload expression", fn ->
-      quote_and_eval(%Ecto.Query{} |> preload(1))
-    end
-
-    message = "expected key in preload to be an atom, got: `1`"
-    assert_raise ArgumentError, message, fn ->
-      temp = 1
-      preload(%Ecto.Query{}, [{^temp, :foo}])
-    end
-  end
-
   test "accumulates on multiple calls" do
     query = %Ecto.Query{} |> preload(:foo) |> preload(:bar)
     assert query.preloads == [:foo, :bar]
@@ -69,7 +57,7 @@ defmodule Ecto.Query.Builder.PreloadTest do
                preload(query, [{:foo, f}, {^comments, c}], [foo: {f, [{^comments, c}]}])
     end
 
-    test "supports dynamics with associations" do
+    test "supports dynamics for join association bindings" do
       comments = :comments
 
       query = from p in "posts", join: c in assoc(p, :comments), as: ^comments
@@ -94,6 +82,53 @@ defmodule Ecto.Query.Builder.PreloadTest do
       preloads = [comments: {dynamic([_, c], c), likes: dynamic([_, _, l], l)}]
       assert %{preloads: [], assocs: [comments: {1, [likes: {2, []}]}]} =
                preload(query, ^preloads)
+    end
+  end
+
+  describe "invalid preload" do
+    test "raises on invalid expression" do
+      message = ~r"`1` is not a valid preload expression"
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        quote_and_eval(%Ecto.Query{} |> preload(1))
+      end
+      assert_raise ArgumentError, message, fn ->
+         preload(%Ecto.Query{}, ^1)
+      end
+    end
+
+    test "raises on invalid keys" do
+      message = ~r"malformed key in preload `1`"
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        quote_and_eval(%Ecto.Query{} |> preload([{1, :foo}]))
+      end
+
+      message = ~r"expected key in preload to be an atom, got: `1`"
+      assert_raise ArgumentError, message, fn ->
+        temp = 1
+        preload(%Ecto.Query{}, [{^temp, :foo}])
+      end
+      assert_raise ArgumentError, message, fn ->
+        preload(%Ecto.Query{}, ^[{1, :foo}])
+      end
+    end
+
+    test "raises when preload join association is nested in non-join" do
+      message = ~r"cannot preload join association `:comments`"
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        quote_and_eval(%Ecto.Query{} |> preload([_, c], [users: [comments: c]]))
+      end
+      assert_raise ArgumentError, message, fn ->
+        query = from p in "posts", join: c in assoc(p, :comments)
+        preload(query, ^[users: [comments: dynamic([_, c], c)]])
+      end
+    end
+
+    test "raises when dynamic evaluates to something other than single binding" do
+      message = ~r"invalid dynamic in preload: `dynamic\(\[_, c\], c.field\)`"
+      assert_raise ArgumentError, message, fn ->
+        query = from p in "posts", join: c in assoc(p, :comments)
+        preload(query, ^[comments: dynamic([_, c], c.field)])
+      end
     end
   end
 end

@@ -184,7 +184,7 @@ defmodule Ecto.Query.Builder.Preload do
   end
 
   defp expand(other, _query, _mode, _preloads, _assocs) do
-    raise ArgumentError, "#{inspect(other)} is not a valid preload expression."
+    raise ArgumentError, "`#{inspect(other)}` is not a valid preload expression."
   end
 
   defp expand_each(atom, _query, _mode, {preloads, assocs}) when is_atom(atom) do
@@ -248,7 +248,7 @@ defmodule Ecto.Query.Builder.Preload do
 
       _ ->
         raise ArgumentError,
-          "invalid dynamic in preload: #{inspect(dynamic)}. " <>
+          "invalid dynamic in preload: `#{inspect(dynamic)}`. " <>
           "Dynamic expressions in preload must evaluate to a single binding, as in: " <>
           "`dynamic([comments: c], c)`"
     end
