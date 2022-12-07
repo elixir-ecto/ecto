@@ -591,7 +591,22 @@ defmodule Ecto.Query do
         joined_assoc: dynamic([joined: j], j)
       ]
 
-      from query, preload: ^preloads
+      from x in query,
+        join: assoc(x, :joined_assoc),
+        as: :joined,
+        preload: ^preloads
+
+  While the example above uses a named binding (`:joined`),
+  positional bindings may also be used:
+
+      preloads = [
+        :non_joined_assoc,
+        joined_assoc: dynamic([_, j], j)
+      ]
+
+      from x in query,
+        join: assoc(x, :joined_assoc)
+        preload: ^preloads
 
   As with `where` and friends, it is not possible to pass dynamics
   outside of an interpolated root. For example, this won't work:
