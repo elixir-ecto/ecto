@@ -184,7 +184,9 @@ defmodule Ecto.Query.Builder.Preload do
   end
 
   defp expand(other, _query, _mode, _preloads, _assocs) do
-    raise ArgumentError, "`#{inspect(other)}` is not a valid preload expression."
+    raise ArgumentError,
+      "`#{inspect(other)}` is not a valid preload expression, " <>
+      "expected an atom or a list."
   end
 
   defp expand_each(atom, _query, _mode, {preloads, assocs}) when is_atom(atom) do
