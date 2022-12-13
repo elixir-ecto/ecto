@@ -414,7 +414,7 @@ defmodule Ecto.Multi do
   @spec one(
           t,
           name,
-          queryable :: Ecto.Queryable.t | (any -> Ecto.Queryable.t),
+          queryable :: Ecto.Queryable.t | fun(Ecto.Queryable.t),
           opts :: Keyword.t
         ) :: t
   def one(multi, name, queryable_or_fun, opts \\ [])
@@ -445,7 +445,7 @@ defmodule Ecto.Multi do
   @spec all(
           t,
           name,
-          queryable :: Ecto.Queryable.t | (any -> Ecto.Queryable.t),
+          queryable :: Ecto.Queryable.t | fun(Ecto.Queryable.t),
           opts :: Keyword.t
         ) :: t
   def all(multi, name, queryable_or_fun, opts \\ [])
@@ -476,7 +476,7 @@ defmodule Ecto.Multi do
   @spec exists?(
           t,
           name,
-          queryable :: Ecto.Queryable.t | (any -> Ecto.Queryable.t),
+          queryable :: Ecto.Queryable.t | fun(Ecto.Queryable.t),
           opts :: Keyword.t
         ) :: t
   def exists?(multi, name, queryable_or_fun, opts \\ [])
