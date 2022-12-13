@@ -458,6 +458,37 @@ defmodule Ecto.Multi do
     run(multi, name, operation_fun({:all, fn _ -> queryable end}, opts))
   end
 
+  @doc """
+  Checks if there exists an entry matching the given query and stores it in the multi.
+
+  Accepts the same arguments and options as `c:Ecto.Repo.exists?/2`.
+
+  ## Example
+
+      Ecto.Multi.new()
+      |> Ecto.Multi.exists?(:post, Post)
+      |> MyApp.Repo.transaction()
+
+      Ecto.Multi.new()
+      |> Ecto.Multi.exists?(:post, fn _changes -> Post end)
+      |> MyApp.Repo.transaction()
+  """
+  @spec exists?(
+          t,
+          name,
+          queryable :: Ecto.Queryable.t | (any -> Ecto.Queryable.t),
+          opts :: Keyword.t
+        ) :: t
+  def exists?(multi, name, queryable_or_fun, opts \\ [])
+
+  def exists?(multi, name, fun, opts) when is_function(fun, 1) do
+    run(multi, name, operation_fun({:exists?, fun}, opts))
+  end
+
+  def exists?(multi, name, queryable, opts) do
+    run(multi, name, operation_fun({:exists?, fn _ -> queryable end}, opts))
+  end
+
   defp add_changeset(multi, action, name, changeset, opts) when is_list(opts) do
     add_operation(multi, name, {:changeset, put_action(changeset, action), opts})
   end
@@ -867,6 +898,12 @@ defmodule Ecto.Multi do
   defp operation_fun({:all, fun}, opts) do
     fn repo, changes ->
       {:ok, repo.all(fun.(changes), opts)}
+    end
+  end
+
+  defp operation_fun({:exists?, fun}, opts) do
+    fn repo, changes ->
+      {:ok, repo.exists?(fun.(changes), opts)}
     end
   end
 
