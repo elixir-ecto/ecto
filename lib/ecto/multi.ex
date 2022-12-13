@@ -459,7 +459,7 @@ defmodule Ecto.Multi do
   end
 
   @doc """
-  Checks if there exists an entry matching the given query and stores it in the multi.
+  Checks if there exists an entry matching the given query and stores a boolean in the multi.
 
   Accepts the same arguments and options as `c:Ecto.Repo.exists?/2`.
 
