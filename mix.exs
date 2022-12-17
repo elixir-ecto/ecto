@@ -136,8 +136,8 @@ defmodule Ecto.MixProject do
   defp groups_for_extras do
     [
       Introduction: ~r/guides\/introduction\/.?/,
-      "How-To's": ~r/guides\/howtos\/.?/,
-      Cheatsheets: ~r/cheatsheets\/.?/
+      Cheatsheets: ~r/cheatsheets\/.?/,
+      "How-To's": ~r/guides\/howtos\/.?/
     ]
   end
 
