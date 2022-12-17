@@ -1,0 +1,140 @@
+# Basic CRUD
+
+## Querying records
+{: .col-2}
+
+### Fetching a single record
+
+#### Fetching record by ID
+
+```elixir
+Repo.get(Movie, 1)
+```
+
+#### Fetching record by attributes
+
+```elixir
+Repo.get_by(Movie, title: "Ready Player One")
+```
+
+#### Fetching the first record
+
+```elixir
+Movie |> Ecto.Query.first() |> Repo.one()
+```
+
+#### Fetching the last record
+
+```elixir
+Movie |> Ecto.Query.last() |> Repo.one()
+```
+
+### Keyword-based queries
+
+#### Bindingless queries
+
+```elixir
+query =
+  from Movie,
+  where: [title: "Ready Player One"],
+  select: [:title, :tagline]
+Repo.all(query)
+```
+
+#### Bindings in queries
+
+```elixir
+query =
+  from m in Movie,
+  where: m.title == "Ready Player One",
+  select: [m.title, m.tagline]
+Repo.all(query)
+```
+
+### Macro-based queries
+
+```elixir
+Movie
+|> where([m], m.title == "Ready Player One")
+|> select([m], {m.title, m.tagline})
+|> Repo.all
+```
+
+### Using where with interpolated values
+
+```elixir
+title = "Ready Player One"
+query =
+  from m in Movie,
+  where: m.title == ^title,
+  select: [m.title, m.tagline]
+Repo.all(query)
+```
+
+## Inserting records
+{: .col-2}
+
+### Inserting a single record
+
+```elixir
+%Person{name: "Bob"}
+|> Repo.insert()
+```
+
+### Inserting multiple records
+
+```elixir
+params = [%{name: "Bob"}, %{name: "Alice"}]
+Repo.insert_all(Person, params)
+```
+
+## Updating records
+{: .col-2}
+
+### Updating a single record
+
+#### Using internal data
+```elixir
+person =
+  Person
+  |> Ecto.Query.first
+  |> Repo.one
+changeset = change(person, %{age: 29})
+Repo.update(changeset)
+```
+
+#### Using external data
+```elixir
+person =
+  Person
+  |> Ecto.Query.first
+  |> Repo.one
+changeset = cast(
+  person,
+  %{"age" => "29"},
+  [:age]
+)
+Repo.update(changeset)
+```
+
+### Updating multiple records
+
+```elixir
+Repo.update_all(Person, set: [age: 29])
+```
+
+## Deleting records
+{: .col-2}
+
+### Deleting a single record
+
+```elixir
+person = Repo.get(Person, 1)
+Repo.delete(person)
+```
+
+### Deleting multiple records
+
+```elixir
+Repo.delete_all(Person)
+```
