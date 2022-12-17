@@ -1,5 +1,7 @@
 # Associations
 
+In this document, "Internal data" represents data or logic hardcoded into your Elixir code. "External data" means data that comes from the user via forms, APIs, and often need to be normalized, pruned, and validated via `Ecto.Changeset`.
+
 ## Has many / belongs to
 {: .col-2}
 
@@ -142,23 +144,24 @@ end
 ## Querying associated records
 {: .col-2}
 
-### Using preload in the parent record query
+### Preloading in the parent record query
 
 ```elixir
 query = from m in Movie, preload: :characters
 Repo.all(query)
 ```
 
-### Using preload when parent record is already loaded
+### Preloading when parent records are already loaded
 
 ```elixir
 movies = Repo.all(Movie)
 movies = Repo.preload(movies, :characters)
 ```
 
-### Using join to generate a single query
+### Preloading with join to generate a single query
 
 #### Regular join
+
 ```elixir
 query =
   from m in Movie,
@@ -168,7 +171,7 @@ query =
 Repo.all(query)
 ```
 
-#### Joing using `Ecto.assoc/3`
+#### Joing using `assoc`
 
 ```elixir
 query =
@@ -182,33 +185,30 @@ Repo.all(query)
 
 ### Inserting a child record to an existing parent
 
-```elixir
-movie = Repo.get_by(Movie, title: "The Shawshank Redemption")
+#### Using internal data
 
-new_character = Ecto.build_assoc(movie, :characters, name: "Red", age: 60)
-Repo.insert(new_character)
+```elixir
+Repo.get_by!(Movie, title: "The Shawshank Redemption")
+|> Ecto.build_assoc(:characters, name: "Red", age: 60)
+|> Repo.insert()
 ```
 
-### Inserting parent and child records together, using internal data
+#### Using external data
 
-#### Using changeset
 ```elixir
-%Movie{
-  title: "The Shawshank Redemption",
-  release_date: ~D[1994-10-14]
-}
-|> change
-|> put_assoc(
-  :characters,
-  [
-    %{name: "Andy Dufresne", age: 50},
-    %{name: "Red", age: 60}
-  ]
-)
-|> Repo.insert
+# Params represent data from a form, API, CLI, etc
+params = %{"name" => "Red", "age" => 60}
+
+Repo.get_by!(Movie, title: "The Shawshank Redemption")
+|> Ecto.build_assoc(movie, :characters)
+|> cast(params, [:name, :age])
+|> Repo.insert()
 ```
 
-#### Without using changeset
+### Inserting parent and child records together
+
+#### Using internal data
+
 ```elixir
 Repo.insert(
   %Movie{
@@ -222,9 +222,10 @@ Repo.insert(
 )
 ```
 
-### Inserting parent and child records together, using external data
+#### Using external data
 
 ```elixir
+# Params represent data from a form, API, CLI, etc
 params = %{
   "title" => "Shawshank Redemption",
   "release_date" => "1994-10-14",
@@ -238,34 +239,101 @@ params = %{
 %Movie{}
 |> cast(params, [:title, :release_date])
 |> cast_assoc(:characters)
-|> Repo.insert
+|> Repo.insert()
 ```
 
 ## Updating associated records
 
-### Updating the entire collection of associated records
+### Updating records individually
+
+#### For individual updates, fetch and update records directly
 
 ```elixir
 movie =
-  Repo.get_by(Movie, title: "The Shawshank Redemption")
+  Repo.get_by!(Movie, title: "The Shawshank Redemption")
+  |> Repo.preload(:screenplay)
+
+movie.screenplay
+|> change(%{lead_writter: "Frank Darabont"})
+|> Repo.update()
+```
+
+### Updating all associated records, using internal data
+
+#### Using `Ecto.Changeset.put_assoc/3`
+
+```elixir
+movie =
+  Repo.get_by!(Movie, title: "The Shawshank Redemption")
   |> Repo.preload(:characters)
 
-movie.characters |> Enum.map(&(&1.name)) |> IO.inspect
-#=> ["Andy Dufresne", "Red"]
+IO.inspect(movie.characters)
+#=> [%{name: "Andy Dufresne", age: 50},
+#=>  %{name: "Red", age: 60}]
 
-params = %{"characters" =>
-  [
-    %{"name" => "Captain Hadley"},
-    %{"name" => "Brooks Hatlen"}
-  ]
-}
+characters =
+  Enum.map(characters, fn character ->
+    update_in(character.age, &(&1 + 1)))
+  end)
 
 {:ok, movie} =
   movie
-  |> cast(params, [])
-  |> cast_assoc(:characters)
+  |> change()
+  |> put_assoc(:characters, characters)
+  |> Repo.update()
+
+movie.characters |> Enum.map(&(&1.age)) |> IO.inspect
+#=> [51, 61]
+```
+
+Note: the example above peforms the same operation on all entries,
+therefore it can be written as a query. Queries should be preferred
+when possible as they avoid loading all data into memory and are
+more performant. See next example.
+
+#### Using `c:Ecto.Repo.update_all/3`
+
+```elixir
+movie = Repo.get_by!(Movie, title: "The Shawshank Redemption")
+
+movie
+# Query to load all characters associated to a given movie
+|> Ecto.assoc(:characters)
+|> Repo.update_all(inc: [age: 1])
+```
+
+### Updating all associated records, using external data
+
+#### Using `Ecto.Changeset.cast_assoc/3`
+
+```elixir
+# Params represent data from a form, API, CLI, etc
+params = [
+  %{"id" => 1, "name" => "Andy Dufresne"},
+  %{"name" => "Red", "age" => 60}
+]
+
+movie =
+  Repo.get_by!(Movie, title: "The Shawshank Redemption")
+  |> Repo.preload(:characters)
+
+IO.inspect(movie.characters)
+#=> [%{id: 1, name: "Andy", age: 50}]
+
+{:ok, movie} =
+  movie
+  |> change()
+  |> cast_assoc(:characters, params)
   |> Repo.update
 
-movie.characters |> Enum.map(&(&1.name)) |> IO.inspect
-#=> ["Captain Hadley", "Brooks Hatlen"]
+IO.inspect(movie.characters)
+#=> [%{id: 1, name: "Andy", age: 50},
+#=>  %{id: 2, name: "Red", age: 60}]
 ```
+
+When using `Ecto.Changeset.cast_assoc/3`:
+
+* Entries without ID are added.
+* Existing entries with matching IDs are updated.
+* Existing entries without matching IDs will raise
+  but it can be configured using `:on_replace`.

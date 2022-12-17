@@ -1,9 +1,11 @@
 # Basic CRUD
 
-## Querying records
+In this document, "Internal data" represents data or logic hardcoded into your Elixir code. "External data" means data that comes from the user via forms, APIs, and often need to be normalized, pruned, and validated via Ecto.Changeset.
+
+## Fetching records
 {: .col-2}
 
-### Fetching a single record
+### Single record
 
 #### Fetching record by ID
 
@@ -29,6 +31,37 @@ Movie |> Ecto.Query.first() |> Repo.one()
 Movie |> Ecto.Query.last() |> Repo.one()
 ```
 
+#### Use `!` to raise if none is found
+
+```elixir
+Repo.get!(Movie, 1)
+Repo.get_by!(Movie, title: "Ready Player One")
+Movie |> Ecto.Query.first() |> Repo.one!()
+```
+
+### Multiple records
+
+#### Fetch all at once
+
+```elixir
+Movie |> Repo.all()
+```
+
+#### Stream all
+
+```elixir
+Movie |> Repo.stream() |> Enum.each(fn record -> ... end)
+```
+
+#### Check at least one exists?
+
+```elixir
+Movie |> Repo.exists?()
+```
+
+## Querying records
+{: .col-2}
+
 ### Keyword-based queries
 
 #### Bindingless queries
@@ -51,16 +84,7 @@ query =
 Repo.all(query)
 ```
 
-### Macro-based queries
-
-```elixir
-Movie
-|> where([m], m.title == "Ready Player One")
-|> select([m], {m.title, m.tagline})
-|> Repo.all
-```
-
-### Using where with interpolated values
+### Interpolation with `^`
 
 ```elixir
 title = "Ready Player One"
@@ -71,53 +95,78 @@ query =
 Repo.all(query)
 ```
 
+### Pipe-based queries
+
+```elixir
+Movie
+|> where([m], m.title == "Ready Player One")
+|> select([m], {m.title, m.tagline})
+|> Repo.all
+```
+
 ## Inserting records
 {: .col-2}
 
-### Inserting a single record
+### Single record
+
+#### Using internal data
 
 ```elixir
 %Person{name: "Bob"}
 |> Repo.insert()
 ```
 
-### Inserting multiple records
+#### Using external data
 
 ```elixir
-params = [%{name: "Bob"}, %{name: "Alice"}]
-Repo.insert_all(Person, params)
+# Params represent data from a form, API, CLI, etc
+params = %{"name" => "Bob"}
+
+%Person{}
+|> Ecto.Changeset.cast(params, [:name])
+|> Repo.insert()
+```
+
+### Multiple records
+
+```elixir
+data = [%{name: "Bob"}, %{name: "Alice"}]
+Repo.insert_all(Person, data)
 ```
 
 ## Updating records
 {: .col-2}
 
-### Updating a single record
+### Single record
 
 #### Using internal data
+
 ```elixir
 person =
   Person
-  |> Ecto.Query.first
-  |> Repo.one
+  |> Ecto.Query.first()
+  |> Repo.one!()
+
 changeset = change(person, %{age: 29})
 Repo.update(changeset)
 ```
 
 #### Using external data
+
 ```elixir
+# Params represent data from a form, API, CLI, etc
+params = %{"age" => "29"}
+
 person =
   Person
-  |> Ecto.Query.first
-  |> Repo.one
-changeset = cast(
-  person,
-  %{"age" => "29"},
-  [:age]
-)
+  |> Ecto.Query.first()
+  |> Repo.one!()
+
+changeset = cast(person, params, [:age])
 Repo.update(changeset)
 ```
 
-### Updating multiple records
+### Multiple records (using queries)
 
 ```elixir
 Repo.update_all(Person, set: [age: 29])
@@ -126,14 +175,14 @@ Repo.update_all(Person, set: [age: 29])
 ## Deleting records
 {: .col-2}
 
-### Deleting a single record
+### Single record
 
 ```elixir
-person = Repo.get(Person, 1)
+person = Repo.get!(Person, 1)
 Repo.delete(person)
 ```
 
-### Deleting multiple records
+### Multiple records (using queries)
 
 ```elixir
 Repo.delete_all(Person)
