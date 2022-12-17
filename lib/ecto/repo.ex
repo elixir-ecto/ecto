@@ -162,7 +162,8 @@ defmodule Ecto.Repo do
       databases, it would be `:ecto_sql_query`
     * `:repo` - the Ecto repository
     * `:result` - the query result
-    * `:params` - the query parameters
+    * `:params` - the dumped query parameters (the version required by database drivers like Postgrex)
+    * `:cast_params` - the casted query parameters (the normalized version, created before transforming to the dumped version)
     * `:query` - the query sent to the database as a string
     * `:source` - the source the query was made on (may be `nil`)
     * `:stacktrace` - the stacktrace information, if enabled, or `nil`
