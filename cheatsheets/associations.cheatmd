@@ -1,0 +1,271 @@
+# Associations
+
+## Has many / belongs to
+{: .col-2}
+
+### The has many association
+
+```elixir
+defmodule Movie do
+  use Ecto.Schema
+
+  schema "movies" do
+    field :title, :string
+    field :release_date, :date
+    has_many :characters, Character
+  end
+end
+```
+
+### The belongs to association
+
+```elixir
+defmodule Character do
+  use Ecto.Schema
+
+  schema "characters" do
+    field :name, :string
+    field :age, :integer
+    belongs_to :movie, Movie
+  end
+end
+```
+
+## Has one / belongs to
+{: .col-2}
+
+### The has one association
+
+```elixir
+defmodule Movie do
+  use Ecto.Schema
+
+  schema "movies" do
+    field :title, :string
+    field :release_date, :date
+    has_one :screenplay, Screenplay
+  end
+end
+```
+
+### The belongs association
+
+```elixir
+defmodule Screenplay do
+  use Ecto.Schema
+
+  schema "screenplays" do
+    field :lead_writer, :string
+    belongs_to :movie, Movie
+  end
+end
+```
+
+## Many to many
+{: .col-2}
+
+### Through a join table
+
+#### The first schema
+
+```elixir
+defmodule Movie do
+  use Ecto.Schema
+
+  schema "movies" do
+    field :title, :string
+    field :release_date, :date
+    many_to_many :actors, Actor, join_through: "movies_actors"
+  end
+end
+```
+{: .wrap}
+
+#### The second schema
+
+```elixir
+defmodule Actor do
+  use Ecto.Schema
+
+  schema "actors" do
+    field :name, :string
+    many_to_many :movies, Movie, join_through: "movies_actors"
+  end
+end
+```
+{: .wrap}
+
+### Through a join schema
+
+#### The first schema
+
+```elixir
+defmodule User do
+  use Ecto.Schema
+
+  schema "users" do
+    many_to_many :organizations, Organization, join_through: UserOrganization
+  end
+end
+```
+{: .wrap}
+
+#### The second schema
+
+```elixir
+defmodule Organization do
+  use Ecto.Schema
+
+  schema "organizations" do
+    many_to_many :users, User, join_through: UserOrganization
+  end
+end
+```
+{: .wrap}
+
+#### The join schema
+
+```elixir
+defmodule UserOrganization do
+  use Ecto.Schema
+
+  @primary_key false
+  schema "users_organizations" do
+    belongs_to :user, User
+    belongs_to :organization, Organization
+    timestamps()
+  end
+end
+```
+{: .wrap}
+
+## Querying associated records
+{: .col-2}
+
+### Using preload in the parent record query
+
+```elixir
+query = from m in Movie, preload: :characters
+Repo.all(query)
+```
+
+### Using preload when parent record is already loaded
+
+```elixir
+movies = Repo.all(Movie)
+movies = Repo.preload(movies, :characters)
+```
+
+### Using join to generate a single query
+
+#### Regular join
+```elixir
+query =
+  from m in Movie,
+  join: c in Character,
+  on: m.id == c.movie_id,
+  preload: :characters
+Repo.all(query)
+```
+
+#### Joing using `Ecto.assoc/3`
+
+```elixir
+query =
+  from m in Movie,
+  join: c in assoc(m, :characters),
+  preload: :characters
+Repo.all(query)
+```
+
+## Inserting associated records
+
+### Inserting a child record to an existing parent
+
+```elixir
+movie = Repo.get_by(Movie, title: "The Shawshank Redemption")
+
+new_character = Ecto.build_assoc(movie, :characters, name: "Red", age: 60)
+Repo.insert(new_character)
+```
+
+### Inserting parent and child records together, using internal data
+
+#### Using changeset
+```elixir
+%Movie{
+  title: "The Shawshank Redemption",
+  release_date: ~D[1994-10-14]
+}
+|> change
+|> put_assoc(
+  :characters,
+  [
+    %{name: "Andy Dufresne", age: 50},
+    %{name: "Red", age: 60}
+  ]
+)
+|> Repo.insert
+```
+
+#### Without using changeset
+```elixir
+Repo.insert(
+  %Movie{
+    title: "The Shawshank Redemption",
+    release_date: ~D[1994-10-14],
+    characters: [
+      %Character{name: "Andy Dufresne", age: 50},
+      %Character{name: "Red", age: 60}
+    ]
+  }
+)
+```
+
+### Inserting parent and child records together, using external data
+
+```elixir
+params = %{
+  "title" => "Shawshank Redemption",
+  "release_date" => "1994-10-14",
+  "characters" =>
+    [
+      %{"name" => "Andy Dufresne", "age" => "50"},
+      %{"name" => "Red", "age" => "60"}
+    ]
+}
+
+%Movie{}
+|> cast(params, [:title, :release_date])
+|> cast_assoc(:characters)
+|> Repo.insert
+```
+
+## Updating associated records
+
+### Updating the entire collection of associated records
+
+```elixir
+movie =
+  Repo.get_by(Movie, title: "The Shawshank Redemption")
+  |> Repo.preload(:characters)
+
+movie.characters |> Enum.map(&(&1.name)) |> IO.inspect
+#=> ["Andy Dufresne", "Red"]
+
+params = %{"characters" =>
+  [
+    %{"name" => "Captain Hadley"},
+    %{"name" => "Brooks Hatlen"}
+  ]
+}
+
+{:ok, movie} =
+  movie
+  |> cast(params, [])
+  |> cast_assoc(:characters)
+  |> Repo.update
+
+movie.characters |> Enum.map(&(&1.name)) |> IO.inspect
+#=> ["Captain Hadley", "Brooks Hatlen"]
+```
