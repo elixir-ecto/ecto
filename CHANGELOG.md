@@ -1,5 +1,15 @@
 # Changelog for v3.x
 
+## v3.9.3 (2022-12-20)
+
+### Enhancements
+  * [Ecto] Add `reset_fields/2`
+  * [Ecto.Multi] Add `exists?/4` function
+  * [Ecto.Repo] Keep url scheme in the repo configuration
+  * [Ecto.Query] Add support for cross lateral joins
+  * [Ecto.Query] Allow preloads to use `dynamic/2`
+  * [Ecto.Query.API] Allow the entire path to be interpolated in `json_extract_path/2`
+
 ## v3.9.2 (2022-11-18)
 
 ### Enhancements
