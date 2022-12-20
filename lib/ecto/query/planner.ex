@@ -755,13 +755,13 @@ defmodule Ecto.Query.Planner do
     # In here we add each cte as its own entry in the cache key.
     # We could group them to avoid multiple keys, but since they are uncommon, we keep it simple.
     Enum.reduce queries, cache_and_params, fn
-      {name, materialized, %Ecto.Query{} = query}, {cache, params} ->
+      {name, opts, %Ecto.Query{} = query}, {cache, params} ->
         {_, params, inner_cache} = traverse_cache(query, :all, {[], params}, adapter)
-        {merge_cache({key, name, materialized, inner_cache}, cache, inner_cache != :nocache), params}
+        {merge_cache({key, name, opts[:materialized], inner_cache}, cache, inner_cache != :nocache), params}
 
-      {name, materialized, %Ecto.Query.QueryExpr{} = query_expr}, {cache, params} ->
+      {name, opts, %Ecto.Query.QueryExpr{} = query_expr}, {cache, params} ->
         {params, cacheable?} = cast_and_merge_params(:with_cte, query, query_expr, params, adapter)
-        {merge_cache({key, name, materialized, expr_to_cache(query_expr)}, cache, cacheable?), params}
+        {merge_cache({key, name, opts[:materialized], expr_to_cache(query_expr)}, cache, cacheable?), params}
     end
   end
 
@@ -919,13 +919,13 @@ defmodule Ecto.Query.Planner do
   defp plan_ctes(%Ecto.Query{with_ctes: %{queries: queries}} = query, adapter) do
     queries =
       Enum.map queries, fn
-        {name, materialized, %Ecto.Query{} = cte_query} ->
+        {name, opts, %Ecto.Query{} = cte_query} ->
           {planned_query, _params, _key} = cte_query |> attach_prefix(query) |> plan(:all, adapter)
           planned_query = planned_query |> ensure_select(true)
-          {name, materialized, planned_query}
+          {name, opts, planned_query}
 
-        {name, materialized, other} ->
-          {name, materialized, other}
+        {name, opts, other} ->
+          {name, opts, other}
       end
 
     put_in(query.with_ctes.queries, queries)
@@ -1044,7 +1044,7 @@ defmodule Ecto.Query.Planner do
 
     {queries, counter} =
       Enum.reduce with_expr.queries, {[], counter}, fn
-        {name, materialized, %Ecto.Query{} = inner_query}, {queries, counter} ->
+        {name, opts, %Ecto.Query{} = inner_query}, {queries, counter} ->
           inner_query = put_in(inner_query.aliases[@parent_as], query)
 
           # We don't want to use normalize_subquery_select because we are
@@ -1059,12 +1059,12 @@ defmodule Ecto.Query.Planner do
           inner_query = put_in(inner_query.select.fields, fields)
           {_, inner_query} = pop_in(inner_query.aliases[@parent_as])
 
-          {[{name, materialized, inner_query} | queries], counter}
+          {[{name, opts, inner_query} | queries], counter}
 
-        {name, materialized, %QueryExpr{expr: {:fragment, _, _} = fragment} = query_expr}, {queries, counter} ->
+        {name, opts, %QueryExpr{expr: {:fragment, _, _} = fragment} = query_expr}, {queries, counter} ->
           {fragment, counter} = prewalk_source(fragment, :with_cte, query, with_expr, counter, adapter)
           query_expr = %{query_expr | expr: fragment}
-          {[{name, materialized, query_expr} | queries], counter}
+          {[{name, opts, query_expr} | queries], counter}
       end
 
     {%{with_expr | queries: Enum.reverse(queries)}, counter}
