@@ -99,6 +99,19 @@ defmodule Ecto.Query.Builder.CTE do
   end
 
   def apply_cte(%Ecto.Query.WithExpr{queries: queries} = with_expr, name, with_query, materialized) do
-    %{with_expr | queries: List.keystore(queries, name, 0, {%{name: name, materialized: materialized}, with_query})}
+    %{with_expr | queries: merge_queries(queries, [], {%{name: name, materialized: materialized}, with_query})}
+  end
+
+  defp merge_queries([{%{name: name}, _old_cte} | tail], new_queries, {%{name: name}, _cte} = new_query) do
+    merge_queries(tail, [new_query | new_queries], nil)
+  end
+  defp merge_queries([query | tail], new_queries, new_query) do
+    merge_queries(tail, [query | new_queries], new_query)
+  end
+  defp merge_queries([], new_queries, nil) do
+    Enum.reverse(new_queries)
+  end
+  defp merge_queries([], new_queries, new_query) do
+    Enum.reverse([new_query | new_queries])
   end
 end
