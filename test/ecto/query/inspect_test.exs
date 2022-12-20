@@ -99,7 +99,7 @@ defmodule Ecto.Query.InspectTest do
     assert query |> inspect() |> Inspect.Algebra.format(80) |> to_string() ==
       ~s{#Ecto.Query<from p0 in "products", join: t1 in "tree", on: t1.id == p0.category_id>\n} <>
       ~s{|> recursive_ctes(true)\n} <>
-      ~s{|> with_cte("tree", as: } <>
+      ~s{|> with_cte("tree", materialized: nil, as: } <>
       ~s{#Ecto.Query<from c0 in "categories", } <>
       ~s{where: is_nil(c0.parent_id), } <>
       ~s{union_all: (from c0 in "categories",\n  } <>
@@ -113,7 +113,7 @@ defmodule Ecto.Query.InspectTest do
     assert with_cte("foo", "foo", as: fragment("select 1 as bar"))
            |> inspect() |> Inspect.Algebra.format(80) |> to_string() ==
       ~s{#Ecto.Query<from f0 in "foo">\n} <>
-      ~s{|> with_cte("foo", as: fragment("select 1 as bar"))}
+      ~s{|> with_cte("foo", materialized: nil, as: fragment("select 1 as bar"))}
   end
 
   test "join" do
