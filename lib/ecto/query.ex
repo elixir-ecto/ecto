@@ -1218,7 +1218,7 @@ defmodule Ecto.Query do
     * `:as` - the CTE query itself or a fragment
     * `:materialized` - a boolean indicating whether the CTE should
     be materialized. If blank, the database's default behaviour
-    will be used
+    will be used (only supported by Postgrex, for the built-in adapters)
 
   ## Recursive CTEs
 
@@ -1295,7 +1295,7 @@ defmodule Ecto.Query do
     with_query = opts[:as]
 
     if !with_query do
-      Builder.error! "`as` option must specified"
+      Builder.error! "`as` option must be specified"
     end
 
     Builder.CTE.build(query, name, with_query, opts[:materialized], __CALLER__)
