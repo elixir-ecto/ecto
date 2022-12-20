@@ -1217,7 +1217,7 @@ defmodule Ecto.Query do
 
     * `:as` - the CTE query itself or a fragment
     * `:materialized` - a boolean indicating whether the CTE should
-    be materialized. if blank, the database's default behaviour
+    be materialized. If blank, the database's default behaviour
     will be used
 
   ## Recursive CTEs
