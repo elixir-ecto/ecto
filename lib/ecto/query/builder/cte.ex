@@ -94,24 +94,19 @@ defmodule Ecto.Query.Builder.CTE do
   end
 
   @doc false
-  def apply_cte(nil, name, with_query, materialized) do
-    %Ecto.Query.WithExpr{queries: [{%{name: name, materialized: materialized}, with_query}]}
+  def apply_cte(nil, name, with_query, materialized) when is_boolean(materialized) do
+    %Ecto.Query.WithExpr{queries: [{name, %{materialized: materialized}, with_query}]}
   end
 
-  def apply_cte(%Ecto.Query.WithExpr{queries: queries} = with_expr, name, with_query, materialized) do
-    %{with_expr | queries: merge_queries(queries, [], {%{name: name, materialized: materialized}, with_query})}
+  def apply_cte(nil, name, with_query, _materialized)  do
+    %Ecto.Query.WithExpr{queries: [{name, %{}, with_query}]}
   end
 
-  defp merge_queries([{%{name: name}, _old_cte} | tail], new_queries, {%{name: name}, _cte} = new_query) do
-    merge_queries(tail, [new_query | new_queries], nil)
+  def apply_cte(%Ecto.Query.WithExpr{queries: queries} = with_expr, name, with_query, materialized) when is_boolean(materialized) do
+    %{with_expr | queries:  List.keystore(queries, name, 0, {name, %{materialized: materialized}, with_query})}
   end
-  defp merge_queries([query | tail], new_queries, new_query) do
-    merge_queries(tail, [query | new_queries], new_query)
-  end
-  defp merge_queries([], new_queries, nil) do
-    Enum.reverse(new_queries)
-  end
-  defp merge_queries([], new_queries, new_query) do
-    Enum.reverse([new_query | new_queries])
+
+  def apply_cte(%Ecto.Query.WithExpr{queries: queries} = with_expr, name, with_query, _materialized) do
+    %{with_expr | queries:  List.keystore(queries, name, 0, {name, %{}, with_query})}
   end
 end
