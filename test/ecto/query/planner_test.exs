@@ -690,14 +690,14 @@ defmodule Ecto.Query.PlannerTest do
         Comment
         |> with_cte("cte", as: ^put_query_prefix(Comment, "another"))
         |> plan()
-      %{queries: [{"cte", false, query}]} = with_expr
+      %{queries: [{"cte", nil, query}]} = with_expr
       assert query.sources == {{"comments", Comment, "another"}}
       assert %Ecto.Query.SelectExpr{expr: {:&, [], [0]}} = query.select
       assert [
         :all,
         {:from, {"comments", Comment, _, nil}, []},
         {:non_recursive_cte, "cte",
-        false,
+        nil,
          [:all, {:prefix, "another"}, {:from, {"comments", Comment, _, nil}, []}, {:select, {:&, _, [0]}}]}
       ] = cache
 
@@ -705,7 +705,7 @@ defmodule Ecto.Query.PlannerTest do
         Comment
         |> with_cte("cte", as: ^(from(c in Comment, where: c in ^[1, 2, 3])))
         |> plan()
-      %{queries: [{"cte", false, query}]} = with_expr
+      %{queries: [{"cte", nil, query}]} = with_expr
       assert query.sources == {{"comments", Comment, nil}}
       assert %Ecto.Query.SelectExpr{expr: {:&, [], [0]}} = query.select
       assert :nocache = cache
@@ -715,10 +715,10 @@ defmodule Ecto.Query.PlannerTest do
         |> recursive_ctes(true)
         |> with_cte("cte", as: fragment("SELECT * FROM comments WHERE id = ?", ^123))
         |> plan()
-      %{queries: [{"cte", false, query_expr}]} = with_expr
+      %{queries: [{"cte", nil, query_expr}]} = with_expr
       expr = {:fragment, [], [raw: "SELECT * FROM comments WHERE id = ", expr: {:^, [], [0]}, raw: ""]}
       assert expr == query_expr.expr
-      assert [:all, {:from, {"comments", Comment, _, nil}, []}, {:recursive_cte, "cte", false, ^expr}] = cache
+      assert [:all, {:from, {"comments", Comment, _, nil}, []}, {:recursive_cte, "cte", nil, ^expr}] = cache
     end
 
     test "on update_all" do
@@ -738,11 +738,11 @@ defmodule Ecto.Query.PlannerTest do
         |> select([c, r], c)
         |> plan(:update_all)
 
-      %{queries: [{"recent_comments", false, cte}]} = with_expr
+      %{queries: [{"recent_comments", nil, cte}]} = with_expr
       assert {{"comments", Comment, "another"}} = cte.sources
       assert %{expr: {:^, [], [0]}, params: [{500, :integer}]} = cte.limit
 
-      assert [:update_all, _, _, _, _, {:non_recursive_cte, "recent_comments", false, cte_cache}] = cache
+      assert [:update_all, _, _, _, _, {:non_recursive_cte, "recent_comments", nil, cte_cache}] = cache
       assert [
                :all,
                {:prefix, "another"},
@@ -770,11 +770,11 @@ defmodule Ecto.Query.PlannerTest do
         |> select([c, r], c)
         |> plan(:delete_all)
 
-      %{queries: [{"recent_comments", false, cte}]} = with_expr
+      %{queries: [{"recent_comments", nil, cte}]} = with_expr
       assert {{"comments", Comment, "another"}} = cte.sources
       assert %{expr: {:^, [], [0]}, params: [{500, :integer}]} = cte.limit
 
-      assert [:delete_all, _, _, _, {:non_recursive_cte, "recent_comments", false, cte_cache}] = cache
+      assert [:delete_all, _, _, _, {:non_recursive_cte, "recent_comments", nil, cte_cache}] = cache
       assert [
                :all,
                {:prefix, "another"},
@@ -788,17 +788,17 @@ defmodule Ecto.Query.PlannerTest do
 
     test "prefixes" do
       {%{with_ctes: with_expr} = query, _, _, _} = Comment |> with_cte("cte", as: ^from(c in Comment)) |> plan()
-      %{queries: [{"cte", _, cte_query}]} = with_expr
+      %{queries: [{"cte", nil, cte_query}]} = with_expr
       assert query.sources == {{"comments", Comment, nil}}
       assert cte_query.sources == {{"comments", Comment, nil}}
 
       {%{with_ctes: with_expr} = query, _, _, _} = Comment |> with_cte("cte", as: ^from(c in Comment)) |> Map.put(:prefix, "global") |> plan()
-      %{queries: [{"cte", false, cte_query}]} = with_expr
+      %{queries: [{"cte", nil, cte_query}]} = with_expr
       assert query.sources == {{"comments", Comment, "global"}}
       assert cte_query.sources == {{"comments", Comment, "global"}}
 
       {%{with_ctes: with_expr} = query, _, _, _} = Comment |> with_cte("cte", as: ^(from(c in Comment) |> Map.put(:prefix, "cte"))) |> Map.put(:prefix, "global") |> plan()
-      %{queries: [{"cte", false, cte_query}]} = with_expr
+      %{queries: [{"cte", nil, cte_query}]} = with_expr
       assert query.sources == {{"comments", Comment, "global"}}
       assert cte_query.sources == {{"comments", Comment, "cte"}}
     end
@@ -1257,7 +1257,7 @@ defmodule Ecto.Query.PlannerTest do
         Comment
         |> with_cte("cte", as: ^from(c in "comments", select: %{id: c.id, text: c.text}))
         |> normalize()
-      %{queries: [{"cte", false, query}]} = with_expr
+      %{queries: [{"cte", nil, query}]} = with_expr
       assert query.sources == {{"comments", nil, nil}}
       assert {:%{}, [], [id: _, text: _]} = query.select.expr
       assert  [id: {{:., _, [{:&, _, [0]}, :id]}, _, []},
@@ -1267,7 +1267,7 @@ defmodule Ecto.Query.PlannerTest do
         Comment
         |> with_cte("cte", as: ^(from(c in Comment, where: c in ^[1, 2, 3])))
         |> normalize()
-      %{queries: [{"cte", false, query}]} = with_expr
+      %{queries: [{"cte", nil, query}]} = with_expr
       assert query.sources == {{"comments", Comment, nil}}
       assert {:%{}, [], [id: _, text: _] ++ _} = query.select.expr
       assert  [{:id, {{:., _, [{:&, _, [0]}, :id]}, _, []}},
@@ -1295,7 +1295,7 @@ defmodule Ecto.Query.PlannerTest do
         |> select([agg_v], agg_v.bucket)
 
       query = normalize(query)
-      [{"agg_values", false, query}] = query.with_ctes.queries
+      [{"agg_values", nil, query}] = query.with_ctes.queries
       assert Macro.to_string(query.select.fields) == "[bucket: ^1 + &0.number()]"
     end
 
@@ -1306,7 +1306,7 @@ defmodule Ecto.Query.PlannerTest do
         |> select([e], [:parent])
         |> normalize()
 
-      [{"cte", false, query}] = query.with_ctes.queries
+      [{"cte", nil, query}] = query.with_ctes.queries
       assert Macro.to_string(query.select.fields) == "[child: &0.child()]"
     end
   end
@@ -1820,7 +1820,7 @@ defmodule Ecto.Query.PlannerTest do
     test "with CTEs" do
       cte_query = from(s in "schema", select: %{x1: selected_as(s.x, :integer), x2: s.x})
 
-      %{with_ctes: %{queries: [{"schema_cte", inner_query}]}} =
+      %{with_ctes: %{queries: [{"schema_cte", nil, inner_query}]}} =
         Comment
         |> with_cte("schema_cte", as: ^cte_query)
         |> normalize()

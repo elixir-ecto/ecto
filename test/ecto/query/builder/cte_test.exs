@@ -12,7 +12,7 @@ defmodule Ecto.Query.Builder.CTETest do
   test "fragment CTE" do
     query = "products" |> with_cte("categories", as: fragment("SELECT * FROM categories"))
 
-    assert [{"categories", false, %Ecto.Query.QueryExpr{expr: expr}}] = query.with_ctes.queries
+    assert [{"categories", nil, %Ecto.Query.QueryExpr{expr: expr}}] = query.with_ctes.queries
     assert {:fragment, [], [raw: "SELECT * FROM categories"]} = expr
     refute query.with_ctes.recursive
   end
@@ -25,11 +25,19 @@ defmodule Ecto.Query.Builder.CTETest do
     assert %Ecto.Query.FromExpr{source: {"categories", nil}} = from
   end
 
+  test "not materialized CTE" do
+    cte = from c in "categories", where: not is_nil(c.parent_id)
+    query = from(p in "products") |> with_cte("categories", as: ^cte, materialized: false)
+
+    assert [{"categories", false, %Ecto.Query{from: from}}] = query.with_ctes.queries
+    assert %Ecto.Query.FromExpr{source: {"categories", nil}} = from
+  end
+
   test "compile time CTE" do
     cte = from c in "categories", where: not is_nil(c.parent_id)
     query = from(p in "products") |> with_cte("categories", as: ^cte)
 
-    assert [{"categories", false, %Ecto.Query{from: from}}] = query.with_ctes.queries
+    assert [{"categories", nil, %Ecto.Query{from: from}}] = query.with_ctes.queries
     assert %Ecto.Query.FromExpr{source: {"categories", nil}} = from
   end
 
@@ -39,7 +47,7 @@ defmodule Ecto.Query.Builder.CTETest do
     tree = initial |> union_all(^recursion)
     query = "products" |> recursive_ctes(true) |> with_cte("tree", as: ^tree)
 
-    assert [{"tree", false, ^tree}] = query.with_ctes.queries
+    assert [{"tree", nil, ^tree}] = query.with_ctes.queries
     assert query.with_ctes.recursive
   end
 
@@ -59,7 +67,7 @@ defmodule Ecto.Query.Builder.CTETest do
       |> with_cte("cte1", as: ^cte1)
       |> with_cte("cte2", as: fragment("SELECT * FROM tbl2"))
 
-    assert [{"cte1", false, ^cte1}, {"cte2", false, %Ecto.Query.QueryExpr{expr: expr}}] = query.with_ctes.queries
+    assert [{"cte1", nil, ^cte1}, {"cte2", nil, %Ecto.Query.QueryExpr{expr: expr}}] = query.with_ctes.queries
     assert {:fragment, [], [raw: "SELECT * FROM tbl2"]} = expr
   end
 
@@ -80,7 +88,7 @@ defmodule Ecto.Query.Builder.CTETest do
     cte2 = from(p in "tbl2")
     query = %Ecto.Query{} |> with_cte("cte", as: ^cte1) |> with_cte("cte", as: ^cte2)
 
-    assert [{"cte", false, ^cte2}] = query.with_ctes.queries
+    assert [{"cte", nil, ^cte2}] = query.with_ctes.queries
   end
 
   test "uses an interpolated CTE name" do
@@ -93,7 +101,7 @@ defmodule Ecto.Query.Builder.CTETest do
       |> with_cte(^cte1_name, as: ^cte1)
       |> with_cte(^cte2_name, as: fragment("SELECT * FROM tbl2"))
 
-    assert [{^cte1_name, false, ^cte1}, {^cte2_name, false, %Ecto.Query.QueryExpr{expr: expr}}] = query.with_ctes.queries
+    assert [{^cte1_name, nil, ^cte1}, {^cte2_name, nil, %Ecto.Query.QueryExpr{expr: expr}}] = query.with_ctes.queries
     assert {:fragment, [], [raw: "SELECT * FROM tbl2"]} = expr
   end
 
@@ -102,7 +110,7 @@ defmodule Ecto.Query.Builder.CTETest do
 
   test "allows macros on name and query" do
     query = %Ecto.Query{} |> with_cte(name(), as: query())
-    assert [{"cte", false, %Ecto.Query.QueryExpr{expr: expr}}] = query.with_ctes.queries
+    assert [{"cte", nil, %Ecto.Query.QueryExpr{expr: expr}}] = query.with_ctes.queries
     assert {:fragment, [], [raw: "query"]} = expr
   end
 end
