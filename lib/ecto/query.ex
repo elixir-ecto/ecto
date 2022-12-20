@@ -1216,6 +1216,9 @@ defmodule Ecto.Query do
   ## Options
 
     * `:as` - the CTE query itself or a fragment
+    * `:materialized` - a boolean indicating whether the CTE should
+    be materialized. If blank, the database's default behaviour
+    will be used (only supported by Postgrex, for the built-in adapters)
 
   ## Recursive CTEs
 
@@ -1288,8 +1291,14 @@ defmodule Ecto.Query do
   invalid queries. If you are running into such scenarios, your best
   option is to use a fragment as your CTE.
   '''
-  defmacro with_cte(query, name, as: with_query) do
-    Builder.CTE.build(query, name, with_query, __CALLER__)
+  defmacro with_cte(query, name, opts) do
+    with_query = opts[:as]
+
+    if !with_query do
+      Builder.error! "`as` option must be specified"
+    end
+
+    Builder.CTE.build(query, name, with_query, opts[:materialized], __CALLER__)
   end
 
   @doc """
