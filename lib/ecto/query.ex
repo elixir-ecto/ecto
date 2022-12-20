@@ -1216,7 +1216,7 @@ defmodule Ecto.Query do
   ## Options
 
     * `:as` - the CTE query itself or a fragment
-    * `:materialized - a boolean indicating whether the CTE should
+    * `:materialized` - a boolean indicating whether the CTE should
     be materialized. if blank, the database's default behaviour
     will be used
 
