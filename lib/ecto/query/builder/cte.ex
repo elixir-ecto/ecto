@@ -95,10 +95,10 @@ defmodule Ecto.Query.Builder.CTE do
 
   @doc false
   def apply_cte(nil, name, with_query, materialized) do
-    %Ecto.Query.WithExpr{queries: [{name, materialized, with_query}]}
+    %Ecto.Query.WithExpr{queries: [{%{name: name, materialized: materialized}, with_query}]}
   end
 
   def apply_cte(%Ecto.Query.WithExpr{queries: queries} = with_expr, name, with_query, materialized) do
-    %{with_expr | queries: List.keystore(queries, name, 0, {name, materialized, with_query})}
+    %{with_expr | queries: List.keystore(queries, name, 0, {%{name: name, materialized: materialized}, with_query})}
   end
 end

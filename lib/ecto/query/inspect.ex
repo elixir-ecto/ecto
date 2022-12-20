@@ -53,7 +53,7 @@ defimpl Inspect, for: Ecto.Query do
     case query.with_ctes do
       %WithExpr{recursive: recursive, queries: [_ | _] = queries} ->
         with_ctes =
-          Enum.map(queries, fn {name, materialized, query} ->
+          Enum.map(queries, fn {%{name: name, materialized: materialized}, query} ->
             cte = case query do
               %Ecto.Query{} -> __MODULE__.inspect(query, opts)
               %Ecto.Query.QueryExpr{} -> expr(query, {})
