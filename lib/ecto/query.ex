@@ -1216,7 +1216,7 @@ defmodule Ecto.Query do
   ## Options
 
     * `:as` - the CTE query itself or a fragment
-    * `:materialize - a boolean indicating whether the CTE should
+    * `:materialized - a boolean indicating whether the CTE should
     be materialized. if blank, the database's default behaviour
     will be used
 
@@ -1295,7 +1295,7 @@ defmodule Ecto.Query do
     with_query = opts[:as]
 
     if !with_query do
-      Builder.error! "`as` keyword must specified"
+      Builder.error! "`as` option must specified"
     end
 
     Builder.CTE.build(query, name, with_query, opts[:materialized], __CALLER__)
