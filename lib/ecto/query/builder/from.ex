@@ -12,13 +12,13 @@ defmodule Ecto.Query.Builder.From do
   ## Examples
 
       iex> escape(quote(do: MySchema), __ENV__)
-      {quote(do: MySchema), []}
+      {MySchema, []}
 
       iex> escape(quote(do: p in posts), __ENV__)
       {quote(do: posts), [p: 0]}
 
       iex> escape(quote(do: p in {"posts", MySchema}), __ENV__)
-      {quote(do: {"posts", MySchema}), [p: 0]}
+      {{"posts", MySchema}, [p: 0]}
 
       iex> escape(quote(do: [p, q] in posts), __ENV__)
       {quote(do: posts), [p: 0, q: 1]}
@@ -44,12 +44,22 @@ defmodule Ecto.Query.Builder.From do
     {query, []}
   end
 
-  defp escape_source({:fragment, _, _} = fragment, env) do
-    {fragment, {params, _acc}} = Builder.escape(fragment, :any, {[], %{}}, [], env)
-    {fragment, Builder.escape_params(params)}
-  end
+  defp escape_source(query, env) do
+    case Macro.expand_once(query, env) do
+      {:fragment, _, _} = fragment->
+        {fragment, {params, _acc}} = Builder.escape(fragment, :any, {[], %{}}, [], env)
+        {fragment, Builder.escape_params(params)}
 
-  defp escape_source(query, _env), do: query
+      ^query ->
+        case query do
+          {left, right} -> {left, Macro.expand(right, env)}
+          _ -> query
+        end
+
+      other ->
+        escape_source(other, env)
+    end
+  end
   
   @typep hints :: [String.t() | {atom, term}]
 
@@ -84,7 +94,7 @@ defmodule Ecto.Query.Builder.From do
 
     {query, binds} = escape(query, env)
 
-    case expand_from(query, env) do
+    case query do
       schema when is_atom(schema) ->
         # Get the source at runtime so no unnecessary compile time
         # dependencies between modules are added
@@ -125,14 +135,6 @@ defmodule Ecto.Query.Builder.From do
     ]
 
     {:%, [], [Ecto.Query, {:%{}, [], query_fields}]}
-  end
-
-  defp expand_from({left, right}, env) do
-    {left, Macro.expand(right, env)}
-  end
-
-  defp expand_from(other, env) do
-    Macro.expand(other, env)
   end
 
   @doc """
