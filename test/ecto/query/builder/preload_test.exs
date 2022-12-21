@@ -28,6 +28,8 @@ defmodule Ecto.Query.Builder.PreloadTest do
       assert preload("posts", ^[[[users: comments]]]).preloads == [users: :comments]
       assert preload("posts", [[users: [[^comments]]]]).preloads == [users: [:comments]]
       assert preload("posts", ^[[users: [[comments]]]]).preloads == [users: [:comments]]
+      assert preload("posts", [[:likes, users: [[^comments]]]]).preloads == [{:users, [:comments]}, :likes]
+      assert preload("posts", ^[[:likes, users: [[comments]]]]).preloads == [{:users, [:comments]}, :likes]
 
       query = from u in "users", limit: 10
       assert preload("posts", [users: ^query]).preloads == [users: query]
