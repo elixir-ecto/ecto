@@ -163,11 +163,42 @@ defmodule Ecto.Query.Builder.Preload do
   """
   def preload!(query, preload) do
     {preloads, assocs} = expand(preload, query)
-    apply(query, Enum.reverse(preloads), Enum.reverse(assocs))
+    apply(query, preloads, assocs)
   end
 
   @doc """
   Expands preloads at runtime.
+
+  ## Examples
+
+      iex> expand(:foo, [])
+      {[:foo], []}
+
+      iex> expand([foo: :bar], [])
+      {[foo: :bar], []}
+
+      iex> expand([:foo, :bar], [])
+      {[:foo, :bar], []}
+
+      iex> expand([foo: [:bar, bar: :bat]], [])
+      {[foo: [:bar, bar: :bat]], []}
+
+      iex> expand([:a, :b, c: [:d]], [])
+      {[:a, :b, c: [:d]], []}
+
+      iex> expand([foo: ["external"]], [])
+      ** (ArgumentError) `"external"` is not a valid preload expression, expected an atom or a list.
+
+      iex> require Ecto.Query
+      iex> expand([b: Ecto.Query.dynamic([_a, b], b)], Ecto.Query.from(a in "a", join: b in "b"))
+      {[], [b: {1, []}]}
+
+      iex> require Ecto.Query
+      iex> expand(
+      ...>   [b: {Ecto.Query.dynamic([_a, b], b), c: Ecto.Query.dynamic([_a, _b, c], c)}],
+      ...>   Ecto.Query.from(a in "a", join: b in "b", join: c in "c")
+      ...> )
+      {[], [b: {1, [c: {2, []}]}]}
   """
   def expand(preloads, query) do
     expand(preloads, query, :both, [], [])
@@ -178,9 +209,12 @@ defmodule Ecto.Query.Builder.Preload do
   end
 
   defp expand(list, query, mode, preloads, assocs) when is_list(list) do
-    Enum.reduce(list, {preloads, assocs}, fn item, acc ->
-      expand_each(item, query, mode, acc)
-    end)
+    {preloads, assocs} =
+      Enum.reduce(list, {preloads, assocs}, fn item, acc ->
+        expand_each(item, query, mode, acc)
+      end)
+
+    {Enum.reverse(preloads), Enum.reverse(assocs)}
   end
 
   defp expand(other, _query, _mode, _preloads, _assocs) do
@@ -213,11 +247,11 @@ defmodule Ecto.Query.Builder.Preload do
 
     idx = expand_dynamic(dynamic, query)
     {inner_preloads, inner_assocs} = expand(inner, query, :assoc, [], [])
-    assocs = [{key, {idx, Enum.reverse(inner_assocs)}}|assocs]
+    assocs = [{key, {idx, inner_assocs}}|assocs]
 
     case inner_preloads do
       [] -> {preloads, assocs}
-      _ -> {[{key, Enum.reverse(inner_preloads)}|preloads], assocs}
+      _ -> {[{key, inner_preloads}|preloads], assocs}
     end
   end
 
@@ -226,14 +260,14 @@ defmodule Ecto.Query.Builder.Preload do
     assert_query_or_fun!(query_or_fun, key)
 
     {inner_preloads, []} = expand(inner, query, :preload, [], [])
-    {[{key, {query_or_fun, Enum.reverse(inner_preloads)}}|preloads], assocs}
+    {[{key, {query_or_fun, inner_preloads}}|preloads], assocs}
   end
 
   defp expand_each({key, list}, query, _mode, {preloads, assocs}) when is_list(list) do
     assert_key!(key)
 
-    {inner_preloads, []} = expand(list, query, :preload, preloads, assocs)
-    {[{key, Enum.reverse(inner_preloads)}|preloads], assocs}
+    {inner_preloads, []} = expand(list, query, :preload, [], [])
+    {[{key, inner_preloads}|preloads], assocs}
   end
 
   defp expand_each({key, query_or_fun}, _query, _mode, {preloads, assocs}) do
