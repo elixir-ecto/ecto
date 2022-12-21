@@ -76,8 +76,8 @@ defmodule Ecto.Enum do
         end
       end
 
-  The `:embed_as_values` field value will save `:foo | :bar`, while the
-  `:embed_as_dump` field value will save as `1 | 2`.
+  The `:embed_as_values` field value will save `:foo` or `:bar`, while the
+  `:embed_as_dump` field value will save `1` or `2`.
   """
 
   use Ecto.ParameterizedType
