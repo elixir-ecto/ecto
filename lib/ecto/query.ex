@@ -320,7 +320,9 @@ defmodule Ecto.Query do
   The keyword-based and pipe-based examples are equivalent. The downside
   of using macros is that the binding must be specified for every operation.
   However, since keyword-based and pipe-based examples are equivalent, the
-  bindingless syntax also works for macros:
+  bindingless syntax also works for macros. Please note that the following 
+  example is not completely equivalent to the previous example, 
+  as it does not return the name but rather the `User` struct:
 
       "users"
       |> where([u], u.age > 18)
