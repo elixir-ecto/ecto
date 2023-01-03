@@ -290,13 +290,13 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "plan: joins" do
-    query = from(p in Post, join: c in "comments") |> plan |> elem(0)
+    query = from(p in Post, join: c in "comments", on: true) |> plan |> elem(0)
     assert hd(query.joins).source == {"comments", nil}
 
-    query = from(p in Post, join: c in Comment) |> plan |> elem(0)
+    query = from(p in Post, join: c in Comment, on: true) |> plan |> elem(0)
     assert hd(query.joins).source == {"comments", Comment}
 
-    query = from(p in Post, join: c in {"post_comments", Comment}) |> plan |> elem(0)
+    query = from(p in Post, join: c in {"post_comments", Comment}, on: true) |> plan |> elem(0)
     assert hd(query.joins).source == {"post_comments", Comment}
   end
 
@@ -472,6 +472,7 @@ defmodule Ecto.Query.PlannerTest do
         where: is_nil(nil),
         or_where: is_nil(nil),
         join: c in Comment,
+        on: true,
         hints: ["join hint"],
         prefix: "world",
         preload: :comments
@@ -531,23 +532,23 @@ defmodule Ecto.Query.PlannerTest do
     assert query.sources == {{"posts", Post, "local"}}
 
     # Schema prefix in join
-    {query, _, _, _} = from(c in Comment, join: Post) |> plan()
+    {query, _, _, _} = from(c in Comment, join: Post, on: true) |> plan()
     assert query.sources == {{"comments", Comment, nil}, {"posts", Post, "my_prefix"}}
 
-    {query, _, _, _} = from(c in Comment, join: Post) |> Map.put(:prefix, "global") |> plan()
+    {query, _, _, _} = from(c in Comment, join: Post, on: true) |> Map.put(:prefix, "global") |> plan()
     assert query.sources == {{"comments", Comment, "global"}, {"posts", Post, "my_prefix"}}
 
-    {query, _, _, _} = from(c in Comment, join: Post, prefix: "local") |> Map.put(:prefix, "global") |> plan()
+    {query, _, _, _} = from(c in Comment, join: Post, on: true, prefix: "local") |> Map.put(:prefix, "global") |> plan()
     assert query.sources == {{"comments", Comment, "global"}, {"posts", Post, "local"}}
 
     # Schema prefix in query join
-    {query, _, _, _} = from(p in Post, join: ^from(c in Comment)) |> plan()
+    {query, _, _, _} = from(p in Post, join: ^from(c in Comment), on: true) |> plan()
     assert query.sources == {{"posts", Post, "my_prefix"}, {"comments", Comment, nil}}
 
-    {query, _, _, _} = from(p in Post, join: ^from(c in Comment)) |> Map.put(:prefix, "global") |> plan()
+    {query, _, _, _} = from(p in Post, join: ^from(c in Comment), on: true) |> Map.put(:prefix, "global") |> plan()
     assert query.sources == {{"posts", Post, "my_prefix"}, {"comments", Comment, "global"}}
 
-    {query, _, _, _} = from(p in Post, join: ^from(c in Comment), prefix: "local") |> Map.put(:prefix, "global") |> plan()
+    {query, _, _, _} = from(p in Post, join: ^from(c in Comment), on: true, prefix: "local") |> Map.put(:prefix, "global") |> plan()
     assert query.sources == {{"posts", Post, "my_prefix"}, {"comments", Comment, "local"}}
 
     # No schema prefix in assoc join
@@ -945,20 +946,20 @@ defmodule Ecto.Query.PlannerTest do
 
   test "normalize: late parent bindings with as" do
     child = from(c in Comment, where: parent_as(:posts).posted == c.posted)
-    query = from(Post, as: :posts, join: c in subquery(child)) |> normalize()
+    query = from(Post, as: :posts, join: c in subquery(child), on: true) |> normalize()
     assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) == "parent_as(:posts).posted() == &0.posted()"
 
     child = from(c in Comment, select: %{map: parent_as(:posts).posted})
-    query = from(Post, as: :posts, join: c in subquery(child)) |> normalize()
+    query = from(Post, as: :posts, join: c in subquery(child), on: true) |> normalize()
     assert Macro.to_string(hd(query.joins).source.query.select.expr) == "%{map: parent_as(:posts).posted()}"
 
     assert_raise Ecto.SubQueryError, ~r/the parent_as in a subquery select used as a join can only access the `from` binding in query/, fn ->
       child = from(c in Comment, select: %{map: parent_as(:itself).posted})
-      from(Post, as: :posts, join: c in subquery(child), as: :itself) |> normalize()
+      from(Post, as: :posts, join: c in subquery(child), on: true, as: :itself) |> normalize()
     end
 
     assert_raise Ecto.SubQueryError, ~r/could not find named binding `parent_as\(:posts\)`/, fn ->
-      from(Post, join: c in subquery(child)) |> normalize()
+      from(Post, join: c in subquery(child), on: true) |> normalize()
     end
 
     assert_raise Ecto.QueryError, ~r/could not find named binding `parent_as\(:posts\)`/, fn ->
@@ -970,11 +971,11 @@ defmodule Ecto.Query.PlannerTest do
     as = :posts
 
     child = from(c in Comment, where: parent_as(^as).posted == c.posted)
-    query = from(Post, as: :posts, join: c in subquery(child)) |> normalize()
+    query = from(Post, as: :posts, join: c in subquery(child), on: true) |> normalize()
     assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) == "parent_as(:posts).posted() == &0.posted()"
 
     child = from(c in Comment, select: %{map: field(parent_as(^as), :posted)})
-    query = from(Post, as: :posts, join: c in subquery(child)) |> normalize()
+    query = from(Post, as: :posts, join: c in subquery(child), on: true) |> normalize()
     assert Macro.to_string(hd(query.joins).source.query.select.expr) == "%{map: parent_as(:posts).posted()}"
   end
 
@@ -983,7 +984,7 @@ defmodule Ecto.Query.PlannerTest do
     child2 = from(c in Comment, where: c.id in subquery(child3), select: c.id)
     child = from(c in Comment, where: parent_as(:posts).posted == c.posted and c.id in subquery(child2))
 
-    query = from(Post, as: :posts, join: c in subquery(child)) |> normalize()
+    query = from(Post, as: :posts, join: c in subquery(child), on: true) |> normalize()
     assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) =~ "parent_as(:posts).posted() == &0.posted()"
     assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) =~ "in %Ecto.SubQuery{"
   end
@@ -994,7 +995,7 @@ defmodule Ecto.Query.PlannerTest do
     child2 = from(c in Comment, where: c.id in subquery(child3), select: c.id)
     child = from(c in Comment, where: field(parent_as(^as), :posted) == c.posted and c.id in subquery(child2))
 
-    query = from(Post, as: :posts, join: c in subquery(child)) |> normalize()
+    query = from(Post, as: :posts, join: c in subquery(child), on: true) |> normalize()
     assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) =~ "parent_as(:posts).posted() == &0.posted()"
     assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) =~ "in %Ecto.SubQuery{"
   end
@@ -1117,7 +1118,7 @@ defmodule Ecto.Query.PlannerTest do
 
   test "normalize: parent_as/1 in type/2" do
     child = from c in Comment, where: type(parent_as(:posts).id, :string) == c.text
-    query = from(Post, as: :posts, inner_lateral_join: c in subquery(child)) |> normalize()
+    query = from(Post, as: :posts, inner_lateral_join: c in subquery(child), on: true) |> normalize()
 
     assert inspect(query) =~ "where: type(parent_as(:posts).id, :string) == c0.text"
   end
@@ -1286,7 +1287,7 @@ defmodule Ecto.Query.PlannerTest do
       agg_values =
         "values"
         |> with_cte("sensors_cte", as: ^sensors)
-        |> join(:inner, [v], s in "sensors_cte")
+        |> join(:inner, [v], s in "sensors_cte", on: true)
         |> select([v, s], %{bucket: ^123 + v.number})
 
       query =
@@ -1330,7 +1331,7 @@ defmodule Ecto.Query.PlannerTest do
 
     query =
       from(Post, [])
-      |> join(:inner, [_], c in Comment)
+      |> join(:inner, [_], c in Comment, on: true)
       |> preload([_, c], comments: c)
       |> select([p, _], {p.title, p})
       |> normalize()
@@ -1393,7 +1394,7 @@ defmodule Ecto.Query.PlannerTest do
 
     query =
       Post
-      |> join(:inner, [_], c in Comment)
+      |> join(:inner, [_], c in Comment, on: true)
       |> select([p, c], {p, struct(c, [:id, :text])})
       |> normalize()
     assert query.select.fields ==
@@ -1404,7 +1405,7 @@ defmodule Ecto.Query.PlannerTest do
   test "normalize: select with struct/2 on assoc" do
     query =
       Post
-      |> join(:inner, [_], c in Comment)
+      |> join(:inner, [_], c in Comment, on: true)
       |> select([p, c], struct(p, [:id, :title, comments: [:id, :text]]))
       |> preload([p, c], comments: c)
       |> normalize()
@@ -1415,7 +1416,7 @@ defmodule Ecto.Query.PlannerTest do
 
     query =
       Post
-      |> join(:inner, [_], c in Comment)
+      |> join(:inner, [_], c in Comment, on: true)
       |> select([p, c], struct(p, [:id, :title, comments: [:id, :text, post: :id], extra_comments: :id]))
       |> preload([p, c], comments: {c, post: p}, extra_comments: c)
       |> normalize()
@@ -1430,7 +1431,7 @@ defmodule Ecto.Query.PlannerTest do
   test "normalize: select with struct/2 on fragment" do
     assert_raise Ecto.QueryError, ~r"it is not possible to return a struct subset of a fragment", fn ->
       Post
-      |> join(:inner, [_], c in fragment("comments"))
+      |> join(:inner, [_], c in fragment("comments"), on: true)
       |> select([_, c], struct(c, [:id]))
       |> normalize()
     end
@@ -1448,7 +1449,7 @@ defmodule Ecto.Query.PlannerTest do
 
     query =
       Post
-      |> join(:inner, [_], c in Comment)
+      |> join(:inner, [_], c in Comment, on: true)
       |> select([p, c], {p, map(c, [:id, :text])})
       |> normalize()
     assert query.select.fields ==
@@ -1459,7 +1460,7 @@ defmodule Ecto.Query.PlannerTest do
   test "normalize: select with map/2 on assoc" do
     query =
       Post
-      |> join(:inner, [_], c in Comment)
+      |> join(:inner, [_], c in Comment, on: true)
       |> select([p, c], map(p, [:id, :title, comments: [:id, :text]]))
       |> preload([p, c], comments: c)
       |> normalize()
@@ -1470,7 +1471,7 @@ defmodule Ecto.Query.PlannerTest do
 
     query =
       Post
-      |> join(:inner, [_], c in Comment)
+      |> join(:inner, [_], c in Comment, on: true)
       |> select([p, c], map(p, [:id, :title, comments: [:id, :text, post: :id], extra_comments: :id]))
       |> preload([p, c], comments: {c, post: p}, extra_comments: c)
       |> normalize()
@@ -1485,7 +1486,7 @@ defmodule Ecto.Query.PlannerTest do
   test "normalize: select with map/2 on fragment" do
     query =
       Post
-      |> join(:inner, [_], f in fragment("select 1 as a, 2 as b"))
+      |> join(:inner, [_], f in fragment("select 1 as a, 2 as b"), on: true)
       |> select([_, f], map(f, [:a, :b]))
       |> normalize()
 
@@ -1509,7 +1510,7 @@ defmodule Ecto.Query.PlannerTest do
 
     query =
       Post
-      |> join(:inner, [_], c in Comment)
+      |> join(:inner, [_], c in Comment, on: true)
       |> select([p, c], {p, %{c | text: "bar"}})
       |> normalize()
     assert query.select.fields ==
@@ -1619,7 +1620,7 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "normalize: fragments do not support preloads" do
-    query = from p in Post, join: c in fragment("..."), preload: [comments: c]
+    query = from p in Post, join: c in fragment("..."), on: true, preload: [comments: c]
     assert_raise Ecto.QueryError, ~r/can only preload sources with a schema/, fn ->
       normalize(query)
     end

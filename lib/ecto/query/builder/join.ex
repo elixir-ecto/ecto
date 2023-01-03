@@ -3,6 +3,7 @@ import Kernel, except: [apply: 2]
 defmodule Ecto.Query.Builder.Join do
   @moduledoc false
 
+  require Logger
   alias Ecto.Query.Builder
   alias Ecto.Query.{JoinExpr, QueryExpr}
 
@@ -184,7 +185,8 @@ defmodule Ecto.Query.Builder.Join do
       hints: hints
     ]
 
-    query = build_on(on || true, join, as, query, binding, count_bind, env)
+    on = ensure_on(on, join)
+    query = build_on(on, join, as, query, binding, count_bind, env)
     {query, binding, next_bind}
   end
 
@@ -228,6 +230,26 @@ defmodule Ecto.Query.Builder.Join do
         Builder.apply_query(query, __MODULE__, [join, as, count_bind], env)
     end
   end
+
+  defp ensure_on(nil, join) do
+    unless join[:assoc] do
+      maybe_source =
+        with {source, alias} <- join[:source],
+          source when source != nil <- source || alias do
+          " on #{inspect(source)}"
+        else
+          _ -> ""
+        end
+
+      Logger.warning(
+        "#{join[:file]}:#{join[:line]} Missing `:on` in join#{maybe_source}, defaulting to `on: true`."
+      )
+    end
+
+    true
+  end
+
+  defp ensure_on(on, _join), do: on
 
   @doc """
   Applies the join expression to the query.
