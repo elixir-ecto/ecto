@@ -241,7 +241,7 @@ defmodule Ecto.Query.Builder.Join do
           _ -> ""
         end
 
-      Logger.warning(
+      Logger.warn(
         "#{join[:file]}:#{join[:line]} Missing `:on` in join#{maybe_source}, defaulting to `on: true`."
       )
     end
