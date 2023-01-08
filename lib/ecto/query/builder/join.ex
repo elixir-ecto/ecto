@@ -185,7 +185,7 @@ defmodule Ecto.Query.Builder.Join do
       hints: hints
     ]
 
-    on = ensure_on(on, join)
+    on = ensure_on(on, join, env)
     query = build_on(on, join, as, query, binding, count_bind, env)
     {query, binding, next_bind}
   end
@@ -231,7 +231,7 @@ defmodule Ecto.Query.Builder.Join do
     end
   end
 
-  defp ensure_on(nil, join) do
+  defp ensure_on(nil, join, env) do
     unless join[:assoc] do
       maybe_source =
         with {source, alias} <- join[:source],
@@ -241,15 +241,13 @@ defmodule Ecto.Query.Builder.Join do
           _ -> ""
         end
 
-      Logger.warn(
-        "#{join[:file]}:#{join[:line]} Missing `:on` in join#{maybe_source}, defaulting to `on: true`."
-      )
+      IO.warn("Missing `:on` in join#{maybe_source}, defaulting to `on: true`.", env)
     end
 
     true
   end
 
-  defp ensure_on(on, _join), do: on
+  defp ensure_on(on, _join, _env), do: on
 
   @doc """
   Applies the join expression to the query.

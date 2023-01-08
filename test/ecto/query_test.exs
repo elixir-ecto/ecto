@@ -174,7 +174,7 @@ defmodule Ecto.QueryTest do
       _ = from(p in "posts") |> group_by([:title])
       _ = from(p in "posts") |> distinct(true)
 
-      assert ExUnit.CaptureLog.capture_log(fn ->
+      assert ExUnit.CaptureIO.capture_io(:stderr, fn ->
         _ = quote_and_eval(from(p in "posts") |> join(:inner, "comments"))
       end) =~ ~s'Missing `:on` in join on "comments", defaulting to `on: true`'
     end
