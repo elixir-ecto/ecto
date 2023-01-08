@@ -712,8 +712,8 @@ defmodule Ecto.QueryTest do
       base = %Ecto.Query{}
 
       inner_query         = from p in "posts", inner_join: b in "blogs", on: true
-      cross_query         = from p in "posts", cross_join: b in "blogs", on: true
-      cross_lateral_query = from p in "posts", cross_lateral_join: b in "blogs", on: true
+      cross_query         = from p in "posts", cross_join: b in "blogs"
+      cross_lateral_query = from p in "posts", cross_lateral_join: b in "blogs"
       left_query          = from p in "posts", left_join: b in "blogs", on: true
       right_query         = from p in "posts", right_join: b in "blogs", on: true
       full_query          = from p in "posts", full_join: b in "blogs", on: true
@@ -761,10 +761,8 @@ defmodule Ecto.QueryTest do
           on: true,
           as: :blogs_i,
           cross_join: bc in "blogs",
-          on: true,
           as: :blogs_c,
           cross_lateral_join: bcl in "blogs",
-          on: true,
           as: :blogs_bcl,
           left_join: bl in "blogs",
           on: true,
