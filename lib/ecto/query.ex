@@ -1050,7 +1050,7 @@ defmodule Ecto.Query do
 
   Each join accepts the following options:
 
-    * `:on` - a query expression or keyword list to filter the join
+    * `:on` - a query expression or keyword list to filter the join, defaults to `true`
     * `:as` - a named binding for the join
     * `:prefix` - the prefix to be used for the join when issuing a database query
     * `:hints` - a string or a list of strings to be used as database hints
