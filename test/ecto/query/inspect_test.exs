@@ -117,7 +117,7 @@ defmodule Ecto.Query.InspectTest do
   end
 
   test "join" do
-    assert i(from(x in Post, join: y in Comment)) ==
+    assert i(from(x in Post, join: y in Comment, on: true)) ==
            ~s{from p0 in Inspect.Post, join: c1 in Inspect.Comment, on: true}
 
     assert i(from(x in Post, join: y in Comment, on: x.id == y.id)) ==
@@ -132,7 +132,7 @@ defmodule Ecto.Query.InspectTest do
     binding = :comments
     assert i(from(x in Post, left_join: y in assoc(x, ^binding), as: ^binding)) ==
            ~s{from p0 in Inspect.Post, left_join: c1 in assoc(p0, :comments), as: :comments}
-    
+
     assert i(from(x in Post, left_join: y in assoc(x, :comments))) ==
            ~s{from p0 in Inspect.Post, left_join: c1 in assoc(p0, :comments)}
 
@@ -470,7 +470,7 @@ defmodule Ecto.Query.InspectTest do
     def equal?(_, _, _), do: false
     def embed_as(_, _), do: :self
   end
-   
+
   test "parameterized types" do
     query = from(x in Post, select: type(^"foo", ^Ecto.ParameterizedType.init(MyParameterizedType, param: :foo)))
     assert i(query) == ~s<from p0 in Inspect.Post, select: type(^"foo", {:parameterized, Ecto.Query.InspectTest.MyParameterizedType, :foo})>

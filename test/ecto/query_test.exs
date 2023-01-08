@@ -173,7 +173,10 @@ defmodule Ecto.QueryTest do
       _ = from(p in "posts") |> select([:title])
       _ = from(p in "posts") |> group_by([:title])
       _ = from(p in "posts") |> distinct(true)
-      _ = from(p in "posts") |> join(:inner, "comments")
+
+      assert ExUnit.CaptureIO.capture_io(:stderr, fn ->
+        _ = quote_and_eval(from(p in "posts") |> join(:inner, "comments"))
+      end) =~ ~s'Missing `:on` in join on "comments", defaulting to `on: true`'
     end
 
     test "must be a list of variables" do
@@ -189,13 +192,13 @@ defmodule Ecto.QueryTest do
       end
 
       "posts" |> select([_], 0)
-      "posts" |> join(:inner, [], "comments") |> select([_, c], c.text)
-      "posts" |> join(:inner, [], "comments") |> select([p, _], p.title)
-      "posts" |> join(:inner, [], "comments") |> select([_, _], 0)
+      "posts" |> join(:inner, [], "comments", on: true) |> select([_, c], c.text)
+      "posts" |> join(:inner, [], "comments", on: true) |> select([p, _], p.title)
+      "posts" |> join(:inner, [], "comments", on: true) |> select([_, _], 0)
     end
 
     test "can be added through joins" do
-      from(c in "comments", join: p in "posts", select: {p.title, c.text})
+      from(c in "comments", join: p in "posts", on: true, select: {p.title, c.text})
       "comments" |> join(:inner, [c], p in "posts", on: true) |> select([c, p], {p.title, c.text})
     end
 
@@ -231,7 +234,7 @@ defmodule Ecto.QueryTest do
 
   describe "trailing bindings (...)" do
     test "match on last bindings" do
-      query = "posts" |> join(:inner, [], "comments") |> join(:inner, [], "votes")
+      query = "posts" |> join(:inner, [], "comments", on: true) |> join(:inner, [], "votes", on: true)
       assert select(query, [..., v], v).select.expr ==
              {:&, [], [2]}
 
@@ -248,9 +251,9 @@ defmodule Ecto.QueryTest do
     test "match on last bindings with multiple constructs" do
       query =
         "posts"
-        |> join(:inner, [], "comments")
+        |> join(:inner, [], "comments", on: true)
         |> where([..., c], c.public)
-        |> join(:inner, [], "votes")
+        |> join(:inner, [], "votes", on: true)
         |> select([..., v], v)
 
       assert query.select.expr == {:&, [], [2]}
@@ -260,7 +263,7 @@ defmodule Ecto.QueryTest do
     test "match on last bindings inside joins" do
       query =
         "posts"
-        |> join(:inner, [], "comments")
+        |> join(:inner, [], "comments", on: true)
         |> join(:inner, [..., c], v in "votes", on: c.id == v.id)
 
       assert hd(tl(query.joins)).on.expr ==
@@ -293,8 +296,8 @@ defmodule Ecto.QueryTest do
     test "assigns a name to a join" do
       query =
         from(p in "posts",
-          join: b in "blogs",
-          join: c in "comments", as: :comment,
+          join: b in "blogs", on: true,
+          join: c in "comments", on: true, as: :comment,
           join: l in "links", on: l.valid, as: :link)
 
       assert %{comment: 2, link: 3} == query.aliases
@@ -314,7 +317,7 @@ defmodule Ecto.QueryTest do
       assert %{post: 0} == query.aliases
       assert %{as: :post} = query.from
     end
-    
+
     test "assigns a name using a variable" do
       binding = :post
       query = from p in "posts", as: ^binding
@@ -345,14 +348,16 @@ defmodule Ecto.QueryTest do
     test "crashes on duplicate as for keyword query" do
       message = ~r"`as` keyword was given more than once"
       assert_raise Ecto.Query.CompileError, message, fn ->
-        quote_and_eval(from(p in "posts", join: b in "blogs", as: :foo, as: :bar))
+        quote_and_eval(from(p in "posts", join: b in "blogs", on: true, as: :foo, as: :bar))
       end
     end
 
     test "crashes on assigning the same name twice at compile time" do
       message = ~r"alias `:foo` already exists"
       assert_raise Ecto.Query.CompileError, message, fn ->
-        quote_and_eval(from(p in "posts", join: b in "blogs", as: :foo, join: c in "comments", as: :foo))
+        quote_and_eval(
+          from(p in "posts", join: b in "blogs", on: true, as: :foo, join: c in "comments", on: true, as: :foo)
+        )
       end
     end
 
@@ -360,14 +365,14 @@ defmodule Ecto.QueryTest do
       message = ~r"alias `:foo` already exists"
       assert_raise Ecto.Query.CompileError, message, fn ->
         query = "posts"
-        from(p in query, join: b in "blogs", as: :foo, join: c in "comments", as: :foo)
+        from(p in query, join: b in "blogs", on: true, as: :foo, join: c in "comments", on: true, as: :foo)
       end
     end
 
     test "crashes on assigning the same name twice when aliasing source" do
       message = ~r"alias `:foo` already exists"
       assert_raise Ecto.Query.CompileError, message, fn ->
-        query = from p in "posts", join: b in "blogs", as: :foo
+        query = from p in "posts", join: b in "blogs", on: true, as: :foo
         from(p in query, as: :foo)
       end
     end
@@ -383,7 +388,7 @@ defmodule Ecto.QueryTest do
     test "match on binding by name" do
       query =
         "posts"
-        |> join(:inner, [p], c in "comments", as: :comment)
+        |> join(:inner, [p], c in "comments", on: true, as: :comment)
         |> where([comment: c], c.id == 0)
 
       assert inspect(query) ==
@@ -413,8 +418,8 @@ defmodule Ecto.QueryTest do
     test "match on binding by name with ... in the middle" do
       query =
         "posts"
-        |> join(:inner, [p], c in "comments")
-        |> join(:inner, [], a in "authors", as: :authors)
+        |> join(:inner, [p], c in "comments", on: true)
+        |> join(:inner, [], a in "authors", on: true, as: :authors)
         |> where([p, ..., authors: a], a.id == 0)
 
       assert inspect(query) ==
@@ -424,7 +429,7 @@ defmodule Ecto.QueryTest do
     test "crashes on non-existing binding" do
       assert_raise Ecto.QueryError, ~r"unknown bind name `:nope`", fn ->
         "posts"
-        |> join(:inner, [p], c in "comments", as: :comment)
+        |> join(:inner, [p], c in "comments", on: true, as: :comment)
         |> where([nope: c], c.id == 0)
       end
     end
@@ -434,7 +439,7 @@ defmodule Ecto.QueryTest do
       assert_raise Ecto.Query.CompileError, message, fn ->
       quote_and_eval(
         "posts"
-        |> join(:inner, [p], c in "comments", as: :comment)
+        |> join(:inner, [p], c in "comments", on: true, as: :comment)
         |> where([{:comment, c}, p], c.id == 0)
       )
       end
@@ -445,7 +450,7 @@ defmodule Ecto.QueryTest do
 
       query =
         "posts"
-        |> join(:inner, [p], c in "comments", as: :comment)
+        |> join(:inner, [p], c in "comments", on: true, as: :comment)
         |> where([{^assoc, c}], c.id == 0)
 
       assert inspect(query) ==
@@ -470,7 +475,7 @@ defmodule Ecto.QueryTest do
     end
 
     test "are supported on from and join" do
-      query = from "posts", prefix: "hello", join: "comments", prefix: "world"
+      query = from "posts", prefix: "hello", join: "comments", on: true, prefix: "world"
       assert query.from.prefix == "hello"
       assert hd(query.joins).prefix == "world"
     end
@@ -507,14 +512,14 @@ defmodule Ecto.QueryTest do
       end
 
       assert_raise Ecto.Query.CompileError, ~r"`prefix` must be a compile time string", fn ->
-        quote_and_eval(from "posts", join: "comments", prefix: 123)
+        quote_and_eval(from "posts", join: "comments", on: true, prefix: 123)
       end
     end
   end
 
   describe "hints" do
     test "are supported on from and join" do
-      query = from "posts", hints: "hello", join: "comments", hints: ["world", "extra"]
+      query = from "posts", hints: "hello", join: "comments", on: true, hints: ["world", "extra"]
       assert query.from.hints == ["hello"]
       assert hd(query.joins).hints == ["world", "extra"]
     end
@@ -535,7 +540,7 @@ defmodule Ecto.QueryTest do
       end
 
       assert_raise Ecto.Query.CompileError, ~r"`hints` must be a compile time string", fn ->
-        quote_and_eval(from "posts", join: "comments", hints: 123)
+        quote_and_eval(from "posts", join: "comments", on: true, hints: 123)
       end
     end
 
@@ -558,7 +563,7 @@ defmodule Ecto.QueryTest do
       quoted =
         quote do
           from(p in "posts",
-               join: b in "blogs",
+               join: b in "blogs", on: true,
                join: c in "comments", on: c.text == "",
                limit: 0,
                where: p.id == 0 and b.id == 0 and c.id == 0,
@@ -573,7 +578,7 @@ defmodule Ecto.QueryTest do
       quoted =
         quote do
           from(p in Post,
-               join: b in Blog,
+               join: b in Blog, on: true,
                join: c in Comment, on: c.text == "",
                limit: 0,
                where: p.id == 0 and b.id == 0 and c.id == 0,
@@ -601,8 +606,8 @@ defmodule Ecto.QueryTest do
 
       query =
         from(p in "posts",
-          join: b in "blogs",
-          join: c in "comments",
+          join: b in "blogs", on: true,
+          join: c in "comments", on: true,
           where: p.id == 0 and b.id == 0,
           or_where: c.id == 0,
           order_by: p.title,
@@ -706,14 +711,14 @@ defmodule Ecto.QueryTest do
     test "removes join qualifiers" do
       base = %Ecto.Query{}
 
-      inner_query         = from p in "posts", inner_join: b in "blogs"
+      inner_query         = from p in "posts", inner_join: b in "blogs", on: true
       cross_query         = from p in "posts", cross_join: b in "blogs"
       cross_lateral_query = from p in "posts", cross_lateral_join: b in "blogs"
-      left_query          = from p in "posts", left_join: b in "blogs"
-      right_query         = from p in "posts", right_join: b in "blogs"
-      full_query          = from p in "posts", full_join: b in "blogs"
-      inner_lateral_query = from p in "posts", inner_lateral_join: b in "blogs"
-      left_lateral_query  = from p in "posts", left_lateral_join: b in "blogs"
+      left_query          = from p in "posts", left_join: b in "blogs", on: true
+      right_query         = from p in "posts", right_join: b in "blogs", on: true
+      full_query          = from p in "posts", full_join: b in "blogs", on: true
+      inner_lateral_query = from p in "posts", inner_lateral_join: b in "blogs", on: true
+      left_lateral_query  = from p in "posts", left_lateral_join: b in "blogs", on: true
 
       refute inner_query.joins == base.joins
       refute cross_query.joins == base.joins
@@ -753,20 +758,26 @@ defmodule Ecto.QueryTest do
       query =
         from p in "posts", as: :base,
           inner_join: bi in "blogs",
+          on: true,
           as: :blogs_i,
           cross_join: bc in "blogs",
           as: :blogs_c,
           cross_lateral_join: bcl in "blogs",
           as: :blogs_bcl,
           left_join: bl in "blogs",
+          on: true,
           as: :blogs_l,
           right_join: br in "blogs",
+          on: true,
           as: :blogs_r,
           full_join: bf in "blogs",
+          on: true,
           as: :blogs_f,
           inner_lateral_join: bil in "blogs",
+          on: true,
           as: :blogs_il,
           left_lateral_join: bll in "blogs",
+          on: true,
           as: :blogs_ll
 
       original_joins_number = length(query.joins)
@@ -940,8 +951,8 @@ defmodule Ecto.QueryTest do
     test "returns true if query has a named binding" do
       query =
         from(p in "posts", as: :posts,
-          join: b in "blogs",
-          join: c in "comments", as: :comment,
+          join: b in "blogs", on: true,
+          join: c in "comments", on: true, as: :comment,
           join: l in "links", on: l.valid, as: :link)
 
       assert has_named_binding?(query, :posts)
@@ -973,7 +984,7 @@ defmodule Ecto.QueryTest do
 
       fun =
         fn query ->
-          join(query, :left, [posts: posts], c in "comments", as: :comments)
+          join(query, :left, [posts: posts], c in "comments", on: true, as: :comments)
         end
 
       query = with_named_binding(query, :comments, fun)
@@ -981,13 +992,13 @@ defmodule Ecto.QueryTest do
       assert has_named_binding?(query, :comments)
       assert %{joins: [%{as: :comments, source: {"comments", nil}}]} = query
     end
-    
+
     test "executes a function with arity 2 when query does not have a named binding" do
       query = from(p in "posts", as: :posts)
 
       fun =
         fn query, binding ->
-          join(query, :left, [posts: posts], c in ^binding, as: ^binding)
+          join(query, :left, [posts: posts], c in ^binding, on: true, as: ^binding)
         end
 
       query = with_named_binding(query, :comments, fun)
@@ -999,7 +1010,7 @@ defmodule Ecto.QueryTest do
     test "does not execute a function when query has a named binding" do
       query =
         from(p in "posts", as: :posts,
-          join: c in "comments", as: :comments)
+          join: c in "comments", on: true, as: :comments)
 
       fun =
         fn _query ->
@@ -1020,7 +1031,7 @@ defmodule Ecto.QueryTest do
                    ~r"callback function for with_named_binding/3 should create a named binding for key :comments",
                    fn -> with_named_binding(Schema, :comments, & &1) end
     end
-    
+
     test "raises when callback is not a function of arity 1 or 2" do
       assert_raise ArgumentError,
                    ~r"callback function for with_named_binding/3 should accept one or two arguments, got:",
