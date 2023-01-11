@@ -129,6 +129,15 @@ defmodule Ecto.Query.InspectTest do
     assert i(from(x in Post, full_join: y in {"user_comments", Comment}, on: x.id == y.id)) ==
            ~s[from p0 in Inspect.Post, full_join: c1 in {"user_comments", Inspect.Comment}, on: p0.id == c1.id]
 
+    assert i(from(x in Post, left_lateral_join: y in Comment, on: x.id == y.id)) ==
+           ~s{from p0 in Inspect.Post, left_lateral_join: c1 in Inspect.Comment, on: p0.id == c1.id}
+
+    assert i(from(x in Post, inner_lateral_join: y in Comment, on: x.id == y.id)) ==
+           ~s{from p0 in Inspect.Post, inner_lateral_join: c1 in Inspect.Comment, on: p0.id == c1.id}
+
+    assert i(from(x in Post, cross_lateral_join: y in Comment, on: x.id == y.id)) ==
+           ~s{from p0 in Inspect.Post, cross_lateral_join: c1 in Inspect.Comment, on: p0.id == c1.id}
+
     binding = :comments
     assert i(from(x in Post, left_join: y in assoc(x, ^binding), as: ^binding)) ==
            ~s{from p0 in Inspect.Post, left_join: c1 in assoc(p0, :comments), as: :comments}
