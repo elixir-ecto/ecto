@@ -621,6 +621,7 @@ defmodule Ecto.QueryTest do
           having: p.comments > 10,
           distinct: p.category,
           lock: "FOO",
+          update: [set: [title: "foo"]],
           select: p
         )
 
@@ -639,6 +640,7 @@ defmodule Ecto.QueryTest do
       refute query.limit == base.limit
       refute query.offset == base.offset
       refute query.lock == base.lock
+      refute query.updates == base.updates
 
       excluded_query =
         query
@@ -654,6 +656,7 @@ defmodule Ecto.QueryTest do
         |> exclude(:limit)
         |> exclude(:offset)
         |> exclude(:lock)
+        |> exclude(:update)
 
       # Post-exclusion assertions
       assert excluded_query.with_ctes == base.with_ctes
@@ -668,6 +671,7 @@ defmodule Ecto.QueryTest do
       assert excluded_query.limit == base.limit
       assert excluded_query.offset == base.offset
       assert excluded_query.lock == base.lock
+      assert excluded_query.updates == base.updates
     end
 
     test "works on any queryable" do
