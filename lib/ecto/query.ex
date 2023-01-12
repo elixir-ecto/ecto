@@ -798,6 +798,7 @@ defmodule Ecto.Query do
       Ecto.Query.exclude(query, :offset)
       Ecto.Query.exclude(query, :lock)
       Ecto.Query.exclude(query, :preload)
+      Ecto.Query.exclude(query, :update)
 
   You can also remove specific joins as well such as `left_join` and
   `inner_join`:
@@ -839,6 +840,7 @@ defmodule Ecto.Query do
   defp do_exclude(%Ecto.Query{} = query, :offset), do: %{query | offset: nil}
   defp do_exclude(%Ecto.Query{} = query, :lock), do: %{query | lock: nil}
   defp do_exclude(%Ecto.Query{} = query, :preload), do: %{query | preloads: [], assocs: []}
+  defp do_exclude(%Ecto.Query{} = query, :update), do: %{query | updates: []}
 
   @doc """
   Creates a query.
