@@ -825,7 +825,7 @@ defmodule Ecto.Query do
   defp do_exclude(%Ecto.Query{} = query, join_keyword) when join_keyword in @joins do
     qual = join_qual(join_keyword)
     {excluded, remaining} = Enum.split_with(query.joins, &(&1.qual == qual))
-    aliases =  Map.drop(query.aliases, Enum.map(excluded, & &1.as))
+    aliases = Map.drop(query.aliases, Enum.map(excluded, & &1.as))
     %{query | joins: remaining, aliases: aliases}
   end
   defp do_exclude(%Ecto.Query{} = query, :where), do: %{query | wheres: []}
