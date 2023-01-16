@@ -238,7 +238,7 @@ defmodule Ecto.Association do
       related_queryable = curr_rel.schema
       next = query
         # join on the foreign key
-        |> join_on_fields(related_queryable, prev_rel.out_key, curr_rel.in_key, counter, counter + 1)
+        |> join_on_fields(related_queryable, curr_rel.in_key, prev_rel.out_key, counter + 1, counter)
         # consider where clauses on assocs
         |> combine_joins_query(curr_rel.where, counter + 1)
 
