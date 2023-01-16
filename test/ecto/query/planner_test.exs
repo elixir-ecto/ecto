@@ -1128,7 +1128,7 @@ defmodule Ecto.Query.PlannerTest do
 
     {query, cast_params, dump_params, _} = Ecto.assoc(%Post{id: 1}, :composites) |> normalize_with_params()
 
-    assert inspect(query) =~ "join: c1 in \"composites_posts\", on: c1.composite_id_1 == c0.id_1 and c1.composite_id_2 == c0.id_2 and c1.deleted == ^..."
+    assert inspect(query) =~ "join: c1 in \"composites_posts\", on: c0.id_1 == c1.composite_id_1 and c0.id_2 == c1.composite_id_2 and c1.deleted == ^..."
     assert inspect(query) =~ "where: c1.post_id in ^..."
     assert cast_params ==  [true, 1]
     assert dump_params ==  [true, 1]
@@ -1143,7 +1143,7 @@ defmodule Ecto.Query.PlannerTest do
 
     {query, cast_params, dump_params, _} = Ecto.assoc(%Post{id: 1}, :composites) |> normalize_with_params()
 
-    assert inspect(query) =~ "join: c1 in \"composites_posts\", on: c1.composite_id_1 == c0.id_1 and c1.composite_id_2 == c0.id_2 and c1.deleted == ^..."
+    assert inspect(query) =~ "join: c1 in \"composites_posts\", on: c0.id_1 == c1.composite_id_1 and c0.id_2 == c1.composite_id_2 and c1.deleted == ^..."
     assert inspect(query) =~ "where: c1.post_id in ^..."
     assert cast_params ==  [true, 1]
     assert dump_params ==  [true, 1]

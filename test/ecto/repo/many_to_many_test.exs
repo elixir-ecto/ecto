@@ -109,8 +109,7 @@ defmodule Ecto.Repo.ManyToManyTest do
 
     TestRepo.preload(schema, where_assocs: {bad_assocs_query, [:sub_assoc]})
 
-    assert_received {:all, %Ecto.Query{joins: [_, %{on: %{expr: expr}}]} = q}
-    IO.inspect(q)
+    assert_received {:all, %Ecto.Query{joins: [_, %{on: %{expr: expr}}]}}
 
     assert "&0.id() == &2.my_assoc_id() and &2.public() == ^1" == Macro.to_string(expr)
   end
