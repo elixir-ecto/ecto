@@ -277,12 +277,14 @@ defmodule Ecto.Association do
 
   @doc false
   def join_on_fields(query, related_queryable, src_keys, dst_keys, binding) do
+    # `:on` is intentionally left blank and is constructed below
+    # TODO suppress warning about missing `:on`
     %{joins: joins} = query = join(query, :inner, [{src, binding}], dst in ^related_queryable)
     {%{on: %{expr: expr} = on} = last_join, joins} = joins |> List.pop_at(-1)
 
     expr = strict_zip(src_keys, dst_keys)
     |> Enum.reduce(expr, fn {src_key, dst_key}, expr ->
-       conjoin_exprs(expr, {:==, [], [to_field(binding, src_key), to_field(binding + 1, dst_key)]})
+       conjoin_exprs(expr, {:==, [], [to_field(binding + 1, dst_key), to_field(binding, src_key)]})
     end)
 
     %{query | joins: joins ++ [%{last_join | on: %{on | expr: expr}}]}
@@ -1416,7 +1418,7 @@ defmodule Ecto.Association.ManyToMany do
     |> Ecto.Association.join_on_fields(join_through, Keyword.values(join_related_keys), Keyword.keys(join_related_keys), 0)
     |> where_fields(owner, 1, join_through_keys, values)
     |> Ecto.Association.combine_assoc_query(assoc.where)
-    |> Ecto.Association.combine_joins_query(assoc.join_where, length(query.joins))
+    |> Ecto.Association.combine_joins_query(assoc.join_where, query && length(query.joins) || 1)
   end
 
   @impl true

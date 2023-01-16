@@ -147,7 +147,7 @@ defmodule Ecto.Query.SubqueryTest do
 
       assert %JoinExpr{on: on, source: source, assoc: nil, qual: :left} = hd(query.joins)
       assert source == {"comments", Comment}
-      assert Macro.to_string(on.expr) == "&0.id() == &1.post_id()"
+      assert Macro.to_string(on.expr) == "&1.post_id() == &0.id()"
     end
 
     test "do not support preloads" do

@@ -292,7 +292,6 @@ defmodule Ecto.Repo.Preloader do
 
     # If we are returning many results, we must sort by the key too
     query =
-<<<<<<< HEAD
       case {card, query.combinations} do
         {:many, [{kind, _} | []]} ->
           raise ArgumentError,
