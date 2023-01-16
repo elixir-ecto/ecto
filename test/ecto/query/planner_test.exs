@@ -1087,7 +1087,7 @@ defmodule Ecto.Query.PlannerTest do
     {query, cast_params, dump_params, _select} =
       from(post in Post, join: comment in assoc(post, :crazy_comments_with_list)) |> normalize_with_params()
 
-    assert inspect(query) =~ "join: c1 in Ecto.Query.PlannerTest.Comment, on: c1.id == c2.comment_id and c1.text in ^... and c2.deleted == ^..."
+    assert inspect(query) =~ "join: c1 in Ecto.Query.PlannerTest.Comment, on: c2.comment_id == c1.id and c1.text in ^... and c2.deleted == ^..."
     assert cast_params == ["crazycomment1", "crazycomment2", true]
     assert dump_params == ["crazycomment1", "crazycomment2", true]
 
@@ -1105,7 +1105,7 @@ defmodule Ecto.Query.PlannerTest do
     {query, cast_params, dump_params, _select} =
       from(post in Post, join: comment in assoc(post, :crazy_comments_without_schema)) |> normalize_with_params()
 
-    assert inspect(query) =~ "join: c1 in Ecto.Query.PlannerTest.Comment, on: c1.id == c2.comment_id and c2.deleted == ^..."
+    assert inspect(query) =~ "join: c1 in Ecto.Query.PlannerTest.Comment, on: c2.comment_id == c1.id and c2.deleted == ^..."
     assert cast_params == [true]
     assert dump_params == [true]
 
@@ -1122,7 +1122,7 @@ defmodule Ecto.Query.PlannerTest do
   test "normalize: many_to_many assoc join with composite keys on association" do
     {query, cast_params, dump_params, _select} = from(post in Post, join: comment in assoc(post, :composites)) |> normalize_with_params()
 
-    assert inspect(query) =~ "join: c1 in Ecto.Query.PlannerTest.CompositePk, on: c1.id_1 == c2.composite_id_1 and c1.id_2 == c2.composite_id_2 and c2.deleted == ^..."
+    assert inspect(query) =~ "join: c1 in Ecto.Query.PlannerTest.CompositePk, on: c2.composite_id_1 == c1.id_1 and c2.composite_id_2 == c1.id_2 and c2.deleted == ^..."
     assert cast_params == [true]
     assert dump_params == [true]
 
@@ -1137,7 +1137,7 @@ defmodule Ecto.Query.PlannerTest do
   test "normalize: many_to_many assoc join with composite keys on owner" do
     {query, cast_params, dump_params, _} = from(compo in CompositePk, join: post in assoc(compo, :posts)) |> normalize_with_params()
 
-    assert inspect(query) =~ "join: p1 in Ecto.Query.PlannerTest.Post, on: p1.id == c2.post_id and c2.deleted == ^..."
+    assert inspect(query) =~ "join: p1 in Ecto.Query.PlannerTest.Post, on: c2.post_id == p1.id and c2.deleted == ^..."
     assert cast_params == [true]
     assert dump_params == [true]
 

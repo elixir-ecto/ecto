@@ -238,7 +238,7 @@ defmodule Ecto.Association do
       related_queryable = curr_rel.schema
       next = query
         # join on the foreign key
-        |> join_on_fields(related_queryable, prev_rel.out_key, curr_rel.in_key, counter)
+        |> join_on_fields(related_queryable, prev_rel.out_key, curr_rel.in_key, counter, counter + 1)
         # consider where clauses on assocs
         |> combine_joins_query(curr_rel.where, counter + 1)
 
@@ -276,7 +276,7 @@ defmodule Ecto.Association do
   end
 
   @doc false
-  def join_on_fields(query, related_queryable, src_keys, dst_keys, binding) do
+  def join_on_fields(query, related_queryable, src_keys, dst_keys, src_binding, dst_binding) do
     # `:on` is intentionally left blank and is constructed below
     # TODO suppress warning about missing `:on`
     %{joins: joins} = query = join(query, :inner, [{src, binding}], dst in ^related_queryable)
@@ -284,7 +284,7 @@ defmodule Ecto.Association do
 
     expr = strict_zip(src_keys, dst_keys)
     |> Enum.reduce(expr, fn {src_key, dst_key}, expr ->
-       conjoin_exprs(expr, {:==, [], [to_field(binding + 1, dst_key), to_field(binding, src_key)]})
+       conjoin_exprs(expr, {:==, [], [to_field(dst_binding, dst_key), to_field(src_binding, src_key)]})
     end)
 
     %{query | joins: joins ++ [%{last_join | on: %{on | expr: expr}}]}
@@ -871,7 +871,7 @@ defmodule Ecto.Association.Has do
   @impl true
   def joins_query(%{related_key: related_key, owner: owner, owner_key: owner_key, queryable: queryable} = assoc) do
     from(o in owner)
-    |> Ecto.Association.join_on_fields(queryable, owner_key, related_key, 0)
+    |> Ecto.Association.join_on_fields(queryable, owner_key, related_key, 0, 1)
     |> Ecto.Association.combine_joins_query(assoc.where, 1)
   end
 
@@ -1176,7 +1176,7 @@ defmodule Ecto.Association.BelongsTo do
   @impl true
   def joins_query(%{related_key: related_key, owner: owner, owner_key: owner_key, queryable: queryable} = assoc) do
     from(o in owner)
-    |> Ecto.Association.join_on_fields(queryable, owner_key, related_key, 0)
+    |> Ecto.Association.join_on_fields(queryable, owner_key, related_key, 0, 1)
     |> Ecto.Association.combine_joins_query(assoc.where, 1)
   end
 
@@ -1396,8 +1396,8 @@ defmodule Ecto.Association.ManyToMany do
     [join_through_keys, join_related_keys] = join_keys
 
     from(o in owner)
-    |> Ecto.Association.join_on_fields(join_through, Keyword.values(join_through_keys), Keyword.keys(join_through_keys), 0)
-    |> Ecto.Association.join_on_fields(queryable, Keyword.keys(join_related_keys), Keyword.values(join_related_keys), 1)
+    |> Ecto.Association.join_on_fields(join_through, Keyword.keys(join_through_keys), Keyword.values(join_through_keys), 1, 0)
+    |> Ecto.Association.join_on_fields(queryable, Keyword.values(join_related_keys), Keyword.keys(join_related_keys), 2, 1)
     |> Ecto.Association.combine_joins_query(assoc.where, 2)
     |> Ecto.Association.combine_joins_query(assoc.join_where, 1)
   end
@@ -1414,11 +1414,19 @@ defmodule Ecto.Association.ManyToMany do
     # We only need to join in the "join table". Preload and Ecto.assoc expressions can then filter
     # by &1.join_owner_key in ^... to filter down to the associated entries in the related table.
 
-    from(q in (query || queryable))
-    |> Ecto.Association.join_on_fields(join_through, Keyword.values(join_related_keys), Keyword.keys(join_related_keys), 0)
-    |> where_fields(owner, 1, join_through_keys, values)
-    |> Ecto.Association.combine_assoc_query(assoc.where)
-    |> Ecto.Association.combine_joins_query(assoc.join_where, query && length(query.joins) || 1)
+    dst_binding = if is_nil(query ) do 
+      1
+    else
+      length(query.joins) + 1
+    end
+
+    query = 
+      from(q in (query || queryable))
+      |> Ecto.Association.join_on_fields(join_through, Keyword.keys(join_related_keys), Keyword.values(join_related_keys), dst_binding, 0)
+      |> where_fields(owner, 1, join_through_keys, values)
+      |> Ecto.Association.combine_assoc_query(assoc.where)
+
+    Ecto.Association.combine_joins_query(query, assoc.join_where, length(query.joins))
   end
 
   @impl true
