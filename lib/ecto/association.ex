@@ -237,7 +237,7 @@ defmodule Ecto.Association do
       related_queryable = curr_rel.schema
       next = query
         # join on the foreign key
-        |> join_on_fields(related_queryable, curr_rel.in_key, prev_rel.out_key, counter + 1, counter)
+        |> join_on_keys(related_queryable, curr_rel.in_key, prev_rel.out_key, counter + 1, counter)
         # consider where clauses on assocs
         |> combine_joins_query(curr_rel.where, counter + 1)
 
@@ -265,7 +265,7 @@ defmodule Ecto.Association do
         end)
       {nil, dest_out_keys, values} ->
         query
-        |> where_fields(final_bind, dest_out_keys, values)
+        |> where_keys(final_bind, dest_out_keys, values)
 
       {_, _, _} ->
         query
@@ -275,7 +275,7 @@ defmodule Ecto.Association do
   end
 
   @doc false
-  def join_on_fields(query, related_queryable, src_keys, dst_keys, src_binding, dst_binding) do
+  def join_on_keys(query, related_queryable, src_keys, dst_keys, src_binding, dst_binding) do
     %{joins: joins} = query = join(query, :inner, [{src, src_binding}], dst in ^related_queryable, on: true)
     {%{on: %{expr: _expr} = on} = last_join, joins} = joins |> List.pop_at(-1)
 
@@ -295,7 +295,7 @@ defmodule Ecto.Association do
   def conjoin_exprs(true, r), do: r
   def conjoin_exprs(l, r), do: {:and, [], [l, r]}
 
-  def where_fields(%{wheres: wheres} = query, binding, keys, values) do
+  def where_keys(%{wheres: wheres} = query, binding, keys, values) do
     {expr, params, op} = where_expr(keys, values, binding)
     %{query | wheres: wheres ++ [%Ecto.Query.BooleanExpr{op: op, expr: expr, params: params, line: __ENV__.line, file: __ENV__.file}]}
   end
@@ -726,6 +726,10 @@ defmodule Ecto.Association do
     Enum.filter related_key, &is_nil(queryable.__schema__(:type, &1))
   end
 
+  def missing_primary_keys(queryable, related_key) do
+    Enum.reject queryable.__schema__(:primary_key), &(&1 in related_key)
+  end
+
   def label(env) do
     {fun, arity} = env.function
     "#{env.module}.#{fun}/#{arity} #{env.line}"
@@ -779,14 +783,14 @@ defmodule Ecto.Association.Has do
   end
 
   @impl true
-  def struct(module, name, opts) do
+  def struct(module, name, opts) do 
     queryable = Keyword.fetch!(opts, :queryable)
     cardinality = Keyword.fetch!(opts, :cardinality)
     related = Ecto.Association.related_from_query(queryable, name)
 
     refs =
       module
-      |> Module.get_attribute(:primary_key)
+      |> Module.get_attribute(:ecto_primary_keys)
       |> get_ref(opts[:references], name)
       |> List.wrap()
 
@@ -848,12 +852,12 @@ defmodule Ecto.Association.Has do
     }
   end
 
-  defp get_ref(primary_key, nil, name) when primary_key in [nil, false] do
+  defp get_ref([] = _primary_keys, nil, name) do
     raise ArgumentError, "need to set :references option for " <>
       "association #{inspect name} when schema has no primary key"
   end
-  defp get_ref(primary_key, nil, _name), do: elem(primary_key, 0)
-  defp get_ref(_primary_key, references, _name), do: references
+  defp get_ref(primary_keys, nil, _name), do: Enum.reverse(primary_keys)
+  defp get_ref(_primary_keys, references, _name), do: references
 
   @impl true
   def build(%{owner_key: owner_key, related_key: related_key} = refl, owner, attributes) do
@@ -864,7 +868,7 @@ defmodule Ecto.Association.Has do
   @impl true
   def joins_query(%{related_key: related_key, owner: owner, owner_key: owner_key, queryable: queryable} = assoc) do
     from(o in owner)
-    |> Ecto.Association.join_on_fields(queryable, owner_key, related_key, 0, 1)
+    |> Ecto.Association.join_on_keys(queryable, owner_key, related_key, 0, 1)
     |> Ecto.Association.combine_joins_query(assoc.where, 1)
   end
 
@@ -872,7 +876,7 @@ defmodule Ecto.Association.Has do
   @impl true
   def assoc_query(%{related_key: related_key, queryable: queryable} = assoc, query, values) do
     from(x in (query || queryable))
-    |> Ecto.Association.where_fields(0, related_key, values)
+    |> Ecto.Association.where_keys(0, related_key, values)
     |> Ecto.Association.combine_assoc_query(assoc.where)
   end
 
@@ -1121,6 +1125,9 @@ defmodule Ecto.Association.BelongsTo do
         {:error, "associated module #{inspect queryable} is not an Ecto schema"}
       [] != (missing_fields = Ecto.Association.missing_fields(queryable, related_key)) ->
         {:error, "associated schema #{inspect queryable} does not have field(s) `#{inspect missing_fields}`"}
+      # TODO how can this be triggered in tests?
+      [] != (missing_pks = Ecto.Association.missing_primary_keys(queryable, related_key)) ->
+        {:error, "associated schema #{inspect queryable} has primary keys #{inspect missing_pks} not included in association"}
       true ->
         :ok
     end
@@ -1128,9 +1135,10 @@ defmodule Ecto.Association.BelongsTo do
 
   @impl true
   def struct(module, name, opts) do
+    # TODO his should ideally not be hard coded to `[:id]` but set to use whatever primary key `related` defines
     refs = if ref = opts[:references], do: List.wrap(ref), else: [:id]
     queryable = Keyword.fetch!(opts, :queryable)
-    related = Ecto.Association.related_from_query(queryable, name)
+    related = Ecto.Association.related_from_query(queryable, name) 
     on_replace = Keyword.get(opts, :on_replace, :raise)
 
     unless on_replace in @on_replace_opts do
@@ -1169,14 +1177,14 @@ defmodule Ecto.Association.BelongsTo do
   @impl true
   def joins_query(%{related_key: related_key, owner: owner, owner_key: owner_key, queryable: queryable} = assoc) do
     from(o in owner)
-    |> Ecto.Association.join_on_fields(queryable, owner_key, related_key, 0, 1)
+    |> Ecto.Association.join_on_keys(queryable, owner_key, related_key, 0, 1)
     |> Ecto.Association.combine_joins_query(assoc.where, 1)
   end
 
   @impl true
   def assoc_query(%{related_key: related_key, queryable: queryable} = assoc, query, values) do
     from(x in (query || queryable))
-    |> Ecto.Association.where_fields(0, related_key, values)
+    |> Ecto.Association.where_keys(0, related_key, values)
     |> Ecto.Association.combine_assoc_query(assoc.where)
   end
 
@@ -1389,8 +1397,8 @@ defmodule Ecto.Association.ManyToMany do
     [join_through_keys, join_related_keys] = join_keys
 
     from(o in owner)
-    |> Ecto.Association.join_on_fields(join_through, Keyword.keys(join_through_keys), Keyword.values(join_through_keys), 1, 0)
-    |> Ecto.Association.join_on_fields(queryable, Keyword.values(join_related_keys), Keyword.keys(join_related_keys), 2, 1)
+    |> Ecto.Association.join_on_keys(join_through, Keyword.keys(join_through_keys), Keyword.values(join_through_keys), 1, 0)
+    |> Ecto.Association.join_on_keys(queryable, Keyword.values(join_related_keys), Keyword.keys(join_related_keys), 2, 1)
     |> Ecto.Association.combine_joins_query(assoc.where, 2)
     |> Ecto.Association.combine_joins_query(assoc.join_where, 1)
   end
@@ -1415,8 +1423,8 @@ defmodule Ecto.Association.ManyToMany do
 
     query = 
       from(q in (query || queryable))
-      |> Ecto.Association.join_on_fields(join_through, Keyword.keys(join_related_keys), Keyword.values(join_related_keys), dst_binding, 0)
-      |> where_fields(owner, 1, join_through_keys, values)
+      |> Ecto.Association.join_on_keys(join_through, Keyword.keys(join_related_keys), Keyword.values(join_related_keys), dst_binding, 0)
+      |> where_keys(owner, 1, join_through_keys, values)
       |> Ecto.Association.combine_assoc_query(assoc.where)
 
     Ecto.Association.combine_joins_query(query, assoc.join_where, length(query.joins))
@@ -1605,12 +1613,12 @@ defmodule Ecto.Association.ManyToMany do
 
 
     unless Enum.all?(values, &is_nil/1) do
-      query = from(j in join_through) |> where_fields(owner, 0, join_through_keys, [values])
+      query = from(j in join_through) |> where_keys(owner, 0, join_through_keys, [values])
       Ecto.Repo.Queryable.delete_all repo_name, query, opts
     end
   end
 
-  defp where_fields(%{wheres: wheres} = query, owner, binding, keys, values) do
+  defp where_keys(%{wheres: wheres} = query, owner, binding, keys, values) do
     {expr, params, op} = where_expr(owner, keys, values, binding)
     %{query | wheres: wheres ++ [%Ecto.Query.BooleanExpr{op: op, expr: expr, params: params, line: __ENV__.line, file: __ENV__.file}]}
   end
