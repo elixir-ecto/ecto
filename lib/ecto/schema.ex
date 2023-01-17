@@ -771,10 +771,11 @@ defmodule Ecto.Schema do
 
     * `:foreign_key` - Sets the foreign key, this should map to a field on the
       other schema, defaults to the underscored name of the current schema
-      suffixed by `_id`
+      suffixed by `_id`. A list denotes a composite foreign key over multiple columns.
 
     * `:references` - Sets the key on the current schema to be used for the
-      association, defaults to the primary key on the schema
+      association, defaults to the primary key on the schema. A list has to be
+      provided if the primary key is composite.
 
     * `:through` - Allow this association to be defined in terms of existing
       associations. Read the section on `:through` associations for more info

@@ -871,6 +871,20 @@ defmodule Ecto.SchemaTest do
     end
   end
 
+  test "has_* references option has to be set when no primary keys" do
+    message = ~r"need to set :references option for association :posts when schema has no primary key"
+    assert_raise ArgumentError, message, fn ->
+      defmodule CompositePkAssocNoConfig do
+        use Ecto.Schema
+
+        @primary_key false
+        schema "assoc" do
+          has_many :posts, Post
+        end
+      end
+    end
+  end
+
   test "has_* expects a queryable" do
     message = ~r"association :posts queryable must be a schema or a {source, schema}. got: 123"
     assert_raise ArgumentError, message, fn ->

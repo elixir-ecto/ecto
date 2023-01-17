@@ -1093,9 +1093,9 @@ defmodule Ecto.Association.BelongsTo do
     * `cardinality` - The association cardinality
     * `field` - The name of the association field on the schema
     * `owner` - The schema where the association was defined
-    * `owner_key` - The key on the `owner` schema used for the association
+    * `owner_key` - The list of keys on the `owner` schema used for the association
     * `related` - The schema that is associated
-    * `related_key` - The key on the `related` schema used for the association
+    * `related_key` - The list of keys on the `related` schema used for the association
     * `queryable` - The real query to use for querying association
     * `defaults` - Default fields used when building the association
     * `relationship` - The relationship to the specified schema, default `:parent`
@@ -1567,7 +1567,6 @@ defmodule Ecto.Association.ManyToMany do
     Enum.map(fields, &dump!(action, join_through, struct, &1, adapter))
   end
 
-  # TODO optimize away single field dump!
   defp dump!(action, join_through, struct, field, adapter) when is_binary(join_through) do
     value = field!(action, struct, field)
     type  = struct.__struct__.__schema__(:type, field)
