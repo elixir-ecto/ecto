@@ -53,7 +53,6 @@ defmodule Ecto.Integration.AssocTest do
     %OneToOneCompositePk{} = TestRepo.insert!(%OneToOneCompositePk{composite_a: 1, composite_b: 2})
     %OneToOneCompositePk{id: id_o22} = TestRepo.insert!(%OneToOneCompositePk{composite_a: 2, composite_b: 2})
 
-    require Debug
     [o11, o22] = TestRepo.all(Ecto.assoc([c11, c22], :one_to_one_composite_pk))
     assert o11.id == id_o11
     assert o22.id == id_o22

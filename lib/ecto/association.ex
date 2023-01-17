@@ -1,5 +1,4 @@
-import Ecto.Query, only: [from: 1, from: 2, join: 4, distinct: 3, where: 3]
-require Debug # TODO delete
+import Ecto.Query, only: [from: 1, from: 2, join: 4, join: 5, distinct: 3, where: 3]
 defmodule Ecto.Association.NotLoaded do
   @moduledoc """
   Struct returned by associations when they are not loaded.
@@ -277,15 +276,12 @@ defmodule Ecto.Association do
 
   @doc false
   def join_on_fields(query, related_queryable, src_keys, dst_keys, src_binding, dst_binding) do
-    # `:on` is intentionally left blank and is constructed below
-    # TODO suppress warning about missing `:on`
-    %{joins: joins} = query = join(query, :inner, [{src, binding}], dst in ^related_queryable)
-    {%{on: %{expr: expr} = on} = last_join, joins} = joins |> List.pop_at(-1)
+    %{joins: joins} = query = join(query, :inner, [{src, src_binding}], dst in ^related_queryable, on: true)
+    {%{on: %{expr: _expr} = on} = last_join, joins} = joins |> List.pop_at(-1)
 
-    expr = strict_zip(src_keys, dst_keys)
-    |> Enum.reduce(expr, fn {src_key, dst_key}, expr ->
-       conjoin_exprs(expr, {:==, [], [to_field(dst_binding, dst_key), to_field(src_binding, src_key)]})
-    end)
+    expr = Enum.reduce strict_zip(src_keys, dst_keys), true, fn {src_key, dst_key}, expr ->
+      conjoin_exprs(expr, {:==, [], [to_field(dst_binding, dst_key), to_field(src_binding, src_key)]})
+    end
 
     %{query | joins: joins ++ [%{last_join | on: %{on | expr: expr}}]}
   end
@@ -428,7 +424,6 @@ defmodule Ecto.Association do
     {joins, [join_expr]} = Enum.split(joins, -1)
     %{on: %{params: params, expr: expr} = join_on} = join_expr
     {expr, params} = expand_where(conditions, expr, Enum.reverse(params), length(params), binding)
-    # Debug.inspect(params: params, expr: expr, conditions: conditions)
     %{query | joins: joins ++ [%{join_expr | on: %{join_on | expr: expr, params: params}}]}
   end
 
@@ -438,14 +433,12 @@ defmodule Ecto.Association do
   def combine_assoc_query(query, []), do: query
   def combine_assoc_query(%{wheres: []} = query, conditions) do
     {expr, params} = expand_where(conditions, true, [], 0, 0)
-    # Debug.inspect(params: params, expr: expr, conditions: conditions)
     %{query | wheres: [%Ecto.Query.BooleanExpr{op: :and, expr: expr, params: params, line: __ENV__.line, file: __ENV__.file}]}
   end
   def combine_assoc_query(%{wheres: wheres} = query, conditions) do
     {wheres, [where_expr]} = Enum.split(wheres, -1)
     %{params: params, expr: expr} = where_expr
     {expr, params} = expand_where(conditions, expr, Enum.reverse(params), length(params), 0)
-    # Debug.inspect(params: params, expr: expr, conditions: conditions)
     %{query | wheres: wheres ++ [%{where_expr | expr: expr, params: params}]}
   end
 
@@ -1414,10 +1407,10 @@ defmodule Ecto.Association.ManyToMany do
     # We only need to join in the "join table". Preload and Ecto.assoc expressions can then filter
     # by &1.join_owner_key in ^... to filter down to the associated entries in the related table.
 
-    dst_binding = if is_nil(query ) do 
+    dst_binding = if is_nil(query) do 
       1
     else
-      length(query.joins) + 1
+      Ecto.Query.Builder.count_binds(query)
     end
 
     query = 
