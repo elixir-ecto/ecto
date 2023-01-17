@@ -137,6 +137,12 @@ defmodule Ecto.Changeset do
       data from one entry to another, to completely remove or replace
       existing entries.
 
+  These functions are opinionated on how it works with associations.
+  If you need different behaviour or explicit control over the associated
+  data, you can skip this functionality and use `Ecto.Multi` to encode how
+  several database operations will happen on several schemas and changesets
+  at once.
+
   See the documentation for those functions for more information.
 
   ### The `:on_replace` option
@@ -795,7 +801,15 @@ defmodule Ecto.Changeset do
   to an `Ecto.Repo` function, all entries will be inserted/updated/deleted
   within the same transaction.
 
-  Note developers are allowed to explicitly set the `:action` field of a
+  As you see above, this function is opinionated on how it works. If you
+  need different behaviour or if you need explicit control over the associated
+  data, you can either use `put_assoc/4` or use `Ecto.Multi` to encode how
+  several database operations will happen on several schemas and changesets
+  at once.
+
+  ## Custom actions
+
+  Developers are allowed to explicitly set the `:action` field of a
   changeset to instruct Ecto how to act in certain situations. Let's suppose
   that, if one of the associations has only empty fields, you want to ignore
   the entry altogether instead of showing an error. The changeset function could
@@ -814,6 +828,9 @@ defmodule Ecto.Changeset do
             changeset
         end
       end
+
+  You can also set it to delete if you want data to be deleted based on the
+  received parameters (such as a checkbox or any other indicator).
 
   ## Partial changes for many-style associations
 
@@ -1419,6 +1436,10 @@ defmodule Ecto.Changeset do
 
   Once the parent changeset is given to an `Ecto.Repo` function, all entries
   will be inserted/updated/deleted within the same transaction.
+
+  If you need different behaviour or explicit control over how this function
+  behaves, you can drop it altogether and use `Ecto.Multi` to encode how several
+  database operations will happen on several schemas and changesets at once.
 
   ## Example: Adding a comment to a post
 
