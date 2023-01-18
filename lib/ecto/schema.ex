@@ -771,11 +771,12 @@ defmodule Ecto.Schema do
 
     * `:foreign_key` - Sets the foreign key, this should map to a field on the
       other schema, defaults to the underscored name of the current schema
-      suffixed by `_id`. A list denotes a composite foreign key over multiple columns.
+      suffixed by `_id`. A list denotes a composite foreign key over multiple
+      columns
 
     * `:references` - Sets the key on the current schema to be used for the
-      association, defaults to the primary key on the schema. A list has to be
-      provided if the primary key is composite.
+      association, defaults to the primary key on the schema. A list can be
+      provided if the primary key is composite
 
     * `:through` - Allow this association to be defined in terms of existing
       associations. Read the section on `:through` associations for more info
@@ -1005,10 +1006,12 @@ defmodule Ecto.Schema do
 
     * `:foreign_key` - Sets the foreign key, this should map to a field on the
       other schema, defaults to the underscored name of the current module
-      suffixed by `_id`
+      suffixed by `_id`. A list denotes a composite foreign key over multiple
+      columns
 
     * `:references`  - Sets the key on the current schema to be used for the
-      association, defaults to the primary key on the schema
+      association, defaults to the primary key on the schema. A list can be
+      provided if the primary key is composite
 
     * `:through` - If this association must be defined in terms of existing
       associations. Read the section in `has_many/3` for more information
@@ -1086,16 +1089,21 @@ defmodule Ecto.Schema do
       of the association suffixed by `_id`. For example, `belongs_to :company`
       will define foreign key of `:company_id`. The associated `has_one` or `has_many`
       field in the other schema should also have its `:foreign_key` option set
-      with the same value.
+      with the same value. If the primary key is composite then a list of keys has
+      to be used
 
     * `:references` - Sets the key on the other schema to be used for the
-      association, defaults to: `:id`
+      association, defaults to: `:id`. A list of keys has to be provided if the
+      primary key is composite
 
     * `:define_field` - When false, does not automatically define a `:foreign_key`
       field, implying the user is defining the field manually elsewhere
 
     * `:type` - Sets the type of automatically defined `:foreign_key`.
-      Defaults to: `:integer` and can be set per schema via `@foreign_key_type`
+      Defaults to: `:integer` and can be set per schema via `@foreign_key_type`.
+      A list of types can be used for composite foreign keys. If `:type` is a
+      single atom and the foreign key is copmosite, the same type is assumed for
+      all key columns
 
     * `:on_replace` - The action taken on associations when the record is
       replaced when casting or manipulating parent changeset. May be
@@ -1143,6 +1151,17 @@ defmodule Ecto.Schema do
         schema "comments" do
           field :post_id, :integer, ... # custom options
           belongs_to :post, Post, define_field: false
+        end
+      end
+
+  If the references schema has composite primary keys:
+
+      defmodule Comment do
+        use Ecto.Schema
+
+        schema "comments" do
+          belongs_to :publication, Publication, references: [:name, :kind],
+            foreign_key: [:publication_name, :publication_kind], type: [:string, :integer]
         end
       end
 
@@ -1304,7 +1323,9 @@ defmodule Ecto.Schema do
       the join table should reach the current schema and the second
       how the join table should reach the associated schema. In the
       example above, it defaults to: `[post_id: :id, tag_id: :id]`.
-      The keys are inflected from the schema names.
+      The keys are inflected from the schema names. Nested keyword
+      lists have to be used if any of the associated schemas have
+      composite primary keys.
 
     * `:on_delete` - The action taken on associations when the parent record
       is deleted. May be `:nothing` (default) or `:delete_all`.
@@ -1517,6 +1538,25 @@ defmodule Ecto.Schema do
       case Repo.insert(changeset) do
         {:ok, assoc} -> # Assoc was created!
         {:error, changeset} -> # Handle the error
+      end
+
+  ## Composite primary key example
+
+  If the current or referenced schema has a composite primary key, `join_keys`
+  has to be a list containing two keyword lists. The first describes the
+  mapping from the join table to the current schema, the second denotes the
+  mapping from the join table to the associated schema.
+
+      defmodule Project do
+        use Ecto.Schema
+
+        @primary_key false
+        schema "word" do
+          field :spelling, :string, primary_key: true
+          field :language, :string, primary_key: true
+          many_to_many :meanings, Meaning, join_through: "words_meanings",
+            join_keys: [[word_spelling: :spelling, word_language: :language], [meaning_id: :id]]
+        end
       end
   """
   defmacro many_to_many(name, queryable, opts \\ []) do
