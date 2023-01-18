@@ -1570,6 +1570,61 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
+  Update the existing association entry or entries as a change in the changeset.
+
+  For association with cardinality one the passed function will receive a changeset.
+  For association with many entries the passed function will receive a list of changesets.
+
+  Returned values or lists of values need to match what is described in
+  `put_assoc/4`. If the given value is not any of values listed there,
+  it will raise. Commonly the returned value(s) are expected to be changesets.
+
+  Lists of entries can be reordered, e.g. for forms rendered based on the parent
+  changeset. But persisting associations does not retain order unless maintained
+  separately – e.g. using `prepare_changes/2`.
+  """
+  def update_assoc(%Changeset{} = changeset, name, default, fun) do
+    update_relation(:assoc, changeset, name, default, fun)
+  end
+
+  @doc """
+  Update the existing embed entry or entries as a change in the changeset.
+
+  For embeds with cardinality one the passed function will receive a changeset.
+  For embeds with many entries the passed function will receive a list of changesets.
+
+  Returned values or lists of values need to match what is described in
+  `put_assoc/4`. If the given value is not any of values listed there,
+  it will raise. Commonly the returned value(s) are expected to be changesets.
+
+  Lists of entries can be reordered.
+  """
+  def update_embed(%Changeset{} = changeset, name, default, fun) do
+    update_relation(:embed, changeset, name, default, fun)
+  end
+
+  defp update_relation(_tag, %{types: nil}, _name, _default, _fun) do
+    raise ArgumentError, "changeset does not have types information"
+  end
+
+  defp update_relation(tag, changeset, name, default, fun) when is_function(fun, 1) do
+    %{data: data, types: types, changes: changes, errors: errors, valid?: valid?} = changeset
+    relation = relation!(:put, tag, name, Map.get(types, name))
+    existing = get_change(changeset, name) || get_field(changeset, name, default)
+
+    value =
+      case existing do
+        list when is_list(list) -> list |> Enum.map(&change/1) |> fun.()
+        item ->  item |> change() |> fun.()
+      end
+
+    {changes, errors, valid?} =
+      put_change(data, changes, errors, valid?, name, value, {tag, relation})
+
+    %{changeset | changes: changes, errors: errors, valid?: valid?}
+  end
+
+  @doc """
   Forces a change on the given `key` with `value`.
 
   If the change is already present, it is overridden with
