@@ -2466,9 +2466,11 @@ defmodule Ecto.Changeset do
   As such as, the "email_confirmation" field does not need to be
   added as a virtual field in your schema.
 
-  Note that if the confirmation field is nil or missing, this does
-  not add a validation error. You can specify that the confirmation
-  parameter is required in the options (see below).
+  Note that if the confirmation field is missing, this does not
+  add a validation error. This is done on purpose as you do not
+  trigger confirmation validation in places where a confirmation
+  is not required (for example, in APIs). You can force the
+  confirmation parameter to be required in the options (see below).
 
   ## Options
 
