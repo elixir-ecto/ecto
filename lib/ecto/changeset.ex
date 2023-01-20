@@ -2496,13 +2496,15 @@ defmodule Ecto.Changeset do
     value = Map.get(params, param)
 
     errors =
-      case Map.fetch(params, error_param) do
-        {:ok, ^value} ->
+      case params do
+        %{^error_param => ^value} ->
           []
-        {:ok, _} ->
+
+        %{^error_param => _} ->
           [{error_field,
            {message(opts, "does not match confirmation"), [validation: :confirmation]}}]
-        :error ->
+
+        %{} ->
           confirmation_missing(opts, error_field)
       end
 
