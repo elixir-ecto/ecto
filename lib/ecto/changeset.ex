@@ -1215,7 +1215,7 @@ defmodule Ecto.Changeset do
 
       iex> %Author{posts: [%Post{id: 1, title: "hello"}]}
       ...> |> change()
-      ...> |> get_assoc(:posts, :changeset)
+      ...> |> get_assoc(:posts)
       [%Ecto.Changeset{data: %Post{id: 1, title: "hello"}, changes: %{}}]
 
       iex> %Author{posts: [%Post{id: 1, title: "hello"}]}
@@ -1231,6 +1231,8 @@ defmodule Ecto.Changeset do
       [%Post{id: 1, title: "world"}]
 
   """
+  def get_assoc(changeset, name, as \\ :changeset)
+
   def get_assoc(%Changeset{} = changeset, name, :struct) do
     get_field(changeset, name)
   end
@@ -1249,7 +1251,7 @@ defmodule Ecto.Changeset do
 
       iex> %Post{comments: [%Comment{id: 1, body: "hello"}]}
       ...> |> change()
-      ...> |> get_embed(:comments, :changeset)
+      ...> |> get_embed(:comments)
       [%Ecto.Changeset{data: %Comment{id: 1, body: "hello"}, changes: %{}}]
 
       iex> %Post{comments: [%Comment{id: 1, body: "hello"}]}
@@ -1265,6 +1267,8 @@ defmodule Ecto.Changeset do
       [%Comment{id: 1, body: "world"}]
 
   """
+  def get_embed(changeset, name, as \\ :changeset)
+
   def get_embed(%Changeset{} = changeset, name, :struct) do
     get_field(changeset, name)
   end
@@ -3103,7 +3107,7 @@ defmodule Ecto.Changeset do
   @spec assoc_constraint(t, atom, Keyword.t) :: t
   def assoc_constraint(changeset, assoc, opts \\ []) do
     constraint = opts[:name] ||
-      case get_assoc(changeset, assoc) do
+      case get_assoc_type(changeset, assoc) do
         %Ecto.Association.BelongsTo{owner_key: owner_key} ->
           "#{get_source(changeset)}_#{owner_key}_fkey"
         other ->
@@ -3159,7 +3163,7 @@ defmodule Ecto.Changeset do
   @spec no_assoc_constraint(t, atom, Keyword.t) :: t
   def no_assoc_constraint(changeset, assoc, opts \\ []) do
     {constraint, message} =
-      case get_assoc(changeset, assoc) do
+      case get_assoc_type(changeset, assoc) do
         %Ecto.Association.Has{cardinality: cardinality,
                               related_key: related_key, related: related} ->
           {opts[:name] || "#{related.__schema__(:source)}_#{related_key}_fkey",
@@ -3238,12 +3242,10 @@ defmodule Ecto.Changeset do
     raise ArgumentError, "cannot add constraint because a changeset was not supplied, got: #{inspect item}"
   end
 
-  defp get_assoc(%{types: types}, assoc) do
+  defp get_assoc_type(%{types: types}, assoc) do
     case Map.fetch(types, assoc) do
-      {:ok, {:assoc, association}} ->
-        association
-      _ ->
-        raise_invalid_assoc(types, assoc)
+      {:ok, {:assoc, association}} -> association
+      _ -> raise_invalid_assoc(types, assoc)
     end
   end
 
