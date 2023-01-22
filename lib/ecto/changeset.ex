@@ -1242,8 +1242,8 @@ defmodule Ecto.Changeset do
   @doc """
   Gets the embedded entry or entries from changes or from the data.
 
-  Returned data is either normalized to be changesets or structs with any changes
-  applied to them. The `:struct` option returns the same value as `get_field/2`.
+  Returned data is normalized to changesets by default. Pass the `:struct`
+  flag to retrieve the data as structs with changes applied, similar to `get_field/2`.
 
   ## Examples
 
