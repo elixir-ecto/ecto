@@ -731,6 +731,20 @@ defmodule Ecto.ChangesetTest do
     assert get_field(changeset, :comments) == []
   end
 
+  test "get_assoc/3" do
+    post = %Post{comments: [%Comment{}]}
+    base_changesset = change(post)
+
+    assert get_assoc(base_changesset, :comments, :changeset) == [change(%Comment{})]
+    assert get_assoc(base_changesset, :comments, :struct) == [%Comment{}]
+
+    comment_changeset = change(%Comment{}, %{id: 123})
+    base_changesset = change(post) |> put_assoc(:comments, [comment_changeset])
+
+    assert get_assoc(base_changesset, :comments, :changeset) == [%{comment_changeset | action: :update}]
+    assert get_assoc(base_changesset, :comments, :struct) == [%Comment{id: 123}]
+  end
+
   test "fetch_change/2" do
     changeset = changeset(%{"title" => "foo", "body" => nil, "upvotes" => nil})
 

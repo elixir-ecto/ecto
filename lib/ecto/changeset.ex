@@ -1161,8 +1161,9 @@ defmodule Ecto.Changeset do
   then falls back on the data, finally returning `default` if
   no value is available.
 
-  For relations, these functions will return the changeset data
-  with changes applied. To retrieve raw changesets, please use `get_change/3`.
+  For relations consider using `get_assoc/3`/`get_embed/3`. This
+  function will return the changeset data with all changes applied,
+  which might not be what you're looking for.
 
       iex> post = %Post{title: "A title", body: "My body is a cage"}
       iex> changeset = change(post, %{title: "A new title"})
@@ -1200,6 +1201,89 @@ defmodule Ecto.Changeset do
         Relation.load!(data, value)
       _other ->
         value
+    end
+  end
+
+  @doc """
+  Gets the association entry or entries from changes or from the data.
+
+  Returned data is either normalized to be changesets or structs with any changes
+  applied to them. The `:struct` option returns the same value as `get_field/2`.
+
+  ## Examples
+
+      iex> %Author{posts: [%Post{id: 1, title: "hello"}]}
+      ...> |> change()
+      ...> |> get_assoc(:posts, :changeset)
+      [%Ecto.Changeset{data: %Post{id: 1, title: "hello"}, changes: %{}}]
+
+      iex> %Author{posts: [%Post{id: 1, title: "hello"}]}
+      ...> |> cast(%{posts: [%{id: 1, title: "world"}]}, [])
+      ...> |> cast_assoc(:posts)
+      ...> |> get_assoc(:posts, :changeset)
+      [%Ecto.Changeset{data: %Post{id: 1, title: "hello"}, changes: %{title: "world"}}]
+
+      iex> %Author{posts: [%Post{id: 1, title: "hello"}]}
+      ...> |> cast(%{posts: [%{id: 1, title: "world"}]}, [])
+      ...> |> cast_assoc(:posts)
+      ...> |> get_assoc(:posts, :struct)
+      [%Post{id: 1, title: "world"}]
+
+  """
+  def get_assoc(%Changeset{} = changeset, name, :struct) do
+    get_field(changeset, name)
+  end
+
+  def get_assoc(%Changeset{} = changeset, name, :changeset) do
+    get_relation(:assoc, changeset, name)
+  end
+
+  @doc """
+  Gets the embedded entry or entries from changes or from the data.
+
+  Returned data is either normalized to be changesets or structs with any changes
+  applied to them. The `:struct` option returns the same value as `get_field/2`.
+
+  ## Examples
+
+      iex> %Post{comments: [%Comment{id: 1, body: "hello"}]}
+      ...> |> change()
+      ...> |> get_embed(:comments, :changeset)
+      [%Ecto.Changeset{data: %Comment{id: 1, body: "hello"}, changes: %{}}]
+
+      iex> %Post{comments: [%Comment{id: 1, body: "hello"}]}
+      ...> |> cast(%{comments: [%{id: 1, body: "world"}]}, [])
+      ...> |> cast_embed(:comments)
+      ...> |> get_embed(:comments, :changeset)
+      [%Ecto.Changeset{data: %Comment{id: 1, body: "hello"}, changes: %{body: "world"}}]
+
+      iex> %Post{comments: [%Comment{id: 1, body: "hello"}]}
+      ...> |> cast(%{comments: [%{id: 1, body: "world"}]}, [])
+      ...> |> cast_embed(:comments)
+      ...> |> get_embed(:comments, :struct)
+      [%Comment{id: 1, body: "world"}]
+
+  """
+  def get_embed(%Changeset{} = changeset, name, :struct) do
+    get_field(changeset, name)
+  end
+
+  def get_embed(%Changeset{} = changeset, name, :changeset) do
+    get_relation(:embed, changeset, name)
+  end
+
+  defp get_relation(_tag, %{types: nil}, _name) do
+    raise ArgumentError, "changeset does not have types information"
+  end
+
+  defp get_relation(tag, %{types: types} = changeset, name) do
+    _ = relation!(:get, tag, name, Map.get(types, name))
+    existing = get_change(changeset, name) || get_field(changeset, name)
+
+    case existing do
+      nil -> nil
+      list when is_list(list) -> Enum.map(list, &change/1)
+      item -> change(item)
     end
   end
 
@@ -1566,61 +1650,6 @@ defmodule Ecto.Changeset do
     relation = relation!(:put, tag, name, Map.get(types, name))
     {changes, errors, valid?} =
       put_change(data, changes, errors, valid?, name, value, {tag, relation})
-    %{changeset | changes: changes, errors: errors, valid?: valid?}
-  end
-
-  @doc """
-  Update the existing association entry or entries as a change in the changeset.
-
-  For association with cardinality one the passed function will receive a changeset.
-  For association with many entries the passed function will receive a list of changesets.
-
-  Returned values or lists of values need to match what is described in
-  `put_assoc/4`. If the given value is not any of values listed there,
-  it will raise. Commonly the returned value(s) are expected to be changesets.
-
-  Lists of entries can be reordered, e.g. for forms rendered based on the parent
-  changeset. But persisting associations does not retain order unless maintained
-  separately – e.g. using `prepare_changes/2`.
-  """
-  def update_assoc(%Changeset{} = changeset, name, default, fun) do
-    update_relation(:assoc, changeset, name, default, fun)
-  end
-
-  @doc """
-  Update the existing embed entry or entries as a change in the changeset.
-
-  For embeds with cardinality one the passed function will receive a changeset.
-  For embeds with many entries the passed function will receive a list of changesets.
-
-  Returned values or lists of values need to match what is described in
-  `put_assoc/4`. If the given value is not any of values listed there,
-  it will raise. Commonly the returned value(s) are expected to be changesets.
-
-  Lists of entries can be reordered.
-  """
-  def update_embed(%Changeset{} = changeset, name, default, fun) do
-    update_relation(:embed, changeset, name, default, fun)
-  end
-
-  defp update_relation(_tag, %{types: nil}, _name, _default, _fun) do
-    raise ArgumentError, "changeset does not have types information"
-  end
-
-  defp update_relation(tag, changeset, name, default, fun) when is_function(fun, 1) do
-    %{data: data, types: types, changes: changes, errors: errors, valid?: valid?} = changeset
-    relation = relation!(:put, tag, name, Map.get(types, name))
-    existing = get_change(changeset, name) || get_field(changeset, name, default)
-
-    value =
-      case existing do
-        list when is_list(list) -> list |> Enum.map(&change/1) |> fun.()
-        item ->  item |> change() |> fun.()
-      end
-
-    {changes, errors, valid?} =
-      put_change(data, changes, errors, valid?, name, value, {tag, relation})
-
     %{changeset | changes: changes, errors: errors, valid?: valid?}
   end
 
