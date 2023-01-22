@@ -1161,9 +1161,10 @@ defmodule Ecto.Changeset do
   then falls back on the data, finally returning `default` if
   no value is available.
 
-  For relations consider using `get_assoc/3`/`get_embed/3`. This
-  function will return the changeset data with all changes applied,
-  which might not be what you're looking for.
+  For associations and embeds, this function returns the changeset
+  data with all changes applied. Use  `get_assoc/3`/`get_embed/3`
+  if you want to retrieve the relations as changesets or if you want
+  more fine-grained control.
 
       iex> post = %Post{title: "A title", body: "My body is a cage"}
       iex> changeset = change(post, %{title: "A new title"})
