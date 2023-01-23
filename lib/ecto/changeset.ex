@@ -1285,9 +1285,9 @@ defmodule Ecto.Changeset do
     _ = relation!(:get, tag, name, Map.get(types, name))
 
     existing =
-      case Map.fetch(changes, name) do
-        {:ok, value} -> value
-        :error -> Relation.load!(data, Map.fetch!(data, name))
+      case changes do
+        %{^name => value} -> value
+        %{} -> Relation.load!(data, Map.fetch!(data, name))
       end
 
     case existing do
