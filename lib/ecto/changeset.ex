@@ -236,7 +236,28 @@ defmodule Ecto.Changeset do
         |> Ecto.Changeset.validate_required(...)
         |> Ecto.Changeset.validate_length(...)
 
-  Such functionality makes Ecto extremely useful to cast, validate and prune data even
+  Besides the basic types which are mentioned above, such as `:boolean` and `:string`, 
+  parameterized types can also be used in schemaless changesets. They implement
+  the `Ecto.ParameterizedType` behaviour and we can create the necessary type info by 
+  calling the `init/2` function.
+
+  For example, to use `Ecto.Enum` in a schemaless changeset:
+
+      types = %{
+        name: :string, 
+        role: Ecto.ParameterizedType.init(Ecto.Enum, values: [:reader, :editor, :admin])
+      }
+
+      data  = %{}
+      params = %{name: "Callum", role: "reader"}
+
+      changeset =
+        {data, types}
+        |> Ecto.Changeset.cast(params, Map.keys(types))
+        |> Ecto.Changeset.validate_required(...)
+        |> Ecto.Changeset.validate_length(...)
+
+  Schemaless changesets make Ecto extremely useful to cast, validate and prune data even
   if it is not meant to be persisted to the database.
 
   ### Changeset actions
