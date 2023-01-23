@@ -930,7 +930,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
     refute Map.has_key?(changeset.changes, :posts)
   end
 
-  test "get_field/3, fetch_field/2 with embeds" do
+  test "get_field/3, fetch_field/2, get_embed/3 with embeds" do
     profile_changeset = Changeset.change(%Profile{}, name: "michal")
     profile = Changeset.apply_changes(profile_changeset)
 
@@ -940,10 +940,14 @@ defmodule Ecto.Changeset.EmbeddedTest do
       |> Changeset.put_embed(:profile, profile_changeset)
     assert Changeset.get_field(changeset, :profile) == profile
     assert Changeset.fetch_field(changeset, :profile) == {:changes, profile}
+    assert Changeset.get_embed(changeset, :profile, :changeset) == %{profile_changeset | action: :insert}
+    assert Changeset.get_embed(changeset, :profile, :struct) == profile
 
     changeset = Changeset.change(%Author{profile: profile})
     assert Changeset.get_field(changeset, :profile) == profile
     assert Changeset.fetch_field(changeset, :profile) == {:data, profile}
+    assert Changeset.get_embed(changeset, :profile, :changeset) == Changeset.change(profile)
+    assert Changeset.get_embed(changeset, :profile, :struct) == profile
 
     post = %Post{id: 1}
     post_changeset = %{Changeset.change(post) | action: :delete}
@@ -953,6 +957,14 @@ defmodule Ecto.Changeset.EmbeddedTest do
       |> Changeset.put_embed(:posts, [post_changeset])
     assert Changeset.get_field(changeset, :posts) == []
     assert Changeset.fetch_field(changeset, :posts) == {:changes, []}
+    assert Changeset.get_embed(changeset, :posts, :changeset) == [post_changeset]
+    assert Changeset.get_embed(changeset, :posts, :struct) == []
+
+    changeset = Changeset.change(%Author{})
+    assert Changeset.get_field(changeset, :posts) == []
+    assert Changeset.fetch_field(changeset, :posts) == {:data, []}
+    assert Changeset.get_embed(changeset, :posts, :changeset) == []
+    assert Changeset.get_embed(changeset, :posts, :struct) == []
   end
 
   test "empty" do

@@ -1182,8 +1182,10 @@ defmodule Ecto.Changeset do
   then falls back on the data, finally returning `default` if
   no value is available.
 
-  For relations, these functions will return the changeset data
-  with changes applied. To retrieve raw changesets, please use `get_change/3`.
+  For associations and embeds, this function returns the changeset
+  data with all changes applied. Use  `get_assoc/3`/`get_embed/3`
+  if you want to retrieve the relations as changesets or if you want
+  more fine-grained control.
 
       iex> post = %Post{title: "A title", body: "My body is a cage"}
       iex> changeset = change(post, %{title: "A new title"})
@@ -1222,6 +1224,98 @@ defmodule Ecto.Changeset do
         Relation.load!(data, value)
       %{} ->
         value
+    end
+  end
+
+  @doc """
+  Gets the association entry or entries from changes or from the data.
+
+  Returned data is normalized to changesets by default. Pass the `:struct`
+  flag to retrieve the data as structs with changes applied, similar to `get_field/2`.
+
+  ## Examples
+
+      iex> %Author{posts: [%Post{id: 1, title: "hello"}]}
+      ...> |> change()
+      ...> |> get_assoc(:posts)
+      [%Ecto.Changeset{data: %Post{id: 1, title: "hello"}, changes: %{}}]
+
+      iex> %Author{posts: [%Post{id: 1, title: "hello"}]}
+      ...> |> cast(%{posts: [%{id: 1, title: "world"}]}, [])
+      ...> |> cast_assoc(:posts)
+      ...> |> get_assoc(:posts, :changeset)
+      [%Ecto.Changeset{data: %Post{id: 1, title: "hello"}, changes: %{title: "world"}}]
+
+      iex> %Author{posts: [%Post{id: 1, title: "hello"}]}
+      ...> |> cast(%{posts: [%{id: 1, title: "world"}]}, [])
+      ...> |> cast_assoc(:posts)
+      ...> |> get_assoc(:posts, :struct)
+      [%Post{id: 1, title: "world"}]
+
+  """
+  def get_assoc(changeset, name, as \\ :changeset)
+
+  def get_assoc(%Changeset{} = changeset, name, :struct) do
+    get_field(changeset, name)
+  end
+
+  def get_assoc(%Changeset{} = changeset, name, :changeset) do
+    get_relation(:assoc, changeset, name)
+  end
+
+  @doc """
+  Gets the embedded entry or entries from changes or from the data.
+
+  Returned data is normalized to changesets by default. Pass the `:struct`
+  flag to retrieve the data as structs with changes applied, similar to `get_field/2`.
+
+  ## Examples
+
+      iex> %Post{comments: [%Comment{id: 1, body: "hello"}]}
+      ...> |> change()
+      ...> |> get_embed(:comments)
+      [%Ecto.Changeset{data: %Comment{id: 1, body: "hello"}, changes: %{}}]
+
+      iex> %Post{comments: [%Comment{id: 1, body: "hello"}]}
+      ...> |> cast(%{comments: [%{id: 1, body: "world"}]}, [])
+      ...> |> cast_embed(:comments)
+      ...> |> get_embed(:comments, :changeset)
+      [%Ecto.Changeset{data: %Comment{id: 1, body: "hello"}, changes: %{body: "world"}}]
+
+      iex> %Post{comments: [%Comment{id: 1, body: "hello"}]}
+      ...> |> cast(%{comments: [%{id: 1, body: "world"}]}, [])
+      ...> |> cast_embed(:comments)
+      ...> |> get_embed(:comments, :struct)
+      [%Comment{id: 1, body: "world"}]
+
+  """
+  def get_embed(changeset, name, as \\ :changeset)
+
+  def get_embed(%Changeset{} = changeset, name, :struct) do
+    get_field(changeset, name)
+  end
+
+  def get_embed(%Changeset{} = changeset, name, :changeset) do
+    get_relation(:embed, changeset, name)
+  end
+
+  defp get_relation(_tag, %{types: nil}, _name) do
+    raise ArgumentError, "changeset does not have types information"
+  end
+
+  defp get_relation(tag, %{changes: changes, data: data, types: types}, name) do
+    _ = relation!(:get, tag, name, Map.get(types, name))
+
+    existing =
+      case changes do
+        %{^name => value} -> value
+        %{} -> Relation.load!(data, Map.fetch!(data, name))
+      end
+
+    case existing do
+      nil -> nil
+      list when is_list(list) -> Enum.map(list, &change/1)
+      item -> change(item)
     end
   end
 
@@ -3044,7 +3138,7 @@ defmodule Ecto.Changeset do
   @spec assoc_constraint(t, atom, Keyword.t) :: t
   def assoc_constraint(changeset, assoc, opts \\ []) do
     constraint = opts[:name] ||
-      case get_assoc(changeset, assoc) do
+      case get_assoc_type(changeset, assoc) do
         %Ecto.Association.BelongsTo{owner_key: owner_key} ->
           "#{get_source(changeset)}_#{owner_key}_fkey"
         other ->
@@ -3100,7 +3194,7 @@ defmodule Ecto.Changeset do
   @spec no_assoc_constraint(t, atom, Keyword.t) :: t
   def no_assoc_constraint(changeset, assoc, opts \\ []) do
     {constraint, message} =
-      case get_assoc(changeset, assoc) do
+      case get_assoc_type(changeset, assoc) do
         %Ecto.Association.Has{cardinality: cardinality,
                               related_key: related_key, related: related} ->
           {opts[:name] || "#{related.__schema__(:source)}_#{related_key}_fkey",
@@ -3179,12 +3273,10 @@ defmodule Ecto.Changeset do
     raise ArgumentError, "cannot add constraint because a changeset was not supplied, got: #{inspect item}"
   end
 
-  defp get_assoc(%{types: types}, assoc) do
+  defp get_assoc_type(%{types: types}, assoc) do
     case Map.fetch(types, assoc) do
-      {:ok, {:assoc, association}} ->
-        association
-      _ ->
-        raise_invalid_assoc(types, assoc)
+      {:ok, {:assoc, association}} -> association
+      _ -> raise_invalid_assoc(types, assoc)
     end
   end
 
