@@ -1281,9 +1281,14 @@ defmodule Ecto.Changeset do
     raise ArgumentError, "changeset does not have types information"
   end
 
-  defp get_relation(tag, %{types: types} = changeset, name) do
+  defp get_relation(tag, %{changes: changes, data: data, types: types}, name) do
     _ = relation!(:get, tag, name, Map.get(types, name))
-    existing = get_change(changeset, name) || get_field(changeset, name)
+
+    existing =
+      case Map.fetch(changes, name) do
+        {:ok, value} -> value
+        :error -> Relation.load!(data, Map.fetch!(data, name))
+      end
 
     case existing do
       nil -> nil
