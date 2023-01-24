@@ -2,6 +2,10 @@ defmodule Ecto.SubQuery do
   @moduledoc """
   A struct representing subqueries.
 
+  Users of Ecto must consider this struct as opaque
+  and not access its field. Authors of adapters may
+  read its contents, but never modify them.
+
   See `Ecto.Query.subquery/2` for more information.
   """
   defstruct [:query, :params, :select, :cache]
@@ -381,6 +385,13 @@ defmodule Ecto.Query do
   The prefixes set in the query will be preserved when loading data.
   """
 
+  @doc """
+  The `Ecto.Query` struct.
+
+  Users of Ecto must consider this struct as opaque
+  and not access its field directly. Authors of adapters
+  may read its contents, but never modify them.
+  """
   defstruct [prefix: nil, sources: nil, from: nil, joins: [], aliases: %{}, wheres: [], select: nil,
              order_bys: [], limit: nil, offset: nil, group_bys: [], combinations: [], updates: [],
              havings: [], preloads: [], assocs: [], distinct: nil, lock: nil, windows: [],
