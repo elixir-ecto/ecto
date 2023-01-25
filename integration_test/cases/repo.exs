@@ -1644,6 +1644,7 @@ defmodule Ecto.Integration.RepoTest do
     end
   end
 
+  @tag :distinct_count
   test "query count distinct" do
     TestRepo.insert!(%Post{title: "1"})
     TestRepo.insert!(%Post{title: "1"})
