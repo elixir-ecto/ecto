@@ -19,6 +19,11 @@
 
   * [Ecto.Changeset] Make unsafe validate unique exclude primary key only for loaded schemas
 
+## v3.9.4 (2022-12-21)
+
+### Bug fixes
+  * [Ecto.Query] Fix regression with interpolated preloads introduced in v3.9.3
+
 ## v3.9.3 (2022-12-20)
 
 ### Enhancements
