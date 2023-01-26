@@ -5,6 +5,7 @@ defmodule Ecto.Query.Builder.Join do
 
   alias Ecto.Query.Builder
   alias Ecto.Query.{JoinExpr, QueryExpr}
+  require Logger
 
   @doc """
   Escapes a join expression (not including the `on` expression).
@@ -183,6 +184,10 @@ defmodule Ecto.Query.Builder.Join do
       source: join_source,
       hints: hints
     ]
+
+      if is_nil(on) and is_nil(join_assoc) do
+        Logger.warning("missing on clause in join, please use 'on: true' if this is what you want")
+      end
 
     query = build_on(on || true, join, as, query, binding, count_bind, env)
     {query, binding, next_bind}
