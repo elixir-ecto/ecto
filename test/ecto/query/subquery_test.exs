@@ -421,10 +421,10 @@ defmodule Ecto.Query.SubqueryTest do
       query = normalize(from(p in subquery(subquery), select: p.title))
       assert query.select.fields == [{{:., [type: :string], [{:&, [], [0]}, :title]}, [], []}]
 
-      query = normalize(from(c in Comment, join: p in subquery(subquery), select: p))
+      query = normalize(from(c in Comment, join: p in subquery(subquery), on: true, select: p))
       assert query.select.fields == select_fields([:id, :title], 1)
 
-      query = normalize(from(c in Comment, join: p in subquery(subquery), select: p.title))
+      query = normalize(from(c in Comment, join: p in subquery(subquery), on: true, select: p.title))
       assert query.select.fields == [{{:., [type: :string], [{:&, [], [1]}, :title]}, [], []}]
 
       subquery = from p in Post, select: %{id: p.id, title: p.title}

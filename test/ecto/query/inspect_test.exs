@@ -117,7 +117,7 @@ defmodule Ecto.Query.InspectTest do
   end
 
   test "join" do
-    assert i(from(x in Post, join: y in Comment)) ==
+    assert i(from(x in Post, join: y in Comment, on: true)) ==
            ~s{from p0 in Inspect.Post, join: c1 in Inspect.Comment, on: true}
 
     assert i(from(x in Post, join: y in Comment, on: x.id == y.id)) ==

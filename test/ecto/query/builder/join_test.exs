@@ -90,7 +90,7 @@ defmodule Ecto.Query.Builder.JoinTest do
     join("posts", :left, [p], c in subquery(subquery), on: true)
     join("posts", :left, [p], c in subquery(subquery, prefix: "sample"), on: true)
   end
-  
+
   test "`as` accepts literal atoms and interpolated values, but not other literals" do
     name = :comments
     join("posts", :left, [p], c in assoc(p, :comments), as: :comments)

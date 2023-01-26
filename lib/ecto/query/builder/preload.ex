@@ -190,13 +190,13 @@ defmodule Ecto.Query.Builder.Preload do
       ** (ArgumentError) `"external"` is not a valid preload expression, expected an atom or a list.
 
       iex> require Ecto.Query
-      iex> expand([b: Ecto.Query.dynamic([_a, b], b)], Ecto.Query.from(a in "a", join: b in "b"))
+      iex> expand([b: Ecto.Query.dynamic([_a, b], b)], Ecto.Query.from(a in "a", join: b in "b", on: true))
       {[], [b: {1, []}]}
 
       iex> require Ecto.Query
       iex> expand(
       ...>   [b: {Ecto.Query.dynamic([_a, b], b), c: Ecto.Query.dynamic([_a, _b, c], c)}],
-      ...>   Ecto.Query.from(a in "a", join: b in "b", join: c in "c")
+      ...>   Ecto.Query.from(a in "a", join: b in "b", on: true, join: c in "c", on: true)
       ...> )
       {[], [b: {1, [c: {2, []}]}]}
   """
