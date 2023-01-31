@@ -775,7 +775,7 @@ defmodule Ecto.ChangesetTest do
     assert get_change(changeset, :upvotes, "other") == nil
   end
 
-  test "update_change/3" do
+  test "update_change/4" do
     changeset =
       changeset(%{"title" => "foo"})
       |> update_change(:title, & &1 <> "bar")
