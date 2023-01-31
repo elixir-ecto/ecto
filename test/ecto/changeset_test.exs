@@ -786,6 +786,11 @@ defmodule Ecto.ChangesetTest do
       |> update_change(:upvotes, & &1 || 10)
     assert changeset.changes.upvotes == 10
 
+    changeset = changeset(%{"title" => "foo"})
+    invalid_changeset = %{changeset | valid?: false}
+    update_change(invalid_changeset, :title, & &1 <> "bar", only_valid: true)
+    assert changeset.changes.title == "foo"
+
     changeset =
       changeset(%{})
       |> update_change(:title, & &1 || "bar")

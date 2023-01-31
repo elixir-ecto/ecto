@@ -236,15 +236,15 @@ defmodule Ecto.Changeset do
         |> Ecto.Changeset.validate_required(...)
         |> Ecto.Changeset.validate_length(...)
 
-  Besides the basic types which are mentioned above, such as `:boolean` and `:string`, 
+  Besides the basic types which are mentioned above, such as `:boolean` and `:string`,
   parameterized types can also be used in schemaless changesets. They implement
-  the `Ecto.ParameterizedType` behaviour and we can create the necessary type info by 
+  the `Ecto.ParameterizedType` behaviour and we can create the necessary type info by
   calling the `init/2` function.
 
   For example, to use `Ecto.Enum` in a schemaless changeset:
 
       types = %{
-        name: :string, 
+        name: :string,
         role: Ecto.ParameterizedType.init(Ecto.Enum, values: [:reader, :editor, :admin])
       }
 
@@ -1385,6 +1385,11 @@ defmodule Ecto.Changeset do
   is a change for `key`. Note that the value of the change
   can still be `nil` (unless the field was marked as required on `validate_required/3`).
 
+  ## Options
+
+    * `:only_valid` - only invoke the function if the changeset is valid,
+      defaults to false.
+
   ## Examples
 
       iex> changeset = change(%Post{}, %{impressions: 1})
@@ -1392,9 +1397,23 @@ defmodule Ecto.Changeset do
       iex> changeset.changes.impressions
       2
 
+      iex> params = %{value: :invalid_value, impressions: 1}
+      iex> changeset = cast(%Post{}, params, [:value, :impressions])
+      iex> changeset = update_change(changeset, :impressions, &(&1 + 1), only_valid: true)
+      iex> changeset.changes.impressions
+      1
+
   """
-  @spec update_change(t, atom, (term -> term)) :: t
-  def update_change(%Changeset{changes: changes} = changeset, key, function) when is_atom(key) do
+  @spec update_change(t, atom, (term -> term), Keyword.t) :: t
+  def update_change(%Changeset{valid?: valid?} = changeset, key, function, opts \\ []) when is_atom(key) do
+    only_valid? = Keyword.get(opts, :only_valid, false)
+
+    if only_valid? and not valid?,
+      do: changeset,
+      else: do_update_change(changeset, key, function)
+  end
+
+  defp do_update_change(%Changeset{changes: changes} = changeset, key, function) do
     case Map.fetch(changes, key) do
       {:ok, value} ->
         put_change(changeset, key, function.(value))
