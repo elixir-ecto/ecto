@@ -801,18 +801,26 @@ defmodule Ecto.Changeset do
 
     * If the parameter does not contain an ID, the parameter data
       will be passed to `MyApp.Address.changeset/2` with a new struct
-      and become an insert operation
+      and become an insert operation. We only consider the ID as not
+      given if there is no "id" key or if its value is strictly `nil`
+
     * If the parameter contains an ID and there is no associated child
       with such ID, the parameter data will be passed to
       `MyApp.Address.changeset/2` with a new struct and become an insert
       operation
+
     * If the parameter contains an ID and there is an associated child
       with such ID, the parameter data will be passed to
       `MyApp.Address.changeset/2` with the existing struct and become an
       update operation
+
     * If there is an associated child with an ID and its ID is not given
       as parameter, the `:on_replace` callback for that association will
       be invoked (see the "On replace" section on the module documentation)
+
+  If two or more addresses have the same IDs, Ecto will consider that an
+  error and add an error to the changeset saying that there are duplicate
+  entries.
 
   Every time the `MyApp.Address.changeset/2` function is invoked, it must
   return a changeset. This changeset will always be included under `changes`
