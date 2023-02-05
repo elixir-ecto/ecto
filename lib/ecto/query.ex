@@ -380,7 +380,10 @@ defmodule Ecto.Query do
     1. The `:prefix` option given to `from`/`join` has the highest precedence
     2. Then it falls back to the `@schema_prefix` attribute declared in the schema
       given to `from`/`join`
-    3. Then it falls back to the query prefix
+    3. Then it falls back to the query prefix. The query prefix may be
+       set either on the query with `put_query_prefix/2` or by passing
+       the `:prefix` option when calling the `Repo` module (where the
+       former wins if both methods are used)
 
   The prefixes set in the query will be preserved when loading data.
   """

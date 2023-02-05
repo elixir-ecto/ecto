@@ -1138,8 +1138,11 @@ defmodule Ecto.Repo do
   ## Options
 
     * `:prefix` - The prefix to run the query on (such as the schema path
-      in Postgres or the database in MySQL). This overrides the prefix set
-      in the query and any `@schema_prefix` set in the schema.
+      in Postgres or the database in MySQL). This will be applied to all `from`
+      and `join`s in the query that did not have a prefix previously given
+      either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
+      in the schema. For more information see the "Query Prefix" section of the
+      `Ecto.Query` documentation.
 
   See the ["Shared options"](#module-shared-options) section at the module
   documentation for remaining options.
@@ -1184,8 +1187,11 @@ defmodule Ecto.Repo do
   ## Options
 
     * `:prefix` - The prefix to run the query on (such as the schema path
-      in Postgres or the database in MySQL). This overrides the prefix set
-      in the query and any `@schema_prefix` set in the schema.
+      in Postgres or the database in MySQL). This will be applied to all `from`
+      and `join`s in the query that did not have a prefix previously given
+      either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
+      in the schema. For more information see the "Query Prefix" section of the
+      `Ecto.Query` documentation.
 
   See the ["Shared options"](#module-shared-options) section at the module
   documentation for remaining options.
@@ -1405,7 +1411,7 @@ defmodule Ecto.Repo do
 
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL). This overrides the prefix set
-      in the query and any `@schema_prefix` set any schemas. Also, the
+      in the query and any `@schema_prefix` set on any schemas. Also, the
       `@schema_prefix` for the parent record will override all default
       `@schema_prefix`s set in any child schemas for associations.
 
@@ -1586,7 +1592,7 @@ defmodule Ecto.Repo do
 
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL). This overrides the prefix set
-      in the query and any `@schema_prefix` set any schemas. Also, the
+      in the query and any `@schema_prefix` set on any schemas. Also, the
       `@schema_prefix` for the parent record will override all default
       `@schema_prefix`s set in any child schemas for associations.
 
