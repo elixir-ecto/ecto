@@ -694,8 +694,8 @@ defmodule Ecto.Schema do
     * `:source` - Defines the name that is to be used in the database for this field.
       This is useful when attaching to an existing database. The value should be
       an atom. Note that this is a last minute translation before the query goes
-      to the database. All references within your Elixir code must
-      still reference the field name, i.e. in association foreign keys.
+      to the database. All references within your Elixir code must still be to the
+      field name, i.e. in association foreign keys.
 
     * `:autogenerate` - a `{module, function, args}` tuple for a function
       to call to generate the field value before insertion if value is not set.
