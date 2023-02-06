@@ -695,7 +695,7 @@ defmodule Ecto.Schema do
       This is useful when attaching to an existing database. The value should be
       an atom. This is a last minute translation before the query goes to the database.
       All references within your Elixir code must still be to the field name,
-      i.e. in association foreign keys.
+      such as in association foreign keys.
 
     * `:autogenerate` - a `{module, function, args}` tuple for a function
       to call to generate the field value before insertion if value is not set.
