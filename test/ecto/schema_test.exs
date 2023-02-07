@@ -21,14 +21,14 @@ defmodule Ecto.SchemaTest do
   end
 
   test "schema metadata" do
-    assert Schema.__schema__(:source)              == "my schema"
-    assert Schema.__schema__(:prefix)              == nil
-    assert Schema.__schema__(:fields)              == [:id, :name, :email, :password, :count, :array, :uuid, :query_excluded_field, :comment_id]
-    assert Schema.__schema__(:virtual_fields)      == [:temp]
-    assert Schema.__schema__(:query_fields)        == [:id, :name, :email, :password, :count, :array, :uuid, :comment_id]
-    assert Schema.__schema__(:read_after_writes)   == [:email, :count]
-    assert Schema.__schema__(:primary_key)         == [:id]
-    assert Schema.__schema__(:autogenerate_id)     == {:id, :id, :id}
+    assert Schema.__schema__(:source) == "my schema"
+    assert Schema.__schema__(:prefix) == nil
+    assert Schema.__schema__(:fields) == [:id, :name, :email, :password, :count, :array, :uuid, :query_excluded_field, :comment_id]
+    assert Schema.__schema__(:virtual_fields) == [:temp]
+    assert Schema.__schema__(:query_fields) == [:id, :name, :email, :password, :count, :array, :uuid, :comment_id]
+    assert Schema.__schema__(:read_after_writes) == [:email, :count]
+    assert Schema.__schema__(:primary_key) == [:id]
+    assert Schema.__schema__(:autogenerate_id) == {:id, :id, :id}
     assert Schema.__schema__(:autogenerate_fields) == [:name, :uuid]
   end
 
