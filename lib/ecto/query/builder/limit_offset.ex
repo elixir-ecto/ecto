@@ -34,7 +34,7 @@ defmodule Ecto.Query.Builder.LimitOffset do
   defp contains_variable?(ast) do
     ast
     |> Macro.prewalk(false, fn
-         {:&, _, [_]} = expr, _ -> {expr, true}
+         {:{}, _, [:&, _, [_]]} = expr, _ -> {expr, true}
          expr, acc -> {expr, acc}
        end)
     |> elem(1)
