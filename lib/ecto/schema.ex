@@ -429,6 +429,8 @@ defmodule Ecto.Schema do
     from the database after every write (insert or update);
 
   * `__schema__(:autogenerate_id)` - Primary key that is auto generated on insert;
+  * `__schema__(:autogenerate_fields)` - Returns a list of fields names that are auto
+    generated on insert, except for the primary key;
 
   * `__schema__(:redact_fields)` - Returns a list of redacted field names;
 
@@ -642,6 +644,7 @@ defmodule Ecto.Schema do
         def __schema__(:loaded), do: unquote(Macro.escape(loaded))
         def __schema__(:redact_fields), do: unquote(redacted_fields)
         def __schema__(:virtual_fields), do: unquote(Enum.map(virtual_fields, &elem(&1, 0)))
+        def __schema__(:autogenerate_fields), do: unquote(Enum.flat_map(autogenerate, &elem(&1, 0)))
 
         def __schema__(:query) do
           %Ecto.Query{
