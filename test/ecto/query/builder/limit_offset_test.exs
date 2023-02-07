@@ -11,7 +11,7 @@ defmodule Ecto.Query.Builder.LimitOffsetTest do
     assert query.offset.expr == 2
   end
 
-  test "does not allow column names in limit and offset" do
+  test "does not allow query variables in limit and offset" do
     assert_raise Ecto.Query.CompileError, "query variables are not allowed in limit expression", fn ->
       quoted = quote do: from p in "posts", limit: p.x + 1
       Code.eval_quoted(quoted, [], __ENV__)
