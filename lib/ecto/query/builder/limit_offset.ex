@@ -18,10 +18,6 @@ defmodule Ecto.Query.Builder.LimitOffset do
     {expr, {params, _acc}} = Builder.escape(expr, :integer, {[], %{}}, binding, env)
     params = Builder.escape_params(params)
 
-    if contains_variable?(expr) do
-      Builder.error! "query variables are not allowed in #{type} expression"
-    end
-
     limoff = quote do: %Ecto.Query.QueryExpr{
                         expr: unquote(expr),
                         params: unquote(params),
@@ -29,15 +25,6 @@ defmodule Ecto.Query.Builder.LimitOffset do
                         line: unquote(env.line)}
 
     Builder.apply_query(query, __MODULE__, [type, limoff], env)
-  end
-
-  defp contains_variable?(ast) do
-    ast
-    |> Macro.prewalk(false, fn
-         {:&, _, [_]} = expr, _ -> {expr, true}
-         expr, acc -> {expr, acc}
-       end)
-    |> elem(1)
   end
 
   @doc """
