@@ -21,13 +21,15 @@ defmodule Ecto.SchemaTest do
   end
 
   test "schema metadata" do
-    assert Schema.__schema__(:source)             == "my schema"
-    assert Schema.__schema__(:prefix)             == nil
-    assert Schema.__schema__(:fields)             == [:id, :name, :email, :password, :count, :array, :uuid, :query_excluded_field, :comment_id]
-    assert Schema.__schema__(:query_fields)       == [:id, :name, :email, :password, :count, :array, :uuid, :comment_id]
-    assert Schema.__schema__(:read_after_writes)  == [:email, :count]
-    assert Schema.__schema__(:primary_key)        == [:id]
-    assert Schema.__schema__(:autogenerate_id)    == {:id, :id, :id}
+    assert Schema.__schema__(:source) == "my schema"
+    assert Schema.__schema__(:prefix) == nil
+    assert Schema.__schema__(:fields) == [:id, :name, :email, :password, :count, :array, :uuid, :query_excluded_field, :comment_id]
+    assert Schema.__schema__(:virtual_fields) == [:temp]
+    assert Schema.__schema__(:query_fields) == [:id, :name, :email, :password, :count, :array, :uuid, :comment_id]
+    assert Schema.__schema__(:read_after_writes) == [:email, :count]
+    assert Schema.__schema__(:primary_key) == [:id]
+    assert Schema.__schema__(:autogenerate_id) == {:id, :id, :id}
+    assert Schema.__schema__(:autogenerate_fields) == [:name, :uuid]
   end
 
   test "types metadata" do
@@ -160,6 +162,7 @@ defmodule Ecto.SchemaTest do
   test "custom schema attributes" do
     assert %CustomSchema{perm: "abc"}.perm == "abc"
     assert CustomSchema.__schema__(:autogenerate_id) == {:perm, :PERM, CustomPermalink}
+    assert CustomSchema.__schema__(:autogenerate_fields) == [:inserted_at, :updated_at]
     assert CustomSchema.__schema__(:type, :comment_id) == :string
   end
 
@@ -293,6 +296,7 @@ defmodule Ecto.SchemaTest do
     assert TimestampsFalse.__schema__(:fields) == [:id]
     assert TimestampsFalse.__schema__(:autogenerate) == []
     assert TimestampsFalse.__schema__(:autoupdate) == []
+    assert TimestampsFalse.__schema__(:autogenerate_fields) == []
   end
 
   ## Schema prefix
