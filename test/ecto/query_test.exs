@@ -480,6 +480,26 @@ defmodule Ecto.QueryTest do
       assert hd(query.joins).prefix == "world"
     end
 
+    test "are assigned from a variable" do
+      from_prefix = "hello"
+      join_prefix = "world"
+      query = from p in "posts", prefix: ^from_prefix, join: "comments", on: true, prefix: ^join_prefix
+      assert query.from.prefix == from_prefix
+      assert hd(query.joins).prefix == join_prefix
+    end
+
+    test "variables are validated at runtime" do
+      prefix = 123
+
+      assert_raise RuntimeError, ~r/`prefix` must be a string/, fn ->
+        from p in "posts", prefix: ^prefix
+      end
+
+      assert_raise RuntimeError, ~r/`prefix` must be a string/, fn ->
+        from p in "posts", join: "comments", on: true, prefix: ^prefix
+      end
+    end
+
     test "are supported and overridden from schemas" do
       query = from(Post)
       assert query.from.prefix == "another"
