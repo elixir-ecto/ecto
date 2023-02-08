@@ -134,8 +134,11 @@ defmodule Ecto.Query.Builder.Join do
       )
     end
 
-    unless is_binary(prefix) or is_nil(prefix) do
-      Builder.error! "`prefix` must be a compile time string, got: `#{Macro.to_string(prefix)}`"
+    prefix = case prefix do
+      nil -> nil
+      prefix when is_binary(prefix) -> prefix
+      {:^, _, [prefix]} -> quote(do: Ecto.Query.Builder.From.prefix!(unquote(prefix)))
+      prefix -> Builder.error!("`prefix` must be a compile time string or an interpolated value using ^, got: #{Macro.to_string(prefix)}")
     end
 
     as = case as do

@@ -80,12 +80,13 @@ defmodule Ecto.Query.Builder.From do
       )
     end
 
-    case prefix do
-      nil -> :ok
-      {:ok, prefix} when is_binary(prefix) or is_nil(prefix) -> :ok
-      _ -> Builder.error!("`prefix` must be a compile time string, got: `#{Macro.to_string(prefix)}`")
+    prefix = case prefix do
+      nil -> nil
+      {:ok, prefix} when is_binary(prefix) or is_nil(prefix) -> {:ok, prefix}
+      {:ok, {:^, _, [prefix]}} -> {:ok, quote(do: Ecto.Query.Builder.From.prefix!(unquote(prefix)))}
+      {:ok, prefix} -> Builder.error!("`prefix` must be a compile time string or an interpolated value using ^, got: #{Macro.to_string(prefix)}")
     end
-    
+
     as = case as do
       {:^, _, [as]} -> as
       as when is_atom(as) -> as
@@ -136,6 +137,13 @@ defmodule Ecto.Query.Builder.From do
 
     {:%, [], [Ecto.Query, {:%{}, [], query_fields}]}
   end
+
+  @doc """
+  Validates a prefix at runtime.
+  """
+  @spec prefix!(any) :: nil | String.t()
+  def prefix!(prefix) when is_binary(prefix) or is_nil(prefix), do: prefix
+  def prefix!(prefix), do: raise("`prefix` must be a string, got: #{inspect(prefix)}")
 
   @doc """
   The callback applied by `build/2` to build the query.
