@@ -63,6 +63,7 @@ defmodule Ecto.Query.PlannerTest do
 
     embedded_schema do
       field :slug, :string
+      field :map_inside_embed, :map
       embeds_one :author, Author
     end
   end
@@ -1151,6 +1152,12 @@ defmodule Ecto.Query.PlannerTest do
     normalize(query)
 
     query = from(Post, []) |> select([p], p.prefs["unknown_field"])
+    normalize(query)
+
+    query = from(Post, []) |> select([p], p.meta["map_inside_embed"]["unknown_field"])
+    normalize(query)
+
+    query = from(Post, []) |> select([p], json_extract_path(field(p, :meta), ^["map_inside_embed", "unknown_field"]))
     normalize(query)
 
     query = from(p in "posts") |> select([p], p.meta["slug"])
