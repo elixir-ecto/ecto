@@ -237,6 +237,11 @@ defmodule Ecto.Query.Builder do
         {field, params_acc} = escape(field, type, params_acc, vars, env)
         {{:{}, [], [:json_extract_path, [], [field, path]]}, params_acc}
 
+      {:field, _, _} ->
+        path = escape_json_path(path)
+        {field, params_acc} = escape(field, type, params_acc, vars, env)
+        {{:{}, [], [:json_extract_path, [], [field, path]]}, params_acc}
+
       _ ->
         error!("`#{Macro.to_string(expr)}` is not a valid query expression")
     end
