@@ -842,14 +842,14 @@ defmodule Ecto.Repo do
 
   ## Examples
 
-      # Returns the number of visits per blog post
-      Repo.aggregate(Post, :count, :visits)
+      # Returns the sum of the number of visits for every blog post
+      Repo.aggregate(Post, :sum, :visits)
 
-      # Returns the number of visits per blog post in the "private" schema path
-      # (in Postgres) or database (in MySQL)
-      Repo.aggregate(Post, :count, :visits, prefix: "private")
+      # Returns the sum of the number of visits for every blog post in the
+      # "private" schema path (in Postgres) or database (in MySQL)
+      Repo.aggregate(Post, :sum, :visits, prefix: "private")
 
-      # Returns the average number of visits for the top 10
+      # Returns the average number of visits for the first 10 blog posts
       query = from Post, limit: 10
       Repo.aggregate(query, :avg, :visits)
   """
