@@ -4,6 +4,7 @@
 
 ### Enhancements
 
+  * [Ecto.Changeset] Add `get_assoc`/`get_embed`
   * [Ecto.Changeset] Allow `:empty_values` option in `cast/4` to include a function which must return true if the value is empty
   * [Ecto.Changeset] `cast/4` will by default consider strings made only of whitespace characters to be empty. This unifies the handling of empty values between `cast/4` and `validate_required/3`. **If you use `:empty_values` and you want to preserve the new behaviour throughout, you may update your code from this**
 
@@ -11,9 +12,12 @@
 
   to
 
-        empty_values = Ecto.Changeset.empty_values([[]])
+        empty_values = [[]] ++ Ecto.Changeset.empty_values()
         Ecto.Changeset.cast(changeset, params, [:field1, :field2], empty_values: empty_values)
   * [Ecto.Query] Support materialized option in CTEs
+  * [Ecto.Query] Support dynamic field inside `json_extract_path`
+  * [Ecto.Query] Support interpolated values for from/join prefixes
+  * [Ecto.Schema] Add `:autogenerate_fields` to the schema reflection API
 
 ### Bug fixes
 
@@ -22,6 +26,7 @@
 ## v3.9.4 (2022-12-21)
 
 ### Bug fixes
+
   * [Ecto.Query] Fix regression with interpolated preloads introduced in v3.9.3
 
 ## v3.9.3 (2022-12-20)

@@ -458,11 +458,10 @@ defmodule Ecto.Changeset do
   Returns the empty values used by `Ecto.Changeset`.
 
   By default it marks a field as empty if it is a string made
-  only of whitespace characters. However, a list of can be given
-  to prepend new empty values to the default list.
+  only of whitespace characters.
   """
-  def empty_values(list \\ []) do
-    list ++ @empty_values
+  def empty_values do
+    @empty_values
   end
 
   @doc """
@@ -538,7 +537,7 @@ defmodule Ecto.Changeset do
       # Augmenting default
       iex> params = %{title: "", topics: []}
       iex> changeset =
-      ...>   cast(post, params, [:topics], empty_values: Ecto.Changeset.empty_values([[], nil]))
+      ...>   cast(post, params, [:topics], empty_values: [[], nil] ++ Ecto.Changeset.empty_values())
       iex> changeset.params
       %{}
 
