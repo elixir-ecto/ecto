@@ -230,16 +230,12 @@ defmodule Ecto.Query.Builder do
   end
 
   # json
-  def escape({:json_extract_path, _, [field, path]} = expr, type, params_acc, vars, env) do
-    case field do
-      {{:., _, _}, _, _} ->
-        path = escape_json_path(path)
-        {field, params_acc} = escape(field, type, params_acc, vars, env)
-        {{:{}, [], [:json_extract_path, [], [field, path]]}, params_acc}
+  def escape({:json_extract_path, _, [field, path]}, type, params_acc, vars, env) do
+    validate_json_field!(field)
 
-      _ ->
-        error!("`#{Macro.to_string(expr)}` is not a valid query expression")
-    end
+    path = escape_json_path(path)
+    {field, params_acc} = escape(field, type, params_acc, vars, env)
+    {{:{}, [], [:json_extract_path, [], [field, path]]}, params_acc}
   end
 
   def escape({{:., meta, [Access, :get]}, _, [left, _]} = expr, type, params_acc, vars, env) do
@@ -531,6 +527,10 @@ defmodule Ecto.Query.Builder do
 
   defp escape_type({:parameterized, _, _} = param), do: Macro.escape(param)
   defp escape_type(type), do: type
+
+  defp validate_json_field!({{:., _, _}, _, _}), do: :ok
+  defp validate_json_field!({:field, _, _}), do: :ok
+  defp validate_json_field!(unsupported_field), do: error!("`#{Macro.to_string(unsupported_field)}` is not a valid json field")
 
   defp wrap_nil(params, {:{}, _, [:^, _, [ix]]}), do: wrap_nil(params, length(params) - ix - 1, [])
   defp wrap_nil(params, _other), do: params
