@@ -1101,26 +1101,35 @@ defmodule Ecto.Query.Planner do
     {Enum.reverse(combinations), counter}
   end
 
-  defp validate_json_path!([path_field | rest], field, embed) do
+  defp validate_json_path!(_path, _field, :any), do: :ok
+  defp validate_json_path!(_path, _field, :map), do: :ok
+  defp validate_json_path!(_path, _field, {:map, _}), do: :ok
+
+  defp validate_json_path!([path_field | rest], field, {:parameterized, Ecto.Embedded, embed}) do
     case embed do
       %{related: related, cardinality: :one} ->
         unless Enum.any?(related.__schema__(:fields), &Atom.to_string(&1) == path_field) do
           raise "field `#{path_field}` does not exist in #{inspect(related)}"
         end
 
-        path_embed = related.__schema__(:embed, String.to_atom(path_field))
-        validate_json_path!(rest, path_field, path_embed)
+        type = related.__schema__(:type, String.to_atom(path_field))
+        validate_json_path!(rest, path_field, type)
 
       %{related: _, cardinality: :many} ->
         unless is_integer(path_field) do
           raise "cannot use `#{path_field}` to refer to an item in `embeds_many`"
         end
 
-        validate_json_path!(rest, path_field, %{embed | cardinality: :one})
+        updated_embed = %{embed | cardinality: :one}
+        validate_json_path!(rest, path_field, {:parameterized, Ecto.Embedded, updated_embed})
 
       other ->
         raise "expected field `#{field}` to be of type embed, got: `#{inspect(other)}`"
     end
+  end
+
+  defp validate_json_path!([_path_field | _rest], field, other_type) do
+    raise "expected field `#{field}` to be an embed or a map, got: `#{inspect(other_type)}`"
   end
 
   defp validate_json_path!([], _field, _type) do
@@ -1248,25 +1257,8 @@ defmodule Ecto.Query.Planner do
   defp prewalk({:json_extract_path, meta, [json_field, path]}, kind, query, expr, acc, _adapter) do
     {{:., dot_meta, [{:&, amp_meta, [ix]}, field]}, expr_meta, []} = json_field
 
-    case type!(kind, query, expr, ix, field) do
-      {:parameterized, Ecto.Embedded, embed} ->
-        validate_json_path!(path, field, embed)
-
-      type ->
-        case Ecto.Type.type(type) do
-          :any ->
-            :ok
-
-          :map ->
-            :ok
-
-          {:map, _} ->
-            :ok
-
-          _ ->
-            raise "expected field `#{field}` to be an embed or a map, got: `#{inspect(type)}`"
-        end
-    end
+    type = type!(kind, query, expr, ix, field)
+    validate_json_path!(path, field, type)
 
     field_source = kind |> get_source!(query, ix) |> field_source(field)
 
