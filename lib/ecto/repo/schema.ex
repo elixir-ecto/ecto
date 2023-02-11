@@ -836,7 +836,7 @@ defmodule Ecto.Repo.Schema do
       {:ok, value} ->
         load_each(%{struct | key => value}, kv, types, adapter)
       :error ->
-        raise ArgumentError, "cannot load `#{inspect value}` as type #{inspect type} " <>
+        raise ArgumentError, "cannot load `#{inspect value}` as type #{Ecto.Type.format(type)} " <>
                              "for field `#{key}` in schema #{inspect struct.__struct__}"
     end
   end
@@ -1009,7 +1009,7 @@ defmodule Ecto.Repo.Schema do
       :error ->
         raise Ecto.ChangeError,
               "value `#{inspect(value)}` for `#{inspect(schema)}.#{field}` " <>
-              "in `#{action}` does not match type #{inspect type}"
+              "in `#{action}` does not match type #{Ecto.Type.format(type)}"
     end
   end
 

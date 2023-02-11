@@ -208,6 +208,11 @@ defmodule Ecto.Enum do
   @impl true
   def embed_as(_, %{embed_as: embed_as}), do: embed_as
 
+  @impl true
+  def format(%{mappings: mappings}) do
+    "#Ecto.Enum<values: #{inspect Keyword.keys(mappings)}>"
+  end
+
   @doc "Returns the possible values for a given schema and field"
   @spec values(module, atom) :: [atom()]
   def values(schema, field) do

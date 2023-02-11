@@ -13,6 +13,7 @@ defmodule Ecto.ParameterizedTypeTest do
     def equal?(true, _, _), do: true
     def equal?(_, _, _), do: false
     def embed_as(_, %{embed: embed}), do: embed
+    def format(:format), do: "#MyParameterizedType<:format>"
   end
 
   defmodule Schema do
@@ -71,6 +72,8 @@ defmodule Ecto.ParameterizedTypeTest do
 
     assert Ecto.Type.cast(@p_self_type, :foo) == {:ok, :cast}
     assert Ecto.Type.cast(@p_self_type, nil) == {:ok, :cast}
+
+    assert Ecto.Type.format({:parameterized, MyParameterizedType, :format}) == "#MyParameterizedType<:format>"
   end
 
   test "on error" do

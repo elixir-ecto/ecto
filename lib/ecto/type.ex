@@ -1209,6 +1209,23 @@ defmodule Ecto.Type do
     false
   end
 
+  @doc """
+  Format type for error messaging and logs.
+  """
+  def format({:array, type}) do
+    "{:array, #{format(type)}}"
+  end
+
+  def format({:parameterized, type, params}) do
+    if function_exported?(type, :format, 1) do
+      apply(type, :format, [params])
+    else
+      "##{inspect(type)}<#{inspect(params)}>"
+    end
+  end
+
+  def format(type), do: inspect(type)
+
   ## Helpers
 
   # Checks if a value is of the given primitive type.

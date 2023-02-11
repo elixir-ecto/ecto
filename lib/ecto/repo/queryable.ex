@@ -417,7 +417,7 @@ defmodule Ecto.Repo.Queryable do
         struct = struct && " in #{inspect(struct)}"
 
         raise ArgumentError,
-              "cannot load `#{inspect(value)}` as type #{inspect(type)}#{field}#{struct}"
+              "cannot load `#{inspect(value)}` as type #{Ecto.Type.format(type)}#{field}#{struct}"
     end
   end
 

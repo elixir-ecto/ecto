@@ -20,6 +20,33 @@ defmodule Ecto.TypeTest do
     def cast(_),   do: {:ok, :cast}
   end
 
+  defmodule CustomParameterizedTypeWithFormat do
+    use Ecto.ParameterizedType
+
+    def init(_options), do: :init
+    def type(_), do: :custom
+    def load(_, _, _), do: {:ok, :load}
+    def dump( _, _, _),  do: {:ok, :dump}
+    def cast( _, _),  do: {:ok, :cast}
+    def equal?(true, _, _), do: true
+    def equal?(_, _, _), do: false
+    def embed_as(_, %{embed: embed}), do: embed
+    def format(_params), do: "#CustomParameterizedTypeWithFormat<:custom>"
+  end
+
+  defmodule CustomParameterizedTypeWithoutFormat do
+    use Ecto.ParameterizedType
+
+    def init(_options), do: :init
+    def type(_), do: :custom
+    def load(_, _, _), do: {:ok, :load}
+    def dump( _, _, _),  do: {:ok, :dump}
+    def cast( _, _),  do: {:ok, :cast}
+    def equal?(true, _, _), do: true
+    def equal?(_, _, _), do: false
+    def embed_as(_, %{embed: embed}), do: embed
+  end
+
   defmodule Schema do
     use Ecto.Schema
 
@@ -974,6 +1001,37 @@ defmodule Ecto.TypeTest do
       assert Ecto.Type.equal?({:map, :time}, term, term)
 
       assert Ecto.Type.equal?(Custom, nil, nil)
+    end
+  end
+
+  describe "format/1" do
+    test "parameterized type with format/1 defined" do
+      params = %{}
+      assert Ecto.Type.format({:parameterized, CustomParameterizedTypeWithFormat, params}) == "#CustomParameterizedTypeWithFormat<:custom>"
+    end
+
+    test "parameterized type without format/1 defined" do
+      type = {:parameterized, CustomParameterizedTypeWithoutFormat, %{key: :value}}
+      assert Ecto.Type.format(type) == "#Ecto.TypeTest.CustomParameterizedTypeWithoutFormat<%{key: :value}>"
+    end
+
+    test "composite parameterized type" do
+      params = %{}
+      with_format_defined = {:parameterized, CustomParameterizedTypeWithFormat, params}
+      without_format_defined = {:parameterized, CustomParameterizedTypeWithoutFormat, params}
+
+      assert Ecto.Type.format({:array, with_format_defined}) == "{:array, #CustomParameterizedTypeWithFormat<:custom>}"
+      assert Ecto.Type.format({:array, without_format_defined}) == "{:array, #Ecto.TypeTest.CustomParameterizedTypeWithoutFormat<%{}>}"
+    end
+
+    test "non parameterized type" do
+      # fallback to `inspect(type)`
+      assert Ecto.Type.format(:id) == ":id"
+    end
+
+    test "composite non parameterized type" do
+      # fallback to `inspect(type)`
+      assert Ecto.Type.format({:array, :id}) == "{:array, :id}"
     end
   end
 
