@@ -1994,8 +1994,8 @@ defmodule Ecto.Query do
   Enables or disables ties for limit expressions.
 
   If there are multiple records tied for the last position in an ordered
-  limit expression, setting this value to `true` will return all of the
-  tied records, even if the final result exceeds the specified limit.
+  limit result, setting this value to `true` will return all of the tied
+  records, even if the final result exceeds the specified limit.
 
   Must be a boolean or evaluate to a boolean at runtime. Can only be applied
   to queries with a `limit` expression or an error is raised. If `limit`
