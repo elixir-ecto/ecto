@@ -74,7 +74,7 @@ defmodule Ecto.Query.Builder.LimitOffset do
   @doc """
   The callback applied by `build/4` to build the query.
   """
-  @spec apply(Ecto.Queryable.t(), :limit | :offset, term) :: Ecto.Query.t()
+  @spec apply(Ecto.Queryable.t(), :limit | :with_ties | :offset, term) :: Ecto.Query.t()
   def apply(%Ecto.Query{} = query, :limit, expr) do
     %{query | limit: expr}
   end
