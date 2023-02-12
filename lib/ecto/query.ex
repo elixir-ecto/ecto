@@ -951,7 +951,7 @@ defmodule Ecto.Query do
   @binds [:lock, :where, :or_where, :select, :distinct, :order_by, :group_by, :windows] ++
            [:having, :or_having, :limit, :offset, :preload, :update, :select_merge, :with_ctes]
 
-  defp from([{type, expr}|_] = kw, env, count_bind, quoted, binds) when type in @binds do
+  defp from([{type, expr}|t], env, count_bind, quoted, binds) when type in @binds do
     # If all bindings are integer indexes keep AST Macro expandable to %Query{},
     # otherwise ensure that quoted code is evaluated before macro call
     quoted =
@@ -966,7 +966,7 @@ defmodule Ecto.Query do
         end
       end
 
-    {t, quoted} = maybe_with_ties(kw, quoted, binds)
+    {t, quoted} = maybe_with_ties(type, t, quoted, binds)
 
     from(t, env, count_bind, quoted, binds)
   end
@@ -1010,7 +1010,7 @@ defmodule Ecto.Query do
     quoted
   end
 
-  defp maybe_with_ties([{:limit, _expr} | t], quoted, binds) do
+  defp maybe_with_ties(:limit, t, quoted, binds) do
     {t, with_ties} = collect_with_ties(t, nil)
 
     quoted =
@@ -1025,7 +1025,7 @@ defmodule Ecto.Query do
     {t, quoted}
   end
 
-  defp maybe_with_ties([_ | t], quoted, _binds), do: {t, quoted}
+  defp maybe_with_ties(_type, t, quoted, _binds), do: {t, quoted}
 
   defp to_query_binds(binds) do
     for {k, v} <- binds, do: {{k, [], nil}, v}
