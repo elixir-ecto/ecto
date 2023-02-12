@@ -2008,8 +2008,8 @@ defmodule Ecto.Query do
   tied records, even if the final result exceeds the specified limit.
 
   Must be a boolean or evaluate to a boolean at runtime. Can only be applied
-  to queries containing a limit or an error is raised. If `limit` is redefined
-  then `with_ties` must be reapplied.
+  to queries with a `limit` expression or an error is raised. If `limit`
+  is redefined then `with_ties` must be reapplied.
 
   Not all databases support this option and the ones that do might list it
   under the `FETCH` command. Databases may require a corresponding `order_by`
