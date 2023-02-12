@@ -12,7 +12,7 @@ defmodule Ecto.Query.Builder.LimitOffset do
   def with_ties!(with_ties) when is_boolean(with_ties), do: with_ties
 
   def with_ties!(with_ties),
-    do: raise("`with_ties` expression must be a boolean, got: `#{inspect(with_ties)}`")
+    do: raise("`with_ties` expression must evaluate to a boolean at runtime, got: `#{inspect(with_ties)}`")
 
   @doc """
   Builds a quoted expression.
@@ -44,7 +44,7 @@ defmodule Ecto.Query.Builder.LimitOffset do
     {quote(do: Ecto.Query.Builder.LimitOffset.with_ties!(unquote(expr))), params_acc}
   end
 
-  defp escape(:with_ties, expr, params_acc, vars, env) do
+  defp escape(:with_ties, expr, _params_acc, _vars, _env) do
     Builder.error!(
       "`with_ties` expression must be a compile time boolean or an interpolated value using ^, got: `#{Macro.to_string(expr)}`"
     )

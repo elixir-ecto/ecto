@@ -47,7 +47,7 @@ defmodule Ecto.Query.Builder.LimitOffsetTest do
   end
 
   test "with_ties must be a runtime or compile time boolean" do
-    msg = "`with_ties` expression must be a boolean, got: `1`"
+    msg = "`with_ties` expression must evaluate to a boolean at runtime, got: `1`"
     assert_raise RuntimeError, msg, fn ->
       with_ties("posts", ^1)
     end
