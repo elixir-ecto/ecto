@@ -476,6 +476,7 @@ defmodule Ecto.Query.PlannerTest do
         on: true,
         hints: ["join hint"],
         prefix: "world",
+        limit: 1, with_ties: true,
         preload: :comments
       )
 
@@ -483,6 +484,7 @@ defmodule Ecto.Query.PlannerTest do
     assert key == [:all,
                    {:lock, "foo"},
                    {:prefix, "foo"},
+                   {:limit, {true, 1}},
                    {:where, [{:and, {:is_nil, [], [nil]}}, {:or, {:is_nil, [], [nil]}}]},
                    {:join, [{:inner, {"comments", Comment, 38292156, "world"}, true, ["join hint"]}]},
                    {:from, {"posts", Post, 32915161, "hello"}, ["hint"]},
@@ -749,7 +751,7 @@ defmodule Ecto.Query.PlannerTest do
                :all,
                {:prefix, "another"},
                {:take, %{0 => {:any, [:id]}}},
-               {:limit, {:^, [], [0]}},
+               {:limit, {false, {:^, [], [0]}}},
                {:order_by, [[desc: _]]},
                {:from, {"comments", Comment, _, nil}, []},
                {:select, {:&, [], [0]}}
@@ -781,7 +783,7 @@ defmodule Ecto.Query.PlannerTest do
                :all,
                {:prefix, "another"},
                {:take, %{0 => {:any, [:id]}}},
-               {:limit, {:^, [], [0]}},
+               {:limit, {false, {:^, [], [0]}}},
                {:order_by, [[desc: _]]},
                {:from, {"comments", Comment, _, nil}, []},
                {:select, {:&, [], [0]}}

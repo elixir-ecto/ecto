@@ -435,6 +435,11 @@ defmodule Ecto.Query do
     defstruct [recursive: false, queries: []]
   end
 
+  defmodule LimitExpr do
+    @moduledoc false
+    defstruct [:expr, :file, :line, :with_ties, params: []]
+  end
+
   defmodule Tagged do
     @moduledoc false
     # * value is the tagged value
@@ -961,6 +966,8 @@ defmodule Ecto.Query do
         end
       end
 
+    {t, quoted} = maybe_with_ties(type, t, quoted, binds)
+
     from(t, env, count_bind, quoted, binds)
   end
 
@@ -983,6 +990,10 @@ defmodule Ecto.Query do
     from(t, env, count_bind, quoted, to_query_binds(binds))
   end
 
+  defp from([{:with_ties, _value}|_], _env, _count_bind, _quoted, _binds) do
+    Builder.error! "`with_ties` keyword must immediately follow a limit"
+  end
+
   defp from([{:on, _value}|_], _env, _count_bind, _quoted, _binds) do
     Builder.error! "`on` keyword must immediately follow a join"
   end
@@ -999,6 +1010,23 @@ defmodule Ecto.Query do
     quoted
   end
 
+  defp maybe_with_ties(:limit, t, quoted, binds) do
+    {t, with_ties} = collect_with_ties(t, nil)
+
+    quoted =
+      if with_ties != nil do
+        quote do
+          Ecto.Query.with_ties(unquote(quoted), unquote(binds), unquote(with_ties))
+        end
+      else
+        quoted
+      end
+
+    {t, quoted}
+  end
+
+  defp maybe_with_ties(_type, t, quoted, _binds), do: {t, quoted}
+
   defp to_query_binds(binds) do
     for {k, v} <- binds, do: {{k, [], nil}, v}
   end
@@ -1012,6 +1040,13 @@ defmodule Ecto.Query do
   defp join_qual(:cross_lateral_join), do: :cross_lateral
   defp join_qual(:left_lateral_join), do: :left_lateral
   defp join_qual(:inner_lateral_join), do: :inner_lateral
+
+  defp collect_with_ties([{:with_ties, with_ties} | t], nil),
+    do: collect_with_ties(t, with_ties)
+  defp collect_with_ties([{:with_ties, _} | _], _),
+    do: Builder.error! "`with_ties` keyword was given more than once to the same limit"
+  defp collect_with_ties(t, with_ties),
+    do: {t, with_ties}
 
   defp collect_on([{key, _} | _] = t, on, as, prefix, hints) when key in @from_join_opts do
     {t, as, prefix, hints} = collect_as_and_prefix_and_hints(t, as, prefix, hints)
@@ -1956,6 +1991,34 @@ defmodule Ecto.Query do
   end
 
   @doc """
+  Enables or disables ties for limit expressions.
+
+  If there are multiple records tied for the last position in an ordered
+  limit result, setting this value to `true` will return all of the tied
+  records, even if the final result exceeds the specified limit.
+
+  Must be a boolean or evaluate to a boolean at runtime. Can only be applied
+  to queries with a `limit` expression or an error is raised. If `limit`
+  is redefined then `with_ties` must be reapplied.
+
+  Not all databases support this option and the ones that do might list it
+  under the `FETCH` command. Databases may require a corresponding `order_by`
+  statement to evaluate ties.
+
+  ## Keywords example
+
+      from(p in Post, where: p.author_id == ^current_user, order_by: [desc: p.visits], limit: 10, with_ties: true)
+
+  ## Expressions example
+
+      Post |> where([p], p.author_id == ^current_user) |> order_by([p], desc: p.visits) |> limit(10) |> with_ties(true)
+
+  """
+  defmacro with_ties(query, binding \\ [], expr) do
+    Builder.LimitOffset.build(:with_ties, query, binding, expr, __CALLER__)
+  end
+
+  @doc """
   An offset query expression.
 
   Offsets the number of rows selected from the result. Can be any expression
@@ -2353,7 +2416,7 @@ defmodule Ecto.Query do
   def last(queryable, key), do: last(order_by(queryable, ^key), nil)
 
   defp limit do
-    %QueryExpr{expr: 1, params: [], file: __ENV__.file, line: __ENV__.line}
+    %LimitExpr{expr: 1, params: [], file: __ENV__.file, line: __ENV__.line}
   end
 
   defp field(ix, field) when is_integer(ix) and is_atom(field) do

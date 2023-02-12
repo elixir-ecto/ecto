@@ -1,7 +1,7 @@
 import Inspect.Algebra
 import Kernel, except: [to_string: 1]
 
-alias Ecto.Query.{DynamicExpr, JoinExpr, QueryExpr, WithExpr}
+alias Ecto.Query.{DynamicExpr, JoinExpr, QueryExpr, WithExpr, LimitExpr}
 
 defimpl Inspect, for: Ecto.Query.DynamicExpr do
   def inspect(%DynamicExpr{binding: binding} = dynamic, opts) do
@@ -95,6 +95,7 @@ defimpl Inspect, for: Ecto.Query do
     assocs = assocs(query.assocs, names)
     windows = windows(query.windows, names)
     combinations = combinations(query.combinations)
+    limit = limit(query.limit, names)
 
     wheres = bool_exprs(%{and: :where, or: :or_where}, query.wheres, names)
     group_bys = kw_exprs(:group_by, query.group_bys, names)
@@ -103,7 +104,6 @@ defimpl Inspect, for: Ecto.Query do
     updates = kw_exprs(:update, query.updates, names)
 
     lock = kw_inspect(:lock, query.lock)
-    limit = kw_expr(:limit, query.limit, names)
     offset = kw_expr(:offset, query.offset, names)
     select = kw_expr(:select, query.select, names)
     distinct = kw_expr(:distinct, query.distinct, names)
@@ -189,6 +189,16 @@ defimpl Inspect, for: Ecto.Query do
 
   defp combinations(combinations) do
     Enum.map(combinations, fn {key, val} -> {key, "(" <> to_string(val) <> ")"} end)
+  end
+
+  defp limit(nil, _names), do: []
+
+  defp limit(%LimitExpr{with_ties: false} = limit, names) do
+    [{:limit, expr(limit, names)}]
+  end
+
+  defp limit(%LimitExpr{with_ties: with_ties} = limit, names) do
+    [{:limit, expr(limit, names)}] ++ kw_inspect(:with_ties, with_ties)
   end
 
   defp bool_exprs(keys, exprs, names) do
