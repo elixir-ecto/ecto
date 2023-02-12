@@ -91,7 +91,9 @@ defmodule Ecto.Query.Builder.LimitOffset do
     apply(Ecto.Queryable.to_query(query), kind, expr)
   end
 
-  @doc false
+  @doc """
+  Applies the `with_ties` value to the `limit` struct.
+  """
   def apply_limit(nil, _with_ties) do
     Builder.error!("`with_ties` can only be applied to queries containing a `limit`")
   end
