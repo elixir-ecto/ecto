@@ -971,8 +971,7 @@ defmodule Ecto.Query do
     quoted =
       if with_ties != nil do
         quote do
-          query = unquote(quoted)
-          Ecto.Query.with_ties(query, unquote(binds), unquote(with_ties))
+          Ecto.Query.with_ties(unquote(quoted), unquote(binds), unquote(with_ties))
         end
       else
         quoted

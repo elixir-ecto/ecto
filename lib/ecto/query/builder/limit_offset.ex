@@ -12,7 +12,7 @@ defmodule Ecto.Query.Builder.LimitOffset do
   def with_ties!(with_ties) when is_boolean(with_ties), do: with_ties
 
   def with_ties!(with_ties),
-    do: Builder.error! "`with_ties` must be a boolean, got: #{inspect(with_ties)}"
+    do: raise("`with_ties` expression must be a boolean, got: `#{inspect(with_ties)}`")
 
   @doc """
   Builds a quoted expression.
@@ -42,6 +42,12 @@ defmodule Ecto.Query.Builder.LimitOffset do
 
   defp escape(:with_ties, {:^, _, [expr]}, params_acc, _vars, _env) do
     {quote(do: Ecto.Query.Builder.LimitOffset.with_ties!(unquote(expr))), params_acc}
+  end
+
+  defp escape(:with_ties, expr, params_acc, vars, env) do
+    Builder.error!(
+      "`with_ties` expression must be a compile time boolean or an interpolated value using ^, got: `#{Macro.to_string(expr)}`"
+    )
   end
 
   defp build_quoted(:limit, expr, params, env) do
@@ -85,11 +91,19 @@ defmodule Ecto.Query.Builder.LimitOffset do
     apply(Ecto.Queryable.to_query(query), kind, expr)
   end
 
-  defp apply_limit(nil, _with_ties) do
-    Builder.error! "`with_ties` can only be applied to queries containing a `limit`"
+  def apply_limit(nil, _with_ties) do
+    Builder.error!("`with_ties` can only be applied to queries containing a `limit`")
   end
 
-  defp apply_limit(limit, with_ties) do
+  # Runtime
+  def apply_limit(%_{} = limit, with_ties) do
     %{limit | with_ties: with_ties}
+  end
+
+  # Compile
+  def apply_limit(limit, with_ties) do
+    quote do
+      Ecto.Query.Builder.LimitOffset.apply_limit(unquote(limit), unquote(with_ties))
+    end
   end
 end
