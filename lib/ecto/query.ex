@@ -951,7 +951,7 @@ defmodule Ecto.Query do
   @binds [:lock, :where, :or_where, :select, :distinct, :order_by, :group_by, :windows] ++
            [:having, :or_having, :limit, :offset, :preload, :update, :select_merge, :with_ctes]
 
-  defp from([{type, expr}|_t] = kw, env, count_bind, quoted, binds) when type in @binds do
+  defp from([{type, expr}|_] = kw, env, count_bind, quoted, binds) when type in @binds do
     # If all bindings are integer indexes keep AST Macro expandable to %Query{},
     # otherwise ensure that quoted code is evaluated before macro call
     quoted =
