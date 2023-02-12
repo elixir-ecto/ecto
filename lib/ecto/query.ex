@@ -2001,20 +2001,27 @@ defmodule Ecto.Query do
   end
 
    @doc """
-  A limit query expression.
+  Enables or disables ties for limit expressions.
 
-  Limits the number of rows returned from the result. Can be any expression but
-  has to evaluate to an integer value and it can't include any field.
+  If there are multiple records tied for the last position in an ordered
+  limit expression, setting this value to `true` will return all of the
+  tied records, even if the final result exceeds the specified limit.
 
-  If `limit` is given twice, it overrides the previous value.
+  Must be a boolean or evaluate to a boolean at runtime. Can only be applied
+  to queries containing a limit or an error is raised. If `limit` is redefined
+  then `with_ties` must be reapplied.
+
+  Not all databases support this option and the ones that do might list it
+  under the `FETCH` command. Databases may require a corresponding `order_by`
+  statement to evaluate ties.
 
   ## Keywords example
 
-      from(u in User, where: u.id == ^current_user, limit: 1)
+      from(p in Post, where: p.author_id == ^current_user, order_by: [desc: p.visits], limit: 10, with_ties: true)
 
   ## Expressions example
 
-      User |> where([u], u.id == ^current_user) |> limit(1)
+      Post |> where([p], p.author_id == ^current_user) |> order_by([p], desc: p.visits) |> limit(10) |> with_ties(true)
 
   """
   defmacro with_ties(query, binding \\ [], expr) do
