@@ -2000,7 +2000,7 @@ defmodule Ecto.Query do
     Builder.LimitOffset.build(:limit, query, binding, expr, __CALLER__)
   end
 
-   @doc """
+  @doc """
   Enables or disables ties for limit expressions.
 
   If there are multiple records tied for the last position in an ordered
