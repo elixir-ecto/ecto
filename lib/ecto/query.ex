@@ -949,38 +949,9 @@ defmodule Ecto.Query do
   @from_join_opts [:as, :prefix, :hints]
   @no_binds [:union, :union_all, :except, :except_all, :intersect, :intersect_all]
   @binds [:lock, :where, :or_where, :select, :distinct, :order_by, :group_by, :windows] ++
-           [:having, :or_having, :offset, :preload, :update, :select_merge, :with_ctes]
+           [:having, :or_having, :limit, :offset, :preload, :update, :select_merge, :with_ctes]
 
-  defp from([{:limit, expr}|t], env, count_bind, quoted, binds) do
-    # If all bindings are integer indexes keep AST Macro expandable to %Query{},
-    # otherwise ensure that quoted code is evaluated before macro call
-    quoted =
-      if Enum.all?(binds, fn {_, value} -> is_integer(value) end) do
-        quote do
-          Ecto.Query.limit(unquote(quoted), unquote(binds), unquote(expr))
-        end
-      else
-        quote do
-          query = unquote(quoted)
-          Ecto.Query.limit(query, unquote(binds), unquote(expr))
-        end
-      end
-
-    {t, with_ties} = collect_with_ties(t, nil)
-
-    quoted =
-      if with_ties != nil do
-        quote do
-          Ecto.Query.with_ties(unquote(quoted), unquote(binds), unquote(with_ties))
-        end
-      else
-        quoted
-      end
-
-    from(t, env, count_bind, quoted, binds)
-  end
-
-  defp from([{type, expr}|t], env, count_bind, quoted, binds) when type in @binds do
+  defp from([{type, expr}|t] = kw, env, count_bind, quoted, binds) when type in @binds do
     # If all bindings are integer indexes keep AST Macro expandable to %Query{},
     # otherwise ensure that quoted code is evaluated before macro call
     quoted =
@@ -994,6 +965,8 @@ defmodule Ecto.Query do
           Ecto.Query.unquote(type)(query, unquote(binds), unquote(expr))
         end
       end
+
+    {t, quoted} = maybe_with_ties(kw, quoted, binds)
 
     from(t, env, count_bind, quoted, binds)
   end
@@ -1036,6 +1009,23 @@ defmodule Ecto.Query do
   defp from([], _env, _count_bind, quoted, _binds) do
     quoted
   end
+
+  defp maybe_with_ties([{:limit, _expr} | t], quoted, binds) do
+    {t, with_ties} = collect_with_ties(t, nil)
+
+    quoted =
+      if with_ties != nil do
+        quote do
+          Ecto.Query.with_ties(unquote(quoted), unquote(binds), unquote(with_ties))
+        end
+      else
+        quoted
+      end
+
+    {t, quoted}
+  end
+
+  defp maybe_with_ties([_ | t], quoted, _binds), do: {t, quoted}
 
   defp to_query_binds(binds) do
     for {k, v} <- binds, do: {{k, [], nil}, v}
