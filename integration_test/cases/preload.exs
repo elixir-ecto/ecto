@@ -369,6 +369,7 @@ defmodule Ecto.Integration.PreloadTest do
       TestRepo.all(
         from u in User,
              join: pu in "posts_users",
+             on: true,
              where: pu.post_id in ^post_ids and pu.user_id == u.id,
              order_by: u.id,
              select: map(u, [:id])
@@ -383,6 +384,7 @@ defmodule Ecto.Integration.PreloadTest do
       TestRepo.all(
         from u in User,
              join: pu in "posts_users",
+             on: true,
              where: pu.post_id in ^post_ids and pu.user_id == u.id,
              order_by: u.id,
              select: {pu.post_id, map(u, [:id])}
