@@ -437,7 +437,7 @@ defmodule Ecto.Query do
 
   defmodule LimitExpr do
     @moduledoc false
-    defstruct [:expr, :file, :line, :with_ties, params: []]
+    defstruct [:expr, :file, :line, with_ties: false, params: []]
   end
 
   defmodule Tagged do
