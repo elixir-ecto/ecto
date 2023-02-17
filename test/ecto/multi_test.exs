@@ -170,6 +170,18 @@ defmodule Ecto.MultiTest do
     assert [{:comment, {:run, _fun}}] = multi.operations
   end
 
+  test "one :nil_as_error option" do
+    fun = fn _changes -> Ecto.Query.from(c in Comment, where: not is_nil(c.x)) end
+
+    multi =
+      Multi.new()
+      |> Multi.one(:comment, fun, nil_as_error: true)
+
+    assert multi.names == MapSet.new([:comment])
+
+    assert {:error, %{comment: nil}} = TestRepo.transaction(multi)
+  end
+
   test "all queryable" do
     multi =
       Multi.new()

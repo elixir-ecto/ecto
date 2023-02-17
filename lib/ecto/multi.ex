@@ -402,11 +402,15 @@ defmodule Ecto.Multi do
 
   Accepts the same arguments and options as `c:Ecto.Repo.one/2`.
 
+  ## Options
+
+    * `:nil_as_error` - Returns {:error, nil} instead of {:ok, nil}.
+
   ## Example
 
       Ecto.Multi.new()
       |> Ecto.Multi.one(:post, Post)
-      |> Ecto.Multi.one(:author, fn %{post: post} -> 
+      |> Ecto.Multi.one(:author, fn %{post: post} ->
         from(a in Author, where: a.id == ^post.author_id)
       end)
       |> MyApp.Repo.transaction()
@@ -725,7 +729,7 @@ defmodule Ecto.Multi do
   In the example above there isn't a large benefit in putting the
   `company` in the multi, because you could also access the
   `company` variable directly inside the anonymous function.
-  
+
   However, the benefit of `put/3` is when composing `Ecto.Multi`s.
   If the insert operations above were defined in another module,
   you could use `put(:company, company)` to inject changes that
@@ -890,8 +894,17 @@ defmodule Ecto.Multi do
   end
 
   defp operation_fun({:one, fun}, opts) do
+    nil_as_error = Keyword.get(opts, :nil_as_error, false)
+
     fn repo, changes ->
-      {:ok, repo.one(fun.(changes), opts)}
+      repo.one(fun.(changes), opts)
+      |> case do
+        nil when nil_as_error ->
+          {:error, nil}
+
+        result ->
+          {:ok, result}
+      end
     end
   end
 
