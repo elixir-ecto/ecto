@@ -437,7 +437,7 @@ defmodule Ecto.Query do
 
   defmodule LimitExpr do
     @moduledoc false
-    defstruct [:expr, :file, :line, :with_ties, params: []]
+    defstruct [:expr, :file, :line, with_ties: false, params: []]
   end
 
   defmodule Tagged do
@@ -2416,7 +2416,7 @@ defmodule Ecto.Query do
   def last(queryable, key), do: last(order_by(queryable, ^key), nil)
 
   defp limit do
-    %LimitExpr{expr: 1, params: [], with_ties: false, file: __ENV__.file, line: __ENV__.line}
+    %LimitExpr{expr: 1, params: [], file: __ENV__.file, line: __ENV__.line}
   end
 
   defp field(ix, field) when is_integer(ix) and is_atom(field) do
