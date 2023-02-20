@@ -1914,7 +1914,7 @@ defmodule Ecto.Query.Planner do
       {:ok, v} ->
         {:ok, v}
       _ ->
-        {:error, "value `#{inspect v}` in `#{kind}` cannot be cast to type #{inspect type}"}
+        {:error, "value `#{inspect v}` in `#{kind}` cannot be cast to type #{Ecto.Type.format(type)}"}
     end
   end
 
@@ -1923,7 +1923,7 @@ defmodule Ecto.Query.Planner do
       {:ok, v} ->
         {:ok, v}
       :error ->
-        {:error, "value `#{inspect v}` cannot be dumped to type #{inspect type}"}
+        {:error, "value `#{inspect v}` cannot be dumped to type #{Ecto.Type.format(type)}"}
     end
   end
 

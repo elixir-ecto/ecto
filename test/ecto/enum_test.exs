@@ -380,7 +380,7 @@ defmodule Ecto.EnumTest do
 
     test "rejects invalid atom" do
       msg =
-        ~r"value `:foo2` for `Ecto.EnumTest.EnumSchema.my_enum` in `insert` does not match type"
+        ~r"value `:foo2` for `Ecto.EnumTest.EnumSchema.my_enum` in `insert` does not match type #Ecto\.Enum<values: \[:foo, :bar, :baz\]>"
 
       assert_raise Ecto.ChangeError, msg, fn ->
         TestRepo.insert!(%EnumSchema{my_enum: :foo2})
@@ -391,7 +391,7 @@ defmodule Ecto.EnumTest do
 
     test "rejects invalid value" do
       msg =
-        ~r"value `\[:a, :b, :c\]` for `Ecto.EnumTest.EnumSchema.my_enum` in `insert` does not match type"
+        ~r"value `\[:a, :b, :c\]` for `Ecto.EnumTest.EnumSchema.my_enum` in `insert` does not match type #Ecto\.Enum<values: \[:foo, :bar, :baz\]>"
 
       assert_raise Ecto.ChangeError, msg, fn ->
         TestRepo.insert!(%EnumSchema{my_enum: [:a, :b, :c]})
@@ -402,7 +402,7 @@ defmodule Ecto.EnumTest do
 
     test "rejects invalid mapped string value" do
       msg =
-        ~r"value `\[:a, :b, :c\]` for `Ecto.EnumTest.EnumSchema.my_string_enum` in `insert` does not match type"
+        ~r"value `\[:a, :b, :c\]` for `Ecto.EnumTest.EnumSchema.my_string_enum` in `insert` does not match type #Ecto\.Enum<values: \[:foo, :bar, :baz\]>"
 
       assert_raise Ecto.ChangeError, msg, fn ->
         TestRepo.insert!(%EnumSchema{my_string_enum: [:a, :b, :c]})
@@ -413,7 +413,7 @@ defmodule Ecto.EnumTest do
 
     test "rejects invalid integer value" do
       msg =
-        ~r"value `\[1, 2, 3\]` for `Ecto.EnumTest.EnumSchema.my_integer_enum` in `insert` does not match type"
+        ~r"value `\[1, 2, 3\]` for `Ecto.EnumTest.EnumSchema.my_integer_enum` in `insert` does not match type #Ecto\.Enum<values: \[:foo, :bar, :baz\]>"
 
       assert_raise Ecto.ChangeError, msg, fn ->
         TestRepo.insert!(%EnumSchema{my_integer_enum: [1, 2, 3]})
@@ -453,7 +453,7 @@ defmodule Ecto.EnumTest do
     test "reject invalid values" do
       Process.put(:test_repo_all_results, {1, [[1, "foo2", nil]]})
 
-      assert_raise ArgumentError, ~r/cannot load `\"foo2\"` as type/, fn ->
+      assert_raise ArgumentError, ~r/cannot load `\"foo2\"` as type #Ecto\.Enum<values: \[:foo, :bar, :baz\]>/, fn ->
         TestRepo.all(EnumSchema)
       end
     end

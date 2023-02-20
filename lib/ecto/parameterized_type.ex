@@ -169,7 +169,17 @@ defmodule Ecto.ParameterizedType do
   """
   @callback autogenerate(params()) :: term()
 
-  @optional_callbacks autogenerate: 1
+  @doc """
+  Formats output when a ParameterizedType is printed in exceptions and
+  other logs.
+
+  Note this callback is not used when constructing `Ecto.Changeset` validation
+  errors. See the `:message` option of most `Ecto.Changeset` validation
+  functions for how to customize error messaging on a per `Ecto.Changeset` basis.
+  """
+  @callback format(params()) :: String.t()
+
+  @optional_callbacks autogenerate: 1, format: 1
 
   @doc """
   Inits a parameterized type given by `type` with `opts`.

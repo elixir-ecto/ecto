@@ -2223,7 +2223,7 @@ defmodule Ecto.Schema do
       {:ok, _} ->
         :ok
       _ ->
-        raise ArgumentError, "value #{inspect(value)} is invalid for type #{inspect(type)}, can't set default"
+        raise ArgumentError, "value #{inspect(value)} is invalid for type #{Ecto.Type.format(type)}, can't set default"
     end
   end
 
@@ -2259,7 +2259,7 @@ defmodule Ecto.Schema do
         {outer_type, check_field_type!(mod, name, inner_type, opts)}
 
       not is_atom(type) ->
-        raise ArgumentError, "invalid type #{inspect type} for field #{inspect name}"
+        raise ArgumentError, "invalid type #{Ecto.Type.format(type)} for field #{inspect name}"
 
       Ecto.Type.base?(type) ->
         type
@@ -2314,7 +2314,7 @@ defmodule Ecto.Schema do
 
       not function_exported?(typemod, :autogenerate, 1) ->
         raise ArgumentError, "field #{inspect name} does not support :autogenerate because it uses a " <>
-                             "parameterized type #{inspect type} that does not define autogenerate/1"
+                             "parameterized type #{Ecto.Type.format(type)} that does not define autogenerate/1"
 
       true ->
         Module.put_attribute(mod, :ecto_autogenerate, {[name], {typemod, :autogenerate, [params]}})
@@ -2328,12 +2328,12 @@ defmodule Ecto.Schema do
 
       Ecto.Type.primitive?(type) ->
         raise ArgumentError, "field #{inspect name} does not support :autogenerate because it uses a " <>
-                             "primitive type #{inspect type}"
+                             "primitive type #{Ecto.Type.format(type)}"
 
       # Note the custom type has already been loaded in check_type!/3
       not function_exported?(type, :autogenerate, 0) ->
         raise ArgumentError, "field #{inspect name} does not support :autogenerate because it uses a " <>
-                             "custom type #{inspect type} that does not define autogenerate/0"
+                             "custom type #{Ecto.Type.format(type)} that does not define autogenerate/0"
 
       true ->
         Module.put_attribute(mod, :ecto_autogenerate, {[name], {type, :autogenerate, []}})
@@ -2346,7 +2346,7 @@ defmodule Ecto.Schema do
         false
 
       not pk? ->
-        raise ArgumentError, "only primary keys allow :autogenerate for type #{inspect type}, " <>
+        raise ArgumentError, "only primary keys allow :autogenerate for type #{Ecto.Type.format(type)}, " <>
                              "field #{inspect name} is not a primary key"
 
       Module.get_attribute(mod, :ecto_autogenerate_id) ->

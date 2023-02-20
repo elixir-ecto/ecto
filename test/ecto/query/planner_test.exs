@@ -831,11 +831,11 @@ defmodule Ecto.Query.PlannerTest do
       normalize(Post |> where([p], p.title == :atoms_are_not_strings))
     end
 
-    assert_raise Ecto.QueryError, ~r/value `:unknown_status` cannot be dumped to type \{:parameterized, Ecto.Enum/, fn ->
+    assert_raise Ecto.QueryError, ~r/value `:unknown_status` cannot be dumped to type #Ecto.Enum<values: \[:draft, :published, :deleted\]>/, fn ->
       normalize(Post |> where([p], p.status == :unknown_status))
     end
 
-    assert_raise Ecto.Query.CastError, ~r/value `:pinned` in `where` cannot be cast to type {:parameterized, Ecto.Enum/, fn ->
+    assert_raise Ecto.Query.CastError, ~r/value `:pinned` in `where` cannot be cast to type #Ecto.Enum<values: \[:draft, :published, :deleted\]>/, fn ->
       normalize(Post |> where([p], p.status == ^:pinned))
     end
   end
