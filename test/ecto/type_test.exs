@@ -1032,6 +1032,7 @@ defmodule Ecto.TypeTest do
     test "composite non parameterized type" do
       # fallback to `inspect(type)`
       assert Ecto.Type.format({:array, :id}) == "{:array, :id}"
+      assert Ecto.Type.format({:array, {:map, :integer}}) == "{:array, {:map, :integer}}"
     end
   end
 

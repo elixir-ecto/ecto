@@ -1212,8 +1212,8 @@ defmodule Ecto.Type do
   @doc """
   Format type for error messaging and logs.
   """
-  def format({:array, type}) do
-    "{:array, #{format(type)}}"
+  def format({composite, type}) when composite in [:array, :map] do
+    "{#{inspect(composite)}, #{format(type)}}"
   end
 
   def format({:parameterized, type, params}) do
