@@ -2068,7 +2068,7 @@ defmodule Ecto.Changeset do
   @doc """
   Returns a list of fields that are present.
 
-  Each field passed into this function will have its prescence evaluated
+  Each field passed into this function will have its presence evaluated
   according to the same rules as `validate_required/3`. If it is present,
   it is returned. If it is not present, it is removed from the list.
 
@@ -2088,12 +2088,11 @@ defmodule Ecto.Changeset do
       []
 
   """
-  @spec filter_required(t, list | atom) :: list
+  @spec filter_required(t, [atom()] | atom()) :: [atom()]
   def filter_required(%Changeset{} = changeset, fields) when not is_nil(fields) do
-    %{types: types} = changeset
     fields = List.wrap(fields)
 
-    Enum.filter(fields, &(not invalid_required_field!(changeset, types, &1)))
+    Enum.filter(fields, &(not invalid_required_field!(changeset, changeset.types, &1)))
   end
 
   defp invalid_required_field!(changeset, types, field) do
@@ -2271,12 +2270,12 @@ defmodule Ecto.Changeset do
     case types do
       %{^field => {:assoc, %Ecto.Association.Has{cardinality: :many}}} ->
         IO.warn("attempting to validate has_many association #{inspect(field)} " <>
-                "with validate_required/3 which has no effect. You can pass the " <>
+                "is required, which has no effect. You can pass the " <>
                 ":required option to Ecto.Changeset.cast_assoc/3 to achieve this.")
 
       %{^field => {:embed, %Ecto.Embedded{cardinality: :many}}} ->
         IO.warn("attempting to validate embed_many field #{inspect(field)} " <>
-                "with validate_required/3 which has no effect. You can pass the " <>
+                "is required, which has no effect. You can pass the " <>
                 ":required option to Ecto.Changeset.cast_embed/3 to achieve this.")
 
       _ ->

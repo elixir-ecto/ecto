@@ -1062,23 +1062,18 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "filter_required/2" do
-    required_fields =
+    # When valid
+    required =
       changeset(%{"body" => "something"})
       |> filter_required([:title, :body])
 
-    assert [:body] == required_fields
+    assert required == [:body]
 
-    required_fields =
-      changeset(%{"body" => "something", "title" => "Title"})
-      |> filter_required([:title, :body])
-
-    assert [:title, :body] == required_fields
-
-    required_fields =
-      changeset(%{})
-      |> filter_required([:title, :body])
-
-    assert [] == required_fields
+    # When unknown field
+    assert_raise ArgumentError, ~r/unknown field :bad in/, fn  ->
+      changeset(%{"title" => "hello", "body" => "something"})
+      |> validate_required(:bad)
+    end
   end
 
   test "validate_format/3" do
