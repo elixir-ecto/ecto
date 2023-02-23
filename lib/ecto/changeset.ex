@@ -2049,9 +2049,7 @@ defmodule Ecto.Changeset do
 
     fields_with_errors =
       for field <- fields,
-          ensure_field_not_many!(types, field),
-          missing?(changeset, field),
-          ensure_field_exists!(changeset, types, field),
+          invalid_required_field!(changeset, types, field),
           is_nil(errors[field]),
           do: field
 
@@ -2065,6 +2063,88 @@ defmodule Ecto.Changeset do
         changes = Map.drop(changes, fields_with_errors)
         %{changeset | changes: changes, required: fields ++ required, errors: new_errors ++ errors, valid?: false}
     end
+  end
+
+  @doc """
+  Validates at least one of the fields is present in the changeset.
+
+  See `validate_required/3` for more details on what constitues a present field.
+  Note that unlike `validate_required/3`, this function will store its validations
+  under the `changeset.validations` key instead of the `changeset.required` key.
+  It will also add an error even if another one already exists on the field.
+
+  """
+  @spec validate_any_required(t, list | atom, Keyword.t) :: t
+  def validate_any_required(%Changeset{} = changeset, fields, opts \\ [])
+      when not is_nil(fields) do
+    %{validations: validations, errors: errors, types: types} = changeset
+    fields = List.wrap(fields)
+
+    valid_field =
+      Enum.reduce_while(fields, nil, fn field, acc ->
+        if not invalid_required_field!(changeset, types, field),
+          do: {:halt, field},
+          else: {:cont, acc}
+      end)
+
+    if valid_field do
+      new_validation = {valid_field, {:any_required, fields: fields}}
+      %{changeset | validations: [new_validation | validations]}
+    else
+      message = message(opts, "at least one field must be present")
+      new_error = {hd(fields), {message, [validation: :any_required, fields: fields]}}
+      %{changeset | errors: [new_error | errors], valid?: false}
+    end
+  end
+
+  @doc """
+  Validates exactly one of the fields is present in the changeset.
+
+  See `validate_required/3` for more details on what constitues a present field.
+  Note that unlike `validate_required/3`, this function will store its validations
+  under the `changeset.validations` key instead of the `changeset.required` key.
+  It will also add an error even if another one already exists on the field.
+
+  """
+  @spec validate_one_of_required(t, list | atom, Keyword.t) :: t
+  def validate_one_of_required(%Changeset{} = changeset, fields, opts \\ [])
+      when not is_nil(fields) do
+    %{validations: validations, errors: errors, types: types} = changeset
+    fields = List.wrap(fields)
+
+    valid_fields =
+      Enum.reduce_while(fields, [], fn field, acc ->
+        acc =
+          if not invalid_required_field!(changeset, types, field),
+            do: [field | acc],
+            else: acc
+
+        case acc do
+          [_, _] -> {:halt, acc}
+          _ -> {:cont, acc}
+        end
+      end)
+
+    case valid_fields do
+      [valid_field] ->
+        new_validation = {valid_field, {:one_of_required, fields: fields}}
+        %{changeset | validations: [new_validation | validations]}
+
+      [] ->
+        message = message(opts, "one field must be present")
+        new_error = {hd(fields), {message, [validation: :one_of_required, fields: fields]}}
+        %{changeset | errors: [new_error | errors], valid?: false}
+
+      [valid_field, _] ->
+        message = message(opts, "more than one field can't be present")
+        new_error = {valid_field, {message, [validation: :one_of_required, fields: fields]}}
+        %{changeset | errors: [new_error | errors], valid?: false}
+    end
+  end
+
+  defp invalid_required_field!(changeset, types, field) do
+    ensure_field_not_many!(types, field) && missing?(changeset, field) &&
+      ensure_field_exists!(changeset, types, field)
   end
 
   @doc """
