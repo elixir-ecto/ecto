@@ -2138,14 +2138,10 @@ defmodule Ecto.Changeset do
         new_validation = {valid_field, {:one_of_required, fields: fields}}
         %{changeset | validations: [new_validation | validations]}
 
-      [] ->
+      _ ->
+        error_field = if valid_fields == [], do: hd(fields), else: hd(valid_fields)
         message = message(opts, "exactly one field must be present")
-        new_error = {hd(fields), {message, [validation: :one_of_required, fields: fields]}}
-        %{changeset | errors: [new_error | errors], valid?: false}
-
-      [valid_field, _] ->
-        message = message(opts, "exactly one field must be present")
-        new_error = {valid_field, {message, [validation: :one_of_required, fields: fields]}}
+        new_error = {error_field, {message, [validation: :one_of_required, fields: fields]}}
         %{changeset | errors: [new_error | errors], valid?: false}
     end
   end
