@@ -2088,7 +2088,7 @@ defmodule Ecto.Changeset do
       []
 
   """
-  @spec filter_required(t, [atom()] | atom()) :: [atom()]
+  @spec filter_required(t(), [atom()] | atom()) :: [atom()]
   def filter_required(%Changeset{} = changeset, fields) when not is_nil(fields) do
     fields = List.wrap(fields)
 
