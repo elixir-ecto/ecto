@@ -1069,6 +1069,12 @@ defmodule Ecto.ChangesetTest do
 
     assert required == [:body]
 
+    required =
+      changeset(%Post{title: "title"}, %{"body" => "something"})
+      |> filter_required([:title, :body])
+
+    assert required == [:title, :body]
+
     # When unknown field
     assert_raise ArgumentError, ~r/unknown field :bad in/, fn  ->
       changeset(%{"title" => "hello", "body" => "something"})
