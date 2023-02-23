@@ -2066,116 +2066,34 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Validates at least one of the fields is present in the changeset.
+  Returns a list of fields that are required but not present.
 
-  See `validate_required/3` for more details on what constitues a present field.
-  Note that unlike `validate_required/3`, this function will store its validations
-  under the `changeset.validations` key instead of the `changeset.required` key.
-  It will also add an error even if another one already exists on the field.
+  Each field passed into this function will have its prescence evaluated
+  according to the same rules as `validate_required/3`. If the field is
+  present, it is removed from the list. If it is not present, it is returned.
 
-  ## Options
-
-    * `:message` - the message on failure, defaults to "at least one field must be present"
-
-  ## Examples
-
-      iex> changeset = cast(%Post{}, %{title: "Title"}, [:title])
-      iex> changeset = validate_any_required(changeset, [:title, :body])
-      iex> changeset.valid?
-      true
-
-      iex> changeset = cast(%Post{}, %{title: "Title", body: "Body"}, [:title, :body])
-      iex> changeset = validate_any_required(changeset, [:title, :body])
-      iex> changeset.valid?
-      true
-
-      iex> changeset = cast(%Post{}, %{color: "Red"}, [:color])
-      iex> changeset = validate_any_required(changeset, [:title, :body])
-      iex> changeset.valid?
-      false
-
-  """
-  @spec validate_any_required(t, list | atom, Keyword.t) :: t
-  def validate_any_required(%Changeset{} = changeset, fields, opts \\ []) when not is_nil(fields) do
-    %{validations: validations, errors: errors, types: types} = changeset
-    fields = List.wrap(fields)
-
-    valid_field =
-      Enum.reduce_while(fields, nil, fn field, acc ->
-        if not invalid_required_field!(changeset, types, field),
-          do: {:halt, field},
-          else: {:cont, acc}
-      end)
-
-    if valid_field do
-      new_validation = {valid_field, {:any_required, fields: fields}}
-      %{changeset | validations: [new_validation | validations]}
-    else
-      message = message(opts, "at least one field must be present")
-      new_error = {hd(fields), {message, [validation: :any_required, fields: fields]}}
-      %{changeset | errors: [new_error | errors], valid?: false}
-    end
-  end
-
-  @doc """
-  Validates exactly one of the fields is present in the changeset.
-
-  See `validate_required/3` for more details on what constitues a present field.
-  Note that unlike `validate_required/3`, this function will store its validations
-  under the `changeset.validations` key instead of the `changeset.required` key.
-  It will also add an error even if another one already exists on the field.
-
-  ## Options
-
-    * `:message` - the message on failure, defaults to "exactly one field must be present"
+  This is useful when performing complex validations that are not possible with
+  `validate_required/3`. For example, evaluating whether at least one field
+  from a list is present or evaluating that exactly one field from a list is
+  present.
 
   ## Examples
 
       iex> changeset = cast(%Post{}, %{title: "Title"}, [:title])
-      iex> changeset = validate_one_of_required(changeset, [:title, :body])
-      iex> changeset.valid?
-      true
+      iex> filter_required(changeset, [:title, :body])
+      [:body]
 
       iex> changeset = cast(%Post{}, %{title: "Title", body: "Body"}, [:title, :body])
-      iex> changeset = validate_one_of_required(changeset, [:title, :body])
-      iex> changeset.valid?
-      false
-
-      iex> changeset = cast(%Post{}, %{color: "Red"}, [:color])
-      iex> changeset = validate_one_of_required(changeset, [:title, :body])
-      iex> changeset.valid?
-      false
+      iex> filter_required(changeset, [:title, :body])
+      []
 
   """
-  @spec validate_one_of_required(t, list | atom, Keyword.t) :: t
-  def validate_one_of_required(%Changeset{} = changeset, fields, opts \\ []) when not is_nil(fields) do
-    %{validations: validations, errors: errors, types: types} = changeset
+  @spec filter_required(t, list | atom) :: t
+  def filter_required(%Changeset{} = changeset, fields) when not is_nil(fields) do
+    %{types: types} = changeset
     fields = List.wrap(fields)
 
-    valid_fields =
-      Enum.reduce_while(fields, [], fn field, acc ->
-        acc =
-          if not invalid_required_field!(changeset, types, field),
-            do: [field | acc],
-            else: acc
-
-        case acc do
-          [_, _] -> {:halt, acc}
-          _ -> {:cont, acc}
-        end
-      end)
-
-    case valid_fields do
-      [valid_field] ->
-        new_validation = {valid_field, {:one_of_required, fields: fields}}
-        %{changeset | validations: [new_validation | validations]}
-
-      _ ->
-        error_field = if valid_fields == [], do: hd(fields), else: hd(valid_fields)
-        message = message(opts, "exactly one field must be present")
-        new_error = {error_field, {message, [validation: :one_of_required, fields: fields]}}
-        %{changeset | errors: [new_error | errors], valid?: false}
-    end
+    Enum.filter(fields, &invalid_required_field!(changeset, types, &1))
   end
 
   defp invalid_required_field!(changeset, types, field) do

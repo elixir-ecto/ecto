@@ -1061,78 +1061,18 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == [topics: {"can't be blank", [validation: :required]}]
   end
 
-  test "validate_any_required/3" do
-    # When valid
-    changeset =
+  test "filter_required/2" do
+    required_fields =
       changeset(%{"body" => "something"})
-      |> validate_any_required([:title, :body])
+      |> filter_required([:title, :body])
 
-    assert changeset.valid?
-    assert changeset.errors == []
-    assert changeset.validations == [body: {:any_required, fields: [:title, :body]}]
+    assert [:title] == required_fields
 
-    # When invalid
-    changeset =
-      changeset(%{"color" => "red"})
-      |> validate_any_required([:title, :body])
+    required_fields =
+      changeset(%{"body" => "something", "title" => "Title"})
+      |> filter_required([:title, :body])
 
-    message = "at least one field must be present"
-    refute changeset.valid?
-    assert changeset.errors == [title: {message, [validation: :any_required, fields: [:title, :body]]}]
-    assert changeset.validations == []
-
-    # Custom error message
-    message = "custom message"
-
-    changeset =
-      changeset(%{"color" => "red"})
-      |> validate_any_required([:title, :body], message: message)
-
-    refute changeset.valid?
-    assert changeset.errors == [title: {message, [validation: :any_required, fields: [:title, :body]]}]
-    assert changeset.validations == []
-  end
-
-  test "validate_one_of_required/3" do
-    # When valid
-    changeset =
-      changeset(%{"body" => "something"})
-      |> validate_one_of_required([:title, :body])
-
-    assert changeset.valid?
-    assert changeset.errors == []
-    assert changeset.validations == [body: {:one_of_required, fields: [:title, :body]}]
-
-    # When no fields are present
-    changeset =
-      changeset(%{"color" => "red"})
-      |> validate_one_of_required([:title, :body])
-
-    message = "exactly one field must be present"
-    refute changeset.valid?
-    assert changeset.errors == [title: {message, [validation: :one_of_required, fields: [:title, :body]]}]
-    assert changeset.validations == []
-
-    # When more than one field present
-    changeset =
-      changeset(%{"title" => "title", "body" => "something"})
-      |> validate_one_of_required([:title, :body])
-
-    message = "exactly one field must be present"
-    refute changeset.valid?
-    assert changeset.errors == [body: {message, [validation: :one_of_required, fields: [:title, :body]]}]
-    assert changeset.validations == []
-
-    # Custom error message
-    message = "custom message"
-
-    changeset =
-      changeset(%{"color" => "red"})
-      |> validate_one_of_required([:title, :body], message: message)
-
-    refute changeset.valid?
-    assert changeset.errors == [title: {message, [validation: :one_of_required, fields: [:title, :body]]}]
-    assert changeset.validations == []
+    assert [] == required_fields
   end
 
   test "validate_format/3" do
