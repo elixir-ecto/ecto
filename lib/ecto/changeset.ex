@@ -2066,7 +2066,7 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Returns a list of fields that are present.
+  Returns which fields in a list would pass required validations (the fields that are present).
 
   Each field passed into this function will have its presence evaluated
   according to the same rules as `validate_required/3`. If it is present,
