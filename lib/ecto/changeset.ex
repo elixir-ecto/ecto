@@ -2077,6 +2077,23 @@ defmodule Ecto.Changeset do
 
     * `:message` - the message on failure, defaults to "at least one field must be present"
 
+  ## Examples
+
+      iex> changeset = cast(%Post{}, %{title: "Title"}, [:title])
+      iex> changeset = validate_any_required(changeset, [:title, :body])
+      iex> changeset.valid?
+      true
+
+      iex> changeset = cast(%Post{}, %{title: "Title", body: "Body"}, [:title, :body])
+      iex> changeset = validate_any_required(changeset, [:title, :body])
+      iex> changeset.valid?
+      true
+
+      iex> changeset = cast(%Post{}, %{color: "Red"}, [:color])
+      iex> changeset = validate_any_required(changeset, [:title, :body])
+      iex> changeset.valid?
+      false
+
   """
   @spec validate_any_required(t, list | atom, Keyword.t) :: t
   def validate_any_required(%Changeset{} = changeset, fields, opts \\ [])
@@ -2112,6 +2129,23 @@ defmodule Ecto.Changeset do
   ## Options
 
     * `:message` - the message on failure, defaults to "exactly one field must be present"
+
+  ## Examples
+
+      iex> changeset = cast(%Post{}, %{title: "Title"}, [:title])
+      iex> changeset = validate_one_of_required(changeset, [:title, :body])
+      iex> changeset.valid?
+      true
+
+      iex> changeset = cast(%Post{}, %{title: "Title", body: "Body"}, [:title, :body])
+      iex> changeset = validate_one_of_required(changeset, [:title, :body])
+      iex> changeset.valid?
+      false
+
+      iex> changeset = cast(%Post{}, %{color: "Red"}, [:color])
+      iex> changeset = validate_one_of_required(changeset, [:title, :body])
+      iex> changeset.valid?
+      false
 
   """
   @spec validate_one_of_required(t, list | atom, Keyword.t) :: t
