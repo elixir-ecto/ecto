@@ -2073,6 +2073,10 @@ defmodule Ecto.Changeset do
   under the `changeset.validations` key instead of the `changeset.required` key.
   It will also add an error even if another one already exists on the field.
 
+  ## Options
+
+    * `:message` - the message on failure, defaults to "at least one field must be present"
+
   """
   @spec validate_any_required(t, list | atom, Keyword.t) :: t
   def validate_any_required(%Changeset{} = changeset, fields, opts \\ [])
@@ -2105,6 +2109,10 @@ defmodule Ecto.Changeset do
   under the `changeset.validations` key instead of the `changeset.required` key.
   It will also add an error even if another one already exists on the field.
 
+  ## Options
+
+    * `:message` - the message on failure, defaults to "exactly one field must be present"
+
   """
   @spec validate_one_of_required(t, list | atom, Keyword.t) :: t
   def validate_one_of_required(%Changeset{} = changeset, fields, opts \\ [])
@@ -2131,12 +2139,12 @@ defmodule Ecto.Changeset do
         %{changeset | validations: [new_validation | validations]}
 
       [] ->
-        message = message(opts, "one field must be present")
+        message = message(opts, "exactly one field must be present")
         new_error = {hd(fields), {message, [validation: :one_of_required, fields: fields]}}
         %{changeset | errors: [new_error | errors], valid?: false}
 
       [valid_field, _] ->
-        message = message(opts, "more than one field can't be present")
+        message = message(opts, "exactly one field must be present")
         new_error = {valid_field, {message, [validation: :one_of_required, fields: fields]}}
         %{changeset | errors: [new_error | errors], valid?: false}
     end

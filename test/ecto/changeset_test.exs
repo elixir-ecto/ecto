@@ -1108,7 +1108,7 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"color" => "red"})
       |> validate_one_of_required([:title, :body])
 
-    message = "one field must be present"
+    message = "exactly one field must be present"
     refute changeset.valid?
     assert changeset.errors == [title: {message, [validation: :one_of_required, fields: [:title, :body]]}]
     assert changeset.validations == []
@@ -1118,7 +1118,7 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"title" => "title", "body" => "something"})
       |> validate_one_of_required([:title, :body])
 
-    message = "more than one field can't be present"
+    message = "exactly one field must be present"
     refute changeset.valid?
     assert changeset.errors == [body: {message, [validation: :one_of_required, fields: [:title, :body]]}]
     assert changeset.validations == []
