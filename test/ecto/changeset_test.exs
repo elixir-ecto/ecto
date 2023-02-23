@@ -1072,7 +1072,7 @@ defmodule Ecto.ChangesetTest do
     # When unknown field
     assert_raise ArgumentError, ~r/unknown field :bad in/, fn  ->
       changeset(%{"title" => "hello", "body" => "something"})
-      |> validate_required(:bad)
+      |> filter_required(:bad)
     end
   end
 
