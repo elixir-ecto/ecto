@@ -2069,8 +2069,8 @@ defmodule Ecto.Changeset do
   Returns a list of fields that are present.
 
   Each field passed into this function will have its prescence evaluated
-  according to the same rules as `validate_required/3`. If the field is
-  not present, it is removed from the list. If it is present, it is returned.
+  according to the same rules as `validate_required/3`. If it is present,
+  it is returned. If it is not present, it is removed from the list.
 
   This is useful when performing complex validations that are not possible with
   `validate_required/3`. For example, evaluating whether at least one field
@@ -2088,7 +2088,7 @@ defmodule Ecto.Changeset do
       []
 
   """
-  @spec filter_required(t, list | atom) :: t
+  @spec filter_required(t, list | atom) :: list
   def filter_required(%Changeset{} = changeset, fields) when not is_nil(fields) do
     %{types: types} = changeset
     fields = List.wrap(fields)
