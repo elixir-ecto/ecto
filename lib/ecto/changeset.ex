@@ -2096,8 +2096,7 @@ defmodule Ecto.Changeset do
 
   """
   @spec validate_any_required(t, list | atom, Keyword.t) :: t
-  def validate_any_required(%Changeset{} = changeset, fields, opts \\ [])
-      when not is_nil(fields) do
+  def validate_any_required(%Changeset{} = changeset, fields, opts \\ []) when not is_nil(fields) do
     %{validations: validations, errors: errors, types: types} = changeset
     fields = List.wrap(fields)
 
@@ -2149,8 +2148,7 @@ defmodule Ecto.Changeset do
 
   """
   @spec validate_one_of_required(t, list | atom, Keyword.t) :: t
-  def validate_one_of_required(%Changeset{} = changeset, fields, opts \\ [])
-      when not is_nil(fields) do
+  def validate_one_of_required(%Changeset{} = changeset, fields, opts \\ []) when not is_nil(fields) do
     %{validations: validations, errors: errors, types: types} = changeset
     fields = List.wrap(fields)
 
