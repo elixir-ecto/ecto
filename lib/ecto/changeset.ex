@@ -2066,11 +2066,11 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Returns a list of fields that are required but not present.
+  Returns a list of fields that are present.
 
   Each field passed into this function will have its prescence evaluated
   according to the same rules as `validate_required/3`. If the field is
-  present, it is removed from the list. If it is not present, it is returned.
+  not present, it is removed from the list. If it is present, it is returned.
 
   This is useful when performing complex validations that are not possible with
   `validate_required/3`. For example, evaluating whether at least one field
@@ -2081,9 +2081,9 @@ defmodule Ecto.Changeset do
 
       iex> changeset = cast(%Post{}, %{title: "Title"}, [:title])
       iex> filter_required(changeset, [:title, :body])
-      [:body]
+      [:title]
 
-      iex> changeset = cast(%Post{}, %{title: "Title", body: "Body"}, [:title, :body])
+      iex> changeset = cast(%Post{}, %{color: "Red"}, [:color])
       iex> filter_required(changeset, [:title, :body])
       []
 
@@ -2093,7 +2093,7 @@ defmodule Ecto.Changeset do
     %{types: types} = changeset
     fields = List.wrap(fields)
 
-    Enum.filter(fields, &invalid_required_field!(changeset, types, &1))
+    Enum.filter(fields, &(not invalid_required_field!(changeset, types, &1)))
   end
 
   defp invalid_required_field!(changeset, types, field) do

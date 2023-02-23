@@ -1066,10 +1066,16 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"body" => "something"})
       |> filter_required([:title, :body])
 
-    assert [:title] == required_fields
+    assert [:body] == required_fields
 
     required_fields =
       changeset(%{"body" => "something", "title" => "Title"})
+      |> filter_required([:title, :body])
+
+    assert [:title, :body] == required_fields
+
+    required_fields =
+      changeset(%{})
       |> filter_required([:title, :body])
 
     assert [] == required_fields
