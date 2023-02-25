@@ -821,8 +821,9 @@ defmodule Ecto.Schema do
 
     * `:defaults` - Default values to use when building the association.
       It may be a keyword list of options that override the association schema
-      or a atom/`{module, function, args}` that receives the struct and the owner as
-      arguments. For example, if you set `Post.has_many :comments, defaults: [public: true]`,
+      or an `atom`/`{module, function, args}` that receives the association struct
+      and the owner struct as arguments. For example, if you set
+      `Post.has_many :comments, defaults: [public: true]`,
       then when using `Ecto.build_assoc(post, :comments)`, the comment will have
       `comment.public == true`. Alternatively, you can set it to
       `Post.has_many :comments, defaults: :update_comment`, which will invoke
@@ -990,12 +991,21 @@ defmodule Ecto.Schema do
   `has_one :through` should be used instead, as in the example at the beginning
   of this section:
 
-      # How we defined the association above
+      # How we defined the association above in Comments
       has_one :post_permalink, through: [:post, :permalink]
 
       # Get a preloaded comment
       [comment] = Repo.all(Comment) |> Repo.preload(:post_permalink)
       comment.post_permalink #=> %Permalink{...}
+
+  If possible, Ecto will avoid traversing intermediate associations in
+  queries. For example, in the example above, `Comment` has a `post_id`
+  column (defined by `belongs_to :post`) and it is expected for
+  `Permalink` to have the same. Therefore, when preloading the permalinks,
+  Ecto may avoid traversing the "posts" table altogether. Of course, this
+  assumes your database guarantees those references are valid, which can
+  be done by defining foreign key constraints and references your database
+  (often done via `EctoSQL` migrations).
 
   Note `:through` associations are read-only. For example, you cannot use
   `Ecto.Changeset.cast_assoc/3` to modify through associations.
@@ -1043,8 +1053,9 @@ defmodule Ecto.Schema do
 
     * `:defaults` - Default values to use when building the association.
       It may be a keyword list of options that override the association schema
-      or as a atom/`{module, function, args}` that receives the struct and the
-      owner as arguments. For example, if you set `Post.has_one :banner, defaults: [public: true]`,
+      or an `atom`/`{module, function, args}` that receives the association struct
+      and the owner struct as arguments. For example, if you set
+      `Post.has_one :banner, defaults: [public: true]`,
       then when using `Ecto.build_assoc(post, :banner)`, the banner will have
       `banner.public == true`. Alternatively, you can set it to
       `Post.has_one :banner, defaults: :update_banner`, which will invoke
@@ -1115,8 +1126,9 @@ defmodule Ecto.Schema do
 
     * `:defaults` - Default values to use when building the association.
       It may be a keyword list of options that override the association schema
-      or a atom/`{module, function, args}` that receives the struct and the owner as
-      arguments. For example, if you set `Comment.belongs_to :post, defaults: [public: true]`,
+      or an `atom`/`{module, function, args}` that receives the association struct
+      and the owner struct as arguments. For example, if you set
+      `Comment.belongs_to :post, defaults: [public: true]`,
       then when using `Ecto.build_assoc(comment, :post)`, the post will have
       `post.public == true`. Alternatively, you can set it to
       `Comment.belongs_to :post, defaults: :update_post`, which will invoke
@@ -1334,8 +1346,9 @@ defmodule Ecto.Schema do
 
     * `:defaults` - Default values to use when building the association.
       It may be a keyword list of options that override the association schema
-      or a atom/`{module, function, args}` that receives the struct and the owner as
-      arguments. For example, if you set `Post.many_to_many :tags, defaults: [public: true]`,
+      or an `atom`/`{module, function, args}` that receives the association struct
+      and the owner struct as arguments. For example, if you set
+      `Post.many_to_many :tags, defaults: [public: true]`,
       then when using `Ecto.build_assoc(post, :tags)`, the tag will have
       `tag.public == true`. Alternatively, you can set it to
       `Post.many_to_many :tags, defaults: :update_tag`, which will invoke
