@@ -47,7 +47,7 @@ defmodule Ecto.Repo do
       Defaults to `10`
 
     * `:telemetry_prefix` - we recommend adapters to publish events
-      using the `Telemetry` library. By default, the telemetry prefix
+      using the [`:telemetry`](`:telemetry`) library. By default, the telemetry prefix
       is based on the module name, so if your module is called
       `MyApp.Repo`, the prefix will be `[:my_app, :repo]`. See the
       "Telemetry Events" section to see which events we recommend
