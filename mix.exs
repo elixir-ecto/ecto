@@ -60,7 +60,6 @@ defmodule Ecto.MixProject do
       skip_undefined_reference_warnings_on: ["CHANGELOG.md"],
       extras: extras(),
       groups_for_extras: groups_for_extras(),
-      deps: deps_for_docs(),
       groups_for_functions: [
         group_for_function("Query API"),
         group_for_function("Schema API"),
@@ -139,12 +138,6 @@ defmodule Ecto.MixProject do
       Introduction: ~r/guides\/introduction\/.?/,
       Cheatsheets: ~r/cheatsheets\/.?/,
       "How-To's": ~r/guides\/howtos\/.?/
-    ]
-  end
-
-  defp deps_for_docs do
-    [
-      telemetry: "https://hexdocs.pm/telemetry"
     ]
   end
 
