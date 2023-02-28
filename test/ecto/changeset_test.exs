@@ -1033,7 +1033,7 @@ defmodule Ecto.ChangesetTest do
     end
 
     # When field is not an atom
-    assert_raise ArgumentError, ~r/expects field names to be atoms, got: `"title"`/, fn ->
+    assert_raise ArgumentError, ~r/expect field names to be atoms, got: `"title"`/, fn ->
       changeset(%{"title" => "hello"})
       |> validate_required("title")
     end
@@ -1061,24 +1061,17 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == [topics: {"can't be blank", [validation: :required]}]
   end
 
-  test "filter_required/2" do
+  test "field_missing?/2" do
     # When valid
-    required =
-      changeset(%{"body" => "something"})
-      |> filter_required([:title, :body])
+    changeset = cast(%Post{}, %{color: "Red"}, [:color])
+    missing_fields = Enum.filter([:title, :body], &field_missing?(changeset, &1))
 
-    assert required == [:body]
-
-    required =
-      changeset(%Post{title: "title"}, %{"body" => "something"})
-      |> filter_required([:title, :body])
-
-    assert required == [:title, :body]
+    assert missing_fields == [:title, :body]
 
     # When unknown field
     assert_raise ArgumentError, ~r/unknown field :bad in/, fn  ->
       changeset(%{"title" => "hello", "body" => "something"})
-      |> filter_required(:bad)
+      |> field_missing?(:bad)
     end
   end
 
