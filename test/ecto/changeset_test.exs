@@ -1064,7 +1064,7 @@ defmodule Ecto.ChangesetTest do
   test "field_missing?/2" do
     # When valid
     changeset = cast(%Post{}, %{color: "Red"}, [:color])
-    missing_fields = Enum.filter([:title, :body], &field_missing?(changeset, &1))
+    missing_fields = Enum.filter([:title, :body, :color], &field_missing?(changeset, &1))
 
     assert missing_fields == [:title, :body]
 
