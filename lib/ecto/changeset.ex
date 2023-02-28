@@ -2044,14 +2044,12 @@ defmodule Ecto.Changeset do
   """
   @spec validate_required(t, list | atom, Keyword.t) :: t
   def validate_required(%Changeset{} = changeset, fields, opts \\ []) when not is_nil(fields) do
-    %{required: required, errors: errors, changes: changes, types: types} = changeset
+    %{required: required, errors: errors, changes: changes} = changeset
     fields = List.wrap(fields)
 
     fields_with_errors =
       for field <- fields,
-          ensure_field_not_many!(types, field),
-          missing?(changeset, field),
-          ensure_field_exists!(changeset, types, field),
+          field_missing?(changeset, field),
           is_nil(errors[field]),
           do: field
 
@@ -2065,6 +2063,36 @@ defmodule Ecto.Changeset do
         changes = Map.drop(changes, fields_with_errors)
         %{changeset | changes: changes, required: fields ++ required, errors: new_errors ++ errors, valid?: false}
     end
+  end
+
+  @doc """
+  Determines whether a field is missing in a changeset.
+
+  The field passed into this function will have its presence evaluated
+  according to the same rules as `validate_required/3`. 
+
+  This is useful when performing complex validations that are not possible with
+  `validate_required/3`. For example, evaluating whether at least one field
+  from a list is present or evaluating that exactly one field from a list is
+  present.
+
+  ## Examples
+
+      iex> changeset = cast(%Post{}, %{color: "Red"}, [:color])
+      iex> missing_fields = Enum.filter([:title, :body], &field_missing?(changeset, &1))
+      iex> changeset =
+      ...>   case missing_fields do
+      ...>     [_, _] -> add_error(changeset, :title, "at least one of `:title` or `:body` must be present")
+      ...>     _ -> changeset    
+      ...>   end
+      ...> changeset.errors
+      [title: {"at least one of `:title` or `:body` must be present", []}]
+
+  """
+  @spec field_missing?(t(), atom()) :: boolean()
+  def field_missing?(%Changeset{} = changeset, field) when not is_nil(field) do
+    ensure_field_not_many!(changeset.types, field) && missing?(changeset, field) &&
+      ensure_field_exists!(changeset, changeset.types, field)
   end
 
   @doc """
@@ -2236,13 +2264,13 @@ defmodule Ecto.Changeset do
   defp ensure_field_not_many!(types, field) do
     case types do
       %{^field => {:assoc, %Ecto.Association.Has{cardinality: :many}}} ->
-        IO.warn("attempting to validate has_many association #{inspect(field)} " <>
-                "with validate_required/3 which has no effect. You can pass the " <>
+        IO.warn("attempting to determine the presence of has_many association #{inspect(field)} " <>
+                "with validate_required/3 or field_missing?/2 which has no effect. You can pass the " <>
                 ":required option to Ecto.Changeset.cast_assoc/3 to achieve this.")
 
       %{^field => {:embed, %Ecto.Embedded{cardinality: :many}}} ->
-        IO.warn("attempting to validate embed_many field #{inspect(field)} " <>
-                "with validate_required/3 which has no effect. You can pass the " <>
+        IO.warn("attempting to determine the presence of embed_many field #{inspect(field)} " <>
+                "with validate_required/3 or field_missing?/2 which has no effect. You can pass the " <>
                 ":required option to Ecto.Changeset.cast_embed/3 to achieve this.")
 
       _ ->
@@ -2253,10 +2281,11 @@ defmodule Ecto.Changeset do
   defp missing?(changeset, field) when is_atom(field) do
     case get_field(changeset, field) do
       %{__struct__: Ecto.Association.NotLoaded} ->
-        raise ArgumentError, "attempting to validate association `#{field}` " <>
-                             "that was not loaded. Please preload your associations " <>
-                             "before calling validate_required/3 or pass the :required " <>
-                             "option to Ecto.Changeset.cast_assoc/3"
+        raise ArgumentError,
+              "attempting to determine the presence of association `#{field}` " <>
+                "that was not loaded. Please preload your associations " <>
+                "before calling validate_required/3 or field_missing?/2. " <>
+                "You may also consider passing the :required option to Ecto.Changeset.cast_assoc/3"
       value when is_binary(value) -> value == ""
       nil -> true
       _ -> false
@@ -2264,7 +2293,8 @@ defmodule Ecto.Changeset do
   end
 
   defp missing?(_changeset, field) do
-    raise ArgumentError, "validate_required/3 expects field names to be atoms, got: `#{inspect field}`"
+    raise ArgumentError,
+          "validate_required/3 and field_missing?/2 expect field names to be atoms, got: `#{inspect(field)}`"
   end
 
   @doc """
