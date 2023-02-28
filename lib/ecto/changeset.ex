@@ -2266,12 +2266,12 @@ defmodule Ecto.Changeset do
     case types do
       %{^field => {:assoc, %Ecto.Association.Has{cardinality: :many}}} ->
         IO.warn("attempting to validate has_many association #{inspect(field)} " <>
-                "with validate_required/3, which has no effect. You can pass the " <>
+                "with validate_required/3 which has no effect. You can pass the " <>
                 ":required option to Ecto.Changeset.cast_assoc/3 to achieve this.")
 
       %{^field => {:embed, %Ecto.Embedded{cardinality: :many}}} ->
         IO.warn("attempting to validate embed_many field #{inspect(field)} " <>
-                "with validate_required/3, which has no effect. You can pass the " <>
+                "with validate_required/3 which has no effect. You can pass the " <>
                 ":required option to Ecto.Changeset.cast_embed/3 to achieve this.")
 
       _ ->
