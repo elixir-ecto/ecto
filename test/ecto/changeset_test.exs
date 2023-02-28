@@ -1068,6 +1068,11 @@ defmodule Ecto.ChangesetTest do
 
     assert missing_fields == [:title, :body]
 
+    changeset = cast(%Post{body: "Body"}, %{title: "Title"}, [:title])
+    missing_fields = Enum.filter([:title, :body, :color], &field_missing?(changeset, &1))
+
+    assert missing_fields == [:color]
+
     # When unknown field
     assert_raise ArgumentError, ~r/unknown field :bad in/, fn  ->
       changeset(%{"title" => "hello", "body" => "something"})
