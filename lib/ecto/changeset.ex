@@ -2044,14 +2044,12 @@ defmodule Ecto.Changeset do
   """
   @spec validate_required(t, list | atom, Keyword.t) :: t
   def validate_required(%Changeset{} = changeset, fields, opts \\ []) when not is_nil(fields) do
-    %{required: required, errors: errors, changes: changes, types: types} = changeset
+    %{required: required, errors: errors, changes: changes} = changeset
     fields = List.wrap(fields)
 
     fields_with_errors =
       for field <- fields,
-          ensure_field_not_many!(types, field),
-          missing?(changeset, field),
-          ensure_field_exists!(changeset, types, field),
+          field_missing?(changeset, field),
           is_nil(errors[field]),
           do: field
 
@@ -2093,7 +2091,8 @@ defmodule Ecto.Changeset do
   """
   @spec field_missing?(t(), atom()) :: boolean()
   def field_missing?(%Changeset{} = changeset, field) when not is_nil(field) do
-    missing?(changeset, field) and ensure_field_exists!(changeset, changeset.types, field)
+    ensure_field_not_many!(changeset.types, field) && missing?(changeset, field) &&
+      ensure_field_exists!(changeset, changeset.types, field)
   end
 
   @doc """
@@ -2265,13 +2264,13 @@ defmodule Ecto.Changeset do
   defp ensure_field_not_many!(types, field) do
     case types do
       %{^field => {:assoc, %Ecto.Association.Has{cardinality: :many}}} ->
-        IO.warn("attempting to validate has_many association #{inspect(field)} " <>
-                "with validate_required/3 which has no effect. You can pass the " <>
+        IO.warn("attempting to determine the presence of has_many association #{inspect(field)} " <>
+                "with validate_required/3 or field_missing?/2 which has no effect. You can pass the " <>
                 ":required option to Ecto.Changeset.cast_assoc/3 to achieve this.")
 
       %{^field => {:embed, %Ecto.Embedded{cardinality: :many}}} ->
-        IO.warn("attempting to validate embed_many field #{inspect(field)} " <>
-                "with validate_required/3 which has no effect. You can pass the " <>
+        IO.warn("attempting to determine the presence of embed_many field #{inspect(field)} " <>
+                "with validate_required/3 or field_missing?/2 which has no effect. You can pass the " <>
                 ":required option to Ecto.Changeset.cast_embed/3 to achieve this.")
 
       _ ->

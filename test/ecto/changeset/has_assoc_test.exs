@@ -921,7 +921,7 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert capture_io(:stderr, fn ->
       changeset = Changeset.validate_required(base_changeset, :posts)
       assert changeset.valid?
-    end) =~ ~r/attempting to validate has_many association :posts/
+    end) =~ ~r/attempting to determine the presence of has_many association :posts/
   end
 
   test "put_assoc/4 with has_one" do
