@@ -2285,7 +2285,7 @@ defmodule Ecto.Changeset do
         raise ArgumentError,
               "attempting to determine the presence of association `#{field}` " <>
                 "that was not loaded. Please preload your associations " <>
-                "before calling validate_required/3 or filter_missing?/2. " <>
+                "before calling validate_required/3 or field_missing?/2. " <>
                 "You may also consider passing the :required option to Ecto.Changeset.cast_assoc/3"
       value when is_binary(value) -> value == ""
       nil -> true
@@ -2295,7 +2295,7 @@ defmodule Ecto.Changeset do
 
   defp missing?(_changeset, field) do
     raise ArgumentError,
-          "validate_required/3 and filter_missing?/2 expect field names to be atoms, got: `#{inspect(field)}`"
+          "validate_required/3 and field_missing?/2 expect field names to be atoms, got: `#{inspect(field)}`"
   end
 
   @doc """
