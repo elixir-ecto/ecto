@@ -236,15 +236,15 @@ defmodule Ecto.Changeset do
         |> Ecto.Changeset.validate_required(...)
         |> Ecto.Changeset.validate_length(...)
 
-  Besides the basic types which are mentioned above, such as `:boolean` and `:string`, 
+  Besides the basic types which are mentioned above, such as `:boolean` and `:string`,
   parameterized types can also be used in schemaless changesets. They implement
-  the `Ecto.ParameterizedType` behaviour and we can create the necessary type info by 
+  the `Ecto.ParameterizedType` behaviour and we can create the necessary type info by
   calling the `init/2` function.
 
   For example, to use `Ecto.Enum` in a schemaless changeset:
 
       types = %{
-        name: :string, 
+        name: :string,
         role: Ecto.ParameterizedType.init(Ecto.Enum, values: [:reader, :editor, :admin])
       }
 
@@ -452,6 +452,44 @@ defmodule Ecto.Changeset do
               "invalid changes being applied to changeset. " <>
                 "Expected a keyword list or a map, got: #{inspect(new_changes)}"
     end)
+  end
+
+  @doc """
+  Returns true if a field was changed in a changeset
+
+  ## Options
+
+    * `:to` - Check if the field was changed to a specific value
+    * `:from` - Check if the field was changed from a specific value
+  """
+  def changed?(%Changeset{} = changeset, field, opts \\ []) do
+    case fetch_change(changeset, field) do
+      {:ok, new_value} ->
+        changed_from?(changeset, field, opts) and changed_to?(new_value, opts)
+
+      :error ->
+        false
+    end
+  end
+
+  defp changed_from?(changeset, field, opts) do
+    case Keyword.fetch(opts, :from) do
+      {:ok, from} ->
+        Map.get(changeset.data, field) == from
+
+      :error ->
+        true
+    end
+  end
+
+  defp changed_to?(new_value, opts) do
+    case Keyword.fetch(opts, :to) do
+      {:ok, to} ->
+        new_value == to
+
+      :error ->
+        true
+    end
   end
 
   @doc """
@@ -2069,7 +2107,7 @@ defmodule Ecto.Changeset do
   Determines whether a field is missing in a changeset.
 
   The field passed into this function will have its presence evaluated
-  according to the same rules as `validate_required/3`. 
+  according to the same rules as `validate_required/3`.
 
   This is useful when performing complex validations that are not possible with
   `validate_required/3`. For example, evaluating whether at least one field
@@ -2083,7 +2121,7 @@ defmodule Ecto.Changeset do
       iex> changeset =
       ...>   case missing_fields do
       ...>     [_, _] -> add_error(changeset, :title, "at least one of `:title` or `:body` must be present")
-      ...>     _ -> changeset    
+      ...>     _ -> changeset
       ...>   end
       ...> changeset.errors
       [title: {"at least one of `:title` or `:body` must be present", []}]

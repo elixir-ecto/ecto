@@ -695,6 +695,38 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
+  test "changed?/3 without :to and :from" do
+    post = %Post{}
+
+    changeset = change(post, title: "title", upvotes: nil)
+
+    assert changed?(changeset, :title)
+    assert changed?(changeset, :upvotes)
+    refute changed?(changeset, :body)
+  end
+
+  test "changed?/3 with :to" do
+    post = %Post{}
+    changeset = change(post, title: "title", upvotes: nil)
+
+    assert changed?(changeset, :title, to: "title")
+    assert changed?(changeset, :upvotes, to: nil)
+
+    refute changed?(changeset, :title, to: "Title")
+    refute changed?(changeset, :body, to: nil)
+  end
+
+  test "changed?/3 with :from" do
+    post = %Post{}
+    changeset = change(post, title: "title", upvotes: nil)
+
+    assert changed?(changeset, :title, from: "")
+    assert changed?(changeset, :upvotes, from: 0)
+
+    refute changed?(changeset, :title, from: "Title")
+    refute changed?(changeset, :body, from: nil)
+  end
+
   test "fetch_field/2" do
     changeset = changeset(%Post{body: "bar"}, %{"title" => "foo"})
 
