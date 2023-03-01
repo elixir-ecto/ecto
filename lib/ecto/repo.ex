@@ -885,7 +885,7 @@ defmodule Ecto.Repo do
 
       # checks if any posts exist in the "private" schema path (in Postgres) or
       # database (in MySQL)
-      Repo.exists?(Post, schema: "private")
+      Repo.exists?(Post, prefix: "private")
 
       # checks if any post with a like count greater than 10 exists
       query = from p in Post, where: p.like_count > 10
