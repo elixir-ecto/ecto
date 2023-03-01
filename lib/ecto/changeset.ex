@@ -455,7 +455,7 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Returns true if a field was changed in a changeset
+  Returns true if a field was changed in a changeset.
 
   ## Options
 
