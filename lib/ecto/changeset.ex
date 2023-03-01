@@ -462,7 +462,8 @@ defmodule Ecto.Changeset do
     * `:to` - Check if the field was changed to a specific value
     * `:from` - Check if the field was changed from a specific value
   """
-  def changed?(%Changeset{} = changeset, field, opts \\ []) do
+  @spec changed?(t, atom, Keyword.t) :: boolean
+  def changed?(%Changeset{} = changeset, field, opts \\ []) when is_atom(field) do
     case fetch_change(changeset, field) do
       {:ok, new_value} ->
         changed_from?(changeset, field, opts) and changed_to?(new_value, opts)
