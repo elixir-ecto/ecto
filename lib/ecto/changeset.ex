@@ -480,7 +480,11 @@ defmodule Ecto.Changeset do
   def changed?(%Changeset{} = changeset, field, opts \\ []) when is_atom(field) do
     case fetch_change(changeset, field) do
       {:ok, new_value} ->
-        changed_from?(changeset, field, opts) and changed_to?(new_value, opts)
+        Enum.all?(opts, fn
+          {:from, from} -> Map.get(changeset.data, field) == from
+          {:to, to} -> new_value == to
+          other -> raise ArgumentError, "unknown option #{inspect(other)}"
+        end)
 
       :error ->
         false
