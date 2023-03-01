@@ -461,6 +461,20 @@ defmodule Ecto.Changeset do
 
     * `:to` - Check if the field was changed to a specific value
     * `:from` - Check if the field was changed from a specific value
+
+  ## Examples
+
+      iex> post = %Post{title: "Foo", body: "Old"}
+      iex> changeset = change(post, %{title: "New title", body: "Old"})
+
+      iex> changed?(changeset, :body)
+      false
+
+      iex> changed?(changeset, :title)
+      true
+
+      iex> changed?(changeset, :title, to: "NEW TITLE")
+      false
   """
   @spec changed?(t, atom, Keyword.t) :: boolean
   def changed?(%Changeset{} = changeset, field, opts \\ []) when is_atom(field) do
