@@ -491,26 +491,6 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp changed_from?(changeset, field, opts) do
-    case Keyword.fetch(opts, :from) do
-      {:ok, from} ->
-        Map.get(changeset.data, field) == from
-
-      :error ->
-        true
-    end
-  end
-
-  defp changed_to?(new_value, opts) do
-    case Keyword.fetch(opts, :to) do
-      {:ok, to} ->
-        new_value == to
-
-      :error ->
-        true
-    end
-  end
-
   @doc """
   Returns the empty values used by `Ecto.Changeset`.
 
