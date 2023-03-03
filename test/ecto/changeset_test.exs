@@ -1080,7 +1080,7 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
-  test "validate_format/3" do
+  test "validate_format/4" do
     changeset =
       changeset(%{"title" => "foo@bar"})
       |> validate_format(:title, ~r/@/)
@@ -1099,6 +1099,11 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"title" => "foobar"})
       |> validate_format(:title, ~r/@/, message: "yada")
     assert changeset.errors == [title: {"yada", [validation: :format]}]
+
+    assert_raise ArgumentError, ~r/expects changes to be strings/, fn ->
+      changeset(%{"upvotes" => 123})
+      |> validate_format(:upvotes, ~r/[0-9]+/, message: "yada")
+    end
   end
 
   test "validate_inclusion/3" do

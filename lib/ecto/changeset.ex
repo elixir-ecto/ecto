@@ -2314,6 +2314,11 @@ defmodule Ecto.Changeset do
   @spec validate_format(t, atom, Regex.t, Keyword.t) :: t
   def validate_format(changeset, field, format, opts \\ []) do
     validate_change changeset, field, {:format, format}, fn _, value ->
+      unless is_binary(value) do
+        raise ArgumentError,
+              "validate_format/4 expects changes to be strings, received: #{inspect(value)} for field `#{field}`"
+      end
+
       if value =~ format, do: [], else: [{field, {message(opts, "has invalid format"), [validation: :format]}}]
     end
   end
