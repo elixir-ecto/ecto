@@ -2311,4 +2311,27 @@ defmodule Ecto.ChangesetTest do
       refute inspect(changeset) =~ "**redacted**"
     end
   end
+
+  test "changed?/3" do
+    import Ecto.Changeset
+
+    changeset = cast(%Post{}, %{"body" => "foo"}, [:body])
+    schemaless_changeset =
+      {%{}, %{body: :string}}
+      |> cast(%{"body" => "foo"}, [:body])
+
+    Enum.each([changeset, schemaless_changeset], fn changeset ->
+      assert changed?(changeset, :body)
+      assert changed?(changeset, :body, from: nil)
+      assert changed?(changeset, :body, to: "foo")
+      assert changed?(changeset, :body, from: nil, to: "foo")
+
+      refute changed?(changeset, :title)
+      refute changed?(changeset, :body, from: "")
+      refute changed?(changeset, :body, to: nil)
+      refute changed?(changeset, :body, from: nil, to: "bar")
+      refute changed?(changeset, :body, from: "", to: "foo")
+    end)
+  end
+
 end

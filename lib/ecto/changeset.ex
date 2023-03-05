@@ -236,15 +236,15 @@ defmodule Ecto.Changeset do
         |> Ecto.Changeset.validate_required(...)
         |> Ecto.Changeset.validate_length(...)
 
-  Besides the basic types which are mentioned above, such as `:boolean` and `:string`, 
+  Besides the basic types which are mentioned above, such as `:boolean` and `:string`,
   parameterized types can also be used in schemaless changesets. They implement
-  the `Ecto.ParameterizedType` behaviour and we can create the necessary type info by 
+  the `Ecto.ParameterizedType` behaviour and we can create the necessary type info by
   calling the `init/2` function.
 
   For example, to use `Ecto.Enum` in a schemaless changeset:
 
       types = %{
-        name: :string, 
+        name: :string,
         role: Ecto.ParameterizedType.init(Ecto.Enum, values: [:reader, :editor, :admin])
       }
 
@@ -2069,7 +2069,7 @@ defmodule Ecto.Changeset do
   Determines whether a field is missing in a changeset.
 
   The field passed into this function will have its presence evaluated
-  according to the same rules as `validate_required/3`. 
+  according to the same rules as `validate_required/3`.
 
   This is useful when performing complex validations that are not possible with
   `validate_required/3`. For example, evaluating whether at least one field
@@ -2083,7 +2083,7 @@ defmodule Ecto.Changeset do
       iex> changeset =
       ...>   case missing_fields do
       ...>     [_, _] -> add_error(changeset, :title, "at least one of `:title` or `:body` must be present")
-      ...>     _ -> changeset    
+      ...>     _ -> changeset
       ...>   end
       ...> changeset.errors
       [title: {"at least one of `:title` or `:body` must be present", []}]
@@ -3460,6 +3460,50 @@ defmodule Ecto.Changeset do
     |> merge_keyword_keys(msg_func, changeset)
     |> merge_related_keys(changes, types, msg_func, &traverse_validations/2)
   end
+
+  @doc """
+  Determine if a field has changed.
+
+  ## Options
+
+  * `:from` Only return true if the previous value matches this.
+  * `:to` Only return true if the current value matches this.
+
+  ## Examples
+
+      changeset = change(%User{}, role: :admin)
+
+      iex> changed?(changeset, :role)
+      true
+
+      iex> changed?(changeset, :email)
+      false
+
+      iex> changed?(changeset, :role, to: :admin)
+      true
+
+      iex> changed?(changeset, :role, from: nil, to: :admin)
+      true
+
+      iex> changed?(changeset, :role, from: "")
+      false
+
+  """
+  def changed?(%Changeset{} = changeset, field, opts \\ []) do
+    # Note that we use Map.get so this works with schemaless changesets.
+
+    case Changeset.fetch_change(changeset, field) do
+      :error -> false
+
+      {:ok, change} -> case Map.new(opts) do
+        %{to: to, from: from} -> change == to and Map.get(changeset.data, field) == from
+        %{from: from} -> Map.get(changeset.data, field) == from
+        %{to: to} -> change == to
+        _ -> true
+      end
+    end
+  end
+
 end
 
 defimpl Inspect, for: Ecto.Changeset do
