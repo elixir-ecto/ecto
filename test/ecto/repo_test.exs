@@ -1377,6 +1377,16 @@ defmodule Ecto.RepoTest do
     test "are mapped to repo constraint violation using suffix match" do
       my_schema = %MySchema{id: 1}
       changeset =
+        put_in(my_schema.__meta__.context, {:invalid, [unique: "foo_table_part_90_custom_foo_index1234"]})
+        |> Ecto.Changeset.change(x: "foo")
+        |> Ecto.Changeset.unique_constraint(:foo, name: "foo_table_part_.+_custom_foo_index\\d+", match: :regex)
+      assert {:error, changeset} = TestRepo.insert(changeset)
+      refute changeset.valid?
+    end
+
+    test "are mapped to repo constraint violation using regex match" do
+      my_schema = %MySchema{id: 1}
+      changeset =
         put_in(my_schema.__meta__.context, {:invalid, [unique: "foo_table_custom_foo_index"]})
         |> Ecto.Changeset.change(x: "foo")
         |> Ecto.Changeset.unique_constraint(:foo, name: "custom_foo_index", match: :suffix)
