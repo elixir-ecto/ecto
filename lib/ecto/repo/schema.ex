@@ -784,6 +784,14 @@ defmodule Ecto.Repo.Schema do
               {^type, ^constraint, :exact} -> true
               {^type, cc, :suffix} -> String.ends_with?(constraint, cc)
               {^type, cc, :prefix} -> String.starts_with?(constraint, cc)
+              {^type, cc, :regex} ->
+                case Regex.compile(cc) do
+                  {:ok, r} ->
+                    Regex.match?(r, constraint)
+
+                    _otherwise ->
+                      false
+                end
               _ -> false
             end
           end)
