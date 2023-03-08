@@ -286,7 +286,7 @@ defmodule Ecto.Repo.Preloader do
     invalid custom preload for `#{assoc.field}` on `#{inspect assoc.owner}`.
 
     For many_to_many associations, the custom function given to preload should \
-    return a tuple with the associated key as first element and the record as \
+    return a tuple with the associated key as first element and the struct as \
     second element.
 
     For example, imagine posts has many to many tags through a posts_tags table. \
@@ -304,7 +304,7 @@ defmodule Ecto.Repo.Preloader do
 
     Unfortunately the query above is not enough because Ecto won't know how to \
     associate the posts with the tags. In those cases, you need to return a tuple \
-    with the `post_id` as first element and the tag record as second. The new query \
+    with the `post_id` as first element and the tag struct as second. The new query \
     will have a select field as follows:
 
         from t in Tag,
@@ -312,7 +312,7 @@ defmodule Ecto.Repo.Preloader do
              where: t.custom and pt.post_id in ^post_ids and pt.tag_id == t.id,
              select: {pt.post_id, t}
 
-    We expected a tuple but we got: #{inspect(entry)}
+    Expected a tuple with ID and struct, got: #{inspect(entry)}
     """
 
   defp preload_order(assoc, query, related_field) do
