@@ -102,7 +102,6 @@ defmodule Ecto.Changeset.EmbeddedTest do
     alias Alias.OneNoPK, warn: false
     alias Alias.ManyNoPK, warn: false
 
-
     schema "aliases" do
       embeds_one :one, One do
         field :name, :string
