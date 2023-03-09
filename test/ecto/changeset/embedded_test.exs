@@ -99,8 +99,8 @@ defmodule Ecto.Changeset.EmbeddedTest do
     use Ecto.Schema
     alias Alias.One, warn: false
     alias Alias.Many, warn: false
-    alias Alias.OneNoPk, warn: false
-    alias Alias.ManyNoPk, warn: false
+    alias Alias.OneNoPK, warn: false
+    alias Alias.ManyNoPK, warn: false
 
 
     schema "aliases" do
@@ -119,7 +119,11 @@ defmodule Ecto.Changeset.EmbeddedTest do
     end
   end
 
-  test "nested embed alias conflict" do
+  test "nested embed overwrites conflicting alias" do
+    assert Alias.One.__schema__(:fields) == [:id, :name]
+    assert Alias.OneNoPK.__schema__(:fields) == [:name]
+    assert Alias.Many.__schema__(:fields) == [:id, :title]
+    assert Alias.ManyNoPK.__schema__(:fields) == [:title]
     assert %Ecto.Embedded{related: Alias.One} =
       Alias.__schema__(:embed, :one)
     assert %Ecto.Embedded{related: Alias.OneNoPK} =
@@ -128,10 +132,6 @@ defmodule Ecto.Changeset.EmbeddedTest do
       Alias.__schema__(:embed, :many)
     assert %Ecto.Embedded{related: Alias.ManyNoPK} =
       Alias.__schema__(:embed, :many_no_pk)
-    assert Alias.One.__schema__(:fields) == [:id, :name]
-    assert Alias.OneNoPK.__schema__(:fields) == [:name]
-    assert Alias.Many.__schema__(:fields) == [:id, :title]
-    assert Alias.ManyNoPK.__schema__(:fields) == [:title]
   end
 
   defp cast(schema, params, embed, opts \\ []) do

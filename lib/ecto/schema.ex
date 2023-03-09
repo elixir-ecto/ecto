@@ -2387,7 +2387,7 @@ defmodule Ecto.Schema do
     end
   end
 
-  defp expand_nested_module_alias({:__aliases__, _, [h | t]} = m, env) when is_atom(h) do
+  defp expand_nested_module_alias({:__aliases__, _, [h | t]}, env) when is_atom(h) do
     module = Module.concat([env.module, h])
 
     case t do
