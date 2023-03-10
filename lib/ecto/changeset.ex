@@ -346,7 +346,7 @@ defmodule Ecto.Changeset do
   @type error :: {String.t, Keyword.t}
   @type action :: nil | :insert | :update | :delete | :replace | :ignore | atom
   @type constraint :: %{type: :check | :exclusion | :foreign_key | :unique,
-                        constraint: String.t, match: :exact | :suffix | :prefix | :regex,
+                        constraint: String.t | Regex.t, match: :exact | :suffix | :prefix,
                         field: atom, error_message: String.t, error_type: atom}
   @type data :: map()
   @type types :: map()
@@ -361,7 +361,7 @@ defmodule Ecto.Changeset do
   }
 
   @relations [:embed, :assoc]
-  @match_types [:exact, :suffix, :prefix, :regex]
+  @match_types [:exact, :suffix, :prefix]
 
   @doc """
   Wraps the given data in a changeset or adds changes to a changeset.
@@ -2887,10 +2887,10 @@ defmodule Ecto.Changeset do
 
     * `:type` - the type of the constraint that will be checked in the database,
       such as `:check`, `:unique`, etc
-    * `:constraint` - the database constraint name as a string. The constraint at
-      the database level will be checked against this string according to `:match` type
+    * `:constraint` - the database constraint name as a string or `Regex`. The constraint at
+      the database level will be checked against this according to `:match` type
     * `:match` - the type of match Ecto will perform on a violated constraint
-      against the `:constraint` value. It is `:exact`, `:suffix`,  `:prefix` or `:regex`
+      against the `:constraint` value. It is `:exact`, `:suffix` or  `:prefix`
     * `:field` - the field a violated constraint will apply the error to
     * `:error_message` - the error message in case of violated constraints
     * `:error_type` - the type of error that identifies the error message
@@ -2932,19 +2932,24 @@ defmodule Ecto.Changeset do
 
     * `:message` - the message in case the constraint check fails.
       Defaults to "is invalid"
-    * `:name` - the name of the constraint. Required.
+    * `:name` - the name of the constraint. Required. It can be a string or a `Regex`
     * `:match` - how the changeset constraint name is matched against the
-      repo constraint, may be `:exact`, `:suffix`, `:prefix` or `regex`. Defaults to
+      repo constraint, may be `:exact`, `:suffix` or `:prefix`. Defaults to
       `:exact`. `:suffix` matches any repo constraint which `ends_with?` `:name`
       to this changeset constraint. `:prefix` matches any repo constraint which
-      `starts_with?` `:name` to this changeset constraint. `:regex` matches any repo constraint which `Regex.match?` `:name` to this changeset constraint.
+      `starts_with?` `:name` to this changeset constraint.
 
   """
   def check_constraint(changeset, field, opts \\ []) do
-    constraint = opts[:name] || raise ArgumentError, "must supply the name of the constraint"
+    name = opts[:name] || raise ArgumentError, "must supply the name of the constraint"
     message    = message(opts, "is invalid")
     match_type = Keyword.get(opts, :match, :exact)
-    add_constraint(changeset, :check, to_string(constraint), match_type, field, message)
+    constraint = case name do
+      %Regex{} -> name
+      _ -> to_string(name)
+    end
+
+    add_constraint(changeset, :check, constraint, match_type, field, message)
   end
 
   @doc """
@@ -2984,10 +2989,10 @@ defmodule Ecto.Changeset do
       explicitly for complex cases
 
     * `:match` - how the changeset constraint name is matched against the
-      repo constraint, may be `:exact`, `:suffix`, `:prefix` or `regex`. Defaults to
+      repo constraint, may be `:exact`, `:suffix` or `:prefix`. Defaults to
       `:exact`. `:suffix` matches any repo constraint which `ends_with?` `:name`
       to this changeset constraint. `:prefix` matches any repo constraint which
-      `starts_with?` `:name` to this changeset constraint. `:regex` matches any repo constraint which `Regex.match?` `:name` to this changeset constraint.
+      `starts_with?` `:name` to this changeset constraint.
 
     * `:error_key` - the key to which changeset error will be added when
       check fails, defaults to the first field name of the given list of
@@ -3049,10 +3054,10 @@ defmodule Ecto.Changeset do
       ...
       user_p99_email_idx101
 
-  In that case, a `:regex` match can be used to match:
+  In that case, a `Regex` can be used to match:
 
       cast(user, params, [:email])
-      |> unique_constraint(:email, name: "user_p\\d+_email_idx\\d+, match: :regex)
+      |> unique_constraint(:email, name: ~r/user_p\d+_email_idx\d+/)
 
   ## Case sensitivity
 
@@ -3084,11 +3089,16 @@ defmodule Ecto.Changeset do
   end
 
   def unique_constraint(changeset, [first_field | _] = fields, opts) do
-    constraint = opts[:name] || unique_index_name(changeset, fields)
+    name = opts[:name] || unique_index_name(changeset, fields)
     message    = message(opts, "has already been taken")
     match_type = Keyword.get(opts, :match, :exact)
     error_key  = Keyword.get(opts, :error_key, first_field)
-    add_constraint(changeset, :unique, to_string(constraint), match_type, error_key, message)
+    constraint = case name do
+      %Regex{} -> name
+      _ -> to_string(name)
+    end
+
+    add_constraint(changeset, :unique, constraint, match_type, error_key, message)
   end
 
   defp unique_index_name(changeset, fields) do
@@ -3139,18 +3149,23 @@ defmodule Ecto.Changeset do
       name is inferred from the table + field. May be required
       explicitly for complex cases
     * `:match` - how the changeset constraint name is matched against the
-      repo constraint, may be `:exact`, `:suffix`, `:prefix` or `regex`. Defaults to
+      repo constraint, may be `:exact`, `:suffix` or `:prefix`. Defaults to
       `:exact`. `:suffix` matches any repo constraint which `ends_with?` `:name`
       to this changeset constraint. `:prefix` matches any repo constraint which
-      `starts_with?` `:name` to this changeset constraint. `:regex` matches any repo constraint which `Regex.match?` `:name` to this changeset constraint.
+      `starts_with?` `:name` to this changeset constraint.
 
   """
   @spec foreign_key_constraint(t, atom, Keyword.t) :: t
   def foreign_key_constraint(changeset, field, opts \\ []) do
-    constraint = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_fkey"
+    name = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_fkey"
     match_type = Keyword.get(opts, :match, :exact)
     message    = message(opts, "does not exist")
-    add_constraint(changeset, :foreign_key, to_string(constraint), match_type, field, message, :foreign)
+    constraint = case name do
+      %Regex{} -> name
+      _ -> to_string(name)
+    end
+
+    add_constraint(changeset, :foreign_key, constraint, match_type, field, message, :foreign)
   end
 
   @doc """
@@ -3186,14 +3201,14 @@ defmodule Ecto.Changeset do
       name is inferred from the table + association field.
       May be required explicitly for complex cases
     * `:match` - how the changeset constraint name is matched against the
-      repo constraint, may be `:exact`, `:suffix`, `:prefix` or `regex`. Defaults to
+      repo constraint, may be `:exact`, `:suffix` or `:prefix`. Defaults to
       `:exact`. `:suffix` matches any repo constraint which `ends_with?` `:name`
       to this changeset constraint. `:prefix` matches any repo constraint which
-      `starts_with?` `:name` to this changeset constraint. `:regex` matches any repo constraint which `Regex.match?` `:name` to this changeset constraint.
+      `starts_with?` `:name` to this changeset constraint.
   """
   @spec assoc_constraint(t, atom, Keyword.t) :: t
   def assoc_constraint(changeset, assoc, opts \\ []) do
-    constraint = opts[:name] ||
+    name = opts[:name] ||
       case get_assoc_type(changeset, assoc) do
         %Ecto.Association.BelongsTo{owner_key: owner_key} ->
           "#{get_source(changeset)}_#{owner_key}_fkey"
@@ -3204,7 +3219,12 @@ defmodule Ecto.Changeset do
 
     match_type = Keyword.get(opts, :match, :exact)
     message = message(opts, "does not exist")
-    add_constraint(changeset, :foreign_key, to_string(constraint), match_type, assoc, message, :assoc)
+    constraint = case name do
+      %Regex{} -> name
+      _ -> to_string(name)
+    end
+
+    add_constraint(changeset, :foreign_key, constraint, match_type, assoc, message, :assoc)
   end
 
   @doc """
@@ -3241,15 +3261,15 @@ defmodule Ecto.Changeset do
       name is inferred from the association table + association
       field. May be required explicitly for complex cases
     * `:match` - how the changeset constraint name is matched against the
-      repo constraint, may be `:exact`, `:suffix`, `:prefix` or `regex`. Defaults to
+      repo constraint, may be `:exact`, `:suffix` or `:prefix`. Defaults to
       `:exact`. `:suffix` matches any repo constraint which `ends_with?` `:name`
       to this changeset constraint. `:prefix` matches any repo constraint which
-      `starts_with?` `:name` to this changeset constraint. `:regex` matches any repo constraint which `Regex.match?` `:name` to this changeset constraint.
+      `starts_with?` `:name` to this changeset constraint.
 
   """
   @spec no_assoc_constraint(t, atom, Keyword.t) :: t
   def no_assoc_constraint(changeset, assoc, opts \\ []) do
-    {constraint, message} =
+    {name, message} =
       case get_assoc_type(changeset, assoc) do
         %Ecto.Association.Has{cardinality: cardinality,
                               related_key: related_key, related: related} ->
@@ -3261,7 +3281,12 @@ defmodule Ecto.Changeset do
       end
 
     match_type = Keyword.get(opts, :match, :exact)
-    add_constraint(changeset, :foreign_key, to_string(constraint), match_type, assoc, message, :no_assoc)
+    constraint = case name do
+      %Regex{} -> name
+      _ -> to_string(name)
+    end
+
+    add_constraint(changeset, :foreign_key, constraint, match_type, assoc, message, :no_assoc)
   end
 
   @doc """
@@ -3279,17 +3304,22 @@ defmodule Ecto.Changeset do
       name is inferred from the table + field. May be required
       explicitly for complex cases
     * `:match` - how the changeset constraint name is matched against the
-      repo constraint, may be `:exact`, `:suffix`, `:prefix` or `regex`. Defaults to
+      repo constraint, may be `:exact`, `:suffix` or `:prefix`. Defaults to
       `:exact`. `:suffix` matches any repo constraint which `ends_with?` `:name`
       to this changeset constraint. `:prefix` matches any repo constraint which
-      `starts_with?` `:name` to this changeset constraint. `:regex` matches any repo constraint which `Regex.match?` `:name` to this changeset constraint.
+      `starts_with?` `:name` to this changeset constraint.
 
   """
   def exclusion_constraint(changeset, field, opts \\ []) do
-    constraint = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_exclusion"
+    name = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_exclusion"
     message    = message(opts, "violates an exclusion constraint")
     match_type = Keyword.get(opts, :match, :exact)
-    add_constraint(changeset, :exclusion, to_string(constraint), match_type, field, message, :exclusion)
+    constraint = case name do
+      %Regex{} -> name
+      _ -> to_string(name)
+    end
+
+    add_constraint(changeset, :exclusion, constraint, match_type, field, message, :exclusion)
   end
 
   defp no_assoc_message(:one), do: "is still associated with this entry"
@@ -3301,7 +3331,7 @@ defmodule Ecto.Changeset do
 
   defp add_constraint(%Changeset{constraints: constraints} = changeset,
                       type, constraint, match, field, error_message, error_type)
-       when is_binary(constraint) and is_atom(field) and is_binary(error_message) do
+       when (is_binary(constraint) or is_struct(constraint, Regex)) and is_atom(field) and is_binary(error_message) do
     unless match in @match_types do
       raise ArgumentError, "invalid match type: #{inspect match}. Allowed match types: #{inspect @match_types}"
     end
