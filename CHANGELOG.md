@@ -5,6 +5,8 @@
 ### Enhancements
 
   * [Ecto.Changeset] Add `get_assoc`/`get_embed`
+  * [Ecto.Changeset] Add `field_missing?/2`
+  * [Ecto.Changeset] Alow `Regex` to be used in constraint names for exact matches
   * [Ecto.Changeset] Allow `:empty_values` option in `cast/4` to include a function which must return true if the value is empty
   * [Ecto.Changeset] `cast/4` will by default consider strings made only of whitespace characters to be empty. This unifies the handling of empty values between `cast/4` and `validate_required/3`. **If you use `:empty_values` and you want to preserve the new behaviour throughout, you may update your code from this**
 
@@ -17,11 +19,16 @@
   * [Ecto.Query] Support materialized option in CTEs
   * [Ecto.Query] Support dynamic field inside `json_extract_path`
   * [Ecto.Query] Support interpolated values for from/join prefixes
+  * [Ecto.Query] Support ties in limit expressions through `with_ties/3`
   * [Ecto.Schema] Add `:autogenerate_fields` to the schema reflection API
+  * [Ecto.ParameterizedType] Add optional callback `format/1`
 
 ### Bug fixes
 
   * [Ecto.Changeset] Make unsafe validate unique exclude primary key only for loaded schemas
+  * [Ecto.Changeset] Raise when change provided to `validate_format/4` is not a string
+  * [Ecto.Query] Fix bug in `json_extract_path` where maps were not allowed to be nested inside of embeds
+  * [Ecto.Schema] Allow inline embeds to overwrite conflicting aliases
 
 ## v3.9.4 (2022-12-21)
 
