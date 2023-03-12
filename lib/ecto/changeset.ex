@@ -236,15 +236,15 @@ defmodule Ecto.Changeset do
         |> Ecto.Changeset.validate_required(...)
         |> Ecto.Changeset.validate_length(...)
 
-  Besides the basic types which are mentioned above, such as `:boolean` and `:string`, 
+  Besides the basic types which are mentioned above, such as `:boolean` and `:string`,
   parameterized types can also be used in schemaless changesets. They implement
-  the `Ecto.ParameterizedType` behaviour and we can create the necessary type info by 
+  the `Ecto.ParameterizedType` behaviour and we can create the necessary type info by
   calling the `init/2` function.
 
   For example, to use `Ecto.Enum` in a schemaless changeset:
 
       types = %{
-        name: :string, 
+        name: :string,
         role: Ecto.ParameterizedType.init(Ecto.Enum, values: [:reader, :editor, :admin])
       }
 
@@ -2069,7 +2069,7 @@ defmodule Ecto.Changeset do
   Determines whether a field is missing in a changeset.
 
   The field passed into this function will have its presence evaluated
-  according to the same rules as `validate_required/3`. 
+  according to the same rules as `validate_required/3`.
 
   This is useful when performing complex validations that are not possible with
   `validate_required/3`. For example, evaluating whether at least one field
@@ -2083,7 +2083,7 @@ defmodule Ecto.Changeset do
       iex> changeset =
       ...>   case missing_fields do
       ...>     [_, _] -> add_error(changeset, :title, "at least one of `:title` or `:body` must be present")
-      ...>     _ -> changeset    
+      ...>     _ -> changeset
       ...>   end
       ...> changeset.errors
       [title: {"at least one of `:title` or `:body` must be present", []}]
@@ -2944,12 +2944,8 @@ defmodule Ecto.Changeset do
     name = opts[:name] || raise ArgumentError, "must supply the name of the constraint"
     message    = message(opts, "is invalid")
     match_type = Keyword.get(opts, :match, :exact)
-    constraint = case name do
-      %Regex{} -> name
-      _ -> to_string(name)
-    end
 
-    add_constraint(changeset, :check, constraint, match_type, field, message)
+    add_constraint(changeset, :check, normalize_constraint(name), match_type, field, message)
   end
 
   @doc """
@@ -3093,12 +3089,8 @@ defmodule Ecto.Changeset do
     message    = message(opts, "has already been taken")
     match_type = Keyword.get(opts, :match, :exact)
     error_key  = Keyword.get(opts, :error_key, first_field)
-    constraint = case name do
-      %Regex{} -> name
-      _ -> to_string(name)
-    end
 
-    add_constraint(changeset, :unique, constraint, match_type, error_key, message)
+    add_constraint(changeset, :unique, normalize_constraint(name), match_type, error_key, message)
   end
 
   defp unique_index_name(changeset, fields) do
@@ -3160,12 +3152,8 @@ defmodule Ecto.Changeset do
     name = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_fkey"
     match_type = Keyword.get(opts, :match, :exact)
     message    = message(opts, "does not exist")
-    constraint = case name do
-      %Regex{} -> name
-      _ -> to_string(name)
-    end
 
-    add_constraint(changeset, :foreign_key, constraint, match_type, field, message, :foreign)
+    add_constraint(changeset, :foreign_key, normalize_constraint(name), match_type, field, message, :foreign)
   end
 
   @doc """
@@ -3219,12 +3207,8 @@ defmodule Ecto.Changeset do
 
     match_type = Keyword.get(opts, :match, :exact)
     message = message(opts, "does not exist")
-    constraint = case name do
-      %Regex{} -> name
-      _ -> to_string(name)
-    end
 
-    add_constraint(changeset, :foreign_key, constraint, match_type, assoc, message, :assoc)
+    add_constraint(changeset, :foreign_key, normalize_constraint(name), match_type, assoc, message, :assoc)
   end
 
   @doc """
@@ -3281,12 +3265,8 @@ defmodule Ecto.Changeset do
       end
 
     match_type = Keyword.get(opts, :match, :exact)
-    constraint = case name do
-      %Regex{} -> name
-      _ -> to_string(name)
-    end
 
-    add_constraint(changeset, :foreign_key, constraint, match_type, assoc, message, :no_assoc)
+    add_constraint(changeset, :foreign_key, normalize_constraint(name), match_type, assoc, message, :no_assoc)
   end
 
   @doc """
@@ -3314,12 +3294,8 @@ defmodule Ecto.Changeset do
     name = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_exclusion"
     message    = message(opts, "violates an exclusion constraint")
     match_type = Keyword.get(opts, :match, :exact)
-    constraint = case name do
-      %Regex{} -> name
-      _ -> to_string(name)
-    end
 
-    add_constraint(changeset, :exclusion, constraint, match_type, field, message, :exclusion)
+    add_constraint(changeset, :exclusion, normalize_constraint(name), match_type, field, message, :exclusion)
   end
 
   defp no_assoc_message(:one), do: "is still associated with this entry"
@@ -3347,6 +3323,10 @@ defmodule Ecto.Changeset do
 
     %{changeset | constraints: [constraint | constraints]}
   end
+
+  defp normalize_constraint(%Regex{} = constraint), do: constraint
+
+  defp normalize_constraint(constraint), do: to_string(constraint)
 
   defp get_source(%{data: %{__meta__: %{source: source}}}) when is_binary(source),
     do: source
