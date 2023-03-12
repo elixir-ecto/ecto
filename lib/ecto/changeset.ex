@@ -236,15 +236,15 @@ defmodule Ecto.Changeset do
         |> Ecto.Changeset.validate_required(...)
         |> Ecto.Changeset.validate_length(...)
 
-  Besides the basic types which are mentioned above, such as `:boolean` and `:string`, 
+  Besides the basic types which are mentioned above, such as `:boolean` and `:string`,
   parameterized types can also be used in schemaless changesets. They implement
-  the `Ecto.ParameterizedType` behaviour and we can create the necessary type info by 
+  the `Ecto.ParameterizedType` behaviour and we can create the necessary type info by
   calling the `init/2` function.
 
   For example, to use `Ecto.Enum` in a schemaless changeset:
 
       types = %{
-        name: :string, 
+        name: :string,
         role: Ecto.ParameterizedType.init(Ecto.Enum, values: [:reader, :editor, :admin])
       }
 
@@ -346,7 +346,7 @@ defmodule Ecto.Changeset do
   @type error :: {String.t, Keyword.t}
   @type action :: nil | :insert | :update | :delete | :replace | :ignore | atom
   @type constraint :: %{type: :check | :exclusion | :foreign_key | :unique,
-                        constraint: String.t, match: :exact | :suffix | :prefix,
+                        constraint: String.t | Regex.t, match: :exact | :suffix | :prefix,
                         field: atom, error_message: String.t, error_type: atom}
   @type data :: map()
   @type types :: map()
@@ -2069,7 +2069,7 @@ defmodule Ecto.Changeset do
   Determines whether a field is missing in a changeset.
 
   The field passed into this function will have its presence evaluated
-  according to the same rules as `validate_required/3`. 
+  according to the same rules as `validate_required/3`.
 
   This is useful when performing complex validations that are not possible with
   `validate_required/3`. For example, evaluating whether at least one field
@@ -2083,7 +2083,7 @@ defmodule Ecto.Changeset do
       iex> changeset =
       ...>   case missing_fields do
       ...>     [_, _] -> add_error(changeset, :title, "at least one of `:title` or `:body` must be present")
-      ...>     _ -> changeset    
+      ...>     _ -> changeset
       ...>   end
       ...> changeset.errors
       [title: {"at least one of `:title` or `:body` must be present", []}]
@@ -2887,7 +2887,8 @@ defmodule Ecto.Changeset do
 
     * `:type` - the type of the constraint that will be checked in the database,
       such as `:check`, `:unique`, etc
-    * `:constraint` - the database constraint name as a string
+    * `:constraint` - the database constraint name as a string or `Regex`. The constraint at
+      the database level will be checked against this according to `:match` type
     * `:match` - the type of match Ecto will perform on a violated constraint
       against the `:constraint` value. It is `:exact`, `:suffix` or `:prefix`
     * `:field` - the field a violated constraint will apply the error to
@@ -2931,7 +2932,7 @@ defmodule Ecto.Changeset do
 
     * `:message` - the message in case the constraint check fails.
       Defaults to "is invalid"
-    * `:name` - the name of the constraint. Required.
+    * `:name` - the name of the constraint. Required. It can be a string or a `Regex`
     * `:match` - how the changeset constraint name is matched against the
       repo constraint, may be `:exact`, `:suffix` or `:prefix`. Defaults to
       `:exact`. `:suffix` matches any repo constraint which `ends_with?` `:name`
@@ -2940,10 +2941,11 @@ defmodule Ecto.Changeset do
 
   """
   def check_constraint(changeset, field, opts \\ []) do
-    constraint = opts[:name] || raise ArgumentError, "must supply the name of the constraint"
+    name = opts[:name] || raise ArgumentError, "must supply the name of the constraint"
     message    = message(opts, "is invalid")
     match_type = Keyword.get(opts, :match, :exact)
-    add_constraint(changeset, :check, to_string(constraint), match_type, field, message)
+
+    add_constraint(changeset, :check, normalize_constraint(name), match_type, field, message)
   end
 
   @doc """
@@ -3040,6 +3042,19 @@ defmodule Ecto.Changeset do
       cast(user, params, [:email])
       |> unique_constraint(:email, name: :email_key, match: :suffix)
 
+  There are cases where the index has a number added both for table name and
+  index name, generating an index name such as:
+
+      user_p0_email_idx2
+      user_p1_email_idx3
+      ...
+      user_p99_email_idx101
+
+  In that case, a `Regex` can be used to match:
+
+      cast(user, params, [:email])
+      |> unique_constraint(:email, name: ~r/user_p\d+_email_idx\d+/)
+
   ## Case sensitivity
 
   Unfortunately, different databases provide different guarantees
@@ -3070,11 +3085,12 @@ defmodule Ecto.Changeset do
   end
 
   def unique_constraint(changeset, [first_field | _] = fields, opts) do
-    constraint = opts[:name] || unique_index_name(changeset, fields)
+    name = opts[:name] || unique_index_name(changeset, fields)
     message    = message(opts, "has already been taken")
     match_type = Keyword.get(opts, :match, :exact)
     error_key  = Keyword.get(opts, :error_key, first_field)
-    add_constraint(changeset, :unique, to_string(constraint), match_type, error_key, message)
+
+    add_constraint(changeset, :unique, normalize_constraint(name), match_type, error_key, message)
   end
 
   defp unique_index_name(changeset, fields) do
@@ -3133,10 +3149,11 @@ defmodule Ecto.Changeset do
   """
   @spec foreign_key_constraint(t, atom, Keyword.t) :: t
   def foreign_key_constraint(changeset, field, opts \\ []) do
-    constraint = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_fkey"
+    name = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_fkey"
     match_type = Keyword.get(opts, :match, :exact)
     message    = message(opts, "does not exist")
-    add_constraint(changeset, :foreign_key, to_string(constraint), match_type, field, message, :foreign)
+
+    add_constraint(changeset, :foreign_key, normalize_constraint(name), match_type, field, message, :foreign)
   end
 
   @doc """
@@ -3179,7 +3196,7 @@ defmodule Ecto.Changeset do
   """
   @spec assoc_constraint(t, atom, Keyword.t) :: t
   def assoc_constraint(changeset, assoc, opts \\ []) do
-    constraint = opts[:name] ||
+    name = opts[:name] ||
       case get_assoc_type(changeset, assoc) do
         %Ecto.Association.BelongsTo{owner_key: owner_key} ->
           "#{get_source(changeset)}_#{owner_key}_fkey"
@@ -3190,7 +3207,8 @@ defmodule Ecto.Changeset do
 
     match_type = Keyword.get(opts, :match, :exact)
     message = message(opts, "does not exist")
-    add_constraint(changeset, :foreign_key, to_string(constraint), match_type, assoc, message, :assoc)
+
+    add_constraint(changeset, :foreign_key, normalize_constraint(name), match_type, assoc, message, :assoc)
   end
 
   @doc """
@@ -3235,7 +3253,7 @@ defmodule Ecto.Changeset do
   """
   @spec no_assoc_constraint(t, atom, Keyword.t) :: t
   def no_assoc_constraint(changeset, assoc, opts \\ []) do
-    {constraint, message} =
+    {name, message} =
       case get_assoc_type(changeset, assoc) do
         %Ecto.Association.Has{cardinality: cardinality,
                               related_key: related_key, related: related} ->
@@ -3247,7 +3265,8 @@ defmodule Ecto.Changeset do
       end
 
     match_type = Keyword.get(opts, :match, :exact)
-    add_constraint(changeset, :foreign_key, to_string(constraint), match_type, assoc, message, :no_assoc)
+
+    add_constraint(changeset, :foreign_key, normalize_constraint(name), match_type, assoc, message, :no_assoc)
   end
 
   @doc """
@@ -3272,10 +3291,11 @@ defmodule Ecto.Changeset do
 
   """
   def exclusion_constraint(changeset, field, opts \\ []) do
-    constraint = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_exclusion"
+    name = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_exclusion"
     message    = message(opts, "violates an exclusion constraint")
     match_type = Keyword.get(opts, :match, :exact)
-    add_constraint(changeset, :exclusion, to_string(constraint), match_type, field, message, :exclusion)
+
+    add_constraint(changeset, :exclusion, normalize_constraint(name), match_type, field, message, :exclusion)
   end
 
   defp no_assoc_message(:one), do: "is still associated with this entry"
@@ -3287,7 +3307,7 @@ defmodule Ecto.Changeset do
 
   defp add_constraint(%Changeset{constraints: constraints} = changeset,
                       type, constraint, match, field, error_message, error_type)
-       when is_binary(constraint) and is_atom(field) and is_binary(error_message) do
+       when (is_binary(constraint) or is_struct(constraint, Regex)) and is_atom(field) and is_binary(error_message) do
     unless match in @match_types do
       raise ArgumentError, "invalid match type: #{inspect match}. Allowed match types: #{inspect @match_types}"
     end
@@ -3303,6 +3323,10 @@ defmodule Ecto.Changeset do
 
     %{changeset | constraints: [constraint | constraints]}
   end
+
+  defp normalize_constraint(%Regex{} = constraint), do: constraint
+
+  defp normalize_constraint(constraint), do: to_string(constraint)
 
   defp get_source(%{data: %{__meta__: %{source: source}}}) when is_binary(source),
     do: source

@@ -286,7 +286,7 @@ defmodule Ecto.ConstraintError do
           "The changeset has not defined any constraint."
         constraints ->
           "The changeset defined the following constraints:\n\n" <>
-            Enum.map_join(constraints, "\n", &"    * #{&1.constraint} (#{&1.type}_constraint)")
+            Enum.map_join(constraints, "\n", &"    * #{inspect(&1.constraint)} (#{&1.type}_constraint)")
       end
 
     msg = """

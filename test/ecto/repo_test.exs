@@ -1374,6 +1374,16 @@ defmodule Ecto.RepoTest do
       refute changeset.valid?
     end
 
+    test "are mapped to repo constraint violation using regex match" do
+      my_schema = %MySchema{id: 1}
+      changeset =
+        put_in(my_schema.__meta__.context, {:invalid, [unique: "foo_table_part_90_custom_foo_index1234"]})
+        |> Ecto.Changeset.change(x: "foo")
+        |> Ecto.Changeset.unique_constraint(:foo, name: ~r/foo_table_part_.+_custom_foo_index\d+/)
+      assert {:error, changeset} = TestRepo.insert(changeset)
+      refute changeset.valid?
+    end
+
     test "are mapped to repo constraint violation using suffix match" do
       my_schema = %MySchema{id: 1}
       changeset =
@@ -1400,6 +1410,18 @@ defmodule Ecto.RepoTest do
         put_in(my_schema.__meta__.context, {:invalid, [unique: "foo_table_custom_foo_index"]})
         |> Ecto.Changeset.change(x: "foo")
         |> Ecto.Changeset.unique_constraint(:foo, name: "custom_foo_index")
+      assert_raise Ecto.ConstraintError, fn ->
+        TestRepo.insert(changeset)
+      end
+    end
+
+    test "may fail to map to repo constraint violation on name regex" do
+      my_schema = %MySchema{id: 1}
+      changeset =
+        put_in(my_schema.__meta__.context, {:invalid, [unique: "foo_table_custom_foo_index"]})
+        |> Ecto.Changeset.change(x: "foo")
+        |> Ecto.Changeset.unique_constraint(:foo, name: ~r/will_not_match/)
+
       assert_raise Ecto.ConstraintError, fn ->
         TestRepo.insert(changeset)
       end
