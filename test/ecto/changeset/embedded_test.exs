@@ -95,14 +95,14 @@ defmodule Ecto.Changeset.EmbeddedTest do
     end
   end
 
-  defmodule Alias do
+  defmodule NestedInline do
     use Ecto.Schema
     alias Alias.One, warn: false
     alias Alias.Many, warn: false
     alias Alias.OneNoPK, warn: false
     alias Alias.ManyNoPK, warn: false
 
-    schema "aliases" do
+    schema "nested_inline" do
       embeds_one :root, Elixir.Root do
         field :name, :string
       end
@@ -129,20 +129,26 @@ defmodule Ecto.Changeset.EmbeddedTest do
     end
   end
 
-  test "nested embed overwrites conflicting alias" do
+  test "nested inline embed can be a root module" do
     assert Root.__schema__(:fields) == [:id, :name]
-    assert Expanded.__schema__(:fields) == [:id, :name]
-    assert Alias.One.__schema__(:fields) == [:id, :name]
-    assert Alias.OneNoPK.__schema__(:fields) == [:name]
-    assert Alias.Many.__schema__(:fields) == [:id, :title]
-    assert Alias.ManyNoPK.__schema__(:fields) == [:title]
+    assert %Ecto.Embedded{related: Root} = NestedInline.__schema__(:embed, :root)
+  end
 
-    assert %Ecto.Embedded{related: Root} = Alias.__schema__(:embed, :root)
-    assert %Ecto.Embedded{related: Expanded} = Alias.__schema__(:embed, :expanded)
-    assert %Ecto.Embedded{related: Alias.One} = Alias.__schema__(:embed, :one)
-    assert %Ecto.Embedded{related: Alias.OneNoPK} = Alias.__schema__(:embed, :one_no_pk)
-    assert %Ecto.Embedded{related: Alias.Many} = Alias.__schema__(:embed, :many)
-    assert %Ecto.Embedded{related: Alias.ManyNoPK} = Alias.__schema__(:embed, :many_no_pk)
+  test "nested inline embed alias can already be expanded" do
+    assert Expanded.__schema__(:fields) == [:id, :name]
+    assert %Ecto.Embedded{related: Expanded} = NestedInline.__schema__(:embed, :expanded)
+  end
+
+  test "nested inilne embed overwrites conflicting alias" do
+    assert NestedInline.One.__schema__(:fields) == [:id, :name]
+    assert NestedInline.OneNoPK.__schema__(:fields) == [:name]
+    assert NestedInline.Many.__schema__(:fields) == [:id, :title]
+    assert NestedInline.ManyNoPK.__schema__(:fields) == [:title]
+
+    assert %Ecto.Embedded{related: NestedInline.One} = NestedInline.__schema__(:embed, :one)
+    assert %Ecto.Embedded{related: NestedInline.OneNoPK} = NestedInline.__schema__(:embed, :one_no_pk)
+    assert %Ecto.Embedded{related: NestedInline.Many} = NestedInline.__schema__(:embed, :many)
+    assert %Ecto.Embedded{related: NestedInline.ManyNoPK} = NestedInline.__schema__(:embed, :many_no_pk)
   end
 
   defp cast(schema, params, embed, opts \\ []) do
