@@ -21,7 +21,7 @@
   * [Ecto.Query] Support interpolated values for from/join prefixes
   * [Ecto.Query] Support ties in limit expressions through `with_ties/3`
   * [Ecto.Schema] Add `:autogenerate_fields` to the schema reflection API
-  * [Ecto.Type] Add optional callback `format/1`
+  * [Ecto.ParameterizedType] Add optional callback `format/1`
 
 ### Bug fixes
 
