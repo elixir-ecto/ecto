@@ -2387,12 +2387,11 @@ defmodule Ecto.Schema do
     end
   end
 
-  defp expand_nested_module_alias({:__aliases__, _, [h | t]}, env) when is_atom(h) do
-    module = Module.concat([env.module, h])
+  defp expand_nested_module_alias(expanded, _env) when is_atom(expanded), do: expanded
 
-    case t do
-      [] -> module
-      _ -> String.to_atom(Enum.join([module | t], "."))
-    end
-  end
+  defp expand_nested_module_alias({:__aliases__, _, [Elixir, _ | _] = alias}, _env),
+    do: Module.concat(alias)
+
+  defp expand_nested_module_alias({:__aliases__, _, [h | t]}, env) when is_atom(h),
+    do: Module.concat([env.module, h | t])
 end

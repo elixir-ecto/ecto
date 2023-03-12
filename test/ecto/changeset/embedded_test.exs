@@ -103,15 +103,26 @@ defmodule Ecto.Changeset.EmbeddedTest do
     alias Alias.ManyNoPK, warn: false
 
     schema "aliases" do
+      embeds_one :root, Elixir.Root do
+        field :name, :string
+      end
+
+      embeds_one :expanded, :"Elixir.Expanded" do
+        field :name, :string
+      end
+
       embeds_one :one, One do
         field :name, :string
       end
+
       embeds_one :one_no_pk, OneNoPK, primary_key: false do
         field :name, :string
       end
+
       embeds_many :many, Many do
         field :title, :string
       end
+
       embeds_many :many_no_pk, ManyNoPK, primary_key: false do
         field :title, :string
       end
@@ -119,18 +130,19 @@ defmodule Ecto.Changeset.EmbeddedTest do
   end
 
   test "nested embed overwrites conflicting alias" do
+    assert Root.__schema__(:fields) == [:id, :name]
+    assert Expanded.__schema__(:fields) == [:id, :name]
     assert Alias.One.__schema__(:fields) == [:id, :name]
     assert Alias.OneNoPK.__schema__(:fields) == [:name]
     assert Alias.Many.__schema__(:fields) == [:id, :title]
     assert Alias.ManyNoPK.__schema__(:fields) == [:title]
-    assert %Ecto.Embedded{related: Alias.One} =
-      Alias.__schema__(:embed, :one)
-    assert %Ecto.Embedded{related: Alias.OneNoPK} =
-      Alias.__schema__(:embed, :one_no_pk)
-    assert %Ecto.Embedded{related: Alias.Many} =
-      Alias.__schema__(:embed, :many)
-    assert %Ecto.Embedded{related: Alias.ManyNoPK} =
-      Alias.__schema__(:embed, :many_no_pk)
+
+    assert %Ecto.Embedded{related: Root} = Alias.__schema__(:embed, :root)
+    assert %Ecto.Embedded{related: Expanded} = Alias.__schema__(:embed, :expanded)
+    assert %Ecto.Embedded{related: Alias.One} = Alias.__schema__(:embed, :one)
+    assert %Ecto.Embedded{related: Alias.OneNoPK} = Alias.__schema__(:embed, :one_no_pk)
+    assert %Ecto.Embedded{related: Alias.Many} = Alias.__schema__(:embed, :many)
+    assert %Ecto.Embedded{related: Alias.ManyNoPK} = Alias.__schema__(:embed, :many_no_pk)
   end
 
   defp cast(schema, params, embed, opts \\ []) do
