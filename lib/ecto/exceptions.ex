@@ -286,17 +286,7 @@ defmodule Ecto.ConstraintError do
           "The changeset has not defined any constraint."
         constraints ->
           "The changeset defined the following constraints:\n\n" <>
-            Enum.map_join(constraints, "\n", fn c ->
-              name =
-                case c.constraint do
-                  name when is_binary(name) ->
-                    name
-
-                  %Regex{} = r ->
-                    inspect(r)
-                end
-              "    * #{name} (#{c.type}_constraint)"
-            end)
+            Enum.map_join(constraints, "\n", &"    * #{inspect(&1.constraint)} (#{&1.type}_constraint)")
       end
 
     msg = """
