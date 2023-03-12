@@ -292,7 +292,7 @@ defmodule Ecto.ConstraintError do
     msg = """
     constraint error when attempting to #{action} struct:
 
-        * #{constraint} (#{type}_constraint)
+        * #{inspect(constraint)} (#{type}_constraint)
 
     If you would like to stop this constraint violation from raising an
     exception and instead add it as an error to your changeset, please
