@@ -2945,7 +2945,7 @@ defmodule Ecto.Changeset do
     message    = message(opts, "is invalid")
     match_type = Keyword.get(opts, :match, :exact)
 
-    add_constraint(changeset, :check, normalize_constraint(name), match_type, field, message)
+    add_constraint(changeset, :check, name, match_type, field, message, :check)
   end
 
   @doc """
@@ -3090,7 +3090,7 @@ defmodule Ecto.Changeset do
     match_type = Keyword.get(opts, :match, :exact)
     error_key  = Keyword.get(opts, :error_key, first_field)
 
-    add_constraint(changeset, :unique, normalize_constraint(name), match_type, error_key, message)
+    add_constraint(changeset, :unique, name, match_type, error_key, message, :unique)
   end
 
   defp unique_index_name(changeset, fields) do
@@ -3153,7 +3153,7 @@ defmodule Ecto.Changeset do
     match_type = Keyword.get(opts, :match, :exact)
     message    = message(opts, "does not exist")
 
-    add_constraint(changeset, :foreign_key, normalize_constraint(name), match_type, field, message, :foreign)
+    add_constraint(changeset, :foreign_key, name, match_type, field, message, :foreign)
   end
 
   @doc """
@@ -3208,7 +3208,7 @@ defmodule Ecto.Changeset do
     match_type = Keyword.get(opts, :match, :exact)
     message = message(opts, "does not exist")
 
-    add_constraint(changeset, :foreign_key, normalize_constraint(name), match_type, assoc, message, :assoc)
+    add_constraint(changeset, :foreign_key, name, match_type, assoc, message, :assoc)
   end
 
   @doc """
@@ -3266,7 +3266,7 @@ defmodule Ecto.Changeset do
 
     match_type = Keyword.get(opts, :match, :exact)
 
-    add_constraint(changeset, :foreign_key, normalize_constraint(name), match_type, assoc, message, :no_assoc)
+    add_constraint(changeset, :foreign_key, name, match_type, assoc, message, :no_assoc)
   end
 
   @doc """
@@ -3295,25 +3295,17 @@ defmodule Ecto.Changeset do
     message    = message(opts, "violates an exclusion constraint")
     match_type = Keyword.get(opts, :match, :exact)
 
-    add_constraint(changeset, :exclusion, normalize_constraint(name), match_type, field, message, :exclusion)
+    add_constraint(changeset, :exclusion, name, match_type, field, message, :exclusion)
   end
 
   defp no_assoc_message(:one), do: "is still associated with this entry"
   defp no_assoc_message(:many), do: "are still associated with this entry"
 
-  defp add_constraint(changeset, type, constraint, match, field, message) do
-    add_constraint(changeset, type, constraint, match, field, message, type)
-  end
-
   defp add_constraint(%Changeset{constraints: constraints} = changeset,
                       type, constraint, match, field, error_message, error_type)
-       when (is_binary(constraint) or is_struct(constraint, Regex)) and is_atom(field) and is_binary(error_message) do
-    unless match in @match_types do
-      raise ArgumentError, "invalid match type: #{inspect match}. Allowed match types: #{inspect @match_types}"
-    end
-
+       when is_atom(field) and is_binary(error_message) do
     constraint = %{
-      constraint: constraint,
+      constraint: normalize_constraint(constraint, match),
       error_message: error_message,
       error_type: error_type,
       field: field,
@@ -3324,9 +3316,25 @@ defmodule Ecto.Changeset do
     %{changeset | constraints: [constraint | constraints]}
   end
 
-  defp normalize_constraint(%Regex{} = constraint), do: constraint
+  defp normalize_constraint(constraint, match) when is_atom(constraint) do
+    normalize_constraint(Atom.to_string(constraint), match)
+  end
 
-  defp normalize_constraint(constraint), do: to_string(constraint)
+  defp normalize_constraint(constraint, match) when is_binary(constraint) do
+    unless match in @match_types do
+      raise ArgumentError, "invalid match type: #{inspect match}. Allowed match types: #{inspect @match_types}"
+    end
+
+    constraint
+  end
+
+  defp normalize_constraint(%Regex{} = constraint, match) do
+    if match != :exact do
+      raise ArgumentError, "a Regex constraint only allows match type of :exact, got: #{inspect(match)}"
+    end
+
+    constraint
+  end
 
   defp get_source(%{data: %{__meta__: %{source: source}}}) when is_binary(source),
     do: source
