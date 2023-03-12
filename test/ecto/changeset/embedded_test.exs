@@ -95,6 +95,62 @@ defmodule Ecto.Changeset.EmbeddedTest do
     end
   end
 
+  defmodule NestedInline do
+    use Ecto.Schema
+    alias Alias.One, warn: false
+    alias Alias.Many, warn: false
+    alias Alias.OneNoPK, warn: false
+    alias Alias.ManyNoPK, warn: false
+
+    schema "nested_inline" do
+      embeds_one :root, Elixir.Root do
+        field :name, :string
+      end
+
+      embeds_one :expanded, :"Elixir.Expanded" do
+        field :name, :string
+      end
+
+      embeds_one :one, One do
+        field :name, :string
+      end
+
+      embeds_one :one_no_pk, OneNoPK, primary_key: false do
+        field :name, :string
+      end
+
+      embeds_many :many, Many do
+        field :title, :string
+      end
+
+      embeds_many :many_no_pk, ManyNoPK, primary_key: false do
+        field :title, :string
+      end
+    end
+  end
+
+  test "nested inline embed can be a root module" do
+    assert Root.__schema__(:fields) == [:id, :name]
+    assert %Ecto.Embedded{related: Root} = NestedInline.__schema__(:embed, :root)
+  end
+
+  test "nested inline embed alias can already be expanded" do
+    assert Expanded.__schema__(:fields) == [:id, :name]
+    assert %Ecto.Embedded{related: Expanded} = NestedInline.__schema__(:embed, :expanded)
+  end
+
+  test "nested inilne embed overwrites conflicting alias" do
+    assert NestedInline.One.__schema__(:fields) == [:id, :name]
+    assert NestedInline.OneNoPK.__schema__(:fields) == [:name]
+    assert NestedInline.Many.__schema__(:fields) == [:id, :title]
+    assert NestedInline.ManyNoPK.__schema__(:fields) == [:title]
+
+    assert %Ecto.Embedded{related: NestedInline.One} = NestedInline.__schema__(:embed, :one)
+    assert %Ecto.Embedded{related: NestedInline.OneNoPK} = NestedInline.__schema__(:embed, :one_no_pk)
+    assert %Ecto.Embedded{related: NestedInline.Many} = NestedInline.__schema__(:embed, :many)
+    assert %Ecto.Embedded{related: NestedInline.ManyNoPK} = NestedInline.__schema__(:embed, :many_no_pk)
+  end
+
   defp cast(schema, params, embed, opts \\ []) do
     schema
     |> Changeset.cast(params, ~w())
