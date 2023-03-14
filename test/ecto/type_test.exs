@@ -695,10 +695,10 @@ defmodule Ecto.TypeTest do
     end
   end
 
-  @datetime DateTime.from_unix!(1422057007, :second)
-  @datetime_zero DateTime.from_unix!(1422057000, :second)
-  @datetime_zero_usec DateTime.from_unix!(1422057000000000, :microsecond)
-  @datetime_usec DateTime.from_unix!(1422057007008000, :microsecond)
+  @datetime ~U[2015-01-23 23:50:07Z]
+  @datetime_zero ~U[2015-01-23 23:50:00Z]
+  @datetime_zero_usec ~U[2015-01-23 23:50:00.000000Z]
+  @datetime_usec ~U[2015-01-23 23:50:07.008000Z]
   @datetime_usec_tz %DateTime{
     calendar: Calendar.ISO,
     day: 24,
@@ -713,8 +713,8 @@ defmodule Ecto.TypeTest do
     year: 2015,
     zone_abbr: "CET"
   }
-  @datetime_leapyear DateTime.from_unix!(951868207, :second)
-  @datetime_leapyear_usec DateTime.from_unix!(951868207008000, :microsecond)
+  @datetime_leapyear ~U[2000-02-29 23:50:07Z]
+  @datetime_leapyear_usec ~U[2000-02-29 23:50:07.008000Z]
 
   describe "utc_datetime" do
     test "cast" do
@@ -785,18 +785,15 @@ defmodule Ecto.TypeTest do
     end
 
     test "cast negative datetime" do
-      {:ok, datetime, 0} = DateTime.from_iso8601("-2015-01-23 23:50:07Z")
-      {:ok, datetime_zero, 0} = DateTime.from_iso8601("-2015-01-23 23:50:00Z")
-
-      assert Ecto.Type.cast(:utc_datetime, "-2015-01-23 23:50") == {:ok, datetime_zero}
-      assert Ecto.Type.cast(:utc_datetime, "-2015-01-23 23:50:07") == {:ok, datetime}
+      assert Ecto.Type.cast(:utc_datetime, "-2015-01-23 23:50") == {:ok, ~U[-2015-01-23 23:50:00Z]}
+      assert Ecto.Type.cast(:utc_datetime, "-2015-01-23 23:50:07") == {:ok, ~U[-2015-01-23 23:50:07Z]}
       assert Ecto.Type.cast(:utc_datetime, "-2015-01-23 23:50:07bad") == :error
     end
 
     test "dump" do
-      assert Ecto.Type.dump(:utc_datetime, @datetime) == DateTime.from_naive(~N[2015-01-23 23:50:07], "Etc/UTC")
-      assert Ecto.Type.dump(:utc_datetime, @datetime_zero) == DateTime.from_naive(~N[2015-01-23 23:50:00], "Etc/UTC")
-      assert Ecto.Type.dump(:utc_datetime, @datetime_leapyear) == DateTime.from_naive(~N[2000-02-29 23:50:07], "Etc/UTC")
+      assert Ecto.Type.dump(:utc_datetime, @datetime) == {:ok, @datetime}
+      assert Ecto.Type.dump(:utc_datetime, @datetime_zero) == {:ok, @datetime_zero}
+      assert Ecto.Type.dump(:utc_datetime, @datetime_leapyear) == {:ok, @datetime_leapyear}
 
       assert_raise ArgumentError, ~r":utc_datetime expects microseconds to be empty", fn ->
         Ecto.Type.dump(:utc_datetime, @datetime_usec)
