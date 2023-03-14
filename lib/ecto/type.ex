@@ -521,7 +521,7 @@ defmodule Ecto.Type do
   defp dump_float(term) when is_float(term), do: {:ok, term}
   defp dump_float(_), do: :error
 
-  defp dump_time(%Time{} = term), do: {:ok, check_no_usec!(term, :time)}
+  defp dump_time(%Time{} = term), do: {:ok, Time.truncate(term, :second)}
   defp dump_time(_), do: :error
 
   defp dump_time_usec(%Time{} = term), do: {:ok, check_usec!(term, :time_usec)}
@@ -532,7 +532,7 @@ defmodule Ecto.Type do
   defp dump_any_datetime(_), do: :error
 
   defp dump_naive_datetime(%NaiveDateTime{} = term), do:
-    {:ok, check_no_usec!(term, :naive_datetime)}
+    {:ok, NaiveDateTime.truncate(term, :second)}
 
   defp dump_naive_datetime(_), do: :error
 
@@ -542,8 +542,7 @@ defmodule Ecto.Type do
   defp dump_naive_datetime_usec(_), do: :error
 
   defp dump_utc_datetime(%DateTime{} = datetime) do
-    kind = :utc_datetime
-    {:ok, datetime |> check_utc_timezone!(kind) |> check_no_usec!(kind)}
+    {:ok, datetime |> check_utc_timezone!(:utc_datetime) |> DateTime.truncate(:second)}
   end
 
   defp dump_utc_datetime(_), do: :error
@@ -1361,16 +1360,6 @@ defmodule Ecto.Type do
   defp check_usec!(datetime, kind) do
     raise ArgumentError,
           "#{inspect(kind)} expects microsecond precision, got: #{inspect(datetime)}"
-  end
-
-  defp check_no_usec!(%{microsecond: {0, 0}} = datetime, _kind), do: datetime
-
-  defp check_no_usec!(%struct{} = datetime, kind) do
-    raise ArgumentError, """
-    #{inspect(kind)} expects microseconds to be empty, got: #{inspect(datetime)}
-
-    Use `#{inspect(struct)}.truncate(#{kind}, :second)` (available in Elixir v1.6+) to remove microseconds.
-    """
   end
 
   defp check_decimal(%Decimal{coef: coef} = decimal, _) when is_integer(coef), do: {:ok, decimal}

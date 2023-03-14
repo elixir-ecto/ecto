@@ -390,11 +390,8 @@ defmodule Ecto.TypeTest do
 
     test "dump" do
       assert Ecto.Type.dump(:time, @time) == {:ok, @time}
+      assert Ecto.Type.dump(:time, @time_usec) == {:ok, @time}
       assert Ecto.Type.dump(:time, @time_zero) ==  {:ok, @time_zero}
-
-      assert_raise ArgumentError, ~r":time expects microseconds to be empty", fn ->
-        Ecto.Type.dump(:time, @time_usec)
-      end
     end
 
     test "load" do
@@ -560,18 +557,15 @@ defmodule Ecto.TypeTest do
 
     test "dump" do
       assert Ecto.Type.dump(:naive_datetime, @datetime) == {:ok, @datetime}
+      assert Ecto.Type.dump(:naive_datetime, @datetime_usec) == {:ok, @datetime}
       assert Ecto.Type.dump(:naive_datetime, @datetime_zero) == {:ok, @datetime_zero}
       assert Ecto.Type.dump(:naive_datetime, @datetime_leapyear) == {:ok, @datetime_leapyear}
-
-      assert_raise ArgumentError, ~r":naive_datetime expects microseconds to be empty", fn ->
-        Ecto.Type.dump(:naive_datetime, @datetime_usec)
-      end
     end
 
     test "load" do
       assert Ecto.Type.load(:naive_datetime, @datetime) == {:ok, @datetime}
-      assert Ecto.Type.load(:naive_datetime, @datetime_zero) == {:ok, @datetime_zero}
       assert Ecto.Type.load(:naive_datetime, @datetime_usec) == {:ok, @datetime}
+      assert Ecto.Type.load(:naive_datetime, @datetime_zero) == {:ok, @datetime_zero}
       assert Ecto.Type.load(:naive_datetime, @datetime_leapyear) == {:ok, @datetime_leapyear}
 
       assert Ecto.Type.load(:naive_datetime, DateTime.from_naive!(@datetime, "Etc/UTC")) ==
@@ -765,12 +759,9 @@ defmodule Ecto.TypeTest do
 
     test "dump" do
       assert Ecto.Type.dump(:utc_datetime, @datetime) == {:ok, @datetime}
+      assert Ecto.Type.dump(:utc_datetime, @datetime_usec) == {:ok, @datetime}
       assert Ecto.Type.dump(:utc_datetime, @datetime_zero) == {:ok, @datetime_zero}
       assert Ecto.Type.dump(:utc_datetime, @datetime_leapyear) == {:ok, @datetime_leapyear}
-
-      assert_raise ArgumentError, ~r":utc_datetime expects microseconds to be empty", fn ->
-        Ecto.Type.dump(:utc_datetime, @datetime_usec)
-      end
     end
 
     test "load" do
