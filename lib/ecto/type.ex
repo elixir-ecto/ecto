@@ -103,8 +103,9 @@ defmodule Ecto.Type do
         end
         def cast(_), do: :error
 
-        def dump(id) when is_binary(id) do
-          Base.decode64(id)
+         def dump(id) when is_binary(id) do
+          {:ok, id_decoded} = Base.decode64(id)
+          {:ok, String.to_integer(id_decoded)}
         end
 
         def load(id) when is_integer(id) do
@@ -114,7 +115,7 @@ defmodule Ecto.Type do
         defp encode_id(id) do
           id
           |> Integer.to_string()
-          |> Base.encode64
+          |> Base.encode64()
         end
       end
 
