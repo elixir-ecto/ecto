@@ -62,11 +62,11 @@ defmodule User do
 end
 ```
 
-Embedded schemas defined in such way are said to be defined inline, which:
+Embedded schemas defined in such way are said to be defined inline, which means that they are:
 
-- generating module in parent scope with the appropriate struct (for example above, module will be `User.Profile`)
-- persisted within parent schema
-- requiring to provide `with` option to `Ecto.Changeset.cast_embed/3`
+- generated as a module in the parent scope with the appropriate struct (for the example above, the module will be `User.Profile`)
+- persisted within the parent schema
+- required to provide the `with` option to `Ecto.Changeset.cast_embed/3`
 
 ### Extracting the embeds
 
