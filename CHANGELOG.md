@@ -1,5 +1,11 @@
 # Changelog for v3.x
 
+## v3.9.5 (2023-03-22)
+
+### Bug fixes
+
+  * [Ecto.Query] Rename `@opaque dynamic` type to `@opaque dynamic_expr` to avoid conflicts with Erlang/OTP 26
+
 ## v3.9.4 (2022-12-21)
 
 ### Bug fixes
