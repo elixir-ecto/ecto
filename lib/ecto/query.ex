@@ -428,7 +428,7 @@ defmodule Ecto.Query do
   end
 
   @type t :: %__MODULE__{}
-  @opaque dynamic :: %DynamicExpr{}
+  @opaque dynamic_expr :: %DynamicExpr{}
 
   alias Ecto.Query.Builder
 
