@@ -457,6 +457,9 @@ defmodule Ecto.Changeset do
   @doc """
   Returns true if a field was changed in a changeset.
 
+  This function can check associations and embeds, but doesn't support the `:to`
+  and `:from` options for such fields.
+
   ## Options
 
     * `:to` - Check if the field was changed to a specific value
