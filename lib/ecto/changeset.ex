@@ -455,6 +455,66 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
+  Returns true if a field was changed in a changeset.
+
+  ## Options
+
+    * `:to` - Check if the field was changed to a specific value
+    * `:from` - Check if the field was changed from a specific value
+
+  ## Examples
+
+      iex> post = %Post{title: "Foo", body: "Old"}
+      iex> changeset = change(post, %{title: "New title", body: "Old"})
+
+      iex> changed?(changeset, :body)
+      false
+
+      iex> changed?(changeset, :title)
+      true
+
+      iex> changed?(changeset, :title, to: "NEW TITLE")
+      false
+  """
+  @spec changed?(t, atom, Keyword.t) :: boolean
+  def changed?(%Changeset{} = changeset, field, opts \\ []) when is_atom(field) do
+    case Map.fetch(changeset.types, field) do
+      {:ok, type} ->
+        case fetch_change(changeset, field) do
+          {:ok, new_value} ->
+            case type do
+              {tag, relation} when tag in @relations ->
+                if opts != [], do: raise ArgumentError, "invalid options for #{tag} field"
+                relation_changed?(relation.cardinality, new_value)
+              _ ->
+                Enum.all?(opts, fn
+                  {:from, from} ->
+                    Ecto.Type.equal?(type, Map.get(changeset.data, field), from)
+                  {:to, to} ->
+                    Ecto.Type.equal?(type, new_value, to)
+                  other ->
+                    raise ArgumentError, "unknown option #{inspect(other)}"
+                end)
+            end
+
+          :error ->
+            false
+        end
+
+      :error ->
+        raise ArgumentError, "field #{inspect(field)} doesn't exist"
+    end
+  end
+
+  defp relation_changed?(:one, changeset) do
+    changeset.action != :update or changeset.changes != %{}
+  end
+
+  defp relation_changed?(:many, changesets) do
+    Enum.any?(changesets, &relation_changed?(:one, &1))
+  end
+
+  @doc """
   Returns the empty values used by `Ecto.Changeset`.
 
   By default it marks a field as empty if it is a string made

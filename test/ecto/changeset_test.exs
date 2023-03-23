@@ -695,6 +695,56 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
+  test "changed?/3 " do
+    post = %Post{}
+
+    changeset = change(post,
+      title: "title",
+      upvotes: nil,
+      author_email: "johndoe@example.com",
+      comment: %Comment{}
+    )
+
+    assert changed?(changeset, :title)
+    assert changed?(changeset, :upvotes)
+    assert changed?(changeset, :comment)
+    refute changed?(changeset, :comments)
+    refute changed?(changeset, :body)
+
+    # :to
+    assert changed?(changeset, :title, to: "title")
+    assert changed?(changeset, :upvotes, to: nil)
+    assert changed?(changeset, :author_email, to: "johndoe+1@example.com")
+    refute changed?(changeset, :title, to: "wrong")
+    refute changed?(changeset, :body, to: nil)
+
+    # :from
+    assert changed?(changeset, :title, from: "")
+    assert changed?(changeset, :upvotes, from: 0)
+    refute changed?(changeset, :title, from: "wrong")
+    refute changed?(changeset, :author_email, to: "johndoee@example.com")
+    refute changed?(changeset, :body, from: nil)
+
+    # :to and :from
+    assert changed?(changeset, :title, from: "", to: "title")
+    refute changed?(changeset, :title, from: "wrong", to: "title")
+    refute changed?(changeset, :title, from: "", to: "wrong")
+
+    # invalid field
+    assert_raise ArgumentError, fn ->
+      changed?(changeset, :invalid_field)
+    end
+
+    # association with :to or :from
+    assert_raise ArgumentError, fn ->
+      changed?(changeset, :comment, to: change(%Comment{}, %{}))
+    end
+
+    assert_raise ArgumentError, fn ->
+      changed?(changeset, :comment, from: change(%Comment{}, %{}))
+    end
+  end
+
   test "fetch_field/2" do
     changeset = changeset(%Post{body: "bar"}, %{"title" => "foo"})
 
