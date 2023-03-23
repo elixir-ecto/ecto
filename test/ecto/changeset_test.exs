@@ -734,6 +734,15 @@ defmodule Ecto.ChangesetTest do
     assert_raise ArgumentError, fn ->
       changed?(changeset, :invalid_field)
     end
+
+    # association with :to or :from
+    assert_raise ArgumentError, fn ->
+      changed?(changeset, :comment, to: change(%Comment{}, %{}))
+    end
+
+    assert_raise ArgumentError, fn ->
+      changed?(changeset, :comment, from: change(%Comment{}, %{}))
+    end
   end
 
   test "fetch_field/2" do
