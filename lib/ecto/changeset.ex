@@ -483,14 +483,9 @@ defmodule Ecto.Changeset do
         case fetch_change(changeset, field) do
           {:ok, new_value} ->
             case type do
-              {tag, _relation} when tag in @relations ->
+              {tag, relation} when tag in @relations ->
                 if opts != [], do: raise ArgumentError, "invalid options for #{tag} field"
-
-                if is_list(new_value) do
-                  Enum.any?(new_value, association_changed?(new_value))
-                else
-                  association_changed?(new_value)
-                end
+                relation_changed?(relation.cardinality, new_value)
               _ ->
                 Enum.all?(opts, fn
                   {:from, from} ->
@@ -511,8 +506,12 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp association_changed?(changeset) do
+  defp relation_changed?(:one, changeset) do
     changeset.action != :update or changeset.changes != %{}
+  end
+
+  defp relation_changed?(:many, changesets) do
+    Enum.any?(changesets, &relation_changed?(:one, &1))
   end
 
   @doc """
