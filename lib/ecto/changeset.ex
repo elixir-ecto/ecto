@@ -478,17 +478,41 @@ defmodule Ecto.Changeset do
   """
   @spec changed?(t, atom, Keyword.t) :: boolean
   def changed?(%Changeset{} = changeset, field, opts \\ []) when is_atom(field) do
-    case fetch_change(changeset, field) do
-      {:ok, new_value} ->
-        Enum.all?(opts, fn
-          {:from, from} -> Map.get(changeset.data, field) == from
-          {:to, to} -> new_value == to
-          other -> raise ArgumentError, "unknown option #{inspect(other)}"
-        end)
+    case Map.fetch(changeset.types, field) do
+      {:ok, type} ->
+        case fetch_change(changeset, field) do
+          {:ok, new_value} ->
+            case type do
+              {tag, _relation} when tag in @relations ->
+                if opts != [], do: raise ArgumentError, "invalid options for #{tag} field"
+
+                if is_list(new_value) do
+                  Enum.any?(new_value, association_changed?(new_value))
+                else
+                  association_changed?(new_value)
+                end
+              _ ->
+                Enum.all?(opts, fn
+                  {:from, from} ->
+                    Ecto.Type.equal?(type, Map.get(changeset.data, field), from)
+                  {:to, to} ->
+                    Ecto.Type.equal?(type, new_value, to)
+                  other ->
+                    raise ArgumentError, "unknown option #{inspect(other)}"
+                end)
+            end
+
+          :error ->
+            false
+        end
 
       :error ->
-        false
+        raise ArgumentError, "field #{inspect(field)} doesn't exist"
     end
+  end
+
+  defp association_changed?(changeset) do
+    changeset.action != :update or changeset.changes != %{}
   end
 
   @doc """
