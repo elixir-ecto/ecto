@@ -369,8 +369,10 @@ defmodule Ecto.ChangesetTest do
   test "cast/4: user-defined error message overrides default invalid error message" do
     params = %{"title" => 1, "body" => 2}
     struct = %Post{}
+    custom_errors = [title: "must be a string"]
+    error_msg_func = fn field, meta -> custom_errors[field] || meta[:message] end
 
-    changeset = cast(struct, params, ~w(title body)a, messages: [title: "must be a string"])
+    changeset = cast(struct, params, ~w(title body)a, message: error_msg_func)
     assert changeset.changes == %{}
 
     assert changeset.errors == [
@@ -384,8 +386,10 @@ defmodule Ecto.ChangesetTest do
   test "cast/4: user-defined error message overrides custom invalid error message" do
     params = %{"custom_error" => :error}
     struct = %CustomErrorTest{}
+    error_msg_func = fn _, _ -> "user-defined error" end
 
-    changeset = cast(struct, params, ~w(custom_error)a, messages: [custom_error: "user-defined error"])
+    changeset = cast(struct, params, ~w(custom_error)a, message: error_msg_func)
+
     assert changeset.errors == [custom_error: {"user-defined error", [type: Ecto.ChangesetTest.CustomError, validation: :cast, reason: :foobar]}]
     refute changeset.valid?
   end
