@@ -724,15 +724,13 @@ defmodule Ecto.Changeset do
       :missing ->
         {changes, errors, valid?}
       {:invalid, custom_errors} ->
-          {default_message, custom_errors} = Keyword.pop(custom_errors, :message, "is invalid")
-          message = messages[key] || default_message
+        {default_message, custom_errors} = Keyword.pop(custom_errors, :message, "is invalid")
+        message = messages[key] || default_message
 
-          new_errors =
-            custom_errors
-            |> Keyword.put_new(:validation, :cast)
-            |> Keyword.put(:type, type)
-
-          {message, new_errors}
+        new_errors =
+          custom_errors
+          |> Keyword.put_new(:validation, :cast)
+          |> Keyword.put(:type, type)
         {changes, [{key, {message, new_errors}} | errors], false}
     end
   end
