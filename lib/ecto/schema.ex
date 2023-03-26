@@ -503,13 +503,13 @@ defmodule Ecto.Schema do
     :default,
     :source,
     :autogenerate,
-    :read_after_writes, 
-    :virtual, 
+    :read_after_writes,
+    :virtual,
     :primary_key,
     :load_in_query,
     :redact,
     :foreign_key,
-    :on_replace, 
+    :on_replace,
     :defaults,
     :type,
     :where,
@@ -683,11 +683,11 @@ defmodule Ecto.Schema do
       The default value is calculated at compilation time, so don't use
       expressions like `DateTime.utc_now` or `Ecto.UUID.generate` as
       they would then be the same for all records: in this scenario you can use
-      the `:autogenerate` option to generate at insertion time. 
+      the `:autogenerate` option to generate at insertion time.
 
       The default value is validated against the field's type at compilation time
-      and it will raise an ArgumentError if there is a type mismatch. If you cannot 
-      infer  the field's type at compilation time, you can use the 
+      and it will raise an ArgumentError if there is a type mismatch. If you cannot
+      infer  the field's type at compilation time, you can use the
       `:skip_default_validation` option on the field to skip validations.
 
       Once a default value is set, if you send changes to the changeset that
