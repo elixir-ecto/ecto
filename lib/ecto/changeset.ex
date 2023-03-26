@@ -726,15 +726,14 @@ defmodule Ecto.Changeset do
           |> Keyword.put(:type, type)
           |> Keyword.put_new(:message, "is invalid")
 
-        message =
+        metadata =
           if is_function(msg_func, 2) do
-            msg_func.(key, metadata)
+            Keyword.put(metadata, :message, msg_func.(key, metadata))
           else
-            Keyword.get(metadata, :message)
+            metadata
           end
 
-        {_, metadata} = Keyword.pop(metadata, :message)
-
+        {message, metadata} = Keyword.pop(metadata, :message)
         {changes, [{key, {message, metadata}} | errors], false}
     end
   end
