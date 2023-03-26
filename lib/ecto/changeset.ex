@@ -733,8 +733,7 @@ defmodule Ecto.Changeset do
             metadata
           end
 
-        {message, metadata} = Keyword.pop(metadata, :message)
-        {changes, [{key, {message, metadata}} | errors], false}
+        {changes, [{key, Keyword.pop(metadata, :message)} | errors], false}
     end
   end
 
