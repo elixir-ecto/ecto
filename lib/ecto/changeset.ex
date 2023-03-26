@@ -563,8 +563,8 @@ defmodule Ecto.Changeset do
     * `:message` - a function of arity 2 that is used to create the error message when
       casting fails. It receives the field name as the first argument, the error metadata
       as the second argument and must return a string. It will be called for every field
-      that cannot be casted. The default error message is given in the metadata under the
-      `:message` key
+      that cannot be casted. The default error message and field type are given under the
+      `:message` and `:type` keys in the metadata, respectively
 
   ## Examples
 
