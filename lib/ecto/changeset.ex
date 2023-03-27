@@ -613,6 +613,7 @@ defmodule Ecto.Changeset do
 
   You can define a custom error message function.
 
+      # Using field name
       iex> params = %{title: 1, body: 2}
       iex> custom_errors = [title: "must be a string"]
       iex> msg_func = fn field, _meta -> custom_errors[field] end
@@ -621,6 +622,20 @@ defmodule Ecto.Changeset do
       [
         title: {"must be a string", [type: :string, validation: :cast]},
         body: {"is_invalid", [type: :string, validation: :cast]}
+      ]
+
+      # Using field type
+      iex> params = %{title: 1, body: 2}
+      iex> custom_errors = [string: "must be a string"]
+      iex> msg_func = fn _field, meta ->
+      ...    type = meta[:type]
+      ...    custom_errors[type]
+      ...  end
+      iex> changeset = cast(post, params, [:title, :body], message: msg_func)
+      iex> changeset.errors
+      [
+        title: {"must be a string", [type: :string, validation: :cast]},
+        body: {"must be a string", [type: :string, validation: :cast]}
       ]
 
   ## Composing casts
