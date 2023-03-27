@@ -561,10 +561,11 @@ defmodule Ecto.Changeset do
       the current data in `:changes`. Defaults to `false`
 
     * `:message` - a function of arity 2 that is used to create the error message when
-      casting fails. It receives the field name as the first argument, the error metadata
-      as the second argument and must return a string. It will be called for every field
-      that cannot be casted. The default error message and field type are given under the
-      `:message` and `:type` keys in the metadata, respectively
+      casting fails. It is called for every field that cannot be casted and receives the
+      field name as the first argument and the error metadata as the second argument. It
+      must return a string or `nil`. If a string is returned it will be used as the error
+      message. If `nil` is returned the default error message will be used. The field type
+      is given under the `:type` key in the metadata
 
   ## Examples
 
@@ -612,12 +613,15 @@ defmodule Ecto.Changeset do
 
   You can define a custom error message function.
 
-      iex> params = %{title: 1, body: ""}
+      iex> params = %{title: 1, body: 2}
       iex> custom_errors = [title: "must be a string"]
-      iex> error_msg_func = fn field, meta -> custom_errors[field] || meta[:message]
-      iex> changeset = cast(post, params, [:title, :body], message: error_msg_func)
+      iex> msg_func = fn field, meta -> custom_errors[field] end
+      iex> changeset = cast(post, params, [:title, :body], message: msg_func)
       iex> changeset.errors
-      changeset.errors == [title: {"must be a string", [type: :string, validation: :cast]}]
+      [
+        title: {"must be a string", [type: :string, validation: :cast]},
+        body: {"is_invalid", [type: :string, validation: :cast]}
+      ]
 
   ## Composing casts
 
@@ -648,6 +652,7 @@ defmodule Ecto.Changeset do
 
   def cast(%Changeset{changes: changes, data: data, types: types, empty_values: empty_values} = changeset,
                       params, permitted, opts) do
+
     opts =
       cond do
         opts[:empty_values] ->
@@ -683,8 +688,13 @@ defmodule Ecto.Changeset do
   defp cast(%{} = data, %{} = types, %{} = changes, %{} = params, permitted, opts) when is_list(permitted) do
     empty_values = Keyword.get(opts, :empty_values, @empty_values)
     force? = Keyword.get(opts, :force_changes, false)
-    msg_func = Keyword.get(opts, :message)
     params = convert_params(params)
+    msg_func = Keyword.get(opts, :message, fn _, _ -> nil end)
+
+    unless is_function(msg_func, 2) do
+      raise ArgumentError,
+            "expected `:message` to be a function of arity 2, received: #{inspect(msg_func)}"
+    end
 
     defaults = case data do
       %{__struct__: struct} -> struct.__struct__()
@@ -720,20 +730,19 @@ defmodule Ecto.Changeset do
       :missing ->
         {changes, errors, valid?}
       {:invalid, custom_errors} ->
-        metadata =
+        {default_message, metadata} =
           custom_errors
           |> Keyword.put_new(:validation, :cast)
           |> Keyword.put(:type, type)
-          |> Keyword.put_new(:message, "is invalid")
+          |> Keyword.pop(:message, "is invalid")
 
-        metadata =
-          if is_function(msg_func, 2) do
-            Keyword.put(metadata, :message, msg_func.(key, metadata))
-          else
-            metadata
+        message =
+          case msg_func.(key, metadata) do
+            nil -> default_message
+            user_message -> user_message
           end
 
-        {changes, [{key, Keyword.pop(metadata, :message)} | errors], false}
+        {changes, [{key, {message, metadata}} | errors], false}
     end
   end
 
