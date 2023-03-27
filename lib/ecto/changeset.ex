@@ -615,7 +615,7 @@ defmodule Ecto.Changeset do
 
       iex> params = %{title: 1, body: 2}
       iex> custom_errors = [title: "must be a string"]
-      iex> msg_func = fn field, meta -> custom_errors[field] end
+      iex> msg_func = fn field, _meta -> custom_errors[field] end
       iex> changeset = cast(post, params, [:title, :body], message: msg_func)
       iex> changeset.errors
       [
