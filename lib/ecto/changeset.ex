@@ -887,7 +887,7 @@ defmodule Ecto.Changeset do
   For example, imagine a user has many addresses relationship where
   post data is sent as follows
 
-      %{"name" => "john doe", "addresses" => [
+      params = %{"name" => "john doe", "addresses" => [
         %{"street" => "somewhere", "country" => "brazil", "id" => 1},
         %{"street" => "elsewhere", "country" => "poland"},
       ]}
@@ -896,7 +896,7 @@ defmodule Ecto.Changeset do
 
       User
       |> Repo.get!(id)
-      |> Repo.preload(:addresses) # Only required when updating data
+      |> Repo.preload(:addresses) # Required when updating associations
       |> Ecto.Changeset.cast(params, [])
       |> Ecto.Changeset.cast_assoc(:addresses, with: &MyApp.Address.changeset/2)
 
