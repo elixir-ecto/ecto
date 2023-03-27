@@ -863,7 +863,7 @@ defmodule Ecto.Changeset do
   once (and not a single element of a many-style association) and receiving
   data external to the application.
 
-  `cast_assoc/3` works matching the records extracted from the database
+  `cast_assoc/3` matches the records extracted from the database
   and compares it with the parameters received from an external source.
   Therefore, it is expected that the data in the changeset has explicitly
   preloaded the association being cast and that all of the IDs exist and
