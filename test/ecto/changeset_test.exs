@@ -366,6 +366,47 @@ defmodule Ecto.ChangesetTest do
     refute changeset.valid?
   end
 
+  test "cast/4: user-defined error message overrides default invalid error message" do
+    params = %{"title" => 1, "body" => 2}
+    struct = %Post{}
+    custom_errors = [title: "must be a string"]
+    msg_func = fn field, _ -> custom_errors[field] end
+
+    changeset = cast(struct, params, ~w(title body)a, message: msg_func)
+    assert changeset.changes == %{}
+
+    assert changeset.errors == [
+             title: {"must be a string", [type: :string, validation: :cast]},
+             body: {"is invalid", [type: :string, validation: :cast]}
+           ]
+
+    refute changeset.valid?
+  end
+
+  test "cast/4: user-defined error message overrides custom invalid error message" do
+    params = %{"custom_error" => :error}
+    struct = %CustomErrorTest{}
+    msg_func = fn _, _ -> "user-defined error" end
+
+    changeset = cast(struct, params, ~w(custom_error)a, message: msg_func)
+
+    assert changeset.errors == [custom_error: {"user-defined error", [type: Ecto.ChangesetTest.CustomError, validation: :cast, reason: :foobar]}]
+    refute changeset.valid?
+  end
+
+  test "cast/4: :message must be a function of arity 2" do
+    params = %{"title" => 1, "body" => 2}
+    struct = %Post{}
+    custom_errors = [title: "must be a string"]
+    msg_func = fn field -> custom_errors[field] end
+
+    msg = ~r/expected `:message` to be a function of arity 2/
+
+    assert_raise ArgumentError, msg, fn ->
+      cast(struct, params, ~w(title body)a, message: msg_func)
+    end
+  end
+
   test "cast/4: ignores the :type parameter in custom errors" do
     params = %{"custom_error_with_type" => :error}
     struct = %CustomErrorTest{}
