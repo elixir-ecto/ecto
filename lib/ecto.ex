@@ -671,7 +671,7 @@ defmodule Ecto do
   @doc """
   Loads previously dumped `data` in the given `format` into a schema.
 
-  The first argument can be a an embedded schema module, or a map (of types) and
+  The first argument can be an embedded schema module, or a map (of types) and
   determines the return value: a struct or a map, respectively.
 
   The second argument `data` specifies fields and values that are to be loaded.
