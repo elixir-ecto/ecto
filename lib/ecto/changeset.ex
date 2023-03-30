@@ -487,7 +487,10 @@ defmodule Ecto.Changeset do
           {:ok, new_value} ->
             case type do
               {tag, relation} when tag in @relations ->
-                if opts != [], do: raise ArgumentError, "invalid options for #{tag} field"
+                if opts != [] do
+                  raise ArgumentError, "invalid options for #{tag} field"
+                end
+
                 relation_changed?(relation.cardinality, new_value)
               _ ->
                 Enum.all?(opts, fn
@@ -1351,15 +1354,15 @@ defmodule Ecto.Changeset do
   @doc """
   Gets the association entry or entries from changes or from the data.
 
-  Returned data is normalized to changesets by default. Pass the `:struct`
-  flag to retrieve the data as structs with changes applied, similar to `get_field/2`.
+  Returned data may be normalized to structs or changesets via the
+  `as` option (defaults to `:struct`, similar to `get_field/2`).
 
   ## Examples
 
       iex> %Author{posts: [%Post{id: 1, title: "hello"}]}
       ...> |> change()
       ...> |> get_assoc(:posts)
-      [%Ecto.Changeset{data: %Post{id: 1, title: "hello"}, changes: %{}}]
+      %Post{id: 1, title: "world"}]
 
       iex> %Author{posts: [%Post{id: 1, title: "hello"}]}
       ...> |> cast(%{posts: [%{id: 1, title: "world"}]}, [])
@@ -1374,7 +1377,7 @@ defmodule Ecto.Changeset do
       [%Post{id: 1, title: "world"}]
 
   """
-  def get_assoc(changeset, name, as \\ :changeset)
+  def get_assoc(changeset, name, as \\ :struct)
 
   def get_assoc(%Changeset{} = changeset, name, :struct) do
     get_field(changeset, name)
@@ -1387,15 +1390,15 @@ defmodule Ecto.Changeset do
   @doc """
   Gets the embedded entry or entries from changes or from the data.
 
-  Returned data is normalized to changesets by default. Pass the `:struct`
-  flag to retrieve the data as structs with changes applied, similar to `get_field/2`.
+  Returned data may be normalized to structs or changesets via the
+  `as` option (defaults to `:struct`, similar to `get_field/2`).
 
   ## Examples
 
       iex> %Post{comments: [%Comment{id: 1, body: "hello"}]}
       ...> |> change()
       ...> |> get_embed(:comments)
-      [%Ecto.Changeset{data: %Comment{id: 1, body: "hello"}, changes: %{}}]
+      [%Comment{id: 1, body: "hello"}]
 
       iex> %Post{comments: [%Comment{id: 1, body: "hello"}]}
       ...> |> cast(%{comments: [%{id: 1, body: "world"}]}, [])
@@ -1410,7 +1413,7 @@ defmodule Ecto.Changeset do
       [%Comment{id: 1, body: "world"}]
 
   """
-  def get_embed(changeset, name, as \\ :changeset)
+  def get_embed(changeset, name, as \\ :struct)
 
   def get_embed(%Changeset{} = changeset, name, :struct) do
     get_field(changeset, name)

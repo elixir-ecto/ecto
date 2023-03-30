@@ -828,12 +828,14 @@ defmodule Ecto.ChangesetTest do
 
     assert get_assoc(base_changesset, :comments, :changeset) == [change(%Comment{})]
     assert get_assoc(base_changesset, :comments, :struct) == [%Comment{}]
+    assert get_assoc(base_changesset, :comments) == [%Comment{}]
 
     comment_changeset = change(%Comment{}, %{id: 123})
     base_changesset = change(post) |> put_assoc(:comments, [comment_changeset])
 
     assert get_assoc(base_changesset, :comments, :changeset) == [%{comment_changeset | action: :update}]
     assert get_assoc(base_changesset, :comments, :struct) == [%Comment{id: 123}]
+    assert get_assoc(base_changesset, :comments) == [%Comment{id: 123}]
   end
 
   test "fetch_change/2" do
