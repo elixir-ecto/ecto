@@ -103,15 +103,6 @@ defmodule Ecto.Changeset.Relation do
     end
   end
 
-  def cast(%{cardinality: :many} = relation, owner, params, current, on_cast) when is_map(params) do
-    params =
-      params
-      |> Enum.map(&key_as_int/1)
-      |> Enum.sort
-      |> Enum.map(&elem(&1, 1))
-    cast(relation, owner, params, current, on_cast)
-  end
-
   def cast(%{related: mod} = relation, owner, params, current, on_cast) do
     pks = mod.__schema__(:primary_key)
     fun = &do_cast(relation, owner, &1, &2, &3, on_cast)
@@ -451,16 +442,9 @@ defmodule Ecto.Changeset.Relation do
     end
   end
 
-  defp key_as_int({key, val}) when is_binary(key) do
-    case Integer.parse(key) do
-      {key, ""} -> {key, val}
-      _ -> {key, val}
-    end
-  end
-  defp key_as_int(key_val), do: key_val
-
   defp process_current(nil, _get_pks, _relation),
     do: {[], %{}}
+
   defp process_current(current, get_pks, relation) do
     {pks, {map, counter}} =
       Enum.map_reduce(current, {%{}, 0}, fn struct, {acc, counter} ->

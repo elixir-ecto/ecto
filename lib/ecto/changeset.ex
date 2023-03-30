@@ -487,7 +487,10 @@ defmodule Ecto.Changeset do
           {:ok, new_value} ->
             case type do
               {tag, relation} when tag in @relations ->
-                if opts != [], do: raise ArgumentError, "invalid options for #{tag} field"
+                if opts != [] do
+                  raise ArgumentError, "invalid options for #{tag} field"
+                end
+
                 relation_changed?(relation.cardinality, new_value)
               _ ->
                 Enum.all?(opts, fn
@@ -994,19 +997,72 @@ defmodule Ecto.Changeset do
   The important point for partial changes is that any addresses, which were not
   preloaded won't be changed.
 
+  ## Sorting and deleting from -many collections
+
+  In earlier examples, we passed a -many style association as a list:
+
+      %{"name" => "john doe", "addresses" => [
+        %{"street" => "somewhere", "country" => "brazil", "id" => 1},
+        %{"street" => "elsewhere", "country" => "poland"},
+      ]}
+
+  However, it is also common to pass the addresses as a map, where each
+  key is an integer representing its position:
+
+      %{"name" => "john doe", "addresses" => %{
+        0 => %{"street" => "somewhere", "country" => "brazil", "id" => 1},
+        1 => %{"street" => "elsewhere", "country" => "poland"}
+      }}
+
+  Using indexes becomes specially useful with two supporting options:
+  `:sort_param` (embeds only) and `:drop_param`. These options tell
+  the indexes should be reordered or deleted from the data. For example,
+  if you did:
+
+      cast_embed(changeset, :addresses,
+        sort_param: :addresses_sort,
+        drop_param: :addresses_drop)
+
+  You can now submit this:
+
+      %{"name" => "john doe", "addresses" => %{...}, "addresses_drop" => [0]}
+
+  And now the entry with index 0 will be dropped from the params before casting.
+  Note this requires setting the relevant `:on_replace` option on your
+  associations/embeds definition.
+
+  Similar, for sorting, you could do:
+
+      %{"name" => "john doe", "addresses" => %{...}, "addresses_sort" => [1, 0]}
+
+  And that will internally sort the elements so 1 comes before 0. Note that
+  any index not present in "addresses_sort" will come _before_ any of the
+  sorted indexes. If an index is not found, an empty entry is added in its
+  place.
+
+  These parameters can be powerful in certain UIs as it allows you to decouple
+  the sorting and replacement of the data from its representation.
+
   ## Options
 
     * `:required` - if the association is a required field
+
     * `:required_message` - the message on failure, defaults to "can't be blank"
+
     * `:invalid_message` - the message on failure, defaults to "is invalid"
+
     * `:force_update_on_change` - force the parent record to be updated in the
       repository if there is a change, defaults to `true`
+
     * `:with` - the function to build the changeset from params. Defaults to the
       `changeset/2` function of the associated module. It can be changed by passing
       an anonymous function or an MFA tuple.  If using an MFA, the default changeset
       and parameters arguments will be prepended to the given args. For example,
       using `with: {Author, :special_changeset, ["hello"]}` will be invoked as
       `Author.special_changeset(changeset, params, "hello")`
+
+    * `:drop_param` - the parameter name which keeps a list of indexes to drop
+      from the relation parameters
 
   """
   def cast_assoc(changeset, name, opts \\ []) when is_atom(name) do
@@ -1030,16 +1086,29 @@ defmodule Ecto.Changeset do
   ## Options
 
     * `:required` - if the embed is a required field
+
     * `:required_message` - the message on failure, defaults to "can't be blank"
+
     * `:invalid_message` - the message on failure, defaults to "is invalid"
+
     * `:force_update_on_change` - force the parent record to be updated in the
       repository if there is a change, defaults to `true`
+
     * `:with` - the function to build the changeset from params. Defaults to the
       `changeset/2` function of the embedded module. It can be changed by passing
       an anonymous function or an MFA tuple.  If using an MFA, the default changeset
       and parameters arguments will be prepended to the given args. For example,
       using `with: {Author, :special_changeset, ["hello"]}` will be invoked as
       `Author.special_changeset(changeset, params, "hello")`
+
+    * `:drop_param` - the parameter name which keeps a list of indexes to drop
+      from the relation parameters
+
+    * `:sort_param` - the parameter name which keeps a list of indexes to sort
+      from the relation parameters. Unknown indexes are considered to be new
+      entries. Non-listed indexes will come before any sorted ones. See
+      `cast_assoc/3` for more information
+
   """
   def cast_embed(changeset, name, opts \\ []) when is_atom(name) do
     cast_relation(:embed, changeset, name, opts)
@@ -1064,13 +1133,15 @@ defmodule Ecto.Changeset do
         {changeset, false}
       end
 
-    on_cast  = Keyword.get_lazy(opts, :with, fn -> on_cast_default(type, related) end)
+    on_cast = Keyword.get_lazy(opts, :with, fn -> on_cast_default(type, related) end)
     original = Map.get(data, key)
 
     changeset =
-      case Map.fetch(params, param_key) do
-        {:ok, value} ->
-          current  = Relation.load!(data, original)
+      case params do
+        %{^param_key => value} ->
+          current = Relation.load!(data, original)
+          value = cast_params(relation, value, params, opts)
+
           case Relation.cast(relation, data, value, current, on_cast) do
             {:ok, change, relation_valid?} when change != original ->
               valid? = changeset.valid? and relation_valid?
@@ -1088,7 +1159,7 @@ defmodule Ecto.Changeset do
               missing_relation(changeset, key, current, required?, relation, opts)
           end
 
-        :error ->
+        %{} ->
           missing_relation(changeset, key, original, required?, relation, opts)
       end
 
@@ -1096,6 +1167,57 @@ defmodule Ecto.Changeset do
       {type, %{relation | on_cast: on_cast}}
     end
   end
+
+  defp cast_params(%{cardinality: :many}, value, params, opts) when is_map(value) do
+    sort = opts_key_from_params(:sort_param, opts, params)
+    drop = opts_key_from_params(:drop_param, opts, params)
+    drop = if is_list(drop), do: drop, else: []
+
+    {sorted, pending} =
+      if is_list(sort) do
+        Enum.map_reduce(sort -- drop, value, &Map.pop(&2, &1, %{}))
+      else
+        {[], value}
+      end
+
+    pending
+    |> Map.drop(drop)
+    |> Enum.map(&key_as_int/1)
+    |> Enum.sort()
+    |> Enum.map(&elem(&1, 1))
+    |> Kernel.++(sorted)
+  end
+
+  defp cast_params(%{cardinality: :one}, value, _params, opts) do
+    if opts[:sort_param] do
+      raise ArgumentError, ":sort_param not supported for belongs_to/has_one"
+    end
+
+    if opts[:drop_param] do
+      raise ArgumentError, ":drop_param not supported for belongs_to/has_one"
+    end
+
+    value
+  end
+
+  defp cast_params(_relation, value, _params, _opts) do
+    value
+  end
+
+  defp opts_key_from_params(opt, opts, params) do
+    if key = opts[opt] do
+      Map.get(params, Atom.to_string(key), nil)
+    end
+  end
+
+  defp key_as_int({key, val}) when is_binary(key) do
+    case Integer.parse(key) do
+      {key, ""} -> {key, val}
+      _ -> {key, val}
+    end
+  end
+
+  defp key_as_int(key_val), do: key_val
 
   defp on_cast_default(type, module) do
     fn struct, params ->

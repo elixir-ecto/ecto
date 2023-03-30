@@ -430,6 +430,41 @@ defmodule Ecto.Changeset.EmbeddedTest do
     assert changeset.valid?
   end
 
+  test "cast embeds_many with map and sort_param and delete_param" do
+    posts = %{1 => %{"title" => "one"}, 2 => %{"title" => "two"}, 3 => %{"title" => "three"}}
+    opts = [sort_param: :sort, drop_param: :drop]
+
+    changeset = cast(%Author{}, %{"posts" => posts}, :posts, opts)
+    assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ~w(one two three)
+
+    changeset = cast(%Author{}, %{"posts" => posts, "drop" => [2]}, :posts, opts)
+    assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ["one", "three"]
+
+    changeset = cast(%Author{}, %{posts: posts, drop: [2]}, :posts, opts)
+    assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ["one", "three"]
+
+    changeset = cast(%Author{}, %{"posts" => posts, "sort" => [2, 3, 1]}, :posts, opts)
+    assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ~w(two three one)
+
+    changeset = cast(%Author{}, %{posts: posts, sort: [2, 3, 1]}, :posts, opts)
+    assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ~w(two three one)
+
+    changeset = cast(%Author{}, %{posts: posts, sort: [2]}, :posts, opts)
+    assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ~w(one three two)
+
+    changeset = cast(%Author{}, %{posts: posts, sort: [2, "new"]}, :posts, opts)
+    assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ["one", "three", "two", nil]
+
+    changeset = cast(%Author{}, %{posts: posts, sort: [3, 2, 1], drop: [2]}, :posts, opts)
+    assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ["three", "one"]
+
+    changeset = cast(%Author{}, %{posts: posts, sort: [1, "new"], drop: [2, "new"]}, :posts, opts)
+    assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ["three", "one"]
+
+    changeset = cast(%Author{}, %{posts: posts, sort: :x, drop: :y}, :posts, opts)
+    assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ["one", "two", "three"]
+  end
+
   test "cast embeds_many with custom changeset" do
     changeset = cast(%Author{}, %{"posts" => [%{"title" => "hello"}]},
                      :posts, with: &Post.optional_changeset/2)
