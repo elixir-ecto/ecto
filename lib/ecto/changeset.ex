@@ -1300,10 +1300,13 @@ defmodule Ecto.Changeset do
   then falls back on the data, finally returning `default` if
   no value is available.
 
-  For associations and embeds, this function returns the changeset
-  data with all changes applied. Use  `get_assoc/3`/`get_embed/3`
-  if you want to retrieve the relations as changesets or if you want
-  more fine-grained control.
+  For associations and embeds, this function always returns
+  nil, a struct, or a list of structs. In case of changes,
+  the changeset data will have all data applies. This guarantees
+  a consistent result regardless if changes have been applied
+  or not. Use `get_change/2` or `get_assoc/3`/`get_embed/3`
+  if you want to retrieve the relations as changesets or
+  if you want more fine-grained control.
 
       iex> post = %Post{title: "A title", body: "My body is a cage"}
       iex> changeset = change(post, %{title: "A new title"})
@@ -1481,6 +1484,9 @@ defmodule Ecto.Changeset do
 
   @doc """
   Gets a change or returns a default value.
+
+  For associations and embeds, this function always returns
+  nil, a changeset, or a list of changesets.
 
   ## Examples
 

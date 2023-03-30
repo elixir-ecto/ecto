@@ -995,12 +995,14 @@ defmodule Ecto.Changeset.EmbeddedTest do
       |> Changeset.change
       |> Changeset.put_embed(:profile, profile_changeset)
     assert Changeset.get_field(changeset, :profile) == profile
+    assert Changeset.get_change(changeset, :profile) == %{profile_changeset | action: :insert}
     assert Changeset.fetch_field(changeset, :profile) == {:changes, profile}
     assert Changeset.get_embed(changeset, :profile, :changeset) == %{profile_changeset | action: :insert}
     assert Changeset.get_embed(changeset, :profile, :struct) == profile
 
     changeset = Changeset.change(%Author{profile: profile})
     assert Changeset.get_field(changeset, :profile) == profile
+    assert Changeset.get_change(changeset, :profile) == nil
     assert Changeset.fetch_field(changeset, :profile) == {:data, profile}
     assert Changeset.get_embed(changeset, :profile, :changeset) == Changeset.change(profile)
     assert Changeset.get_embed(changeset, :profile, :struct) == profile
