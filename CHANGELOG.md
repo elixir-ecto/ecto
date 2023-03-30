@@ -2,20 +2,27 @@
 
 ## v3.10.0-dev
 
+This release contains many improvements to Ecto.Changeset, functions like `Ecto.Changeset.changed?/2` and `field_missing?/2` will help make your code more expressive. Improvements to association and embed handling will also make it easier to manage more complex forms, especially those embedded within Phoenix.LiveView applications.
+
+On the changeset front, note this release unifies the handling of empty values between `cast/4` and `validate_required/3`. **If you were setting `:empty_values` in the past and you want to preserve this new behaviour throughout, you may want to update your code** from this:
+
+    Ecto.Changeset.cast(changeset, params, [:field1, :field2], empty_values: ["", []])
+
+to:
+
+    empty_values = [[]] ++ Ecto.Changeset.empty_values()
+    Ecto.Changeset.cast(changeset, params, [:field1, :field2], empty_values: empty_values)
+
+Queries have also been improved, to support LIMIT WITH TIES as well as materialized CTEs.
+
 ### Enhancements
 
   * [Ecto.Changeset] Add `get_assoc`/`get_embed`
   * [Ecto.Changeset] Add `field_missing?/2`
+  * [Ecto.Changeset] Add `changed?/2` and `changed?/3` with predicates support
   * [Ecto.Changeset] Alow `Regex` to be used in constraint names for exact matches
   * [Ecto.Changeset] Allow `:empty_values` option in `cast/4` to include a function which must return true if the value is empty
-  * [Ecto.Changeset] `cast/4` will by default consider strings made only of whitespace characters to be empty. This unifies the handling of empty values between `cast/4` and `validate_required/3`. **If you use `:empty_values` and you want to preserve the new behaviour throughout, you may update your code from this**
-
-        Ecto.Changeset.cast(changeset, params, [:field1, :field2], empty_values: ["", []])
-
-  to
-
-        empty_values = [[]] ++ Ecto.Changeset.empty_values()
-        Ecto.Changeset.cast(changeset, params, [:field1, :field2], empty_values: empty_values)
+  * [Ecto.Changeset] `cast/4` will by default consider strings made only of whitespace characters to be empty
   * [Ecto.Query] Support materialized option in CTEs
   * [Ecto.Query] Support dynamic field inside `json_extract_path`
   * [Ecto.Query] Support interpolated values for from/join prefixes
