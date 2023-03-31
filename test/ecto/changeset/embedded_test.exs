@@ -450,16 +450,16 @@ defmodule Ecto.Changeset.EmbeddedTest do
     assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ~w(two three one)
 
     changeset = cast(%Author{}, %{posts: posts, sort: [2]}, :posts, opts)
-    assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ~w(one three two)
+    assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ~w(two one three)
 
     changeset = cast(%Author{}, %{posts: posts, sort: [2, "new"]}, :posts, opts)
-    assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ["one", "three", "two", nil]
+    assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ["two", nil, "one", "three"]
 
     changeset = cast(%Author{}, %{posts: posts, sort: [3, 2, 1], drop: [2]}, :posts, opts)
     assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ["three", "one"]
 
     changeset = cast(%Author{}, %{posts: posts, sort: [1, "new"], drop: [2, "new"]}, :posts, opts)
-    assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ["three", "one"]
+    assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ["one", "three"]
 
     changeset = cast(%Author{}, %{posts: posts, sort: :x, drop: :y}, :posts, opts)
     assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ["one", "two", "three"]
