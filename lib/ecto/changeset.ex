@@ -1015,9 +1015,8 @@ defmodule Ecto.Changeset do
       }}
 
   Using indexes becomes specially useful with two supporting options:
-  `:sort_param` (embeds only) and `:drop_param`. These options tell
-  the indexes should be reordered or deleted from the data. For example,
-  if you did:
+  `:sort_param` and `:drop_param`. These options tell the indexes should
+  be reordered or deleted from the data. For example, if you did:
 
       cast_embed(changeset, :addresses,
         sort_param: :addresses_sort,
@@ -1039,6 +1038,27 @@ defmodule Ecto.Changeset do
   any index not present in "addresses_sort" will come _before_ any of the
   sorted indexes. If an index is not found, an empty entry is added in its
   place.
+
+  For embeds, this guarantees the embeds will be rewritten in the given order.
+  However, for associations, this is not enough. You will have to add a
+  `field :position, :integer` to the schema and then do a post-processing
+  of the association, something like this:
+
+      changeset
+      |> cast_assoc(:children, sort_param: ...)
+      |> copy_children_positions()
+
+      defp copy_children_positions(changeset) do
+        if children = Ecto.Changeset.get_change(changeset, :children) do
+          children
+          |> Enum.with_index(fn child, index ->
+            Ecto.Changeset.put_change(child, :position, index)
+          end)
+          |> then(&Ecto.Changeset.put_change(changeset, :children, &1))
+        else
+          changeset
+        end
+      end
 
   These parameters can be powerful in certain UIs as it allows you to decouple
   the sorting and replacement of the data from its representation.
@@ -1063,6 +1083,11 @@ defmodule Ecto.Changeset do
 
     * `:drop_param` - the parameter name which keeps a list of indexes to drop
       from the relation parameters
+
+    * `:sort_param` - the parameter name which keeps a list of indexes to sort
+      from the relation parameters. Unknown indexes are considered to be new
+      entries. Non-listed indexes will come before any sorted ones. See
+      `cast_assoc/3` for more information
 
   """
   def cast_assoc(changeset, name, opts \\ []) when is_atom(name) do
