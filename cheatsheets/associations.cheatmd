@@ -171,7 +171,7 @@ query =
 Repo.all(query)
 ```
 
-#### Joing using `assoc`
+#### Join using `assoc`
 
 ```elixir
 query =
@@ -286,7 +286,7 @@ movie.characters |> Enum.map(&(&1.age)) |> IO.inspect
 #=> [51, 61]
 ```
 
-Note: the example above peforms the same operation on all entries,
+Note: the example above performs the same operation on all entries,
 therefore it can be written as a query. Queries should be preferred
 when possible as they avoid loading all data into memory and are
 more performant. See next example.
