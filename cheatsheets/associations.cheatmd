@@ -200,7 +200,7 @@ Repo.get_by!(Movie, title: "The Shawshank Redemption")
 params = %{"name" => "Red", "age" => 60}
 
 Repo.get_by!(Movie, title: "The Shawshank Redemption")
-|> Ecto.build_assoc(movie, :characters)
+|> Ecto.build_assoc(:characters)
 |> cast(params, [:name, :age])
 |> Repo.insert()
 ```
