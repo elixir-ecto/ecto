@@ -37,6 +37,12 @@ Queries have also been improved, to support LIMIT WITH TIES as well as materiali
   * [Ecto.Query] Fix bug in `json_extract_path` where maps were not allowed to be nested inside of embeds
   * [Ecto.Schema] Allow inline embeds to overwrite conflicting aliases
 
+## v3.9.5 (2023-03-22)
+
+### Bug fixes
+
+  * [Ecto.Query] Rename `@opaque dynamic` type to `@opaque dynamic_expr` to avoid conflicts with Erlang/OTP 26
+
 ## v3.9.4 (2022-12-21)
 
 ### Bug fixes
