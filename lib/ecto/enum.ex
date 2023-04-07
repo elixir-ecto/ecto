@@ -213,35 +213,41 @@ defmodule Ecto.Enum do
     "#Ecto.Enum<values: #{inspect Keyword.keys(mappings)}>"
   end
 
-  @doc "Returns the possible values for a given schema and field"
-  @spec values(module, atom) :: [atom()]
-  def values(schema, field) do
-    schema
+  @doc "Returns the possible values for a given schema or types map and field"
+  @spec values(map | module, atom) :: [atom()]
+  def values(schema_or_types, field) do
+    schema_or_types
     |> mappings(field)
     |> Keyword.keys()
   end
 
-  @doc "Returns the possible dump values for a given schema and field"
-  @spec dump_values(module, atom) :: [String.t()] | [integer()]
-  def dump_values(schema, field) do
-    schema
+  @doc "Returns the possible dump values for a given schema or types map and field"
+  @spec dump_values(map | module, atom) :: [String.t()] | [integer()]
+  def dump_values(schema_or_types, field) do
+    schema_or_types
     |> mappings(field)
     |> Keyword.values()
   end
 
-  @doc "Returns the mappings for a given schema and field"
+  @spec mappings(map, atom) :: Keyword.t()
+  def mappings(types, field) when is_map(types) do
+    case types do
+      %{^field => {:parameterized, Ecto.Enum, %{mappings: mappings}}} -> mappings
+      %{^field => {_, {:parameterized, Ecto.Enum, %{mappings: mappings}}}} -> mappings
+      %{^field => _} -> raise ArgumentError, "#{field} is not an Ecto.Enum field"
+      %{} -> raise ArgumentError, "#{field} does not exist"
+    end
+  end
+
   @spec mappings(module, atom) :: Keyword.t()
   def mappings(schema, field) do
     try do
       schema.__changeset__()
     rescue
       _ in UndefinedFunctionError ->
-        raise ArgumentError, "#{inspect(schema)} is not an Ecto schema"
+        raise ArgumentError, "#{inspect(schema)} is not an Ecto schema or types map"
     else
-      %{^field => {:parameterized, Ecto.Enum, %{mappings: mappings}}} -> mappings
-      %{^field => {_, {:parameterized, Ecto.Enum, %{mappings: mappings}}}} -> mappings
-      %{^field => _} -> raise ArgumentError, "#{field} is not an Ecto.Enum field"
-      %{} -> raise ArgumentError, "#{field} does not exist"
+      %{} = types -> mappings(types, field)
     end
   end
 end
