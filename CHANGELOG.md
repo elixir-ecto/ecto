@@ -20,7 +20,7 @@ Queries have also been improved, to support LIMIT WITH TIES as well as materiali
   * [Ecto.Changeset] Add `get_assoc`/`get_embed`
   * [Ecto.Changeset] Add `field_missing?/2`
   * [Ecto.Changeset] Add `changed?/2` and `changed?/3` with predicates support
-  * [Ecto.Changeset] Alow `Regex` to be used in constraint names for exact matches
+  * [Ecto.Changeset] Allow `Regex` to be used in constraint names for exact matches
   * [Ecto.Changeset] Allow `:empty_values` option in `cast/4` to include a function which must return true if the value is empty
   * [Ecto.Changeset] `cast/4` will by default consider strings made only of whitespace characters to be empty
   * [Ecto.Query] Support materialized option in CTEs
