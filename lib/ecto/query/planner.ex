@@ -1434,7 +1434,6 @@ defmodule Ecto.Query.Planner do
     {put_in(query.select.fields, fields), select}
   end
 
-
   defp normalize_selected_as(fields, aliases) when aliases == %{}, do: fields
 
   defp normalize_selected_as(fields, _aliases) do

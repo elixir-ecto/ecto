@@ -664,5 +664,15 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert Macro.to_string(query.select.expr) == "&0"
       assert query.select.take == %{0 => {:map, [:dislikes] ++ comment_fields}}
     end
+
+    test "map/1 requires a source with a schema" do
+      assert_raise RuntimeError, "map/1 requires a source with a schema", fn ->
+        from c in "comments", select: c, select_merge: map(c)
+      end
+
+      assert_raise RuntimeError, "map/1 requires a source with a schema", fn ->
+        from c in "comments", select: map(c), select_merge: [:dislikes]
+      end
+    end
   end
 end

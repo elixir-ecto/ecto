@@ -444,7 +444,7 @@ defmodule Ecto.Query.Builder.Select do
           add_take(take, ix, {:map, fields})
 
         _ ->
-          take
+          raise "map/1 requires a source with a schema"
       end
 
     {amp, take}
