@@ -621,5 +621,48 @@ defmodule Ecto.Query.Builder.SelectTest do
           select_merge: %{t: p.title, b: p.body}
       assert Macro.to_string(query.select.expr) =~ "merge"
     end
+
+    test "merging into map/1" do
+      comment_fields = Comment.__schema__(:query_fields)
+
+      # take
+      query = from c in Comment, select: map(c), select_merge: [:dislikes]
+      assert Macro.to_string(query.select.expr) == "&0"
+      assert query.select.take == %{0 => {:map, comment_fields ++ [:dislikes]}}
+
+      # map
+      query = from c in Comment, select: map(c), select_merge: %{likes: 1}
+      assert Macro.to_string(query.select.expr) == "merge(&0, %{likes: 1})"
+      assert query.select.take == %{0 => {:map, comment_fields}}
+
+      # map/2
+      query = from c in Comment, select: map(c), select_merge: map(c, [:dislikes])
+      assert Macro.to_string(query.select.expr) == "&0"
+      assert query.select.take == %{0 => {:map, comment_fields ++ [:dislikes]}}
+    end
+
+    test "merging map/1 into" do
+      comment_fields = Comment.__schema__(:query_fields)
+
+      # schema
+      query = from c in Comment, select: c, select_merge: map(c)
+      assert Macro.to_string(query.select.expr) == "&0"
+      assert query.select.take == %{0 => {:map, comment_fields}}
+
+      # take
+      query = from c in Comment, select: [:dislikes], select_merge: map(c)
+      assert Macro.to_string(query.select.expr) == "&0"
+      assert query.select.take == %{0 => {:map, [:dislikes] ++ comment_fields}}
+
+      # map
+      query = from c in Comment, select: %{likes: 1}, select_merge: map(c)
+      assert Macro.to_string(query.select.expr) == "merge(%{likes: 1}, &0)"
+      assert query.select.take == %{0 => {:map, comment_fields}}
+
+      # map/2
+      query = from c in Comment, select: map(c, [:dislikes]), select_merge: map(c)
+      assert Macro.to_string(query.select.expr) == "&0"
+      assert query.select.take == %{0 => {:map, [:dislikes] ++ comment_fields}}
+    end
   end
 end

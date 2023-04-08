@@ -1488,7 +1488,7 @@ defmodule Ecto.Query.PlannerTest do
     assert query.select.fields ==
            select_fields([:id, :post_title], 0) ++
            select_fields([:id, :text], 1) ++
-            select_fields([:id], 0) ++
+           select_fields([:id], 0) ++
            select_fields([:id], 1)
   end
 
@@ -1504,6 +1504,87 @@ defmodule Ecto.Query.PlannerTest do
     assert query.select.fields ==
              select_fields([:a], 1) ++
                select_fields([:b], 1)
+  end
+
+  test "normalize: select with map/1" do
+    post_fields =
+      Post.__schema__(:query_fields) |> Enum.map(&(Post.__schema__(:field_source, &1) || &1))
+
+    query =
+      Post
+      |> select([p], map(p))
+      |> normalize()
+
+    assert {:&, _, [0]} = query.select.expr
+    assert query.select.fields == select_fields(post_fields, 0)
+
+    query =
+      Post
+      |> select([p], {map(p), p.title})
+      |> normalize()
+
+    assert query.select.fields ==
+           select_fields(post_fields, 0) ++
+           [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
+
+    comment_fields = Comment.__schema__(:query_fields)
+
+    query =
+      Post
+      |> join(:inner, [_], c in Comment, on: true)
+      |> select([p, c], {p, map(c)})
+      |> normalize()
+
+    assert query.select.fields ==
+           select_fields(post_fields, 0) ++
+           select_fields(comment_fields, 1)
+  end
+
+  test "normalize: select with map/1 on assoc" do
+    post_fields =
+      Post.__schema__(:query_fields) |> Enum.map(&(Post.__schema__(:field_source, &1) || &1))
+
+    comment_fields = Comment.__schema__(:query_fields)
+
+    query =
+      Post
+      |> join(:inner, [_], c in Comment, on: true)
+      |> select([p, c], map(p))
+      |> preload([p, c], comments: c)
+      |> normalize()
+
+    assert {:&, _, [0]} = query.select.expr
+
+    assert query.select.fields ==
+           select_fields(post_fields, 0) ++
+           select_fields(comment_fields, 1)
+
+    query =
+      Post
+      |> join(:inner, [_], c in Comment, on: true)
+      |> select([p, c], map(p))
+      |> preload([p, c], comments: {c, post: p}, extra_comments: c)
+      |> normalize()
+
+    assert {:&, _, [0]} = query.select.expr
+
+    assert query.select.fields ==
+           select_fields(post_fields, 0) ++
+           select_fields(comment_fields, 1) ++
+           select_fields(post_fields, 0) ++
+           select_fields(comment_fields, 1)
+  end
+
+  test  "normalize: map/1 requires a source with a schema" do
+    msg = ~r/map\/1 requires a source with a schema/
+
+    assert_raise Ecto.QueryError, msg, fn ->
+      normalize(from p in "posts", select: map(p))
+    end
+
+    assert_raise Ecto.QueryError, msg, fn ->
+      normalize(from p in fragment("posts"), select: map(p))
+    end
   end
 
   test "normalize: select with :%{}" do
@@ -1816,7 +1897,6 @@ defmodule Ecto.Query.PlannerTest do
       query = from(p in Post, select_merge: %{title: selected_as(p.title, :alias)}) |> normalize()
       assert [{:alias, _} | _] = Enum.reverse(query.select.fields)
     end
-
 
     test "raises when subquery key conflicts with selected_as/2 alias" do
       message = ~r"the alias, :integer, provided to `selected_as/2` conflicts"

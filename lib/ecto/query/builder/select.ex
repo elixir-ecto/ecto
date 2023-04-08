@@ -107,8 +107,15 @@ defmodule Ecto.Query.Builder.Select do
        when tag in [:map, :struct] and is_atom(var) and is_atom(context) do
     taken = escape_fields(fields, tag, env)
     expr = Builder.escape_var!(var, vars)
-    acc = add_take(acc, Builder.find_var!(var, vars), {tag, taken})
-    {expr, {params, acc}}
+    take = add_take(acc.take, Builder.find_var!(var, vars), {tag, taken})
+    {expr, {params, %{acc | take: take}}}
+  end
+
+  # map(var)
+  defp escape({:map, _, [{var, _, context}]}, {params, acc}, vars, _env)
+       when is_atom(var) and is_atom(context) do
+    expr = Builder.escape_var!(var, vars)
+    {{:{}, [], [:map, [], [expr]]}, {params, acc}}
   end
 
   # aliased values
@@ -163,6 +170,13 @@ defmodule Ecto.Query.Builder.Select do
             "(3) map with dynamic values"
         )
     end
+  end
+
+  @doc """
+  Validates and adds fields to the take map.
+  """
+  def add_take(take, key, value) do
+    Map.update(take, key, value, &merge_take_kind_and_fields(key, &1, value))
   end
 
   @doc """
@@ -348,6 +362,9 @@ defmodule Ecto.Query.Builder.Select do
   defp merge(query, select, old_expr, old_params, old_subqueries, old_take, old_aliases, new_select) do
     %{expr: new_expr, params: new_params, subqueries: new_subqueries, take: new_take, aliases: new_aliases} = new_select
 
+    {old_expr, old_take} = expand_map(query, old_expr, old_take)
+    {new_expr, new_take} = expand_map(query, new_expr, new_take)
+
     new_expr =
       new_expr
       |> Ecto.Query.Builder.bump_interpolations(old_params)
@@ -419,6 +436,26 @@ defmodule Ecto.Query.Builder.Select do
     %{query | select: select}
   end
 
+  defp expand_map(query, {:map, _, [{:&, _, [ix]} = amp]}, take) do
+    take =
+      case get_source(query, ix) do
+        {_, schema} when schema != nil ->
+          fields = schema.__schema__(:query_fields)
+          add_take(take, ix, {:map, fields})
+
+        _ ->
+          take
+      end
+
+    {amp, take}
+  end
+
+  defp expand_map(_, expr, take), do: {expr, take}
+
+  defp get_source(query, ix) do
+    Enum.at([query.from | query.joins], ix).source
+  end
+
   defp classify_merge({:&, meta, [ix]}, take) when is_integer(ix) do
     case take do
       %{^ix => {:map, _}} -> {:map, meta, :runtime}
@@ -456,11 +493,6 @@ defmodule Ecto.Query.Builder.Select do
     Macro.to_string(other)
   end
 
-  defp add_take(acc, key, value) do
-    take = Map.update(acc.take, key, value, &merge_take_kind_and_fields(key, &1, value))
-    %{acc | take: take}
-  end
-
   defp bump_subquery_params(new_params, old_subqueries) do
     len = length(old_subqueries)
 
@@ -482,7 +514,7 @@ defmodule Ecto.Query.Builder.Select do
           # If merging with a schemaless source, do nothing so the planner can take all the fields.
           case old_expr do
             {:&, _, [^binding]} ->
-              source = Enum.at([query.from | query.joins], binding).source
+              source = get_source(query, binding)
 
               case source do
                 {_, schema} when schema != nil ->

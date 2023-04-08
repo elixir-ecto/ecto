@@ -514,6 +514,24 @@ defmodule Ecto.Query.API do
   def struct(source, fields), do: doc! [source, fields]
 
   @doc """
+  Used in `select` to return the source as a map instead of a struct.
+
+  For example:
+
+      # from source
+      from p in Post, select: map(p)
+
+      # join source
+      from(p in Post, join: c in Comment, on: true,
+           select: {p, map(c)})
+
+  It can also be used with `select_merge`:
+
+      from p in Post, select: map(p), select_merge: [:payload]
+  """
+  def map(source), do: doc! [source]
+
+  @doc """
   Used in `select` to specify which fields should be returned as a map.
 
   For example, if you don't need all fields to be returned or

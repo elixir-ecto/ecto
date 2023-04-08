@@ -441,6 +441,13 @@ defmodule Ecto.Query.SubqueryTest do
       end
     end
 
+    test "with map/1" do
+      post_fields = Post.__schema__(:query_fields)
+      subquery = from p in Post, select: map(p)
+      query = normalize(from(p in subquery(subquery)))
+      assert query.select.fields == select_fields(post_fields, 0)
+    end
+
     test "invalid usage" do
       assert_raise Ecto.SubQueryError, ~r/does not allow `update` expressions in query/, fn ->
         query = from p in Post, update: [set: [title: nil]]
