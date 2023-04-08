@@ -566,6 +566,12 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert query.select.params == []
       assert query.select.take == %{0 => {:any, [:dislikes, :title, :likes]}}
 
+      query = from p in "posts", join: c in Comment, on: true, select: c, select_merge: map(c, [:dislikes])
+
+      assert Macro.to_string(query.select.expr) == "&1"
+      assert query.select.params == []
+      assert query.select.take == %{1 => {:map, [:dislikes, :title, :likes]}}
+
       # On take with schemaless source
       query = from c in "comments", select: [:title], select_merge: [:likes]
 
