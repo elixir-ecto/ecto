@@ -176,7 +176,7 @@ defmodule Ecto.QueryTest do
 
       assert ExUnit.CaptureIO.capture_io(:stderr, fn ->
         _ = quote_and_eval(from(p in "posts") |> join(:inner, "comments"))
-      end) =~ ~s'Missing `:on` in join on "comments", defaulting to `on: true`'
+      end) =~ ~s'missing `:on` in join on "comments", defaulting to `on: true`'
     end
 
     test "must be a list of variables" do

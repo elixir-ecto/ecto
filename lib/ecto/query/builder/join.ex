@@ -246,7 +246,7 @@ defmodule Ecto.Query.Builder.Join do
       end
 
     stacktrace = Macro.Env.stacktrace(env)
-    IO.warn("Missing `:on` in join#{maybe_source}, defaulting to `on: true`.", stacktrace)
+    IO.warn("missing `:on` in join#{maybe_source}, defaulting to `on: true`.", stacktrace)
 
     true
   end

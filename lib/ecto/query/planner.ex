@@ -307,7 +307,7 @@ defmodule Ecto.Query.Planner do
   defp normalize_subquery_select(query, adapter, source?) do
     {schema_or_source, expr, %{select: select} = query} = rewrite_subquery_select_expr(query, source?)
     {expr, _} = prewalk(expr, :select, query, select, 0, adapter)
-    {{:map, types}, fields, _from} = collect_fields(expr, [], :never, query, select.take, true, %{})
+    {{:map, types}, fields, _from} = collect_fields(expr, [], :none, query, select.take, true, %{})
     # types must take into account selected_as/2 aliases so that the correct fields are
     # referenced when the outer query selects the entire subquery
     types = normalize_subquery_types(types, Enum.reverse(fields), query.select.aliases, [])
@@ -1055,7 +1055,7 @@ defmodule Ecto.Query.Planner do
 
           # Now compute the fields as keyword lists so we emit AS in Ecto query.
           %{select: %{expr: expr, take: take, aliases: aliases}} = inner_query
-          {{:map, types}, fields, _from} = collect_fields(expr, [], :never, inner_query, take, true, %{})
+          {{:map, types}, fields, _from} = collect_fields(expr, [], :none, inner_query, take, true, %{})
           fields = cte_fields(Keyword.keys(types), Enum.reverse(fields), aliases)
           inner_query = put_in(inner_query.select.fields, fields)
           {_, inner_query} = pop_in(inner_query.aliases[@parent_as])
@@ -1420,11 +1420,6 @@ defmodule Ecto.Query.Planner do
   defp collect_fields({:&, _, [0]}, fields, :none, query, take, _keep_literals?, drop) do
     {expr, taken} = source_take!(:select, query, take, 0, 0, drop)
     {{:source, :from}, fields, {{:source, :from}, expr, taken}}
-  end
-
-  defp collect_fields({:&, _, [0]}, fields, from, _query, _take, _keep_literals?, _drop)
-       when from != :never do
-    {{:source, :from}, fields, from}
   end
 
   defp collect_fields({:&, _, [ix]}, fields, from, query, take, _keep_literals?, drop) do
