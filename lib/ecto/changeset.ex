@@ -3083,8 +3083,8 @@ defmodule Ecto.Changeset do
 
     if is_nil(current) do
       Logger.warn """
-      the current value of `#{field}` is `nil` and will not be used as a filter for optimistic
-      locking. To ensure `#{field}` is never `nil`, consider setting a default value.
+      the current value of `#{field}` is `nil` and will not be used as a filter for optimistic locking. \
+      To ensure `#{field}` is never `nil`, consider setting a default value.
       """
       changeset
     else

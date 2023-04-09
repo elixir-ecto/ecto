@@ -1367,13 +1367,11 @@ defmodule Ecto.Query.Planner do
 
     {fields, preprocess, from} =
       case from do
-        {:ok, from_pre, from_expr, from_taken} ->
+        {from_expr, from_source, from_fields} ->
           {assoc_exprs, assoc_fields} = collect_assocs([], [], query, tag, from_take, assocs)
-
-          fields = from_taken ++ Enum.reverse(assoc_fields, Enum.reverse(fields))
-
-          preprocess = [from_pre | Enum.reverse(assoc_exprs)]
-          {fields, preprocess, {from_tag, from_expr}}
+          fields = from_fields ++ Enum.reverse(assoc_fields, Enum.reverse(fields))
+          preprocess = [from_expr | Enum.reverse(assoc_exprs)]
+          {fields, preprocess, {from_tag, from_source}}
 
         :none when preloads != [] or assocs != [] ->
           error! query, "the binding used in `from` must be selected in `select` when using `preload`"
@@ -1395,19 +1393,33 @@ defmodule Ecto.Query.Planner do
 
   # Handling of source
 
-  defp collect_fields({:merge, _, [{:&, _, [0]}, right]}, fields, :none, query, take, keep_literals?, _drop) do
-    {expr, taken} = source_take!(:select, query, take, 0, 0, %{})
-    from = {:ok, {:source, :from}, expr, taken}
+  # The idea of collect_fields is to collect all fields used in select.
+  # However, special care is taken in for `from`. Because `from` is used
+  # earlier in assoc/preloads, any operation done on `from` is separately
+  # collected in the `from` information. Then, everything else refers to
+  # the preprocessed `from` as `{:source, :from}`.
 
-    {right, right_fields, _from} = collect_fields(right, [], from, query, take, keep_literals?, %{})
-    from = {:ok, {:merge, {:source, :from}, right}, expr, taken ++ Enum.reverse(right_fields)}
+  defp collect_fields({:merge, _, [left, right]}, fields, from, query, take, keep_literals?, _drop) do
+    case collect_fields(left, fields, from, query, take, keep_literals?, %{}) do
+      {{:source, :from}, fields, left_from} ->
+        {right, right_fields, _} =
+          collect_fields(right, [], left_from, query, take, keep_literals?, %{})
 
-    {{:source, :from}, fields, from}
+        {from_expr, from_source, from_fields} = left_from
+        from = {{:merge, from_expr, right}, from_source, from_fields ++ Enum.reverse(right_fields)}
+        {{:source, :from}, fields, from}
+
+      {left, left_fields, left_from} ->
+        {right, right_fields, right_from} =
+          collect_fields(right, left_fields, left_from, query, take, keep_literals?, %{})
+
+        {{:merge, left, right}, right_fields, right_from}
+    end
   end
 
   defp collect_fields({:&, _, [0]}, fields, :none, query, take, _keep_literals?, drop) do
     {expr, taken} = source_take!(:select, query, take, 0, 0, drop)
-    {{:source, :from}, fields, {:ok, {:source, :from}, expr, taken}}
+    {{:source, :from}, fields, {{:source, :from}, expr, taken}}
   end
 
   defp collect_fields({:&, _, [0]}, fields, from, _query, _take, _keep_literals?, _drop)
@@ -1509,11 +1521,6 @@ defmodule Ecto.Query.Planner do
     {args, fields, from} = collect_kv(args, fields, from, query, take, keep_literals?, [])
     struct!(name, args)
     {{:struct, name, args}, fields, from}
-  end
-
-  defp collect_fields({:merge, _, args}, fields, from, query, take, keep_literals?, _drop) do
-    {[left, right], fields, from} = collect_args(args, fields, from, query, take, keep_literals?, [])
-    {{:merge, left, right}, fields, from}
   end
 
   defp collect_fields({:date_add, _, [arg | _]} = expr, fields, from, query, take, keep_literals?, _drop) do
