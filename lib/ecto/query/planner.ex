@@ -1054,9 +1054,9 @@ defmodule Ecto.Query.Planner do
           {inner_query, counter} = traverse_exprs(inner_query, :all, counter, fun)
 
           # Now compute the fields as keyword lists so we emit AS in Ecto query.
-          %{select: %{expr: expr, take: take}} = inner_query
+          %{select: %{expr: expr, take: take, aliases: aliases}} = inner_query
           {{:map, types}, fields, _from} = collect_fields(expr, [], :never, inner_query, take, true, %{})
-          fields = cte_fields(Keyword.keys(types), Enum.reverse(fields), inner_query.select.aliases, [])
+          fields = cte_fields(Keyword.keys(types), Enum.reverse(fields), aliases)
           inner_query = put_in(inner_query.select.fields, fields)
           {_, inner_query} = pop_in(inner_query.aliases[@parent_as])
 
@@ -1936,12 +1936,11 @@ defmodule Ecto.Query.Planner do
     field
   end
 
-
-  defp cte_fields([key | rest_keys], [{:selected_as, _, [select_expr, key]} | rest_fields], aliases, acc) do
-    cte_fields(rest_keys, rest_fields, aliases, [{key, select_expr} | acc])
+  defp cte_fields([key | rest_keys], [{:selected_as, _, [select_expr, key]} | rest_fields], aliases) do
+    [{key, select_expr} | cte_fields(rest_keys, rest_fields, aliases)]
   end
 
-  defp cte_fields([key | rest_keys], [field | rest_fields], aliases, acc) do
+  defp cte_fields([key | rest_keys], [field | rest_fields], aliases) do
     if Map.has_key?(aliases, key) do
       raise ArgumentError,
             "the alias, #{inspect(key)}, provided to `selected_as/2` conflicts" <>
@@ -1956,11 +1955,10 @@ defmodule Ecto.Query.Planner do
         field -> {key, field}
       end
 
-    cte_fields(rest_keys, rest_fields, aliases, [{key, field} | acc])
+    [{key, field} | cte_fields(rest_keys, rest_fields, aliases)]
   end
 
-  defp cte_fields(_keys, [], _aliases, acc), do: :lists.reverse(acc)
-  defp cte_fields([], _fields, _aliases, acc), do: :lists.reverse(acc)
+  defp cte_fields([], [], _aliases), do: []
 
   defp assert_update!(%Ecto.Query{updates: updates} = query, operation) do
     changes =
