@@ -322,7 +322,7 @@ defmodule Ecto.Query.Planner do
     Enum.reverse(acc)
   end
 
-  defp normalize_subquery_types([{alias, _} = type | types], [{:selected_as, _, [_, alias]} | fields], select_aliases, acc) do
+  defp normalize_subquery_types([{alias, _} = type | types], [{alias, _} | fields], select_aliases, acc) do
     normalize_subquery_types(types, fields, select_aliases, [type | acc])
   end
 
@@ -343,7 +343,7 @@ defmodule Ecto.Query.Planner do
 
     type =
       case field do
-        {:selected_as, _, [_, select_alias]} -> {select_alias, type_value}
+        {select_alias, _} -> {select_alias, type_value}
         _ -> {source_alias, type_value}
       end
 
@@ -1370,9 +1370,7 @@ defmodule Ecto.Query.Planner do
         {:ok, from_pre, from_expr, from_taken} ->
           {assoc_exprs, assoc_fields} = collect_assocs([], [], query, tag, from_take, assocs)
 
-          fields =
-            (from_taken ++ Enum.reverse(assoc_fields, Enum.reverse(fields)))
-            |> normalize_selected_as(select.aliases)
+          fields = from_taken ++ Enum.reverse(assoc_fields, Enum.reverse(fields))
 
           preprocess = [from_pre | Enum.reverse(assoc_exprs)]
           {fields, preprocess, {from_tag, from_expr}}
@@ -1381,8 +1379,7 @@ defmodule Ecto.Query.Planner do
           error! query, "the binding used in `from` must be selected in `select` when using `preload`"
 
         :none ->
-          fields = fields |> normalize_selected_as(select.aliases) |> Enum.reverse()
-          {fields, [], :none}
+          {Enum.reverse(fields), [], :none}
       end
 
     select = %{
@@ -1394,15 +1391,6 @@ defmodule Ecto.Query.Planner do
     }
 
     {put_in(query.select.fields, fields), select}
-  end
-
-  defp normalize_selected_as(fields, aliases) when aliases == %{}, do: fields
-
-  defp normalize_selected_as(fields, _aliases) do
-    Enum.map(fields, fn
-      {:selected_as, _, [select_expr, name]} -> {name, select_expr}
-      field -> field
-    end)
   end
 
   # Handling of source
@@ -1590,9 +1578,9 @@ defmodule Ecto.Query.Planner do
     {{:value, :boolean}, [expr | fields], from}
   end
 
-  defp collect_fields({:selected_as, _, [select_expr, _name]} = expr, fields, from, query, take, keep_literals?, _drop) do
+  defp collect_fields({:selected_as, _, [select_expr, name]}, fields, from, query, take, keep_literals?, _drop) do
     {type, _, _} = collect_fields(select_expr, fields, from, query, take, keep_literals?, %{})
-    {type, [expr | fields], from}
+    {type, [{name, select_expr} | fields], from}
   end
 
   defp collect_fields(expr, fields, from, _query, _take, _keep_literals?, _drop) do
@@ -1936,7 +1924,7 @@ defmodule Ecto.Query.Planner do
     field
   end
 
-  defp cte_fields([key | rest_keys], [{:selected_as, _, [select_expr, key]} | rest_fields], aliases) do
+  defp cte_fields([key | rest_keys], [{key, select_expr} | rest_fields], aliases) do
     [{key, select_expr} | cte_fields(rest_keys, rest_fields, aliases)]
   end
 
@@ -1951,7 +1939,7 @@ defmodule Ecto.Query.Planner do
 
     {key, field} =
       case field do
-        {:selected_as, _, [select_expr, alias]} -> {alias, select_expr}
+        {alias, select_expr} -> {alias, select_expr}
         field -> {key, field}
       end
 
