@@ -490,6 +490,11 @@ defmodule Ecto.Query.InspectTest do
     assert i(query) == ~s<from p0 in Inspect.Post, select: type(^..., {:parameterized, Ecto.Query.InspectTest.MyParameterizedType, :foo})>
   end
 
+  test "map/1" do
+    query = from p in Post, select: map(p)
+    assert i(query) == ~s<from p0 in Inspect.Post, select: map(p0)>
+  end
+
   def plan(query) do
     {query, _, _} = Ecto.Adapter.Queryable.plan_query(:all, Ecto.TestAdapter, query)
     query
