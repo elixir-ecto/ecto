@@ -1,6 +1,6 @@
 # Changelog for v3.x
 
-## v3.10.0-dev
+## v3.10.0 (2023-04-10) 
 
 This release contains many improvements to Ecto.Changeset, functions like `Ecto.Changeset.changed?/2` and `field_missing?/2` will help make your code more expressive. Improvements to association and embed handling will also make it easier to manage more complex forms, especially those embedded within Phoenix.LiveView applications.
 
@@ -13,7 +13,7 @@ to:
     empty_values = [[]] ++ Ecto.Changeset.empty_values()
     Ecto.Changeset.cast(changeset, params, [:field1, :field2], empty_values: empty_values)
 
-Queries have also been improved, to support LIMIT WITH TIES as well as materialized CTEs.
+Queries have also been improved to support LIMIT WITH TIES as well as materialized CTEs.
 
 ### Enhancements
 
@@ -23,6 +23,7 @@ Queries have also been improved, to support LIMIT WITH TIES as well as materiali
   * [Ecto.Changeset] Allow `Regex` to be used in constraint names for exact matches
   * [Ecto.Changeset] Allow `:empty_values` option in `cast/4` to include a function which must return true if the value is empty
   * [Ecto.Changeset] `cast/4` will by default consider strings made only of whitespace characters to be empty
+  * [Ecto.Changeset] Add support for `:sort_param` and `:drop_param` on `cast_assoc` and `cast_embed`
   * [Ecto.Query] Support materialized option in CTEs
   * [Ecto.Query] Support dynamic field inside `json_extract_path`
   * [Ecto.Query] Support interpolated values for from/join prefixes

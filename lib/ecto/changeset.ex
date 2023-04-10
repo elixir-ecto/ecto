@@ -521,10 +521,16 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Returns the empty values used by `Ecto.Changeset`.
+  Returns the default empty values used by `Ecto.Changeset`.
 
   By default it marks a field as empty if it is a string made
-  only of whitespace characters.
+  only of whitespace characters. If you want to provide your
+  additional empty values on top of this one, such as an empty
+  list, you can write:
+
+      @empty_values [[]] ++ Ecto.Changeset.empty_values()
+
+  And then pass `empty_values: @empty_values` on `cast/3`.
   """
   def empty_values do
     @empty_values
