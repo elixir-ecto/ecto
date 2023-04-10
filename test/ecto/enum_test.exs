@@ -23,6 +23,15 @@ defmodule Ecto.EnumTest do
     end
   end
 
+  @schemaless_types %{
+    my_enum: Ecto.ParameterizedType.init(Ecto.Enum, values: [:foo, :bar, :baz]),
+    my_enums: {:array, Ecto.ParameterizedType.init(Ecto.Enum, values: [:foo, :bar, :baz])},
+    my_integer_enum: Ecto.ParameterizedType.init(Ecto.Enum, values: [foo: 1, bar: 2, baz: 5]),
+    my_integer_enums: {:array, Ecto.ParameterizedType.init(Ecto.Enum, values: [foo: 1, bar: 2, baz: 5])},
+    my_string_enum: Ecto.ParameterizedType.init(Ecto.Enum, values: [foo: "fooo", bar: "baar", baz: "baaz"]),
+    my_string_enums: {:array, Ecto.ParameterizedType.init(Ecto.Enum, values: [foo: "fooo", bar: "baar", baz: "baaz"])}
+  }
+
   describe "Ecto.Enum" do
     test "schema" do
       assert EnumSchema.__schema__(:type, :my_enum) ==
@@ -468,6 +477,13 @@ defmodule Ecto.EnumTest do
       assert Ecto.Enum.values(EnumSchema, :my_integer_enum) == [:foo, :bar, :baz]
       assert Ecto.Enum.values(EnumSchema, :my_integer_enums) == [:foo, :bar, :baz]
       assert Ecto.Enum.values(EnumSchema, :virtual_enum) == [:foo, :bar, :baz]
+
+      assert Ecto.Enum.values(@schemaless_types, :my_enum) == [:foo, :bar, :baz]
+      assert Ecto.Enum.values(@schemaless_types, :my_enums) == [:foo, :bar, :baz]
+      assert Ecto.Enum.values(@schemaless_types, :my_integer_enum) == [:foo, :bar, :baz]
+      assert Ecto.Enum.values(@schemaless_types, :my_integer_enums) == [:foo, :bar, :baz]
+      assert Ecto.Enum.values(@schemaless_types, :my_string_enum) == [:foo, :bar, :baz]
+      assert Ecto.Enum.values(@schemaless_types, :my_string_enums) == [:foo, :bar, :baz]
     end
   end
 
@@ -480,6 +496,13 @@ defmodule Ecto.EnumTest do
       assert Ecto.Enum.dump_values(EnumSchema, :my_integer_enum) == [1, 2, 5]
       assert Ecto.Enum.dump_values(EnumSchema, :my_integer_enums) == [1, 2, 5]
       assert Ecto.Enum.dump_values(EnumSchema, :virtual_enum) == ["foo", "bar", "baz"]
+
+      assert Ecto.Enum.dump_values(@schemaless_types, :my_enum) == ["foo","bar", "baz"]
+      assert Ecto.Enum.dump_values(@schemaless_types, :my_enums) == ["foo","bar", "baz"]
+      assert Ecto.Enum.dump_values(@schemaless_types, :my_string_enum) == ["fooo","baar", "baaz"]
+      assert Ecto.Enum.dump_values(@schemaless_types, :my_string_enums) == ["fooo","baar", "baaz"]
+      assert Ecto.Enum.dump_values(@schemaless_types, :my_integer_enum) == [1, 2, 5]
+      assert Ecto.Enum.dump_values(@schemaless_types, :my_integer_enums) == [1, 2, 5]
     end
   end
 
@@ -492,10 +515,17 @@ defmodule Ecto.EnumTest do
       assert Ecto.Enum.mappings(EnumSchema, :my_integer_enum) == [foo: 1, bar: 2, baz: 5]
       assert Ecto.Enum.mappings(EnumSchema, :my_integer_enums) == [foo: 1, bar: 2, baz: 5]
       assert Ecto.Enum.mappings(EnumSchema, :virtual_enum) == [foo: "foo", bar: "bar", baz: "baz"]
+
+      assert Ecto.Enum.mappings(@schemaless_types, :my_enum) == [foo: "foo", bar: "bar", baz: "baz"]
+      assert Ecto.Enum.mappings(@schemaless_types, :my_enums) == [foo: "foo", bar: "bar", baz: "baz"]
+      assert Ecto.Enum.mappings(@schemaless_types, :my_string_enum) == [foo: "fooo", bar: "baar", baz: "baaz"]
+      assert Ecto.Enum.mappings(@schemaless_types, :my_string_enums) == [foo: "fooo", bar: "baar", baz: "baaz"]
+      assert Ecto.Enum.mappings(@schemaless_types, :my_integer_enum) == [foo: 1, bar: 2, baz: 5]
+      assert Ecto.Enum.mappings(@schemaless_types, :my_integer_enums) == [foo: 1, bar: 2, baz: 5]
     end
 
     test "raises on bad schema" do
-      assert_raise ArgumentError, "NotASchema is not an Ecto schema", fn ->
+      assert_raise ArgumentError, "NotASchema is not an Ecto schema or types map", fn ->
         Ecto.Enum.mappings(NotASchema, :foo)
       end
     end
