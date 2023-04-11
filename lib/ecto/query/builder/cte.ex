@@ -35,7 +35,7 @@ defmodule Ecto.Query.Builder.CTE do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t, Macro.t, Macro.t, boolean(), Macro.Env.t) :: Macro.t
+  @spec build(Macro.t, Macro.t, Macro.t, nil | boolean(), Macro.Env.t) :: Macro.t
   def build(query, name, cte, materialized, env) do
     Builder.apply_query(query, __MODULE__, [escape(name, env), build_cte(name, cte, env), materialized], env)
   end
@@ -73,7 +73,7 @@ defmodule Ecto.Query.Builder.CTE do
   @doc """
   The callback applied by `build/4` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, bitstring, Ecto.Queryable.t, boolean()) :: Ecto.Query.t
+  @spec apply(Ecto.Queryable.t, bitstring, Ecto.Queryable.t, nil | boolean()) :: Ecto.Query.t
   # Runtime
   def apply(%Ecto.Query{with_ctes: with_expr} = query, name, %_{} = with_query, materialized) do
     %{query | with_ctes: apply_cte(with_expr, name, with_query, materialized)}
