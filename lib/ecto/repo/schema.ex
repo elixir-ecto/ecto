@@ -116,7 +116,7 @@ defmodule Ecto.Repo.Schema do
 
       %Ecto.Query.SelectExpr{expr: {:&, _, [ix]}, take: take} when is_map(take) ->
         # we want to support any table index, so we just get the first entry
-        {:map, fields} = take |> Enum.at(0) |> elem(1)
+        {:map, fields} = Map.get(take, ix)
         fields
 
       _ ->
