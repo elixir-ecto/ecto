@@ -119,7 +119,7 @@ defmodule Ecto.Repo.Schema do
       %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}} ->
         Enum.map(args, &elem(&1, 0))
 
-      %Ecto.Query.SelectExpr{take: %{^ix => {fun, fields}}} when not is_nil(ix) and fun in [:struct, :map] ->
+      %Ecto.Query.SelectExpr{take: %{^ix => {_fun, fields}}} ->
         fields
 
       _ ->
