@@ -110,13 +110,16 @@ defmodule Ecto.Repo.Schema do
 
     {query, cast_params, dump_params} = Ecto.Adapter.Queryable.plan_query(:insert_all, adapter, query)
 
+    ix = case query.select do
+      %Ecto.Query.SelectExpr{expr: {:&, _, [ix]}} -> ix
+      _ -> nil
+    end
+
     header = case query.select do
       %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}} ->
         Enum.map(args, &elem(&1, 0))
 
-      %Ecto.Query.SelectExpr{expr: {:&, _, [ix]}, take: take} when is_map(take) ->
-        # we want to support any table index, so we just get the first entry
-        {:map, fields} = Map.get(take, ix)
+      %Ecto.Query.SelectExpr{take: %{^ix => {fun, fields}}} when not is_nil(ix) and fun in [:struct, :map] ->
         fields
 
       _ ->

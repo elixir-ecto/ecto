@@ -536,8 +536,6 @@ defmodule Ecto.RepoTest do
     end
 
     test "takes query as datasource with literals" do
-      import Ecto.Query
-
       threshold = "ten"
 
       query = from s in MySchema,
@@ -555,6 +553,24 @@ defmodule Ecto.RepoTest do
       assert ["ten"] = params
     end
 
+    test "takes query selecting on struct" do
+      query = from s in MySchema,
+        select: struct(s, [:foo, :bar])
+
+      TestRepo.insert_all(MySchema, query)
+
+      assert_received {:insert_all, %{source: "my_schema"}, {%Ecto.Query{}, _params}}
+    end
+
+    test "takes query selecting on map" do
+      query = from s in MySchema,
+        select: map(s, [:foo, :bar])
+
+      TestRepo.insert_all(MySchema, query)
+
+      assert_received {:insert_all, %{source: "my_schema"}, {%Ecto.Query{}, _params}}
+    end
+
     test "raises when a bad query is given as source" do
       assert_raise ArgumentError, fn ->
         TestRepo.insert_all(MySchema, from(s in MySchema))
@@ -562,6 +578,10 @@ defmodule Ecto.RepoTest do
       assert_raise ArgumentError, fn ->
         source = from s in MySchema,
           select: s.x
+        TestRepo.insert_all(MySchema, source)
+      end
+      assert_raise Ecto.QueryError, fn ->
+        source = from s in MySchema, select: map(s, [])
         TestRepo.insert_all(MySchema, source)
       end
     end
