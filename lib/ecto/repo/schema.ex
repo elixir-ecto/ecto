@@ -114,6 +114,11 @@ defmodule Ecto.Repo.Schema do
       %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}} ->
         Enum.map(args, &elem(&1, 0))
 
+      %Ecto.Query.SelectExpr{take: take} when is_map(take) ->
+        # we want to support any table index, so we just get the first entry
+        {:map, fields} = take |> Enum.at(0) |> elem(1)
+        fields
+
       _ ->
         raise ArgumentError, """
         cannot generate a fields list for insert_all from the given source query
@@ -130,7 +135,7 @@ defmodule Ecto.Repo.Schema do
               field_b: x.foo
             }
 
-        The keys must exist in the schema that is being inserted into
+        All keys must exist in the schema that is being inserted into
         """
     end
 
