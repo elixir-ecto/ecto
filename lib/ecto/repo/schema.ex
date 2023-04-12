@@ -110,9 +110,17 @@ defmodule Ecto.Repo.Schema do
 
     {query, cast_params, dump_params} = Ecto.Adapter.Queryable.plan_query(:insert_all, adapter, query)
 
+    ix = case query.select do
+      %Ecto.Query.SelectExpr{expr: {:&, _, [ix]}} -> ix
+      _ -> nil
+    end
+
     header = case query.select do
       %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}} ->
         Enum.map(args, &elem(&1, 0))
+
+      %Ecto.Query.SelectExpr{take: %{^ix => {_fun, fields}}} ->
+        fields
 
       _ ->
         raise ArgumentError, """
@@ -130,7 +138,7 @@ defmodule Ecto.Repo.Schema do
               field_b: x.foo
             }
 
-        The keys must exist in the schema that is being inserted into
+        All keys must exist in the schema that is being inserted into
         """
     end
 
