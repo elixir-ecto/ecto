@@ -2,7 +2,7 @@ defmodule Ecto.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/elixir-ecto/ecto"
-  @version "3.10.0"
+  @version "3.10.1"
 
   def project do
     [
@@ -41,7 +41,7 @@ defmodule Ecto.MixProject do
 
   defp package do
     [
-      maintainers: ["Eric Meadows-Jönsson", "José Valim", "James Fish", "Michał Muskała", "Felipe Stival"],
+      maintainers: ["Eric Meadows-Jönsson", "José Valim", "Felipe Stival", "Greg Rychlewski"],
       licenses: ["Apache-2.0"],
       links: %{"GitHub" => @source_url},
       files:
