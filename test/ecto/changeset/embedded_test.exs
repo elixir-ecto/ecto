@@ -446,6 +446,9 @@ defmodule Ecto.Changeset.EmbeddedTest do
     changeset = cast(%Author{}, %{"posts" => posts, "sort" => [2, 3, 1]}, :posts, opts)
     assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ~w(two three one)
 
+    changeset = cast(%Author{}, %{sort: ["new"]}, :posts, opts)
+    assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == [nil]
+
     changeset = cast(%Author{}, %{posts: posts, sort: [2, 3, 1]}, :posts, opts)
     assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ~w(two three one)
 
