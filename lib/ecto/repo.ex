@@ -1873,7 +1873,7 @@ defmodule Ecto.Repo do
 
   We have two options to deal with such scenarios:
   
-  If don't want to change the semantics of your code,  you can also use the savepoints 
+  If you don't want to change the semantics of your code,  you can also use the savepoints 
   feature by passing the `:mode` option like this: `repo.insert(changeset, mode: :savepoint)`. 
   In case of an exception, the transaction will rollback to the savepoint and prevent 
   the transaction from failing.
