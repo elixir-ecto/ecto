@@ -119,6 +119,11 @@ defmodule Ecto.Multi do
 
   defstruct operations: [], names: MapSet.new()
 
+  @typedoc """
+  Map of changes made so far during the current transaction. For any Multi
+  which returns `{:ok, result}`, its `t:name/0` is added as a key and its
+  result as the value.
+  """
   @type changes :: map
   @type run :: ((Ecto.Repo.t, changes) -> {:ok | :error, any})
   @type fun(result) :: (changes -> result)
@@ -133,7 +138,14 @@ defmodule Ecto.Multi do
                       {:delete_all, Ecto.Query.t, Keyword.t} |
                       {:insert_all, schema_or_source, [map | Keyword.t], Keyword.t}
   @typep operations :: [{name, operation}]
+
   @typep names :: MapSet.t
+
+  @typedoc """
+  Name of an operation in the Multi. Can be any term, as long as it is unique
+  within the list of operations; for example, `:insert_post` or `{:delete_post,
+  5}`.
+  """
   @type name :: any
   @type t :: %__MODULE__{operations: operations, names: names}
 
