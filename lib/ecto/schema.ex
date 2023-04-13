@@ -1656,6 +1656,10 @@ defmodule Ecto.Schema do
   that, when using embedded schemas with databases like PG or MySQL,
   make sure all of your types can be JSON encoded/decoded correctly.
   Ecto provides this guarantee for all built-in types.
+  
+  When decoding, if a key exists in the database not defined in the
+  schema, it'll be ignored. If a field exists in the schema thats not
+  in the database, it's value will be `nil`.
   """
   defmacro embeds_one(name, schema, opts \\ [])
 
