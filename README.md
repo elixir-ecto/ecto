@@ -11,7 +11,7 @@ Add `:ecto` to the list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:ecto, "~> 3.8"}
+    {:ecto, "~> 3.10"}
   ]
 end
 ```
@@ -127,6 +127,9 @@ defmodule MyApp.Repo do
 
 | Branch | Support                  |
 | ------ | ------------------------ |
+| v3.10  | Bug fixes                |
+| v3.9   | Bug fixes                |
+| v3.8   | Bug fixes                |
 | v3.7   | Bug fixes                |
 | v3.6   | Security patches only    |
 | v3.5   | Security patches only    |
