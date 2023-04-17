@@ -317,6 +317,13 @@ defmodule Ecto.RepoTest do
       assert query.from.source == {"my_parent", Ecto.RepoTest.MyParent}
       assert query.prefix == "fallback_schema"
     end
+
+    test "raises if options aren't kw list" do
+      assert_raise FunctionClauseError, fn -> 
+        {:ok, _pid} = DefaultOptionRepo.start_link(url: "ecto://user:pass@local/hello")
+        DefaultOptionRepo.all(MySchema, [1])
+      end
+    end
   end
 
   describe "aggregate" do

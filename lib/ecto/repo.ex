@@ -261,7 +261,9 @@ defmodule Ecto.Repo do
       def default_options(_operation), do: []
       defoverridable default_options: 1
 
-      defp prepare_opts(operation_name, opts) do
+      defp prepare_opts(operation_name, []), do: default_options(operation_name)
+
+      defp prepare_opts(operation_name, [{key, _} | _rest] = opts) when is_atom(key) do
         operation_name
         |> default_options()
         |> Keyword.merge(opts)
