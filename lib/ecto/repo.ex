@@ -248,7 +248,7 @@ defmodule Ecto.Repo do
         adapter.checked_out?(meta)
       end
 
-      @compile {:inline, get_dynamic_repo: 0, prepare_opts: 2}
+      @compile {:inline, get_dynamic_repo: 0}
 
       def get_dynamic_repo() do
         Process.get({__MODULE__, :dynamic_repo}, @default_dynamic_repo)
@@ -1845,9 +1845,9 @@ defmodule Ecto.Repo do
 
   ## Aborted transactions
 
-  When an operation inside a transaction fails, the transaction is aborted in the database. 
-  For instance, if you attempt an insert that violates a unique constraint, the insert fails 
-  and the transaction is aborted. In such cases, any further operation inside the transaction 
+  When an operation inside a transaction fails, the transaction is aborted in the database.
+  For instance, if you attempt an insert that violates a unique constraint, the insert fails
+  and the transaction is aborted. In such cases, any further operation inside the transaction
   will raise exceptions.
 
   Take the following transaction as an example:
@@ -1866,24 +1866,24 @@ defmodule Ecto.Repo do
   the subsequent `repo.insert(%Failure{})` operation will raise an exception because the
   database has already aborted the transaction and thus making the operation invalid.
   In Postgres, the exception would look like this:
-  
+
       ** (Postgrex.Error) ERROR 25P02 (in_failed_sql_transaction) current transaction is aborted, commands ignored until end of transaction block
-      
-  If the changeset is invalid before it reaches the database due to a validation error, 
-  no statement is sent to the database, an `:error` tuple is returned, and `repo.insert(%Failure{})` 
-  operation will execute as usual. 
+
+  If the changeset is invalid before it reaches the database due to a validation error,
+  no statement is sent to the database, an `:error` tuple is returned, and `repo.insert(%Failure{})`
+  operation will execute as usual.
 
   We have two options to deal with such scenarios:
-  
-  If you don't want to change the semantics of your code,  you can also use the savepoints 
-  feature by passing the `:mode` option like this: `repo.insert(changeset, mode: :savepoint)`. 
-  In case of an exception, the transaction will rollback to the savepoint and prevent 
+
+  If you don't want to change the semantics of your code,  you can also use the savepoints
+  feature by passing the `:mode` option like this: `repo.insert(changeset, mode: :savepoint)`.
+  In case of an exception, the transaction will rollback to the savepoint and prevent
   the transaction from failing.
 
-  Another alternative is to handle this operation outside of the transaction. 
-  For example, you can choose to perform an explicit `repo.rollback` call in the 
-  `{:error, changeset}` clause and then perform the `repo.insert(%Failure{})` outside 
-  of the transaction. You might also consider using `Ecto.Multi`, as they automatically 
+  Another alternative is to handle this operation outside of the transaction.
+  For example, you can choose to perform an explicit `repo.rollback` call in the
+  `{:error, changeset}` clause and then perform the `repo.insert(%Failure{})` outside
+  of the transaction. You might also consider using `Ecto.Multi`, as they automatically
   rollback whenever an operation fails.
 
   ## Working with processes
