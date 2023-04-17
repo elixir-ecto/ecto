@@ -319,7 +319,7 @@ defmodule Ecto.RepoTest do
     end
 
     test "raises if options aren't a keyword list" do
-      assert_raise FunctionClauseError, fn -> 
+      assert_raise CaseClauseError, fn ->
         {:ok, _pid} = DefaultOptionRepo.start_link(url: "ecto://user:pass@local/hello")
         DefaultOptionRepo.all(MySchema, [1])
       end
