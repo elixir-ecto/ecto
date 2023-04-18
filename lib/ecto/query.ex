@@ -2306,7 +2306,8 @@ defmodule Ecto.Query do
       comments_query =
         from c in Comment,
         join: r in subquery(ranking_query),
-        on: c.id == r.id and r.row_number <= 5
+        on: c.id == r.id, 
+        where: r.row_number <= 5
 
       Repo.all from p in Post, preload: [comments: ^comments_query]
 
