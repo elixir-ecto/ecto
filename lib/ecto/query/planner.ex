@@ -1102,10 +1102,6 @@ defmodule Ecto.Query.Planner do
     {Enum.reverse(combinations), counter}
   end
 
-  defp validate_json_path!(_path, _field, :any), do: :ok
-  defp validate_json_path!(_path, _field, :map), do: :ok
-  defp validate_json_path!(_path, _field, {:map, _}), do: :ok
-
   defp validate_json_path!([path_field | rest], field, {:parameterized, Ecto.Embedded, embed}) do
     case embed do
       %{related: related, cardinality: :one} ->
@@ -1130,7 +1126,19 @@ defmodule Ecto.Query.Planner do
   end
 
   defp validate_json_path!([_path_field | _rest], field, other_type) do
-    raise "expected field `#{field}` to be an embed or a map, got: `#{inspect(other_type)}`"
+    case Ecto.Type.type(other_type) do
+      :any ->
+        :ok
+
+      :map ->
+        :ok
+
+      {:map, _} ->
+        :ok
+
+      type ->
+        raise "expected field `#{field}` to be an embed or a map, got: `#{inspect(type)}`"
+    end
   end
 
   defp validate_json_path!([], _field, _type) do

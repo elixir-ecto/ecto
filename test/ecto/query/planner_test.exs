@@ -8,6 +8,29 @@ defmodule Ecto.Query.PlannerTest do
   alias Ecto.Query.Planner
   alias Ecto.Query.JoinExpr
 
+  defmodule CustomMap do
+      use Ecto.Type
+      def type,      do: :map
+      def load(_),   do: {:ok, :load}
+      def dump(_),   do: {:ok, :dump}
+      def cast(_),   do: {:ok, :cast}
+      def equal?(true, _), do: true
+      def equal?(_, _), do: false
+      def embed_as(_), do: :dump
+    end
+
+  defmodule Custom do
+    use Ecto.Schema
+
+    schema "custom" do
+      field :custom_map, CustomMap
+
+      embeds_one :custom_embed, CustomEmbed do
+        field :nested_custom_map, CustomMap
+      end
+    end
+  end
+
   defmodule Comment do
     use Ecto.Schema
 
@@ -1219,6 +1242,17 @@ defmodule Ecto.Query.PlannerTest do
       |> normalize()
 
     assert inspect(normalized_query) =~ "where: p0.preferences[\"field\"] == \"value\", select: p0.preferences[\"field\"]>"
+  end
+
+  test "normalize: json_extract_path with field having custom map type" do
+    normalized_query =
+      Custom
+      |> where([c], c.custom_map["field"] == "value")
+      |> select([c], [c.custom_map["field"], c.custom_embed["nested_custom_map"]["field"]])
+      |> normalize()
+
+    assert inspect(normalized_query) =~
+             "where: c0.custom_map[\"field\"] == \"value\", select: [c0.custom_map[\"field\"], c0.custom_embed[\"nested_custom_map\"][\"field\"]]>"
   end
 
   test "normalize: flattens and expands right side of in expressions" do
