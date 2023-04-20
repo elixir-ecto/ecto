@@ -2403,6 +2403,12 @@ defmodule Ecto.Changeset do
       in Postgres or the database in MySQL). See `Ecto.Repo` documentation
       for more information.
 
+    * `:nulls_distinct` - a boolean controlling whether different null values
+      are considered distinct (not equal). If `false`, `nil` values will have
+      their uniqueness checked. Otherwise, the check will not be performed. This
+      is only meaningful when paired with a unique index that treats nulls as equal,
+      such as Postgres 15's `NULLS NOT DISTINCT` option. Defaults to `true`
+
     * `:repo_opts` - the options to pass to the `Ecto.Repo` call.
 
     * `:query` - the base query to use for the check. Defaults to the schema of
@@ -2448,9 +2454,8 @@ defmodule Ecto.Changeset do
     fields = List.wrap(fields)
     changeset = %{changeset | validations: [{hd(fields), {:unsafe_unique, fields: fields}} | validations]}
 
-    where_clause = for field <- fields do
-      {field, get_field(changeset, field)}
-    end
+    nulls_distinct = Keyword.get(opts, :nulls_distinct, true)
+    where_clause = unsafe_unique_filter(fields, changeset, nulls_distinct)
 
     # No need to query if there is a prior error for the fields
     any_prior_errors_for_fields? = Enum.any?(changeset.errors, &(elem(&1, 0) in fields))
@@ -2458,10 +2463,15 @@ defmodule Ecto.Changeset do
     # No need to query if we haven't changed any of the fields in question
     unrelated_changes? = Enum.all?(fields, &not Map.has_key?(changeset.changes, &1))
 
-    # If we don't have values for all fields, we can't query for uniqueness
-    any_nil_values_for_fields? = Enum.any?(where_clause, &(&1 |> elem(1) |> is_nil()))
+    # If one or more fields are `nil` and `nulls_distinct` is not false, we can't query for uniqueness
+    distinct_nils? =
+      if nulls_distinct == false do
+        false
+      else
+        Enum.any?(where_clause, &(&1 |> elem(1) |> is_nil()))
+      end
 
-    if unrelated_changes? or any_nil_values_for_fields? or any_prior_errors_for_fields? do
+    if unrelated_changes? or distinct_nils? or any_prior_errors_for_fields? do
       changeset
     else
       query =
@@ -2484,6 +2494,21 @@ defmodule Ecto.Changeset do
       else
         changeset
       end
+    end
+  end
+
+  defp unsafe_unique_filter(fields, changeset, false) do
+    Enum.reduce(fields, Ecto.Query.dynamic(true), fn field, dynamic ->
+      case get_field(changeset, field) do
+        nil -> Ecto.Query.dynamic([q], ^dynamic and is_nil(field(q, ^field)))
+        value -> Ecto.Query.dynamic([q], ^dynamic and field(q, ^field) == ^value)
+      end
+    end)
+  end
+
+  defp unsafe_unique_filter(fields, changeset, _nulls_distinct) do
+    for field <- fields do
+      {field, get_field(changeset, field)}
     end
   end
 

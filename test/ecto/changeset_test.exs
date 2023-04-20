@@ -1773,6 +1773,15 @@ defmodule Ecto.ChangesetTest do
       assert Macro.to_string(check_expr) == "&0.body() == ^0"
     end
 
+    test "accepts nulls_distinct option" do
+      cs = changeset(%Post{title: nil, body: "hi", color: "red"}, %{body: nil})
+      unsafe_validate_unique(cs, [:body, :title, :color], MockRepo, nulls_distinct: false)
+      assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{wheres: wheres}, opts: []]
+      assert [%{expr: check_expr}] = wheres
+
+      assert Macro.to_string(check_expr) == "true and is_nil(&0.body()) and is_nil(&0.title()) and &0.color() == ^0"
+    end
+
     test "generates correct where clause for single primary key without query option for loaded schema" do
       body_change =
         %SinglePkSchema{id: 0, body: "hi"}
