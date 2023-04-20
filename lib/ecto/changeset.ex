@@ -2405,11 +2405,11 @@ defmodule Ecto.Changeset do
       in Postgres or the database in MySQL). See `Ecto.Repo` documentation
       for more information.
 
-    * `:nulls_distinct` - a boolean controlling whether all null values are considered
-      equal. If `false`, `nil` values will have their uniqueness checked. Otherwise, the
-      check will not be performed. This is only meaningful when paired with a unique index
-      that treats nulls as equal, such as Postgres 15's `NULLS NOT DISTINCT` option.
-      Defaults to `true`
+    * `:nulls_distinct` - a boolean controlling whether different null values
+      are considered distinct (not equal). If `false`, `nil` values will have
+      their uniqueness checked. Otherwise, the check will not be performed. This
+      is only meaningful when paired with a unique index that treats nulls as equal,
+      such as Postgres 15's `NULLS NOT DISTINCT` option. Defaults to `true`
 
     * `:repo_opts` - the options to pass to the `Ecto.Repo` call.
 
