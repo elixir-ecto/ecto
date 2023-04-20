@@ -1774,8 +1774,8 @@ defmodule Ecto.ChangesetTest do
     end
 
     test "accepts nulls_distinct option" do
-      body_change = changeset(%Post{title: nil, body: "hi", color: "red"}, %{body: nil})
-      unsafe_validate_unique(body_change, [:body, :title, :color], MockRepo, nulls_distinct: false)
+      cs = changeset(%Post{title: nil, body: "hi", color: "red"}, %{body: nil})
+      unsafe_validate_unique(cs, [:body, :title, :color], MockRepo, nulls_distinct: false)
       assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{wheres: wheres}, opts: []]
       assert [%{expr: check_expr}] = wheres
 
