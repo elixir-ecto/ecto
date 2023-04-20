@@ -1200,6 +1200,94 @@ defmodule Ecto.RepoTest do
     assert schema.__meta__.prefix == "private"
   end
 
+  defmodule MySchemaVirtualAssoc do
+    use Ecto.Schema
+
+    schema "my_schema" do
+      field :x, :string
+      field :n, :integer
+      field :child, :any, virtual: true
+    end
+  end
+
+  test "select allows picking truthy value for field" do
+    Process.put(
+      :test_repo_all_results,
+      {1, [[2, "foo", 1, nil, nil, nil, 1, "test2", nil, nil, nil, nil]]}
+    )
+
+    result = MySchemaVirtualAssoc
+      |> join(:left, [s], ch in MySchemaChild, on: ch.n == s.n)
+      |> join(:left, [s], ch2 in MySchemaEmbedsOne, on: ch2.n == s.n)
+      |> join(:left, [s], ch3 in MySchemaChild, on: ch3.n == s.n)
+      |> select_merge([s, ch, ch2, ch3], %{
+        child: ch or ch2 or ch3
+      })
+      |> TestRepo.one()
+
+    assert %MySchemaVirtualAssoc{child: %MySchemaEmbedsOne{x: "test2"}} = result
+
+    Process.put(
+      :test_repo_all_results,
+      {1, [[2, "foo", 1, nil, "test2", nil]]}
+    )
+
+    result = MySchemaVirtualAssoc
+      |> join(:left, [s], ch in MySchemaChild, on: ch.n == s.n)
+      |> join(:left, [s], ch2 in MySchemaEmbedsOne, on: ch2.n == s.n)
+      |> join(:left, [s], ch3 in MySchemaChild, on: ch3.n == s.n)
+      |> select_merge([s, ch, ch2, ch3], %{
+        child: ch.a or ch2.x or ch3.a
+      })
+      |> TestRepo.one()
+
+    assert %MySchemaVirtualAssoc{child: "test2"} = result
+  end
+
+  test "select allows any order of alternatives" do
+    Process.put(
+      :test_repo_all_results,
+      {1, [[1, "test2", nil, nil, nil, nil]]}
+    )
+
+    result = MySchemaVirtualAssoc
+      |> join(:left, [s], ch in MySchemaEmbedsOne, on: ch.n == s.n)
+      |> join(:left, [s], ch2 in MySchemaEmbedsOne, on: ch2.n == s.n)
+      |> select([s, ch, ch2], ch or ch2)
+      |> TestRepo.one()
+
+    assert %MySchemaEmbedsOne{x: "test2"} = result
+
+    result = MySchemaVirtualAssoc
+      |> join(:left, [s], ch in MySchemaEmbedsOne, on: ch.n == s.n)
+      |> join(:left, [s], ch2 in MySchemaEmbedsOne, on: ch2.n == s.n)
+      |> select([s, ch, ch2], ch2 or ch)
+      |> TestRepo.one()
+
+    assert %MySchemaEmbedsOne{x: "test2"} = result
+
+    Process.put(
+      :test_repo_all_results,
+      {1, [[nil, nil, nil, 1, "test2", nil]]}
+    )
+
+    result = MySchemaVirtualAssoc
+      |> join(:left, [s], ch in MySchemaChild, on: ch.n == s.n)
+      |> join(:left, [s], ch2 in MySchemaChild, on: ch2.n == s.n)
+      |> select([..., ch, ch2], ch or ch2)
+      |> TestRepo.one()
+
+    assert %MySchemaChild{a: "test2"} = result
+
+    result = MySchemaVirtualAssoc
+      |> join(:left, [s], ch in MySchemaChild, on: ch.n == s.n)
+      |> join(:left, [s], ch2 in MySchemaChild, on: ch2.n == s.n)
+      |> select([..., ch, ch2], ch2 or ch)
+      |> TestRepo.one()
+
+    assert %MySchemaChild{a: "test2"} = result
+  end
+
   describe "changeset prepare" do
     defp prepare_changeset() do
       %MySchema{id: 1}

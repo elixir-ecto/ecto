@@ -99,6 +99,35 @@ defmodule Ecto.Query.Builder.SelectTest do
       end
     end
 
+    test "supports picking truthy value" do
+      query = from p in "posts",
+        join: c in "comments",
+        as: :comment,
+        on: c.post_id == p.id,
+        select: c or p
+
+      assert {:or, [], [{:&, [], [1]}, {:&, [], [0]}]} == query.select.expr
+
+      query = from p in "posts",
+        join: c in "comments",
+        as: :comment,
+        on: c.post_id == p.id,
+        select: c.id or p.id
+
+      escaped_or = {:or, [], [{{:., [], [{:&, [], [1]}, :id]}, [], []}, {{:., [], [{:&, [], [0]}, :id]}, [], []}]}
+      assert escaped_or == query.select.expr
+    end
+
+    test "raises when alternative contains first binding not at the end" do
+      assert_raise Ecto.Query.CompileError, ~r"binding `a` can be put only at the end of an alternative", fn ->
+        escape(quote do (a or b or c) end, [a: 0, b: 1, c: 2], __ENV__)
+      end
+
+      assert_raise Ecto.Query.CompileError, ~r"binding `a` can be put only at the end of an alternative", fn ->
+        escape(quote do (b or a or c) end, [a: 0, b: 1, c: 2], __ENV__)
+      end
+    end
+
     test "supports aliasing a selected value with selected_as/2" do
       escaped_alias = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :id]}, [], []}, :ident]}
 

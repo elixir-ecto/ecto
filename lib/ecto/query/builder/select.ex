@@ -111,6 +111,31 @@ defmodule Ecto.Query.Builder.Select do
     {expr, {params, acc}}
   end
 
+  # alternative (a or b)
+  defp escape({:or, _, [left, right]}, params_acc, vars, env) do
+    Macro.prewalk(left, fn
+      # if binding isn't direct then we're fine, no need to go that branch
+      {:., _, _} ->
+        nil
+
+      {binding, _, _} = ast when is_atom(binding) ->
+        if Keyword.get(vars, binding) == 0 do
+          Builder.error!(
+            "binding `#{Macro.to_string(ast)}` can be put only at the end of an alternative"
+          )
+        end
+
+        ast
+
+      other ->
+        other
+    end)
+
+    {left, params_acc} = escape(left, params_acc, vars, env)
+    {right, params_acc} = escape(right, params_acc, vars, env)
+    {{:{}, [], [:or, [], [left, right]]}, params_acc}
+  end
+
   # aliased values
   defp escape({:selected_as, _, [expr, name]}, {params, acc}, vars, env) when is_atom(name) do
     {escaped, {params, acc}} = Builder.escape(expr, :any, {params, acc}, vars, env)

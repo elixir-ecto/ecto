@@ -1417,6 +1417,16 @@ defmodule Ecto.Query.Planner do
     end
   end
 
+  defp collect_fields({:or, _, [left, right]}, fields, from, query, take, keep_literals?, _drop) do
+    {left, left_fields, left_from} =
+      collect_fields(left, fields, from, query, take, keep_literals?, %{})
+
+    {right, right_fields, right_from} =
+      collect_fields(right, left_fields, left_from, query, take, keep_literals?, %{})
+
+    {{:or, left, right}, right_fields, right_from}
+  end
+
   defp collect_fields({:&, _, [0]}, fields, :none, query, take, _keep_literals?, drop) do
     {expr, taken} = source_take!(:select, query, take, 0, 0, drop)
     {{:source, :from}, fields, {{:source, :from}, expr, taken}}

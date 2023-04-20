@@ -292,6 +292,12 @@ defmodule Ecto.Repo.Queryable do
     struct_load!(types, row, [], true, struct, adapter)
   end
 
+  defp process(row, {:or, left, right}, from, adapter) do
+    {left, row} = process(row, left, from, adapter)
+    {right, row} = process(row, right, from, adapter)
+    {left || right, row}
+  end
+
   defp process(row, {:merge, left, right}, from, adapter) do
     {left, row} = process(row, left, from, adapter)
     {right, row} = process(row, right, from, adapter)
