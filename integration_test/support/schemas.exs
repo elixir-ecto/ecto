@@ -378,3 +378,16 @@ defmodule Ecto.Integration.ArrayLogging do
     timestamps()
   end
 end
+
+defmodule Ecto.Integration.Abstract do
+  @moduledoc """
+  This module is used to test:
+
+  * Repo callbacks for schemas without a source defined
+  """
+  use Ecto.Integration.Schema
+
+  abstract_schema do
+    field :name, :string
+  end
+end

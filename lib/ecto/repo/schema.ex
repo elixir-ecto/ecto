@@ -663,9 +663,10 @@ defmodule Ecto.Repo.Schema do
     }
   end
   defp metadata(%{__struct__: schema, __meta__: %{context: context, source: source, prefix: prefix}},
-                autogen_id, opts) do
+                autogen_id, opts) when not is_nil(source) do
     metadata(schema, prefix, source, autogen_id, context, opts)
   end
+
   defp metadata(%{__struct__: schema}, _, _) do
     raise ArgumentError, "#{inspect(schema)} needs to be a schema with source"
   end

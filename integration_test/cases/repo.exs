@@ -13,6 +13,7 @@ defmodule Ecto.Integration.RepoTest do
   alias Ecto.Integration.Barebone
   alias Ecto.Integration.CompositePk
   alias Ecto.Integration.PostUserCompositePk
+  alias Ecto.Integration.Abstract
 
   test "returns already started for started repos" do
     assert {:error, {:already_started, _}} = TestRepo.start_link()
@@ -2162,5 +2163,17 @@ defmodule Ecto.Integration.RepoTest do
       assert updated_second.visits == 21
       assert updated_second.public == false
     end
+  end
+
+  test "xd" do
+    message = "Ecto.Integration.Abstract needs to be a schema with source"
+    assert_raise ArgumentError, message, fn ->
+      TestRepo.insert(%Abstract{})
+    end
+
+   {:ok, %Abstract{}} =
+     %Abstract{}
+     |> Ecto.put_meta([source: "concrete_table_for_abstract"])
+     |> TestRepo.insert()
   end
 end

@@ -247,6 +247,23 @@ defmodule Ecto.SchemaTest do
     assert InlineEmbeddedSchema.Many.__schema__(:fields) == [:id, :y]
   end
 
+  defmodule AbstractSchema do
+    use Ecto.Schema
+
+    abstract_schema do
+      field :name, :string, default: "renan"
+      field :age, :integer
+    end
+  end
+
+  test "abstract schema" do
+    assert AbstractSchema.__schema__(:source)          == nil
+    assert AbstractSchema.__schema__(:prefix)          == nil
+    assert AbstractSchema.__schema__(:fields)          == [:id, :name, :age]
+    assert AbstractSchema.__schema__(:primary_key)     == [:id]
+    assert AbstractSchema.__schema__(:autogenerate_id) == {:id, :id, :id}
+  end
+
   defmodule TimestampsAutoGen do
     use Ecto.Schema
 
@@ -422,7 +439,7 @@ defmodule Ecto.SchemaTest do
     end
   end
 
-  test "skipping validations on invalid types" do 
+  test "skipping validations on invalid types" do
     defmodule SchemaSkipValidationsDefault do
       use Ecto.Schema
 

@@ -474,7 +474,7 @@ defmodule Ecto.Schema do
   @doc false
   defmacro __using__(_) do
     quote do
-      import Ecto.Schema, only: [schema: 2, embedded_schema: 1]
+      import Ecto.Schema, only: [schema: 2, embedded_schema: 1, abstract_schema: 1]
 
       @primary_key nil
       @timestamps_opts []
@@ -530,7 +530,7 @@ defmodule Ecto.Schema do
   `@primary_key` attribute.
   """
   defmacro embedded_schema([do: block]) do
-    schema(__CALLER__, nil, false, :binary_id, block)
+    schema(__CALLER__, nil, :embedded_schema, :binary_id, block)
   end
 
   @doc """
@@ -541,10 +541,14 @@ defmodule Ecto.Schema do
   as value and can be manipulated with the `Ecto.put_meta/2` function.
   """
   defmacro schema(source, [do: block]) do
-    schema(__CALLER__, source, true, :id, block)
+    schema(__CALLER__, source, :schema, :id, block)
   end
 
-  defp schema(caller, source, meta?, type, block) do
+  defmacro abstract_schema([do: block]) do
+    schema(__CALLER__, nil, :abstract_schema, :id, block)
+  end
+
+  defp schema(caller, source, schema_type, pk_type, block) do
     prelude =
       quote do
         if line = Module.get_attribute(__MODULE__, :ecto_schema_defined) do
@@ -557,7 +561,7 @@ defmodule Ecto.Schema do
         Module.register_attribute(__MODULE__, :ecto_changeset_fields, accumulate: true)
         Module.register_attribute(__MODULE__, :ecto_struct_fields, accumulate: true)
 
-        meta?  = unquote(meta?)
+        schema_type  = unquote(schema_type)
         source = unquote(source)
         prefix = @schema_prefix
         context = @schema_context
@@ -567,11 +571,13 @@ defmodule Ecto.Schema do
         _ = @foreign_key_type
         _ = @timestamps_opts
 
-        if meta? do
+        if schema_type == :schema do
           unless is_binary(source) do
             raise ArgumentError, "schema source must be a string, got: #{inspect source}"
           end
+        end
 
+        if schema_type in [:schema, :abstract_schema] do
           meta = %Metadata{
             state: :built,
             source: source,
@@ -584,15 +590,15 @@ defmodule Ecto.Schema do
         end
 
         if @primary_key == nil do
-          @primary_key {:id, unquote(type), autogenerate: true}
+          @primary_key {:id, unquote(pk_type), autogenerate: true}
         end
 
         primary_key_fields =
           case @primary_key do
             false ->
               []
-            {name, type, opts} ->
-              Ecto.Schema.__field__(__MODULE__, name, type, [primary_key: true] ++ opts)
+            {name, pk_type, opts} ->
+              Ecto.Schema.__field__(__MODULE__, name, pk_type, [primary_key: true] ++ opts)
               [name]
             other ->
               raise ArgumentError, "@primary_key must be false or {name, type, opts}"
@@ -632,7 +638,9 @@ defmodule Ecto.Schema do
         end
 
         def __schema__(:prefix), do: unquote(prefix)
+
         def __schema__(:source), do: unquote(source)
+
         def __schema__(:fields), do: unquote(Enum.map(fields, &elem(&1, 0)))
         def __schema__(:query_fields), do: unquote(Enum.map(query_fields, &elem(&1, 0)))
         def __schema__(:primary_key), do: unquote(primary_key_fields)
@@ -1179,15 +1187,11 @@ defmodule Ecto.Schema do
       defmodule Comment do
         use Ecto.Schema
 
-        schema "abstract table: comments" do
+        abstract_schema do
           # This will be used by associations on each "concrete" table
           field :assoc_id, :integer
         end
       end
-
-  Notice we have changed the table name to "abstract table: comments".
-  You can choose whatever name you want, the point here is that this
-  particular table will never exist.
 
   Now in your Post and Task schemas:
 
@@ -1217,7 +1221,8 @@ defmodule Ecto.Schema do
 
       Repo.insert!(%Comment{})
 
-  will attempt to use the abstract table. Instead, one should use
+  will attempt to use the abstract table, which will raise an exception. Instead,
+  one should use:
 
       Repo.insert!(build_assoc(post, :comments))
 
@@ -1656,7 +1661,7 @@ defmodule Ecto.Schema do
   that, when using embedded schemas with databases like PG or MySQL,
   make sure all of your types can be JSON encoded/decoded correctly.
   Ecto provides this guarantee for all built-in types.
-  
+
   When decoding, if a key exists in the database not defined in the
   schema, it'll be ignored. If a field exists in the schema thats not
   in the database, it's value will be `nil`.
