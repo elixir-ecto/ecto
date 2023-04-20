@@ -2369,8 +2369,6 @@ defmodule Ecto.Changeset do
       ensure_field_exists!(changeset, changeset.types, field)
   end
 
-  import Ecto.Query, only: [dynamic: 1, dynamic: 2]
-
   @doc """
   Validates that no existing record with a different primary key
   has the same values for these fields.
@@ -2500,10 +2498,10 @@ defmodule Ecto.Changeset do
   end
 
   defp unsafe_unique_filter(fields, changeset, false) do
-    Enum.reduce(fields, dynamic(true), fn field, dynamic ->
+    Enum.reduce(fields, Ecto.Query.dynamic(true), fn field, dynamic ->
       case get_field(changeset, field) do
-        nil -> dynamic([q], ^dynamic and is_nil(field(q, ^field)))
-        value -> dynamic([q], ^dynamic and field(q, ^field) == ^value)
+        nil -> Ecto.Query.dynamic([q], ^dynamic and is_nil(field(q, ^field)))
+        value -> Ecto.Query.dynamic([q], ^dynamic and field(q, ^field) == ^value)
       end
     end)
   end
