@@ -239,6 +239,10 @@ defmodule Ecto.Query.Planner do
     error!(query, "cannot preload associations with a fragment source")
   end
 
+  defp plan_from(%{from: %{source: {nil, _}}} = query, _adapter) do
+    error!(query, "can't use a schema without a source")
+  end
+
   defp plan_from(%{from: from} = query, adapter) do
     plan_source(query, from, adapter)
   end

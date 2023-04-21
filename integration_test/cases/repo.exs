@@ -2165,9 +2165,8 @@ defmodule Ecto.Integration.RepoTest do
     end
   end
 
-  test "xd" do
-    message = "Ecto.Integration.Abstract needs to be a schema with source"
-    assert_raise ArgumentError, message, fn ->
+  test "abstract schema usage" do
+    assert_raise ArgumentError, ~r/needs to be a schema with source/, fn ->
       TestRepo.insert(%Abstract{})
     end
 
@@ -2175,5 +2174,11 @@ defmodule Ecto.Integration.RepoTest do
      %Abstract{}
      |> Ecto.put_meta([source: "concrete_table_for_abstract"])
      |> TestRepo.insert()
+
+    assert [_] = TestRepo.all({"concrete_table_for_abstract", Abstract})
+
+    assert_raise Ecto.QueryError, ~r/can't use a schema without a source/, fn ->
+      TestRepo.all(Abstract)
+    end
   end
 end
