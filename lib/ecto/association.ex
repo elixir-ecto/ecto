@@ -1097,9 +1097,9 @@ defmodule Ecto.Association.BelongsTo do
     * `cardinality` - The association cardinality
     * `field` - The name of the association field on the schema
     * `owner` - The schema where the association was defined
-    * `owner_key` - The list of keys on the `owner` schema used for the association
+    * `owner_key` - The key or list of keys on the `owner` schema used for the association
     * `related` - The schema that is associated
-    * `related_key` - The list of keys on the `related` schema used for the association
+    * `related_key` - The key or list of keys on the `related` schema used for the association
     * `queryable` - The real query to use for querying association
     * `defaults` - Default fields used when building the association
     * `relationship` - The relationship to the specified schema, default `:parent`
@@ -1136,9 +1136,10 @@ defmodule Ecto.Association.BelongsTo do
   @impl true
   def struct(module, name, opts) do
     # TODO his should ideally not be hard coded to `[:id]` but set to use whatever primary key `related` defines
-    refs = if ref = opts[:references], do: List.wrap(ref), else: [:id]
+    ref = if ref = opts[:references], do: ref, else: :id
+    # refs = if ref = opts[:references], do: List.wrap(ref), else: [:id]
     queryable = Keyword.fetch!(opts, :queryable)
-    related = Ecto.Association.related_from_query(queryable, name) 
+    related = Ecto.Association.related_from_query(queryable, name)
     on_replace = Keyword.get(opts, :on_replace, :raise)
 
     unless on_replace in @on_replace_opts do
@@ -1158,8 +1159,10 @@ defmodule Ecto.Association.BelongsTo do
       field: name,
       owner: module,
       related: related,
-      owner_key: List.wrap(Keyword.fetch!(opts, :foreign_key)),
-      related_key: refs,
+      owner_key: Keyword.fetch!(opts, :foreign_key),
+      # owner_key: List.wrap(Keyword.fetch!(opts, :foreign_key)),
+      related_key: ref,
+      # related_key: refs,
       queryable: queryable,
       on_replace: on_replace,
       defaults: defaults,

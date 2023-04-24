@@ -908,6 +908,8 @@ defmodule Ecto.Repo.Schema do
     Enum.reduce assocs, changes, fn {refl, _}, changes ->
       %{field: field, owner_key: owner_key, related_key: related_key} = refl
       related = Map.get(struct, field)
+      owner_key = List.wrap(owner_key)
+      related_key = List.wrap(related_key)
 
       Ecto.Association.strict_zip(owner_key, related_key)
       |> Enum.reduce(changes, fn {owner_key, related_key}, changes ->
