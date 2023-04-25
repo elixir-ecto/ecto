@@ -727,10 +727,13 @@ defmodule Ecto.Association do
   defp primary_key!(struct), do: Ecto.primary_key!(struct)
 
   def missing_fields(queryable, related_key) do
-    Enum.filter related_key, &is_nil(queryable.__schema__(:type, &1))
+    related_key
+    |> List.wrap()
+    |> Enum.filter(&is_nil(queryable.__schema__(:type, &1)))
   end
 
   def missing_primary_keys(queryable, related_key) do
+    related_key = List.wrap related_key
     Enum.reject queryable.__schema__(:primary_key), &(&1 in related_key)
   end
 
