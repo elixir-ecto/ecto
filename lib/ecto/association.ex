@@ -249,7 +249,7 @@ defmodule Ecto.Association do
     values = List.wrap(values)
 
     query = case {join_to, dest_out_key, values} do
-      {nil, single_key, [single_value]} when is_atom(single_key) and not is_list(single_value) ->
+      {nil, single_key, [single_value]} when is_atom(single_key) ->
         query
         |> where([{dest, final_bind}], field(dest, ^single_key) == ^single_value)
       {nil, [single_key], [single_value]} ->
