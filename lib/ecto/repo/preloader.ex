@@ -194,21 +194,22 @@ defmodule Ecto.Repo.Preloader do
 
   defp fetch_ids(structs, module, assoc, {_adapter_meta, opts}) do
     %{field: field, owner_key: owner_key, cardinality: card} = assoc
+    owner_keys = List.wrap owner_key
     force? = Keyword.get(opts, :force, false)
 
-    Enum.reduce(structs, {[], [], []}, fn
+    Enum.reduce structs, {[], [], []}, fn
       nil, acc ->
         acc
 
       struct, {fetch_ids, loaded_ids, loaded_structs} ->
         assert_struct!(module, struct)
         %{^field => value} = struct
-        id = owner_key |> Enum.map(&Map.fetch!(struct, &1))
+        id = owner_keys |> Enum.map(&Map.fetch!(struct, &1))
         loaded? = Ecto.assoc_loaded?(value) and not force?
 
         if loaded? and Enum.any?(id, &is_nil/1) and
              not Ecto.Changeset.Relation.empty?(assoc, value) do
-          key_list = "(#{Enum.join(owner_key, ", ")})"
+          key_list = "(#{Enum.join(owner_keys, ", ")})"
 
           Logger.warn("""
           association `#{field}` for `#{inspect(module)}` has a loaded value but \
@@ -348,15 +349,18 @@ defmodule Ecto.Repo.Preloader do
     |> Enum.flat_map(fn {direction, fields} -> Enum.map(fields, &{direction, &1}) end)
   end
 
-  defp related_key_to_fields(query, {pos, keys}) do
-    Enum.map(keys, fn key ->
+  defp related_key_to_fields(query, {pos, key_or_keys}) do
+    key_or_keys
+    |> List.wrap()
+    |> Enum.map(fn key ->
       {{:., [], [{:&, [], [related_key_pos(query, pos)]}, key]}, [], []}
     end)
   end
 
   defp related_key_to_fields(query, {pos, keys, types}) do
     keys
-    |> Enum.zip(types)
+    |> List.wrap()
+    |> Enum.zip(List.wrap(types))
     |> Enum.map(fn {key, field_type} ->
       field_ast = {{:., [], [{:&, [], [related_key_pos(query, pos)]}, key]}, [], []}
       {:type, [], [field_ast, field_type]}
@@ -424,7 +428,9 @@ defmodule Ecto.Repo.Preloader do
     %{field: field, owner_key: owner_key, cardinality: cardinality} = assoc
 
     key =
-      Enum.map(owner_key, fn owner_key_field -> Map.fetch!(struct, owner_key_field) end)
+      owner_key
+      |> List.wrap()
+      |> Enum.map(fn owner_key_field -> Map.fetch!(struct, owner_key_field) end)
       |> unwrap_list()
 
     loaded =
