@@ -10,14 +10,7 @@ defmodule Ecto.Repo.Preloader do
   Transforms a result set based on query preloads, loading
   the associations onto their parent schema.
   """
-  @spec query(
-          [list],
-          Ecto.Repo.t(),
-          list,
-          Access.t(),
-          fun,
-          {adapter_meta :: map, opts :: Keyword.t()}
-        ) :: [list]
+  @spec query([list], Ecto.Repo.t(), list, Access.t(), fun, {adapter_meta :: map, opts :: Keyword.t()}) :: [list]
   def query([], _repo_name, _preloads, _take, _fun, _tuplet), do: []
   def query(rows, _repo_name, [], _take, fun, _tuplet), do: Enum.map(rows, fun)
 
@@ -28,30 +21,24 @@ defmodule Ecto.Repo.Preloader do
     |> unextract(rows, fun)
   end
 
-  defp extract([[nil | _] | t2]), do: extract(t2)
-  defp extract([[h | _] | t2]), do: [h | extract(t2)]
+  defp extract([[nil|_]|t2]), do: extract(t2)
+  defp extract([[h|_]|t2]), do: [h|extract(t2)]
   defp extract([]), do: []
 
-  defp unextract(structs, [[nil | _] = h2 | t2], fun),
-    do: [fun.(h2) | unextract(structs, t2, fun)]
-
-  defp unextract([h1 | structs], [[_ | t1] | t2], fun),
-    do: [fun.([h1 | t1]) | unextract(structs, t2, fun)]
-
+  defp unextract(structs, [[nil|_] = h2|t2], fun), do: [fun.(h2)|unextract(structs, t2, fun)]
+  defp unextract([h1|structs], [[_|t1]|t2], fun), do: [fun.([h1|t1])|unextract(structs, t2, fun)]
   defp unextract([], [], _fun), do: []
 
   @doc """
   Implementation for `Ecto.Repo.preload/2`.
   """
   @spec preload(structs, atom, atom | list, {adapter_meta :: map, opts :: Keyword.t()}) ::
-          structs
-        when structs: [Ecto.Schema.t()] | Ecto.Schema.t() | nil
+                structs when structs: [Ecto.Schema.t()] | Ecto.Schema.t() | nil
   def preload(nil, _repo_name, _preloads, _tuplet) do
     nil
   end
 
-  def preload(structs, repo_name, preloads, {_adapter_meta, opts} = tuplet)
-      when is_list(structs) do
+  def preload(structs, repo_name, preloads, {_adapter_meta, opts} = tuplet) when is_list(structs) do
     normalize_and_preload_each(structs, repo_name, preloads, opts[:take], tuplet)
   end
 
@@ -65,14 +52,13 @@ defmodule Ecto.Repo.Preloader do
   rescue
     e ->
       # Reraise errors so we ignore the preload inner stacktrace
-      filter_and_reraise(e, __STACKTRACE__)
+      filter_and_reraise e, __STACKTRACE__
   end
 
   ## Preloading
 
-  defp preload_each(structs, _repo_name, [], _tuplet), do: structs
+  defp preload_each(structs, _repo_name, [], _tuplet),   do: structs
   defp preload_each([], _repo_name, _preloads, _tuplet), do: []
-
   defp preload_each(structs, repo_name, preloads, tuplet) do
     if sample = Enum.find(structs, & &1) do
       module = sample.__struct__
@@ -88,8 +74,8 @@ defmodule Ecto.Repo.Preloader do
       throughs = Map.values(throughs)
 
       for struct <- structs do
-        struct = Enum.reduce(assocs, struct, &load_assoc/2)
-        struct = Enum.reduce(throughs, struct, &load_through/2)
+        struct = Enum.reduce assocs, struct, &load_assoc/2
+        struct = Enum.reduce throughs, struct, &load_through/2
         struct
       end
     else
@@ -137,7 +123,7 @@ defmodule Ecto.Repo.Preloader do
 
   # Then we execute queries in parallel
   defp maybe_pmap(preloaders, _repo_name, {adapter_meta, opts}) do
-    if match?([_, _ | _], preloaders) and not adapter_meta.adapter.checked_out?(adapter_meta) and
+    if match?([_,_|_], preloaders) and not adapter_meta.adapter.checked_out?(adapter_meta) and
          Keyword.get(opts, :in_parallel, true) do
       # We pass caller: self() so the ownership pool knows where
       # to fetch the connection from and set the proper timeouts.
@@ -147,10 +133,10 @@ defmodule Ecto.Repo.Preloader do
       opts = Keyword.put_new(opts, :caller, self())
 
       preloaders
-      |> Task.async_stream(& &1.({adapter_meta, opts}), timeout: :infinity)
+      |> Task.async_stream(&(&1.({adapter_meta, opts})), timeout: :infinity)
       |> Enum.map(fn {:ok, assoc} -> assoc end)
     else
-      Enum.map(preloaders, & &1.({adapter_meta, opts}))
+      Enum.map(preloaders, &(&1.({adapter_meta, opts})))
     end
   end
 
@@ -163,10 +149,7 @@ defmodule Ecto.Repo.Preloader do
        ) do
     {fetch_ids, fetch_structs, queries} = maybe_unpack_query(query?, queries)
     all = preload_each(Enum.reverse(loaded_structs, fetch_structs), repo_name, preloads, tuplet)
-
-    entry =
-      {:assoc, assoc, assoc_map(assoc.cardinality, Enum.reverse(loaded_ids, fetch_ids), all)}
-
+    entry = {:assoc, assoc, assoc_map(assoc.cardinality, Enum.reverse(loaded_ids, fetch_ids), all)}
     [entry | preload_assocs(assocs, queries, repo_name, tuplet)]
   end
 
@@ -251,11 +234,10 @@ defmodule Ecto.Repo.Preloader do
           true ->
             {[unwrap_list(id) | fetch_ids], loaded_ids, loaded_structs}
         end
-    end)
+    end
   end
 
   defp unwrap_list([id]), do: id
-  # List.to_tuple(ids)
   defp unwrap_list([_ | _] = ids), do: ids
 
   defp fetch_query(ids, assoc, _repo_name, query, _prefix, related_key, _take, _tuplet)
@@ -270,16 +252,7 @@ defmodule Ecto.Repo.Preloader do
     |> unzip_ids([], [])
   end
 
-  defp fetch_query(
-         ids,
-         %{cardinality: card} = assoc,
-         repo_name,
-         query,
-         prefix,
-         related_key,
-         take,
-         tuplet
-       ) do
+  defp fetch_query(ids, %{cardinality: card} = assoc, repo_name, query, prefix, related_key, take, tuplet) do
     query = assoc.__struct__.assoc_query(assoc, query, Enum.uniq(ids))
     fields = related_key_to_fields(query, related_key)
 
@@ -393,18 +366,13 @@ defmodule Ecto.Repo.Preloader do
   defp related_key_pos(_query, pos) when pos >= 0, do: pos
   defp related_key_pos(query, pos), do: Ecto.Query.Builder.count_binds(query) + pos
 
-  defp unzip_ids([{k, v} | t], acc1, acc2), do: unzip_ids(t, [k | acc1], [v | acc2])
+  defp unzip_ids([{k, v}|t], acc1, acc2), do: unzip_ids(t, [k|acc1], [v|acc2])
   defp unzip_ids([], acc1, acc2), do: {acc1, acc2}
 
-  # defp unwrap_related_fields([elem]), do: elem
-  # defp unwrap_related_fields(elems), do: elems
-
   defp assert_struct!(mod, %{__struct__: mod}), do: true
-
   defp assert_struct!(mod, %{__struct__: struct}) do
-    raise ArgumentError,
-          "expected a homogeneous list containing the same struct, " <>
-            "got: #{inspect(mod)} and #{inspect(struct)}"
+    raise ArgumentError, "expected a homogeneous list containing the same struct, " <>
+                         "got: #{inspect(mod)} and #{inspect(struct)}"
   end
 
   defp assoc_map(:one, ids, structs) do
