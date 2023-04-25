@@ -2083,28 +2083,43 @@ defmodule Ecto.Schema do
 
   @doc false
   def __belongs_to__(mod, name, queryable, opts) do
-    opts = Keyword.update(opts, :foreign_key, [:"#{name}_id"], &List.wrap/1)
-
-    foreign_key_names = opts[:foreign_key]
+    # TODO needs a refactor
+    opts = Keyword.put_new(opts, :foreign_key, :"#{name}_id")
     foreign_key_type = opts[:type] || Module.get_attribute(mod, :foreign_key_type)
-      foreign_key_types = if is_list(foreign_key_type) do
-        foreign_key_type
-      else
-        # TODO add a test for this branch
-        List.duplicate(foreign_key_type, length(foreign_key_names))
-      end
-    foreign_key_types = Enum.map(foreign_key_types, &check_field_type!(mod, name, &1, opts))
-    Enum.each(foreign_key_types, &check_options!(&1, opts, @valid_belongs_to_options, "belongs_to/3"))
 
-    if name in foreign_key_names do
-      raise ArgumentError, "foreign_key #{inspect name} must be distinct from corresponding association name"
-    end
+    case opts[:foreign_key] do
+      foreign_key_name when is_atom(foreign_key_name) -> 
+        foreign_key_type = check_field_type!(mod, name, foreign_key_type, opts)
+        check_options!(foreign_key_type, opts, @valid_belongs_to_options, "belongs_to/3")
 
-    if Keyword.get(opts, :define_field, true) do
-      for {foreign_key_name, foreign_key_type} <- Enum.zip(foreign_key_names, foreign_key_types) do
-        Module.put_attribute(mod, :ecto_changeset_fields, {foreign_key_name, foreign_key_type})
-        define_field(mod, foreign_key_name, foreign_key_type, opts)
-      end
+        if foreign_key_name == name do
+          raise ArgumentError, "foreign_key #{inspect name} must be distinct from corresponding association name"
+        end
+
+        if Keyword.get(opts, :define_field, true) do
+          Module.put_attribute(mod, :ecto_changeset_fields, {foreign_key_name, foreign_key_type})
+          define_field(mod, foreign_key_name, foreign_key_type, opts)
+        end
+      foreign_key_names when is_list(foreign_key_names) -> 
+        foreign_key_types = if is_list(foreign_key_type) do
+          foreign_key_type
+        else
+          # TODO add a test for this branch
+          List.duplicate(foreign_key_type, length(foreign_key_names))
+        end
+        foreign_key_types = Enum.map(foreign_key_types, &check_field_type!(mod, name, &1, opts))
+        Enum.each(foreign_key_types, &check_options!(&1, opts, @valid_belongs_to_options, "belongs_to/3"))
+
+        if name in foreign_key_names do
+          raise ArgumentError, "foreign_key #{inspect name} must be distinct from corresponding association name"
+        end
+
+        if Keyword.get(opts, :define_field, true) do
+          for {foreign_key_name, foreign_key_type} <- Enum.zip(foreign_key_names, foreign_key_types) do
+            Module.put_attribute(mod, :ecto_changeset_fields, {foreign_key_name, foreign_key_type})
+            define_field(mod, foreign_key_name, foreign_key_type, opts)
+          end
+        end
     end
 
     struct =

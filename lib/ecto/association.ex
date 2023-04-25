@@ -276,6 +276,8 @@ defmodule Ecto.Association do
 
   @doc false
   def join_on_keys(query, related_queryable, src_keys, dst_keys, src_binding, dst_binding) do
+    src_keys = List.wrap(src_keys)
+    dst_keys = List.wrap(dst_keys)
     %{joins: joins} = query = join(query, :inner, [{src, src_binding}], dst in ^related_queryable, on: true)
     {%{on: %{expr: _expr} = on} = last_join, joins} = joins |> List.pop_at(-1)
 
@@ -296,6 +298,8 @@ defmodule Ecto.Association do
   def conjoin_exprs(l, r), do: {:and, [], [l, r]}
 
   def where_keys(%{wheres: wheres} = query, binding, keys, values) do
+    keys = List.wrap(keys)
+    values = List.wrap(values)
     {expr, params, op} = where_expr(keys, values, binding)
     %{query | wheres: wheres ++ [%Ecto.Query.BooleanExpr{op: op, expr: expr, params: params, line: __ENV__.line, file: __ENV__.file}]}
   end
@@ -746,8 +750,8 @@ defmodule Ecto.Association.Has do
     * `field` - The name of the association field on the schema
     * `owner` - The schema where the association was defined
     * `related` - The schema that is associated
-    * `owner_key` - The list of columns that form the key on the `owner` schema used for the association
-    * `related_key` - The list of columns that form the key on the `related` schema used for the association
+    * `owner_key` - The key or list of columns that form the key on the `owner` schema used for the association
+    * `related_key` - The key or list of columns that form the key on the `related` schema used for the association
     * `queryable` - The real query to use for querying association
     * `on_delete` - The action taken on associations when schema is deleted
     * `on_replace` - The action taken on associations when schema is replaced
@@ -788,13 +792,12 @@ defmodule Ecto.Association.Has do
     cardinality = Keyword.fetch!(opts, :cardinality)
     related = Ecto.Association.related_from_query(queryable, name)
 
-    refs =
+    ref =
       module
       |> Module.get_attribute(:ecto_primary_keys)
       |> get_ref(opts[:references], name)
-      |> List.wrap()
 
-    for ref <- refs do
+    for ref <- List.wrap(ref) do
       unless Module.get_attribute(module, :ecto_fields)[ref] do
         raise ArgumentError, "schema does not have the field #{inspect ref} used by " <>
           "association #{inspect name}, please set the :references option accordingly"
@@ -831,9 +834,9 @@ defmodule Ecto.Association.Has do
     end
 
     foreign_key = case opts[:foreign_key] do
-      nil -> Enum.map(refs, &Ecto.Association.association_key(module, &1))
-      key when is_atom(key) -> [key]
-      keys when is_list(keys) -> keys
+      nil when is_atom(ref) -> Ecto.Association.association_key(module, ref)
+      nil when is_list(ref) -> Enum.map(ref, &Ecto.Association.association_key(module, &1))
+      key_or_keys  -> key_or_keys
     end
 
     %__MODULE__{
@@ -841,7 +844,7 @@ defmodule Ecto.Association.Has do
       cardinality: cardinality,
       owner: module,
       related: related,
-      owner_key: refs,
+      owner_key: ref,
       related_key: foreign_key,
       queryable: queryable,
       on_delete: on_delete,
@@ -856,7 +859,9 @@ defmodule Ecto.Association.Has do
     raise ArgumentError, "need to set :references option for " <>
       "association #{inspect name} when schema has no primary key"
   end
+  defp get_ref([primary_key], nil, _name), do: primary_key
   defp get_ref(primary_keys, nil, _name), do: Enum.reverse(primary_keys)
+  defp get_ref(_primary_keys, [reference], _name), do: reference
   defp get_ref(_primary_keys, references, _name), do: references
 
   @impl true
@@ -1016,7 +1021,7 @@ defmodule Ecto.Association.HasThrough do
     * `cardinality` - The association cardinality
     * `field` - The name of the association field on the schema
     * `owner` - The schema where the association was defined
-    * `owner_key` - The list of columns that form the key on the `owner` schema used for the association
+    * `owner_key` - The column or list of columns that form the key on the `owner` schema used for the association
     * `through` - The through associations
     * `relationship` - The relationship to the specified schema, default `:child`
   """
@@ -1135,9 +1140,9 @@ defmodule Ecto.Association.BelongsTo do
 
   @impl true
   def struct(module, name, opts) do
-    # TODO his should ideally not be hard coded to `[:id]` but set to use whatever primary key `related` defines
+    dbg(opts)
+    # TODO his should ideally not be hard coded to `:id` but set to use whatever primary key `related` defines
     ref = if ref = opts[:references], do: ref, else: :id
-    # refs = if ref = opts[:references], do: List.wrap(ref), else: [:id]
     queryable = Keyword.fetch!(opts, :queryable)
     related = Ecto.Association.related_from_query(queryable, name)
     on_replace = Keyword.get(opts, :on_replace, :raise)
@@ -1160,14 +1165,13 @@ defmodule Ecto.Association.BelongsTo do
       owner: module,
       related: related,
       owner_key: Keyword.fetch!(opts, :foreign_key),
-      # owner_key: List.wrap(Keyword.fetch!(opts, :foreign_key)),
       related_key: ref,
-      # related_key: refs,
       queryable: queryable,
       on_replace: on_replace,
       defaults: defaults,
       where: where
     }
+    |> dbg
   end
 
   @impl true
@@ -1622,6 +1626,8 @@ defmodule Ecto.Association.ManyToMany do
   end
 
   defp where_keys(%{wheres: wheres} = query, owner, binding, keys, values) do
+    keys = List.wrap(keys)
+    values = List.wrap(values)
     {expr, params, op} = where_expr(owner, keys, values, binding)
     %{query | wheres: wheres ++ [%Ecto.Query.BooleanExpr{op: op, expr: expr, params: params, line: __ENV__.line, file: __ENV__.file}]}
   end
