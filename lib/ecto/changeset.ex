@@ -3800,7 +3800,8 @@ defmodule Ecto.Changeset do
     |> merge_related_keys(changes, types, msg_func, &traverse_validations/2)
   end
 
-  defp atom_concat(atoms) do
+  defp atom_concat(atom) when is_atom(atom), do: Atom.to_string(atom)
+  defp atom_concat(atoms) when is_list(atoms) do
     atoms
     |> Enum.map(&Atom.to_string/1)
     |> Enum.join("_")
