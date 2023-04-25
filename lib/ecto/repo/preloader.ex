@@ -288,9 +288,9 @@ defmodule Ecto.Repo.Preloader do
 
   defp fetched_records_to_tuple_ids([], _assoc, _related_key), do: []
 
-  defp fetched_records_to_tuple_ids([%{} | _] = entries, _assoc, {0, keys}) do
+  defp fetched_records_to_tuple_ids([%{} | _] = entries, _assoc, {0, key_or_keys}) do
     Enum.map(entries, fn entry ->
-      key = Enum.map(keys, &Map.fetch!(entry, &1)) |> unwrap_list()
+      key = key_or_keys |> List.wrap |> Enum.map(&Map.fetch!(entry, &1)) |> unwrap_list()
       {key, entry}
     end)
   end

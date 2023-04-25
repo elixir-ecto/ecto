@@ -983,7 +983,7 @@ defmodule Ecto.Association.Has do
   end
 
   @doc false
-  def nilify_all(%{related_key: [related_key]} = refl, parent, repo_name, opts) do
+  def nilify_all(%{related_key: related_key} = refl, parent, repo_name, opts) when is_atom(related_key) do
     if query = on_delete_query(refl, parent) do
       Ecto.Repo.Queryable.update_all repo_name, query, [set: [{related_key, nil}]], opts
     end
@@ -995,18 +995,17 @@ defmodule Ecto.Association.Has do
     end
   end
 
-  defp on_delete_query(%{owner_key: [owner_key], related_key: [related_key],
-                         queryable: queryable}, parent) do
+  defp on_delete_query(%{owner_key: owner_key, related_key: related_key, queryable: queryable}, parent)
+                       when is_atom(owner_key) and is_atom(related_key) do
     if value = Map.get(parent, owner_key) do
       from x in queryable, where: field(x, ^related_key) == ^value
     end
   end
 
-  defp on_delete_query(%{owner_key: owner_key, related_key: related_key,
-                         queryable: queryable}, parent) do
-    values = Enum.map(owner_key, &Map.get(parent, &1))
+  defp on_delete_query(%{owner_key: owner_keys, related_key: related_keys, queryable: queryable}, parent) do
+    values = Enum.map(owner_keys, &Map.get(parent, &1))
     if values != [] && Enum.all?(values) do
-      related_key
+      related_keys
       |> Enum.zip(values)
       |> Enum.reduce(from(x in queryable), fn {related_key_field, value}, query ->
         query |> where([x], field(x, ^related_key_field) == ^ value)
