@@ -85,28 +85,54 @@ defmodule Ecto.Embedded do
   @impl Ecto.ParameterizedType
   def dump(nil, _, _), do: {:ok, nil}
 
-  def dump(value, fun, %{cardinality: :one, related: schema, field: field}) when is_map(value) do
-    {:ok, dump_field(field, schema, value, schema.__schema__(:dump), fun, _one_embed? = true)}
+  def dump(value, fun, %{cardinality: :one, related: related, field: field}) when is_map(value) do
+    {:ok, dump_field(field, related, value, fun, _one_embed? = true)}
   end
 
-  def dump(value, fun, %{cardinality: :many, related: schema, field: field}) when is_list(value) do
-    types = schema.__schema__(:dump)
-    {:ok, Enum.map(value, &dump_field(field, schema, &1, types, fun, _one_embed? = false))}
+  def dump(value, fun, %{cardinality: :many, related: related, field: field}) when is_list(value) do
+    {:ok, Enum.map(value, &dump_field(field, related, &1, fun, _one_embed? = false))}
   end
 
   def dump(_value, _fun, _embed) do
     :error
   end
 
-  defp dump_field(_field, schema, %{__struct__: schema} = struct, types, dumper, _one_embed?) do
+  defp dump_field(field, {:one_of, variants} = related, %schema{} = value, dumper, one_embed?) do
+    case Enum.find(variants, &match?({_, ^schema}, &1)) do
+      {type, ^schema} ->
+        %{type: type, data: dump_field(field, schema, value, dumper, one_embed?)}
+      _ ->
+        dump_error(field, related, value, one_embed?)
+    end
+  end
+
+  defp dump_field(_field, schema, %{__struct__: schema} = struct, dumper, _one_embed?) do
+    types = schema.__schema__(:dump)
     Ecto.Schema.Loader.safe_dump(struct, types, dumper)
   end
 
-  defp dump_field(field, schema, value, _types, _dumper, one_embed?) do
+  defp dump_field(field, schema, value, _dumper, one_embed?) do
+    dump_error(field, schema, value, one_embed?)
+  end
+
+  defp dump_error(field, related, value, one_embed?) do
+    schemas = case related do
+      {:one_of, [{_, schema}]} -> inspect(schema)
+
+      {:one_of, variants} ->
+        [last | rest] = variants |> Enum.map(&inspect(elem(&1, 1))) |> Enum.reverse()
+
+        rest
+        |> Enum.reverse()
+        |> Enum.join(", ")
+        |> Kernel.<>(" or #{last}")
+      schema -> inspect(schema)
+    end
+
     one_or_many =
       if one_embed?,
-        do: "a struct #{inspect schema} value",
-        else: "a list of #{inspect schema} struct values"
+        do: "a struct #{schemas} value",
+        else: "a list of #{schemas} struct values"
 
     raise ArgumentError,
           "cannot dump embed `#{field}`, expected #{one_or_many} but got: #{inspect value}"

@@ -1656,7 +1656,7 @@ defmodule Ecto.Schema do
   that, when using embedded schemas with databases like PG or MySQL,
   make sure all of your types can be JSON encoded/decoded correctly.
   Ecto provides this guarantee for all built-in types.
-  
+
   When decoding, if a key exists in the database not defined in the
   schema, it'll be ignored. If a field exists in the schema thats not
   in the database, it's value will be `nil`.
@@ -2078,6 +2078,11 @@ defmodule Ecto.Schema do
   @valid_embeds_one_options [:on_replace, :source]
 
   @doc false
+  def __embeds_one__(mod, name, {:one_of, variants}, opts) when is_list(variants) do
+    check_options!(opts, @valid_embeds_one_options, "embeds_one/3")
+    embed(mod, :one, name, {:one_of, variants}, opts)
+  end
+
   def __embeds_one__(mod, name, schema, opts) when is_atom(schema) do
     check_options!(opts, @valid_embeds_one_options, "embeds_one/3")
     embed(mod, :one, name, schema, opts)
@@ -2091,6 +2096,12 @@ defmodule Ecto.Schema do
   @valid_embeds_many_options [:on_replace, :source]
 
   @doc false
+  def __embeds_many__(mod, name, {:one_of, variants}, opts) when is_list(variants) do
+    check_options!(opts, @valid_embeds_many_options, "embeds_many/3")
+    opts = Keyword.put(opts, :default, [])
+    embed(mod, :many, name, {:one_of, variants}, opts)
+  end
+
   def __embeds_many__(mod, name, schema, opts) when is_atom(schema) do
     check_options!(opts, @valid_embeds_many_options, "embeds_many/3")
     opts = Keyword.put(opts, :default, [])

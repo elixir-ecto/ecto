@@ -27,6 +27,18 @@ defmodule Ecto.Schema.Loader do
   Assumes data does not all belongs to schema/struct
   and that it may also require source-based renaming.
   """
+  def unsafe_load({:one_of, variants}, data, loader) do
+    variants = Map.new(variants, fn {key, value} -> {to_string(key), value} end)
+
+    with {:ok, type} <- fetch_string_or_atom_field(data, :type),
+         {:ok, data} <- fetch_string_or_atom_field(data, :data),
+         {:ok, schema} <- Map.fetch(variants, to_string(type)) do
+      unsafe_load(schema, data, loader)
+    else
+      _ -> :error
+    end
+  end
+
   def unsafe_load(schema, data, loader) do
     types = schema.__schema__(:load)
     struct = schema.__schema__(:loaded)
