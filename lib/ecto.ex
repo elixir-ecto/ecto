@@ -527,6 +527,7 @@ defmodule Ecto do
       |> Enum.filter(&assert_struct!(schema, &1))
       |> Enum.map(fn struct ->
         case owner_key do
+          single_key when is_atom(single_key) -> Map.fetch!(struct, single_key)
           [single_key] -> Map.fetch!(struct, single_key)
           [_ | _] -> owner_key |> Enum.map(&Map.fetch!(struct, &1)) # |> List.to_tuple()
         end
