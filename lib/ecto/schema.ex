@@ -849,6 +849,20 @@ defmodule Ecto.Schema do
         end
       end
 
+  `has_many` can be defined over a foreign key that spans more than one column.
+
+      defmodule Domain do
+        use Ecto.Schema
+
+        @primary_key false 
+        schema "domains" do
+          field :tld, :string, primary_key: true
+          field :name, :string, primary_key: true
+          has_many :subdomains, Subdomain, foreign_key: [:parent_tld, :parent_name],
+            references: [:tld, :name]
+        end
+      end
+
   ## Filtering associations
 
   It is possible to specify a `:where` option that will filter the records
@@ -2091,7 +2105,6 @@ defmodule Ecto.Schema do
       foreign_key_types when is_list(foreign_key_types) ->
         foreign_key_types
       foreign_key_type when is_atom(foreign_key_type) ->
-        # TODO add a test for this branch
         List.duplicate(foreign_key_type, length(foreign_key_names))
     end
     foreign_key_types = Enum.map(foreign_key_types, &check_field_type!(mod, name, &1, opts))
