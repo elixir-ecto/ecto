@@ -1140,7 +1140,6 @@ defmodule Ecto.Association.BelongsTo do
 
   @impl true
   def struct(module, name, opts) do
-    dbg(opts)
     # TODO his should ideally not be hard coded to `:id` but set to use whatever primary key `related` defines
     ref = if ref = opts[:references], do: ref, else: :id
     queryable = Keyword.fetch!(opts, :queryable)
@@ -1171,7 +1170,6 @@ defmodule Ecto.Association.BelongsTo do
       defaults: defaults,
       where: where
     }
-    |> dbg
   end
 
   @impl true

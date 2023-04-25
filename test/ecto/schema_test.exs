@@ -650,7 +650,7 @@ defmodule Ecto.SchemaTest do
   test "has_many through association" do
     assert AssocSchema.__schema__(:association, :comment_authors) ==
            %Ecto.Association.HasThrough{field: :comment_authors, owner: AssocSchema, cardinality: :many,
-                                         through: [:comment, :authors], owner_key: [:comment_id]}
+                                         through: [:comment, :authors], owner_key: :comment_id}
 
     refute Map.has_key?(AssocSchema.__changeset__(), :comment_authors)
 
@@ -690,7 +690,7 @@ defmodule Ecto.SchemaTest do
   test "has_one through association" do
     assert AssocSchema.__schema__(:association, :comment_main_author) ==
            %Ecto.Association.HasThrough{field: :comment_main_author, owner: AssocSchema, cardinality: :one,
-                                         through: [:comment, :main_author], owner_key: [:comment_id]}
+                                         through: [:comment, :main_author], owner_key: :comment_id}
 
     refute Map.has_key?(AssocSchema.__changeset__(), :comment_main_author)
 
@@ -702,7 +702,7 @@ defmodule Ecto.SchemaTest do
   test "belongs_to association" do
     struct =
       %Ecto.Association.BelongsTo{field: :comment, owner: AssocSchema, cardinality: :one,
-       related: Comment, owner_key: [:comment_id], related_key: :id, queryable: Comment,
+       related: Comment, owner_key: :comment_id, related_key: :id, queryable: Comment,
        on_replace: :raise, defaults: []}
 
     assert AssocSchema.__schema__(:association, :comment) == struct
@@ -716,7 +716,7 @@ defmodule Ecto.SchemaTest do
   test "belongs_to association via {source, schema}" do
     struct =
       %Ecto.Association.BelongsTo{field: :summary, owner: AssocSchema, cardinality: :one,
-       related: Summary, owner_key: [:summary_id], related_key: :id,
+       related: Summary, owner_key: :summary_id, related_key: :id,
        queryable: {"post_summary", Summary}, on_replace: :raise, defaults: []}
 
     assert AssocSchema.__schema__(:association, :summary) == struct
