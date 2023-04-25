@@ -633,9 +633,9 @@ defmodule Ecto.Repo.HasAssocTest do
     assoc = schema.assoc
     assert assoc.id
     assert assoc.name == "xyz"
-    assert assoc.composite_x == schema.x
-    assert assoc.composite_y == schema.y
-    assert assoc.inserted_at
+    assert assoc.composite_x == 3
+    assert assoc.composite_y == "a"
+    assert assoc.updated_at
 
     changeset =
       %MyCompositeSchema{x: 4, y: "b"}
@@ -645,8 +645,8 @@ defmodule Ecto.Repo.HasAssocTest do
     [assoc] = schema.assocs
     assert assoc.id
     assert assoc.name == "xyz"
-    assert assoc.composite_x == schema.x
-    assert assoc.composite_y == schema.y
-    assert assoc.inserted_at
+    assert assoc.composite_x == 4
+    assert assoc.composite_y == "b" 
+    assert assoc.updated_at
   end
 end
