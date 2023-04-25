@@ -103,6 +103,15 @@ defmodule Ecto.Changeset.Relation do
     end
   end
 
+  def cast(%{related: {:one_of, variants}} = relation, owner, params, current, on_cast) do
+    with {_key, type} <- Enum.find(params, fn {key, _val} -> to_string(key) == "type" end),
+         {_type, mod} <- Enum.find(variants, fn {key, _val} -> to_string(key) == to_string(type) end) do
+      cast(%{relation | related: mod}, owner, params, current, on_cast)
+    else
+      _ -> {:error, {"is invalid", [type: expected_type(relation)]}}
+    end
+  end
+
   def cast(%{related: mod} = relation, owner, params, current, on_cast) do
     pks = mod.__schema__(:primary_key)
     fun = &do_cast(relation, owner, &1, &2, &3, on_cast)

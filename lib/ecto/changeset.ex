@@ -1254,6 +1254,21 @@ defmodule Ecto.Changeset do
 
   defp key_as_int(key_val), do: key_val
 
+  defp on_cast_default(_relation_type, {:one_of, variants}) do
+    fn struct, params ->
+      with {_, type} <- Enum.find(params, &to_string(elem(&1, 0)) == "type"),
+           {_, data} <- Enum.find(params, &to_string(elem(&1, 0)) == "data"),
+           {_type, mod} <- Enum.find(variants, fn {key, _val} -> to_string(key) == to_string(type) end) do
+        mod.changeset(struct, data)
+      else
+        _ ->
+          raise ArgumentError, """
+            Expected a type and a data field
+          """
+      end
+    end
+  end
+
   defp on_cast_default(type, module) do
     fn struct, params ->
       try do

@@ -30,6 +30,28 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
+  defmodule HexSource do
+    use Ecto.Schema
+
+    @primary_key false
+    embedded_schema do
+      field :package_name
+    end
+
+    def changeset(schema \\ %SocialSource{}, params) do
+      cast(schema, params, ~w(package_name)a)
+    end
+  end
+
+  defmodule Source do
+    use Ecto.Schema
+
+    @primary_key false
+    embedded_schema do
+      embeds_one :source, {:one_of, social: SocialSource, hex: HexSource}
+    end
+  end
+
   defmodule Category do
     use Ecto.Schema
 
@@ -522,6 +544,23 @@ defmodule Ecto.ChangesetTest do
     {data, types} = {%{x: %{decimal: nil}}, %{x: {:map, :decimal}}}
     changeset = cast({data, types}, data, ~w(x)a)
     assert changeset.changes == %{}
+  end
+
+  test "cast/4: one_of embed" do
+    params = %{"source" => %{"type" => "hex", "data" => %{"package_name" => "ecto"}}}
+    struct = %Source{}
+
+    changeset =
+      struct
+      |> cast(params, [])
+      |> cast_embed(:source)
+
+    assert changeset.params == params
+    assert %{source: %Ecto.Changeset{}} = changeset.changes
+    assert changeset.errors == []
+    assert changeset.valid?
+    assert apply_changes(changeset) ==
+      %Source{source: %HexSource{package_name: "ecto"}}
   end
 
   ## Changeset functions
