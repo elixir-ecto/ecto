@@ -622,5 +622,31 @@ defmodule Ecto.Repo.HasAssocTest do
     assert assoc.inserted_at
   end
 
-  # TODO add tests for update
+  test "handles assocs with composite keys on update" do
+    sample = %MyCompositeAssoc{name: "xyz"}
+
+    changeset =
+      %MyCompositeSchema{x: 3, y: "a"}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:assoc, sample)
+    schema = TestRepo.update!(changeset)
+    assoc = schema.assoc
+    assert assoc.id
+    assert assoc.name == "xyz"
+    assert assoc.composite_x == schema.x
+    assert assoc.composite_y == schema.y
+    assert assoc.inserted_at
+
+    changeset =
+      %MyCompositeSchema{x: 4, y: "b"}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:assocs, [sample])
+    schema = TestRepo.update!(changeset)
+    [assoc] = schema.assocs
+    assert assoc.id
+    assert assoc.name == "xyz"
+    assert assoc.composite_x == schema.x
+    assert assoc.composite_y == schema.y
+    assert assoc.inserted_at
+  end
 end

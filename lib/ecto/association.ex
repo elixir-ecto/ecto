@@ -325,7 +325,6 @@ defmodule Ecto.Association do
   end
 
   defp where_expr(keys, values, binding) do
-    # TODO make sure this has a test case
     or_exprs = fn
       false, r -> r
       l, r -> {:or, [], [l, r]}
@@ -373,8 +372,6 @@ defmodule Ecto.Association do
 
       table_list = case refl do
         %{join_through: join_through, join_keys: join_keys, join_where: join_where, where: where} ->
-          # [[{owner_join_key, owner_key}], [{related_join_key, related_key}]] = join_keys
-          # TODO does this support more than one key on many to many?
           %{
             owner_keys: owner_keys,
             owner_join_keys: owner_join_keys,
@@ -880,7 +877,6 @@ defmodule Ecto.Association.Has do
     |> Ecto.Association.combine_joins_query(assoc.where, 1)
   end
 
-  # TODO add a test case for composite keys here
   @impl true
   def assoc_query(%{related_key: related_key, queryable: queryable} = assoc, query, values) do
     from(x in (query || queryable))
@@ -1132,7 +1128,6 @@ defmodule Ecto.Association.BelongsTo do
         {:error, "associated module #{inspect queryable} is not an Ecto schema"}
       [] != (missing_fields = Ecto.Association.missing_fields(queryable, related_key)) ->
         {:error, "associated schema #{inspect queryable} does not have field(s) `#{inspect missing_fields}`"}
-      # TODO how can this be triggered in tests?
       [] != (missing_pks = Ecto.Association.missing_primary_keys(queryable, related_key)) ->
         {:error, "associated schema #{inspect queryable} has primary keys #{inspect missing_pks} not included in association"}
       true ->
@@ -1142,7 +1137,6 @@ defmodule Ecto.Association.BelongsTo do
 
   @impl true
   def struct(module, name, opts) do
-    # TODO his should ideally not be hard coded to `:id` but set to use whatever primary key `related` defines
     ref = if ref = opts[:references], do: ref, else: :id
     queryable = Keyword.fetch!(opts, :queryable)
     related = Ecto.Association.related_from_query(queryable, name)
@@ -1307,7 +1301,6 @@ defmodule Ecto.Association.ManyToMany do
     related = Ecto.Association.related_from_query(queryable, name)
 
     join_keys = opts[:join_keys]
-    validate_join_keys!(name, join_keys)
     join_through = opts[:join_through]
     validate_join_through!(name, join_through)
 
@@ -1448,7 +1441,6 @@ defmodule Ecto.Association.ManyToMany do
   def preload_info(%{join_keys: [join_through_keys, _], owner: owner} = refl) do
     join_owner_keys = Keyword.keys(join_through_keys)
     owner_key_types = join_through_keys |> Keyword.values |> Enum.map(& owner.__schema__(:type, &1))
-    # owner_key_type = owner.__schema__(:type, owner_key)
 
     # When preloading use the last bound table (which is the join table) and the join_owner_key
     # to filter out related entities to the owner structs we're preloading with.
@@ -1493,7 +1485,6 @@ defmodule Ecto.Association.ManyToMany do
         [join_through_keys, join_related_keys] = join_keys
         owner_keys = Keyword.values(join_through_keys)
         related_keys = Keyword.values(join_related_keys)
-        # [[{join_owner_key, owner_key}], [{join_related_key, related_key}]] = join_keys
 
         if insert_join?(parent_changeset, changeset, field, related_keys) do
           owner_values = dump! :insert, join_through, owner, owner_keys, adapter
@@ -1519,10 +1510,6 @@ defmodule Ecto.Association.ManyToMany do
     end
   end
 
-  defp validate_join_keys!(_name, _join_keys) do
-    # TODO
-    :ok
-  end
   defp validate_join_through!(name, nil) do
     raise ArgumentError, "many_to_many #{inspect name} associations require the :join_through option to be given"
   end
