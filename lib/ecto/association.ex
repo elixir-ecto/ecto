@@ -1,4 +1,5 @@
 import Ecto.Query, only: [from: 1, from: 2, join: 4, join: 5, distinct: 3, where: 3]
+
 defmodule Ecto.Association.NotLoaded do
   @moduledoc """
   Struct returned by associations when they are not loaded.
@@ -248,10 +249,7 @@ defmodule Ecto.Association do
 
     values = List.wrap(values)
 
-    query = case {join_to, dest_out_key, values} do
-      {nil, single_key, [single_value]} when is_atom(single_key) ->
-        query
-        |> where([{dest, final_bind}], field(dest, ^single_key) == ^single_value)
+    query = case {join_to, List.wrap(dest_out_key), values} do
       {nil, [single_key], [single_value]} ->
         query
         |> where([{dest, final_bind}], field(dest, ^single_key) == ^single_value)
@@ -259,6 +257,7 @@ defmodule Ecto.Association do
       {nil, [single_key], values} ->
         query
         |> where([{dest, final_bind}], field(dest, ^single_key) in ^values)
+
       {nil, dest_out_keys, [single_value]} ->
         dest_out_keys
         |> Enum.zip(single_value)
@@ -266,6 +265,7 @@ defmodule Ecto.Association do
           query
           |> where([{dest, final_bind}], field(dest, ^dest_out_key_field) == ^value)
         end)
+
       {nil, dest_out_keys, values} ->
         query
         |> where_keys(final_bind, dest_out_keys, values)
