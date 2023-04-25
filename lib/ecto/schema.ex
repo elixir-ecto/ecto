@@ -1102,7 +1102,7 @@ defmodule Ecto.Schema do
     * `:type` - Sets the type of automatically defined `:foreign_key`.
       Defaults to: `:integer` and can be set per schema via `@foreign_key_type`.
       A list of types can be used for composite foreign keys. If `:type` is a
-      single atom and the foreign key is copmosite, the same type is assumed for
+      single atom and the foreign key is composite, the same type is assumed for
       all key columns
 
     * `:on_replace` - The action taken on associations when the record is
