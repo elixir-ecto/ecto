@@ -433,7 +433,8 @@ defmodule Ecto.Integration.PreloadTest do
       TestRepo.all(
         from c in CompositePk,
              join: cc in "composite_pk_composite_pk",
-             where: cc.a_1 in ^composite_ids_a and cc.b_1 in ^composite_ids_b and cc.a_2 == c.a and cc.b_2 == c.b,
+             on: cc.a_2 == c.a and cc.b_2 == c.b,
+             where: cc.a_1 in ^composite_ids_a and cc.b_1 in ^composite_ids_b,
              order_by: [c.a, c.b],
              select: map(c, [:name])
       )
@@ -449,7 +450,8 @@ defmodule Ecto.Integration.PreloadTest do
       TestRepo.all(
         from c in CompositePk,
              join: cc in "composite_pk_composite_pk",
-             where: cc.a_1 in ^composite_ids_a and cc.b_1 in ^composite_ids_b and cc.a_2 == c.a and cc.b_2 == c.b,
+             on: cc.a_2 == c.a and cc.b_2 == c.b,
+             where: cc.a_1 in ^composite_ids_a and cc.b_1 in ^composite_ids_b,
              order_by: [c.a, c.b],
              select: {[cc.a_1, cc.b_1], map(c, [:name])}
       )
