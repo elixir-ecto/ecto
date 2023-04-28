@@ -26,7 +26,7 @@ defmodule Ecto.Multi do
   be started and the error will be immediately returned.
 
   Note: `insert/4`, `update/4`, `insert_or_update/4`, and `delete/4`
-  variants that accept a function are not performing such checks since
+  variants that accept a function do not perform these checks since
   the functions are executed after the transaction has started.
 
   ## Run
