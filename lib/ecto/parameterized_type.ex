@@ -164,7 +164,7 @@ defmodule Ecto.ParameterizedType do
   @doc """
   Generates a loaded version of the data.
 
-  This is callback is invoked when a parameterized type is given
+  This callback is invoked when a parameterized type is given
   to `field` with the `:autogenerate` flag.
   """
   @callback autogenerate(params()) :: term()
