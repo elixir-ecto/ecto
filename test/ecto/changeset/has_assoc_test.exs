@@ -261,13 +261,6 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert profile.valid?
     assert changeset.valid?
   end
-  
-  test "cast has_one with custom changeset specified with mfa" do
-    changeset = cast(%Author{}, %{"profile" => %{}}, :profile, with: {Profile, :failing_changeset, ["test"]})
-
-    assert changeset.changes.profile.errors == [name: {"test", []}]
-    refute changeset.valid?
-  end
 
   test "cast has_one keeps appropriate action from changeset" do
     changeset = cast(%Author{profile: %Profile{id: "id"}},

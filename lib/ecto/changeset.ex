@@ -1081,11 +1081,9 @@ defmodule Ecto.Changeset do
       repository if there is a change, defaults to `true`
 
     * `:with` - the function to build the changeset from params. Defaults to the
-      `changeset/2` function of the associated module. It can be changed by passing
-      an anonymous function or an MFA tuple.  If using an MFA, the default changeset
-      and parameters arguments will be prepended to the given args. For example,
-      using `with: {Author, :special_changeset, ["hello"]}` will be invoked as
-      `Author.special_changeset(changeset, params, "hello")`
+      `changeset/2` function of the associated module. It must be an anonymous
+      function that expects two arguments, a changeset to be modified and its
+      parameters
 
     * `:drop_param` - the parameter name which keeps a list of indexes to drop
       from the relation parameters
@@ -1126,11 +1124,9 @@ defmodule Ecto.Changeset do
       repository if there is a change, defaults to `true`
 
     * `:with` - the function to build the changeset from params. Defaults to the
-      `changeset/2` function of the embedded module. It can be changed by passing
-      an anonymous function or an MFA tuple.  If using an MFA, the default changeset
-      and parameters arguments will be prepended to the given args. For example,
-      using `with: {Author, :special_changeset, ["hello"]}` will be invoked as
-      `Author.special_changeset(changeset, params, "hello")`
+      `changeset/2` function of the associated module. It must be an anonymous
+      function that expects two arguments, a changeset to be modified and its
+      parameters
 
     * `:drop_param` - the parameter name which keeps a list of indexes to drop
       from the relation parameters

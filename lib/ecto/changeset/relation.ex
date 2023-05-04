@@ -116,6 +116,8 @@ defmodule Ecto.Changeset.Relation do
 
   defp do_cast(meta, owner, params, struct, allowed_actions, {module, fun, args})
        when is_atom(module) and is_atom(fun) and is_list(args) do
+    IO.warn "passing a MFA to :with in cast_assoc/cast_embed is deprecated, please pass an anonymous function instead"
+
     on_cast = fn changeset, attrs ->
       apply(module, fun, [changeset, attrs | args])
     end
