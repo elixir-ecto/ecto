@@ -140,10 +140,11 @@ defmodule Ecto.Query.API do
 
       from p in Post, where: "elixir" in p.tags
 
-  Additionally, the right side may also be a subquery:
+  Additionally, the right side may also be a subquery, which should return
+  a single column:
 
       from c in Comment, where: c.post_id in subquery(
-        from(p in Post, where: p.created_at > ^since)
+        from(p in Post, where: p.created_at > ^since, select: p.id)
       )
   """
   def left in right, do: doc! [left, right]
