@@ -1264,7 +1264,8 @@ defmodule Ecto.Changeset do
 
                 1. implement the #{type}.changeset/2 function
                 2. pass the :with option to cast_#{type}/3 with an anonymous
-                   function
+                   function of arity 2 (or possibly arity 3, if using has_many or
+                   embeds_many)
 
               When using an inline embed, the :with option must be given
               """
