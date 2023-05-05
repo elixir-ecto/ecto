@@ -14,6 +14,7 @@ defmodule Ecto.Changeset.HasAssocTest do
 
     schema "posts" do
       field :title, :string
+      field :position, :integer
       belongs_to :author, Author
     end
 
@@ -21,6 +22,13 @@ defmodule Ecto.Changeset.HasAssocTest do
       Changeset.cast(schema, params, ~w(title author_id)a)
       |> Changeset.validate_required(:title)
       |> Changeset.validate_length(:title, min: 3)
+    end
+
+    def changeset_with_position(schema, params, position) do
+      Changeset.cast(schema, params, ~w(title author_id)a)
+      |> Changeset.validate_required(:title)
+      |> Changeset.validate_length(:title, min: 3)
+      |> Changeset.put_change(:position, position)
     end
 
     def set_action(schema, params) do
@@ -73,7 +81,7 @@ defmodule Ecto.Changeset.HasAssocTest do
     def optional_changeset(schema, params) do
       Changeset.cast(schema, params, ~w(name)a)
     end
-    
+
     def failing_changeset(schema, params, error_string) do
       Changeset.cast(schema, params, ~w(name)a)
       |> Changeset.add_error(:name, error_string)
@@ -461,6 +469,26 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert third.valid?
 
     refute changeset.valid?
+  end
+
+  test "cast has_many with sort_param, drop param and arity-3 with" do
+    posts = %{1 => %{"title" => "one"}, 2 => %{"title" => "two"}, 3 => %{"title" => "three"}}
+    opts = [sort_param: :sort, drop_param: :drop, with: &Post.changeset_with_position/3]
+
+    changeset = cast(%Author{}, %{"posts" => posts}, :posts, opts)
+    assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ~w(one two three)
+
+    changeset = cast(%Author{}, %{"posts" => posts, "drop" => [2]}, :posts, opts)
+    assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ["one", "three"]
+    assert Enum.map(changeset.changes.posts, & &1.changes[:position]) == [0, 1]
+
+    changeset = cast(%Author{}, %{"posts" => posts, "sort" => [2, 3, 1]}, :posts, opts)
+    assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ~w(two three one)
+    assert Enum.map(changeset.changes.posts, & &1.changes[:position]) == [0, 1, 2]
+
+    changeset = cast(%Author{}, %{posts: posts, sort: [1, "new"], drop: [2, "new"]}, :posts, opts)
+    assert Enum.map(changeset.changes.posts, & &1.changes[:title]) == ["one", "three"]
+    assert Enum.map(changeset.changes.posts, & &1.changes[:position]) == [0, 1]
   end
 
   test "cast has_many with invalid operation" do
