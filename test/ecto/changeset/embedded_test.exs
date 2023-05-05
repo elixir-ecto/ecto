@@ -39,12 +39,20 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     schema "posts" do
       field :title, :string
+      field :position, :integer
     end
 
     def changeset(schema, params) do
       cast(schema, params, ~w(title)a)
       |> validate_required(:title)
       |> validate_length(:title, min: 3)
+    end
+
+    def changeset_with_position(schema, params, position) do
+      cast(schema, params, ~w(title)a)
+      |> validate_required(:title)
+      |> validate_length(:title, min: 3)
+      |> put_change(:position, position)
     end
 
     def optional_changeset(schema, params) do
@@ -78,6 +86,12 @@ defmodule Ecto.Changeset.EmbeddedTest do
     def set_action(schema, params) do
       changeset(schema, params)
       |> Map.put(:action, Map.get(params, :action, :update))
+    end
+
+    def changeset_with_position(schema, params, _position) do
+      cast(schema, params, ~w(name id)a)
+      |> validate_required(:name)
+      |> validate_length(:name, min: 3)
     end
   end
 
@@ -617,15 +631,19 @@ defmodule Ecto.Changeset.EmbeddedTest do
     refute changeset.valid?
   end
 
-  test "cast inline embeds_many with valid params" do
-    changeset = cast(%Author{}, %{"inline_posts" => [%{"title" => "hello"}]},
-      :inline_posts, with: &Post.changeset/2)
-    [post] = changeset.changes.inline_posts
-    assert post.changes == %{title: "hello"}
-    assert post.errors == []
-    assert post.action  == :insert
-    assert post.valid?
-    assert changeset.valid?
+  test "argument error when casting embeds_one with arity 3 function" do
+    assert_raise(ArgumentError, ~r/invalid \:with function for relation \:profile/, fn ->
+      params = %{"profile" => %{"name" => "John"}}
+      cast(%Author{}, params, :profile, with: &Profile.changeset_with_position/3)
+    end)
+  end
+
+  test "sends index when casting embeds_many with arity 3 function" do
+    changeset = cast(%Author{}, %{"posts" => [%{"title" => "hello"}, %{"title" => "bye"}]},
+      :posts, with: &Post.changeset_with_position/3)
+    [post, post2] = changeset.changes.posts
+    assert post.changes == %{title: "hello", position: 0}
+    assert post2.changes == %{title: "bye", position: 1}
   end
 
   ## Others

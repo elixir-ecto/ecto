@@ -105,7 +105,7 @@ defmodule Ecto.Changeset.Relation do
 
   def cast(%{related: mod} = relation, owner, params, current, on_cast) do
     pks = mod.__schema__(:primary_key)
-    fun = &do_cast(relation, owner, &1, &2, &3, on_cast)
+    fun = &do_cast(relation, owner, &1, &2, &3, &4, on_cast)
     data_pk = data_pk(pks)
     param_pk = param_pk(mod, pks)
 
@@ -114,7 +114,7 @@ defmodule Ecto.Changeset.Relation do
     end
   end
 
-  defp do_cast(meta, owner, params, struct, allowed_actions, {module, fun, args})
+  defp do_cast(meta, owner, params, struct, allowed_actions, idx, {module, fun, args})
        when is_atom(module) and is_atom(fun) and is_list(args) do
     IO.warn "passing a MFA to :with in cast_assoc/cast_embed is deprecated, please pass an anonymous function instead"
 
@@ -122,25 +122,40 @@ defmodule Ecto.Changeset.Relation do
       apply(module, fun, [changeset, attrs | args])
     end
 
-    do_cast(meta, owner, params, struct, allowed_actions, on_cast)
+    do_cast(meta, owner, params, struct, allowed_actions, idx, on_cast)
   end
 
-  defp do_cast(meta, owner, params, nil = _struct, allowed_actions, on_cast) do
+  defp do_cast(relation, owner, params, nil = _struct, allowed_actions, idx, on_cast) do
     {:ok,
-      on_cast.(meta.__struct__.build(meta, owner), params)
+      relation
+      |> apply_on_cast(on_cast, relation.__struct__.build(relation, owner), params, idx)
       |> put_new_action(:insert)
       |> check_action!(allowed_actions)}
   end
 
-  defp do_cast(relation, _owner, nil = _params, current, _allowed_actions, _on_cast) do
+  defp do_cast(relation, _owner, nil = _params, current, _allowed_actions, _idx, _on_cast) do
     on_replace(relation, current)
   end
 
-  defp do_cast(_meta, _owner, params, struct, allowed_actions, on_cast) do
+  defp do_cast(relation, _owner, params, struct, allowed_actions, idx, on_cast) do
     {:ok,
-      on_cast.(struct, params)
+      relation
+      |> apply_on_cast(on_cast, struct, params, idx)
       |> put_new_action(:update)
       |> check_action!(allowed_actions)}
+  end
+
+  defp apply_on_cast(%{cardinality: :many}, on_cast, struct, params, idx) when is_function(on_cast, 3) do
+    on_cast.(struct, params, idx)
+  end
+
+  defp apply_on_cast(%{cardinality: :one, field: field}, on_cast, _struct, _params, _idx) when is_function(on_cast, 3) do
+    raise ArgumentError, "invalid :with function for relation #{inspect(field)} " <>
+      "of cardinality one. Expected a function of arity 2"
+  end
+
+  defp apply_on_cast(_relation, on_cast, struct, params, _idx) when is_function(on_cast, 2) do
+    on_cast.(struct, params)
   end
 
   @doc """
@@ -156,13 +171,13 @@ defmodule Ecto.Changeset.Relation do
   def change(%{related: mod} = relation, value, current) do
     get_pks = data_pk(mod.__schema__(:primary_key))
     with :error <- cast_or_change(relation, value, current, get_pks, get_pks,
-                                  &do_change(relation, &1, &2, &3)) do
+                                  &do_change(relation, &1, &2, &3, &4)) do
       {:error, {"is invalid", [type: expected_type(relation)]}}
     end
   end
 
   # This may be an insert or an update, get all fields.
-  defp do_change(relation, %{__struct__: _} = changeset_or_struct, nil, _allowed_actions) do
+  defp do_change(relation, %{__struct__: _} = changeset_or_struct, nil, _allowed_actions, _idx) do
     changeset = Changeset.change(changeset_or_struct)
     {:ok,
      changeset
@@ -170,11 +185,11 @@ defmodule Ecto.Changeset.Relation do
      |> put_new_action(action_from_changeset(changeset, nil))}
   end
 
-  defp do_change(relation, nil, current, _allowed_actions) do
+  defp do_change(relation, nil, current, _allowed_actions, _idx) do
     on_replace(relation, current)
   end
 
-  defp do_change(relation, %Changeset{} = changeset, _current, allowed_actions) do
+  defp do_change(relation, %Changeset{} = changeset, _current, allowed_actions, _idx) do
     {:ok,
      changeset
      |> assert_changeset_struct!(relation)
@@ -182,7 +197,7 @@ defmodule Ecto.Changeset.Relation do
      |> check_action!(allowed_actions)}
   end
 
-  defp do_change(_relation, %{__struct__: _} = struct, _current, allowed_actions) do
+  defp do_change(_relation, %{__struct__: _} = struct, _current, allowed_actions, _idx) do
     {:ok,
      struct
      |> Ecto.Changeset.change
@@ -190,11 +205,11 @@ defmodule Ecto.Changeset.Relation do
      |> check_action!(allowed_actions)}
   end
 
-  defp do_change(relation, changes, current, allowed_actions)
+  defp do_change(relation, changes, current, allowed_actions, idx)
       when is_list(changes) or is_map(changes) do
     changeset = Ecto.Changeset.change(current || relation.__struct__.build(relation, nil), changes)
     changeset = put_new_action(changeset, action_from_changeset(changeset, current))
-    do_change(relation, changeset, current, allowed_actions)
+    do_change(relation, changeset, current, allowed_actions, idx)
   end
 
   defp action_from_changeset(%{data: %{__meta__: %{state: state}}}, _current) do
@@ -295,7 +310,7 @@ defmodule Ecto.Changeset.Relation do
     {current_pks, current_map} = process_current(current, current_pks_fun, relation)
     %{unique: unique, ordered: ordered} = relation
     ordered = if ordered, do: current_pks, else: []
-    map_changes(value, new_pks_fun, fun, current_map, [], true, true, unique && %{}, ordered)
+    map_changes(value, new_pks_fun, fun, current_map, [], true, true, unique && %{}, 0, ordered)
   end
 
   defp cast_or_change(_, _, _, _, _, _), do: :error
@@ -325,7 +340,7 @@ defmodule Ecto.Changeset.Relation do
   end
 
   defp single_change(new, current, fun, allowed_actions, skippable?) do
-    case fun.(new, current, allowed_actions) do
+    case fun.(new, current, allowed_actions, nil) do
       {:ok, %{action: :ignore}} ->
         :ignore
       {:ok, changeset} ->
@@ -341,15 +356,15 @@ defmodule Ecto.Changeset.Relation do
 
   # map changes
 
-  defp map_changes([changes | rest], new_pks, fun, current, acc, valid?, skip?, unique, ordered)
+  defp map_changes([changes | rest], new_pks, fun, current, acc, valid?, skip?, unique, idx, ordered)
       when is_map(changes) or is_list(changes) do
     pk_values = new_pks.(changes)
     {struct, current, allowed_actions} = pop_current(current, pk_values)
 
-    case fun.(changes, struct, allowed_actions) do
+    case fun.(changes, struct, allowed_actions, idx) do
       {:ok, %{action: :ignore}} ->
         ordered = pop_ordered(pk_values, ordered)
-        map_changes(rest, new_pks, fun, current, acc, valid?, skip?, unique, ordered)
+        map_changes(rest, new_pks, fun, current, acc, valid?, skip?, unique, idx + 1, ordered)
       {:ok, changeset} ->
         changeset = maybe_add_error_on_pk(changeset, pk_values, unique)
         acc = [changeset | acc]
@@ -357,19 +372,19 @@ defmodule Ecto.Changeset.Relation do
         skip? = (struct != nil) and skip? and skip?(changeset)
         unique = unique && Map.put(unique, pk_values, true)
         ordered = pop_ordered(pk_values, ordered)
-        map_changes(rest, new_pks, fun, current, acc, valid?, skip?, unique, ordered)
+        map_changes(rest, new_pks, fun, current, acc, valid?, skip?, unique, idx + 1, ordered)
       :error ->
         :error
     end
   end
 
-  defp map_changes([], _new_pks, fun, current, acc, valid?, skip?, _unique, ordered) do
+  defp map_changes([], _new_pks, fun, current, acc, valid?, skip?, _unique, _idx, ordered) do
     current_structs = Enum.map(current, &elem(&1, 1))
     skip? = skip? and ordered == []
     reduce_delete_changesets(current_structs, fun, Enum.reverse(acc), valid?, skip?)
   end
 
-  defp map_changes(_params, _new_pks, _fun, _current, _acc, _valid?, _skip?, _unique, _ordered) do
+  defp map_changes(_params, _new_pks, _fun, _current, _acc, _valid?, _skip?, _unique, _idx, _ordered) do
     :error
   end
 
@@ -399,7 +414,7 @@ defmodule Ecto.Changeset.Relation do
   end
 
   defp reduce_delete_changesets([struct | rest], fun, acc, valid?, _skip?) do
-    case fun.(nil, struct, [:update, :delete]) do
+    case fun.(nil, struct, [:update, :delete], nil) do
       {:ok, changeset} ->
         valid? = valid? and changeset.valid?
         reduce_delete_changesets(rest, fun, [changeset | acc], valid?, false)

@@ -1047,24 +1047,19 @@ defmodule Ecto.Changeset do
 
   For embeds, this guarantees the embeds will be rewritten in the given order.
   However, for associations, this is not enough. You will have to add a
-  `field :position, :integer` to the schema and then do a post-processing
-  of the association, something like this:
+  `field :position, :integer` to the schema and add a with function of arity 3
+  to add the position to your children changeset. For example, you could implement:
+
+      defp child_changeset(child, _changes, position) do
+        child
+        |> put_change(:position, position)
+      end
+
+  And by passing it to `:with`, it will be called with the final position of the
+  item:
 
       changeset
-      |> cast_assoc(:children, sort_param: ...)
-      |> copy_children_positions()
-
-      defp copy_children_positions(changeset) do
-        if children = Ecto.Changeset.get_change(changeset, :children) do
-          children
-          |> Enum.with_index(fn child, index ->
-            Ecto.Changeset.put_change(child, :position, index)
-          end)
-          |> then(&Ecto.Changeset.put_change(changeset, :children, &1))
-        else
-          changeset
-        end
-      end
+      |> cast_assoc(:children, sort_param: ..., with: &child_changeset/3)
 
   These parameters can be powerful in certain UIs as it allows you to decouple
   the sorting and replacement of the data from its representation.
@@ -1081,9 +1076,11 @@ defmodule Ecto.Changeset do
       repository if there is a change, defaults to `true`
 
     * `:with` - the function to build the changeset from params. Defaults to the
-      `changeset/2` function of the associated module. It must be an anonymous
+      `changeset/2` function of the associated module. It can be an anonymous
       function that expects two arguments, a changeset to be modified and its
-      parameters
+      parameters. For associations with cardinality `:many`, functions with arity
+      3 are accepted, and the third argument will be the position of the associated
+      element in the list, or `nil`, if the changeset is being replaced.
 
     * `:drop_param` - the parameter name which keeps a list of indexes to drop
       from the relation parameters
@@ -1126,7 +1123,9 @@ defmodule Ecto.Changeset do
     * `:with` - the function to build the changeset from params. Defaults to the
       `changeset/2` function of the associated module. It must be an anonymous
       function that expects two arguments, a changeset to be modified and its
-      parameters
+      parameters. For associations with cardinality `:many`, functions with arity
+      3 are accepted, and the third argument will be the position of the associated
+      element in the list, or `nil`, if the changeset is being replaced.
 
     * `:drop_param` - the parameter name which keeps a list of indexes to drop
       from the relation parameters
@@ -1265,7 +1264,7 @@ defmodule Ecto.Changeset do
 
                 1. implement the #{type}.changeset/2 function
                 2. pass the :with option to cast_#{type}/3 with an anonymous
-                   function.
+                   function
 
               When using an inline embed, the :with option must be given
               """
