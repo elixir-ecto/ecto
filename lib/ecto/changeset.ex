@@ -2728,7 +2728,7 @@ defmodule Ecto.Changeset do
         * "should be %{count} byte(s)"
         * "should be at least %{count} byte(s)"
         * "should be at most %{count} byte(s)"
-      * for lists:
+      * for lists and maps:
         * "should have %{count} item(s)"
         * "should have at least %{count} item(s)"
         * "should have at most %{count} item(s)"
@@ -2757,6 +2757,8 @@ defmodule Ecto.Changeset do
             {:binary, byte_size(value)}
           {value, _} when is_list(value) ->
             {:list, list_length(changeset, field, value)}
+          {value, _} when is_map(value) ->
+            {:map, map_size(value)}
         end
 
         error = ((is = opts[:is]) && wrong_length(type, length, is, opts)) ||
@@ -2787,6 +2789,8 @@ defmodule Ecto.Changeset do
     {message(opts, "should be %{count} byte(s)"), count: value, validation: :length, kind: :is, type: :binary}
   defp wrong_length(:list, _length, value, opts), do:
     {message(opts, "should have %{count} item(s)"), count: value, validation: :length, kind: :is, type: :list}
+  defp wrong_length(:map, _length, value, opts), do:
+    {message(opts, "should have %{count} item(s)"), count: value, validation: :length, kind: :is, type: :map}
 
   defp too_short(_type, length, value, _opts) when length >= value, do: nil
   defp too_short(:string, _length, value, opts), do:
@@ -2795,6 +2799,8 @@ defmodule Ecto.Changeset do
     {message(opts, "should be at least %{count} byte(s)"), count: value, validation: :length, kind: :min, type: :binary}
   defp too_short(:list, _length, value, opts), do:
     {message(opts, "should have at least %{count} item(s)"), count: value, validation: :length, kind: :min, type: :list}
+  defp too_short(:map, _length, value, opts), do:
+    {message(opts, "should have at least %{count} item(s)"), count: value, validation: :length, kind: :min, type: :map}
 
   defp too_long(_type, length, value, _opts) when length <= value, do: nil
   defp too_long(:string, _length, value, opts), do:
@@ -2803,6 +2809,8 @@ defmodule Ecto.Changeset do
     {message(opts, "should be at most %{count} byte(s)"), count: value, validation: :length, kind: :max, type: :binary}
   defp too_long(:list, _length, value, opts), do:
     {message(opts, "should have at most %{count} item(s)"), count: value, validation: :length, kind: :max, type: :list}
+  defp too_long(:map, _length, value, opts), do:
+    {message(opts, "should have at most %{count} item(s)"), count: value, validation: :length, kind: :max, type: :map}
 
   @doc """
   Validates the properties of a number.
