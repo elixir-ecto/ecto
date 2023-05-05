@@ -95,6 +95,7 @@ defmodule Ecto.ChangesetTest do
       field :decimal, :decimal
       field :upvotes, :integer, default: 0
       field :topics, {:array, :string}
+      field :seo_metadata, :map
       field :virtual, :string, virtual: true
       field :published_at, :naive_datetime
       field :source, :map
@@ -119,7 +120,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   defp changeset(schema \\ %Post{}, params) do
-    cast(schema, params, ~w(id token title author_email body upvotes decimal color topics virtual)a)
+    cast(schema, params, ~w(id token title author_email body upvotes decimal color topics seo_metadata virtual)a)
   end
 
   defmodule CustomError do
@@ -1423,6 +1424,34 @@ defmodule Ecto.ChangesetTest do
 
     changeset = changeset(%{"topics" => ["Politics", "Security"]}) |> validate_length(:topics, is: 10, message: "yada")
     assert changeset.errors == [topics: {"yada", count: 10, validation: :length, kind: :is, type: :list}]
+  end
+
+  test "validate_length/3 with map" do
+    changeset = changeset(%{"seo_metadata" => %{"keywords" => ["foo", "bar"], "slug" => "my-post-1"}}) |> validate_length(:seo_metadata, min: 2, max: 3)
+    assert changeset.valid?
+    assert changeset.errors == []
+    assert validations(changeset) == [seo_metadata: {:length, [min: 2, max: 3]}]
+
+    changeset = changeset(%{"seo_metadata" => %{"keywords" => ["foo", "bar"], "slug" => "my-post-2"}}) |> validate_length(:seo_metadata, min: 2, max: 2)
+    assert changeset.valid?
+
+    changeset = changeset(%{"seo_metadata" => %{"keywords" => ["foo", "bar"], "slug" => "my-post-3"}}) |> validate_length(:seo_metadata, is: 2)
+    assert changeset.valid?
+
+    changeset = changeset(%{"seo_metadata" => %{"keywords" => ["foo", "bar"], "slug" => "my-post-4"}}) |> validate_length(:seo_metadata, min: 3)
+    refute changeset.valid?
+    assert changeset.errors == [seo_metadata: {"should have at least %{count} item(s)", count: 3, validation: :length, kind: :min, type: :map}]
+
+    changeset = changeset(%{"seo_metadata" => %{"keywords" => ["foo", "bar"], "slug" => "my-post-5", "is_indexed" => false}}) |> validate_length(:seo_metadata, max: 2)
+    refute changeset.valid?
+    assert changeset.errors == [seo_metadata: {"should have at most %{count} item(s)", count: 2, validation: :length, kind: :max, type: :map}]
+
+    changeset = changeset(%{"seo_metadata" => %{"keywords" => ["foo", "bar"], "slug" => "my-post-6", "is_indexed" => false}}) |> validate_length(:seo_metadata, is: 10)
+    refute changeset.valid?
+    assert changeset.errors == [seo_metadata: {"should have %{count} item(s)", count: 10, validation: :length, kind: :is, type: :map}]
+
+    changeset = changeset(%{"seo_metadata" => %{"keywords" => ["foo", "bar"], "slug" => "my-post-7", "is_indexed" => false}}) |> validate_length(:seo_metadata, is: 10, message: "yada")
+    assert changeset.errors == [seo_metadata: {"yada", count: 10, validation: :length, kind: :is, type: :map}]
   end
 
   test "validate_length/3 with associations" do
