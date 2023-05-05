@@ -2,6 +2,9 @@
 
 With Ecto we can run queries in different prefixes using a single pool of database connections. For databases engines such as Postgres, Ecto's prefix [maps to Postgres' DDL schemas](https://www.postgresql.org/docs/current/static/ddl-schemas.html). For MySQL, each prefix is a different database on its own.
 
+> ⚠️ **Caution**  
+> When using PostgreSQL, schema-based tenancy may not be the best approach for your application if you plan to scale to tens to hundreds of tenants. For more information, see [this article](https://www.citusdata.com/blog/2016/12/18/schema-sharding-lessons/) from Citus Data, and [this article](https://medium.com/infinite-monkeys/our-multi-tenancy-journey-with-postgres-schemas-and-apartment-6ecda151a21f) from Influitive.
+
 Query prefixes may be useful in different scenarios. For example, multi tenant apps running on PostgreSQL would define multiple prefixes, usually one per client, under a single database. The idea is that prefixes will provide data isolation between the different users of the application, guaranteeing either globally or at the data level that queries and commands act on a specific tenants.
 
 Prefixes may also be useful on high-traffic applications where data is partitioned upfront. For example, a gaming platform may break game data into isolated partitions, each named after a different prefix. A partition for a given player is either chosen at random or calculated based on the player information.
