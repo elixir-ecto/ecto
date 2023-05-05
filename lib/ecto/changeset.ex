@@ -1125,7 +1125,7 @@ defmodule Ecto.Changeset do
       function that expects two arguments, a changeset to be modified and its
       parameters. For associations with cardinality `:many`, functions with arity
       3 are accepted, and the third argument will be the position of the associated
-      element in the list, or `nil`, if the changeset is being deleted.
+      element in the list, or `nil`, if the changeset is being replaced.
 
     * `:drop_param` - the parameter name which keeps a list of indexes to drop
       from the relation parameters
