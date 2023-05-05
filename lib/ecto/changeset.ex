@@ -1215,14 +1215,12 @@ defmodule Ecto.Changeset do
         {[], value}
       end
 
-    (
     sorted ++
       (pending
        |> Map.drop(drop)
        |> Enum.map(&key_as_int/1)
        |> Enum.sort()
        |> Enum.map(&elem(&1, 1)))
-    )
   end
 
   defp cast_params(%{cardinality: :one}, value, sort, drop) do

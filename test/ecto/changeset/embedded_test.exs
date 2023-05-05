@@ -87,6 +87,12 @@ defmodule Ecto.Changeset.EmbeddedTest do
       changeset(schema, params)
       |> Map.put(:action, Map.get(params, :action, :update))
     end
+
+    def changeset_with_position(schema, params, _position) do
+      cast(schema, params, ~w(name id)a)
+      |> validate_required(:name)
+      |> validate_length(:name, min: 3)
+    end
   end
 
   defmodule Nested do
@@ -625,15 +631,19 @@ defmodule Ecto.Changeset.EmbeddedTest do
     refute changeset.valid?
   end
 
-  test "cast embeds_many with arity 3 function" do
-    changeset = cast(%Author{}, %{"posts" => [%{"title" => "hello"}]},
+  test "argument error when casting embeds_one with arity 3 function" do
+    assert_raise(ArgumentError, ~r/invalid \:with function for relation \:profile/, fn ->
+      params = %{"profile" => %{"name" => "John"}}
+      cast(%Author{}, params, :profile, with: &Profile.changeset_with_position/3)
+    end)
+  end
+
+  test "sends index when casting embeds_many with arity 3 function" do
+    changeset = cast(%Author{}, %{"posts" => [%{"title" => "hello"}, %{"title" => "bye"}]},
       :posts, with: &Post.changeset_with_position/3)
-    [post] = changeset.changes.posts
+    [post, post2] = changeset.changes.posts
     assert post.changes == %{title: "hello", position: 0}
-    assert post.errors == []
-    assert post.action  == :insert
-    assert post.valid?
-    assert changeset.valid?
+    assert post2.changes == %{title: "bye", position: 1}
   end
 
   ## Others

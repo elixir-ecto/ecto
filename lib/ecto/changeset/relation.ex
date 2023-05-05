@@ -149,6 +149,11 @@ defmodule Ecto.Changeset.Relation do
     on_cast.(struct, params, idx)
   end
 
+  defp apply_on_cast(%{cardinality: :one, field: field}, on_cast, _struct, _params, _idx) when is_function(on_cast, 3) do
+    raise ArgumentError, "invalid :with function for relation #{inspect(field)} " <>
+      "of cardinality one. Expected a function of arity 2"
+  end
+
   defp apply_on_cast(_relation, on_cast, struct, params, _idx) when is_function(on_cast, 2) do
     on_cast.(struct, params)
   end
