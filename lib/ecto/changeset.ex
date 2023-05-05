@@ -1078,9 +1078,9 @@ defmodule Ecto.Changeset do
     * `:with` - the function to build the changeset from params. Defaults to the
       `changeset/2` function of the associated module. It can be an anonymous
       function that expects two arguments, a changeset to be modified and its
-      parameters. For associations of `:many` cardinality, functions with arity
+      parameters. For associations with cardinality `:many`, functions with arity
       3 are accepted, and the third argument will be the position of the associated
-      element in the list.
+      element in the list, or `nil`, if the changeset is being deleted.
 
     * `:drop_param` - the parameter name which keeps a list of indexes to drop
       from the relation parameters
@@ -1123,9 +1123,9 @@ defmodule Ecto.Changeset do
     * `:with` - the function to build the changeset from params. Defaults to the
       `changeset/2` function of the associated module. It must be an anonymous
       function that expects two arguments, a changeset to be modified and its
-      parameters. For associations of `:many` cardinality, functions with arity
+      parameters. For associations with cardinality `:many`, functions with arity
       3 are accepted, and the third argument will be the position of the associated
-      element in the list.
+      element in the list, or `nil`, if the changeset is being deleted.
 
     * `:drop_param` - the parameter name which keeps a list of indexes to drop
       from the relation parameters
