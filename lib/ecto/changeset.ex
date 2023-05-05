@@ -1081,9 +1081,11 @@ defmodule Ecto.Changeset do
       repository if there is a change, defaults to `true`
 
     * `:with` - the function to build the changeset from params. Defaults to the
-      `changeset/2` function of the associated module. It must be an anonymous
+      `changeset/2` function of the associated module. It can be an anonymous
       function that expects two arguments, a changeset to be modified and its
-      parameters
+      parameters. For associations of `:many` cardinality, functions with arity
+      3 are accepted, and the third argument will be the position of the associated
+      element in the list.
 
     * `:drop_param` - the parameter name which keeps a list of indexes to drop
       from the relation parameters
@@ -1126,7 +1128,9 @@ defmodule Ecto.Changeset do
     * `:with` - the function to build the changeset from params. Defaults to the
       `changeset/2` function of the associated module. It must be an anonymous
       function that expects two arguments, a changeset to be modified and its
-      parameters
+      parameters. For associations of `:many` cardinality, functions with arity
+      3 are accepted, and the third argument will be the position of the associated
+      element in the list.
 
     * `:drop_param` - the parameter name which keeps a list of indexes to drop
       from the relation parameters
@@ -1211,12 +1215,14 @@ defmodule Ecto.Changeset do
         {[], value}
       end
 
+    (
     sorted ++
       (pending
        |> Map.drop(drop)
        |> Enum.map(&key_as_int/1)
        |> Enum.sort()
        |> Enum.map(&elem(&1, 1)))
+    )
   end
 
   defp cast_params(%{cardinality: :one}, value, sort, drop) do
@@ -1265,7 +1271,7 @@ defmodule Ecto.Changeset do
 
                 1. implement the #{type}.changeset/2 function
                 2. pass the :with option to cast_#{type}/3 with an anonymous
-                   function.
+                   function
 
               When using an inline embed, the :with option must be given
               """

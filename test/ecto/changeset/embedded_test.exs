@@ -39,12 +39,20 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     schema "posts" do
       field :title, :string
+      field :position, :integer
     end
 
     def changeset(schema, params) do
       cast(schema, params, ~w(title)a)
       |> validate_required(:title)
       |> validate_length(:title, min: 3)
+    end
+
+    def changeset_with_position(schema, params, position) do
+      cast(schema, params, ~w(title)a)
+      |> validate_required(:title)
+      |> validate_length(:title, min: 3)
+      |> put_change(:position, position)
     end
 
     def optional_changeset(schema, params) do
@@ -617,11 +625,11 @@ defmodule Ecto.Changeset.EmbeddedTest do
     refute changeset.valid?
   end
 
-  test "cast inline embeds_many with valid params" do
-    changeset = cast(%Author{}, %{"inline_posts" => [%{"title" => "hello"}]},
-      :inline_posts, with: &Post.changeset/2)
-    [post] = changeset.changes.inline_posts
-    assert post.changes == %{title: "hello"}
+  test "cast embeds_many with arity 3 function" do
+    changeset = cast(%Author{}, %{"posts" => [%{"title" => "hello"}]},
+      :posts, with: &Post.changeset_with_position/3)
+    [post] = changeset.changes.posts
+    assert post.changes == %{title: "hello", position: 0}
     assert post.errors == []
     assert post.action  == :insert
     assert post.valid?
