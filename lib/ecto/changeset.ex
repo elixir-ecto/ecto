@@ -1047,24 +1047,19 @@ defmodule Ecto.Changeset do
 
   For embeds, this guarantees the embeds will be rewritten in the given order.
   However, for associations, this is not enough. You will have to add a
-  `field :position, :integer` to the schema and then do a post-processing
-  of the association, something like this:
+  `field :position, :integer` to the schema and add a with function of arity 3
+  to add the position to your children changeset. For example, you could implement:
+
+      defp child_changeset(child, _changes, position) do
+        child
+        |> put_change(:position, position)
+      end
+
+  And by passing it to `:with`, it will be called with the final position of the
+  item:
 
       changeset
-      |> cast_assoc(:children, sort_param: ...)
-      |> copy_children_positions()
-
-      defp copy_children_positions(changeset) do
-        if children = Ecto.Changeset.get_change(changeset, :children) do
-          children
-          |> Enum.with_index(fn child, index ->
-            Ecto.Changeset.put_change(child, :position, index)
-          end)
-          |> then(&Ecto.Changeset.put_change(changeset, :children, &1))
-        else
-          changeset
-        end
-      end
+      |> cast_assoc(:children, sort_param: ..., with: &child_changeset/3)
 
   These parameters can be powerful in certain UIs as it allows you to decouple
   the sorting and replacement of the data from its representation.
