@@ -310,10 +310,7 @@ defmodule Ecto.Changeset.Relation do
     {current_pks, current_map} = process_current(current, current_pks_fun, relation)
     %{unique: unique, ordered: ordered} = relation
     ordered = if ordered, do: current_pks, else: []
-
-    value
-    |> Enum.with_index()
-    |> map_changes(new_pks_fun, fun, current_map, [], true, true, unique && %{}, ordered)
+    map_changes(value, new_pks_fun, fun, current_map, [], true, true, unique && %{}, 0, ordered)
   end
 
   defp cast_or_change(_, _, _, _, _, _), do: :error
@@ -359,7 +356,7 @@ defmodule Ecto.Changeset.Relation do
 
   # map changes
 
-  defp map_changes([{changes, idx} | rest], new_pks, fun, current, acc, valid?, skip?, unique, ordered)
+  defp map_changes([changes | rest], new_pks, fun, current, acc, valid?, skip?, unique, idx, ordered)
       when is_map(changes) or is_list(changes) do
     pk_values = new_pks.(changes)
     {struct, current, allowed_actions} = pop_current(current, pk_values)
@@ -367,7 +364,7 @@ defmodule Ecto.Changeset.Relation do
     case fun.(changes, struct, allowed_actions, idx) do
       {:ok, %{action: :ignore}} ->
         ordered = pop_ordered(pk_values, ordered)
-        map_changes(rest, new_pks, fun, current, acc, valid?, skip?, unique, ordered)
+        map_changes(rest, new_pks, fun, current, acc, valid?, skip?, unique, idx + 1, ordered)
       {:ok, changeset} ->
         changeset = maybe_add_error_on_pk(changeset, pk_values, unique)
         acc = [changeset | acc]
@@ -375,19 +372,19 @@ defmodule Ecto.Changeset.Relation do
         skip? = (struct != nil) and skip? and skip?(changeset)
         unique = unique && Map.put(unique, pk_values, true)
         ordered = pop_ordered(pk_values, ordered)
-        map_changes(rest, new_pks, fun, current, acc, valid?, skip?, unique, ordered)
+        map_changes(rest, new_pks, fun, current, acc, valid?, skip?, unique, idx + 1, ordered)
       :error ->
         :error
     end
   end
 
-  defp map_changes([], _new_pks, fun, current, acc, valid?, skip?, _unique, ordered) do
+  defp map_changes([], _new_pks, fun, current, acc, valid?, skip?, _unique, _idx, ordered) do
     current_structs = Enum.map(current, &elem(&1, 1))
     skip? = skip? and ordered == []
     reduce_delete_changesets(current_structs, fun, Enum.reverse(acc), valid?, skip?)
   end
 
-  defp map_changes(_params, _new_pks, _fun, _current, _acc, _valid?, _skip?, _unique, _ordered) do
+  defp map_changes(_params, _new_pks, _fun, _current, _acc, _valid?, _skip?, _unique, _idx, _ordered) do
     :error
   end
 
