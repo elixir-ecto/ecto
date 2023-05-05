@@ -1703,6 +1703,7 @@ defmodule Ecto.Query do
 
       City |> order_by([c], asc: c.name, desc: c.population)
       City |> order_by(asc: :name) # Sorts by the cities name
+      City |> order_by(^order_by_param) # Keyword list
 
   """
   defmacro order_by(query, binding \\ [], expr) do
