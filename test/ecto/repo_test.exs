@@ -359,6 +359,22 @@ defmodule Ecto.RepoTest do
       assert query.prefix == "public"
     end
 
+    test "aggregate/3 respects parent query prefix" do
+      query = from(m in MySchema, limit: 1) |> put_query_prefix("public")
+      TestRepo.aggregate(query, :count)
+
+      assert_received {:all, query}
+      assert query.prefix == "public"
+    end
+
+    test "aggregate/4 respects parent query prefix" do
+      query = from(m in MySchema, limit: 1) |> put_query_prefix("public")
+      TestRepo.aggregate(query, :count, :id)
+
+      assert_received {:all, query}
+      assert query.prefix == "public"
+    end
+
     test "removes any preload from query" do
       from(MySchemaWithAssoc, preload: :parent) |> TestRepo.aggregate(:count, :id)
       assert_received {:all, query}
