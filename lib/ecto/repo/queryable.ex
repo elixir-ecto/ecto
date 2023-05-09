@@ -486,10 +486,13 @@ defmodule Ecto.Repo.Queryable do
         %{distinct: nil, limit: nil, offset: nil, combinations: []} = query ->
           %{query | order_bys: []}
 
-        query ->
-          query
-          |> Query.subquery()
-          |> Queryable.Ecto.SubQuery.to_query()
+        %{prefix: prefix} = query ->
+          query =
+            query
+            |> Query.subquery()
+            |> Queryable.Ecto.SubQuery.to_query()
+
+          %{query | prefix: prefix}
       end
 
     select = %SelectExpr{expr: {aggregate, [], []}, file: __ENV__.file, line: __ENV__.line}
@@ -504,12 +507,15 @@ defmodule Ecto.Repo.Queryable do
         %{distinct: nil, limit: nil, offset: nil, combinations: []} = query ->
           %{query | order_bys: []}
 
-        query ->
+        %{prefix: prefix} = query ->
           select = %SelectExpr{expr: ast, file: __ENV__.file, line: __ENV__.line}
 
-          %{query | select: select}
-          |> Query.subquery()
-          |> Queryable.Ecto.SubQuery.to_query()
+          query =
+            %{query | select: select}
+            |> Query.subquery()
+            |> Queryable.Ecto.SubQuery.to_query()
+
+          %{query | prefix: prefix}
       end
 
     select = %SelectExpr{expr: {aggregate, [], [ast]}, file: __ENV__.file, line: __ENV__.line}
