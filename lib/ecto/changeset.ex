@@ -1066,7 +1066,9 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:required` - if the association is a required field
+    * `:required` - if the association is a required field. For associations of cardinality
+      one, a non-nil value satisfies this validation. For associations with many entries,
+      a non-empty list is satisfactory.
 
     * `:required_message` - the message on failure, defaults to "can't be blank"
 
@@ -1111,7 +1113,9 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:required` - if the embed is a required field
+    * `:required` - if the embed is a required field. For embeds of cardinality
+      one, a non-nil value satisfies this validation. For embeds with many entries,
+      a non-empty list is satisfactory.
 
     * `:required_message` - the message on failure, defaults to "can't be blank"
 
