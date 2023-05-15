@@ -1125,7 +1125,7 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp validate_json_path!([_path_field | _rest], field, other_type) do
+  defp validate_json_path!([_path_field | _rest] = path, field, other_type) do
     case Ecto.Type.type(other_type) do
       :any ->
         :ok
@@ -1135,6 +1135,9 @@ defmodule Ecto.Query.Planner do
 
       {:map, _} ->
         :ok
+      
+      {:parameterized, type, _} ->
+        validate_json_path!(path, field, type)
 
       type ->
         raise "expected field `#{field}` to be an embed or a map, got: `#{inspect(type)}`"
