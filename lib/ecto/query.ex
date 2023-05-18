@@ -505,6 +505,19 @@ defmodule Ecto.Query do
       conditions = dynamic([q], q.some_condition and ^conditions)
       from query, where: ^conditions
 
+  > ### Dynamic boundaries {: .warning}
+  >
+  > Type casting does not cross dynamic boundaries. When you write
+  > a dynamic expression, such as `dynamic([p], p.visits > ^param)`,
+  > Ecto will automatically cast `^param` to the type of `p.visits`.
+  >
+  > However, if `p.visits` is in itself dynamic, as in the example
+  > below, then Ecto won't be able to propagate its type to `^param`:
+  >
+  >     field = dynamic([p], p.visits)
+  >     dynamic(^field > ^param)
+  >
+
   ## `order_by`
 
   Dynamics can be interpolated inside keyword lists at the root of
