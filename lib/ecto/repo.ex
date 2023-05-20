@@ -40,7 +40,7 @@ defmodule Ecto.Repo do
       for more information
 
     * `:log` - the log level used when logging the query with Elixir's
-      Logger. Can be any of Logger.level/0 values or `false`. If false,
+      Logger. Can be any of `Logger.level/0` values or `false`. If false,
       disables logging for that repository. Defaults to `:debug`
 
     * `:pool_size` - the size of the pool used by the connection module.
