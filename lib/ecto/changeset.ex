@@ -359,7 +359,7 @@ defmodule Ecto.Changeset do
   the module documentation for more information.
   """
   @typedoc since: "3.11.0"
-  @type empty_value :: (term() -> boolean()) | term()
+  @type empty_value :: (term() -> boolean()) | binary() | list() | map() | tuple()
 
   @number_validators %{
     less_than:                {&</2,  "must be less than %{number}"},
