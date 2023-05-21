@@ -116,9 +116,10 @@ defmodule Ecto.Changeset do
   empty value inside the array will be removed.
 
   Empty values are stored as a list in the changeset's `:empty_values` field.
-  The list may contain either values, which will be considered empty if they
+  The list contains elements of type `t:empty_value/0`. Those are either values,
+  which will be considered empty if they
   match, or a function that must return a boolean if the value is empty or
-  not. By default it returns `Ecto.Changeset.empty_values/0` which will mark
+  not. By default, Ecto uses `Ecto.Changeset.empty_values/0` which will mark
   a field as empty if it is a string made only of whitespace characters.
   You can also pass the `:empty_values` option to `cast/4` in case you want
   to change how a particular `cast/4` work.
@@ -351,6 +352,15 @@ defmodule Ecto.Changeset do
   @type data :: map()
   @type types :: map()
 
+  @typedoc """
+  A possible value that you can pass to the `:empty_values` option.
+
+  See `empty_values/0` and the [*Empty values* section](#module-empty-values) in
+  the module documentation for more information.
+  """
+  @typedoc since: "3.11.0"
+  @type empty_value :: (term() -> boolean()) | binary() | list() | map() | tuple()
+
   @number_validators %{
     less_than:                {&</2,  "must be less than %{number}"},
     greater_than:             {&>/2,  "must be greater than %{number}"},
@@ -523,15 +533,20 @@ defmodule Ecto.Changeset do
   @doc """
   Returns the default empty values used by `Ecto.Changeset`.
 
-  By default it marks a field as empty if it is a string made
+  By default, Ecto marks a field as empty if it is a string made
   only of whitespace characters. If you want to provide your
-  additional empty values on top of this one, such as an empty
+  additional empty values on top of the default, such as an empty
   list, you can write:
 
       @empty_values [[]] ++ Ecto.Changeset.empty_values()
 
-  And then pass `empty_values: @empty_values` on `cast/3`.
+  Then, you can pass `empty_values: @empty_values` on `cast/3`.
+
+  See also the [*Empty values* section](#module-empty-values) for more
+  information.
   """
+  @doc since: "3.10.0"
+  @spec empty_values() :: [empty_value()]
   def empty_values do
     @empty_values
   end
@@ -563,8 +578,8 @@ defmodule Ecto.Changeset do
     * `:empty_values` - a list of values to be considered as empty when casting.
       Empty values are always replaced by the default value of the respective field.
       If the field is an array type, any empty value inside of the array will be removed.
-      To set this option while keeping the current default, use `empty_values/1` passing
-      your additional empty values as list
+      To set this option while keeping the current default, use `empty_values/0` and add
+      your additional empty values
 
     * `:force_changes` - a boolean indicating whether to include values that don't alter
       the current data in `:changes`. Defaults to `false`
