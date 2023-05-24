@@ -2324,6 +2324,10 @@ defmodule Ecto.Query do
 
       Repo.all from p in Post, preload: [comments: ^comments_query]
 
+  Similarly, if you have a `:through` association, such as posts has many authors
+  through comments (`posts->comments->authors`), the query will only customize the
+  relationship between comments and authors, even if preloaded through posts.
+
   ## Preload functions
 
   Preload also allows functions to be given. In such cases, the function
