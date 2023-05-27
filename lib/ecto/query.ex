@@ -1098,7 +1098,7 @@ defmodule Ecto.Query do
   Receives a source that is to be joined to the query and a condition for
   the join. The join condition can be any expression that evaluates
   to a boolean value. The qualifier must be one of `:inner`, `:left`,
-  `:right`, `:cross`, `:cross_lateral`, `:full`, `:inner_lateral` or `:left_lateral`,
+  `:right`, `:cross`, `:cross_lateral`, `:full`, `:inner_lateral`, `:left_lateral`,
   `:array` or `:left_array`.
 
   For a keyword query the `:join` keyword can be changed to `:inner_join`,
