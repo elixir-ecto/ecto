@@ -843,6 +843,8 @@ defmodule Ecto.Query do
       Ecto.Query.exclude(query, :full_join)
       Ecto.Query.exclude(query, :inner_lateral_join)
       Ecto.Query.exclude(query, :left_lateral_join)
+      Ecto.Query.exclude(query, :array_join)
+      Ecto.Query.exclude(query, :left_array_join)
 
   However, keep in mind that if a join is removed and its bindings
   were referenced elsewhere, the bindings won't be removed, leading
@@ -1096,7 +1098,7 @@ defmodule Ecto.Query do
   Receives a source that is to be joined to the query and a condition for
   the join. The join condition can be any expression that evaluates
   to a boolean value. The qualifier must be one of `:inner`, `:left`,
-  `:right`, `:cross`, `:cross_lateral`, `:full`, `:inner_lateral`, `:left_lateral`,
+  `:right`, `:cross`, `:cross_lateral`, `:full`, `:inner_lateral` or `:left_lateral`,
   `:array` or `:left_array`.
 
   For a keyword query the `:join` keyword can be changed to `:inner_join`,
@@ -1233,6 +1235,11 @@ defmodule Ecto.Query do
       from e in Event,
         hints: [sample: sample_threshold()],
         select: e
+        
+  ## Array joins
+  
+  `:array` and `:left_array` qualifiers can be used to join with array
+  columns in [Clickhouse.](https://clickhouse.com/docs/en/sql-reference/statements/select/array-join)
 
   """
   @join_opts [:on | @from_join_opts]

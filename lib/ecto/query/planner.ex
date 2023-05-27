@@ -892,7 +892,7 @@ defmodule Ecto.Query.Planner do
       end
 
       case find_source_expr(query, child_ix) do
-        %JoinExpr{qual: qual} when qual in [:inner, :left, :inner_lateral, :left_lateral, :array, :left_array] ->
+        %JoinExpr{qual: qual} when qual in [:inner, :left, :inner_lateral, :left_lateral] ->
           :ok
         %JoinExpr{qual: qual} ->
           error! query, "association `#{inspect parent_schema}.#{assoc}` " <>
