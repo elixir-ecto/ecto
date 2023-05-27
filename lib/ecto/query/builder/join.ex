@@ -236,7 +236,7 @@ defmodule Ecto.Query.Builder.Join do
 
   defp ensure_on(on, _assoc, _qual, _source, _env) when on != nil, do: on
 
-  defp ensure_on(nil, _assoc = nil, qual, source, env) when qual not in [:cross, :cross_lateral] do
+  defp ensure_on(nil, _assoc = nil, qual, source, env) when qual not in [:cross, :cross_lateral, :array, :left_array] do
     maybe_source =
       with {source, alias} <- source,
         source when source != nil <- source || alias do
@@ -323,7 +323,7 @@ defmodule Ecto.Query.Builder.Join do
     end
   end
 
-  @qualifiers [:inner, :inner_lateral, :left, :left_lateral, :right, :full, :cross, :cross_lateral]
+  @qualifiers [:inner, :inner_lateral, :left, :left_lateral, :right, :full, :cross, :cross_lateral, :array, :left_array]
 
   @doc """
   Called at runtime to check dynamic qualifier.

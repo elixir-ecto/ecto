@@ -795,7 +795,7 @@ defmodule Ecto.Query do
   defp wrap_in_subquery(queryable), do: %Ecto.SubQuery{query: Ecto.Queryable.to_query(queryable)}
 
   @joins [:join, :inner_join, :cross_join, :cross_lateral_join, :left_join, :right_join, :full_join,
-          :inner_lateral_join, :left_lateral_join]
+          :inner_lateral_join, :left_lateral_join, :array_join, :left_array_join]
 
   @doc """
   Puts the given prefix in a query.
@@ -843,6 +843,8 @@ defmodule Ecto.Query do
       Ecto.Query.exclude(query, :full_join)
       Ecto.Query.exclude(query, :inner_lateral_join)
       Ecto.Query.exclude(query, :left_lateral_join)
+      Ecto.Query.exclude(query, :array_join)
+      Ecto.Query.exclude(query, :left_array_join)
 
   However, keep in mind that if a join is removed and its bindings
   were referenced elsewhere, the bindings won't be removed, leading
@@ -1053,6 +1055,8 @@ defmodule Ecto.Query do
   defp join_qual(:cross_lateral_join), do: :cross_lateral
   defp join_qual(:left_lateral_join), do: :left_lateral
   defp join_qual(:inner_lateral_join), do: :inner_lateral
+  defp join_qual(:array_join), do: :array
+  defp join_qual(:left_array_join), do: :left_array
 
   defp collect_with_ties([{:with_ties, with_ties} | t], nil),
     do: collect_with_ties(t, with_ties)
@@ -1094,11 +1098,12 @@ defmodule Ecto.Query do
   Receives a source that is to be joined to the query and a condition for
   the join. The join condition can be any expression that evaluates
   to a boolean value. The qualifier must be one of `:inner`, `:left`,
-  `:right`, `:cross`, `:cross_lateral`, `:full`, `:inner_lateral` or `:left_lateral`.
+  `:right`, `:cross`, `:cross_lateral`, `:full`, `:inner_lateral`, `:left_lateral`,
+  `:array` or `:left_array`.
 
   For a keyword query the `:join` keyword can be changed to `:inner_join`,
-  `:left_join`, `:right_join`, `:cross_join`, `:cross_lateral_join`, `:full_join`, `:inner_lateral_join`
-  or `:left_lateral_join`. `:join` is equivalent to `:inner_join`.
+  `:left_join`, `:right_join`, `:cross_join`, `:cross_lateral_join`, `:full_join`, `:inner_lateral_join`,
+  `:left_lateral_join`, `:array_join` or `:left_array_join`. `:join` is equivalent to `:inner_join`.
 
   Currently it is possible to join on:
 
@@ -1230,6 +1235,17 @@ defmodule Ecto.Query do
       from e in Event,
         hints: [sample: sample_threshold()],
         select: e
+        
+  ## Array joins
+  
+  The `:array` and `:left_array` qualifiers can be used to join with array
+  columns in [Clickhouse:](https://clickhouse.com/docs/en/sql-reference/statements/select/array-join)
+
+      from at in "arrays_test",
+        array_join: a in "arr",
+        select: %{s: at.s, arr: a}
+
+  Note that only the columns in the base table (i.e. the table referenced in `FROM`) can be used in the array join.
 
   """
   @join_opts [:on | @from_join_opts]
