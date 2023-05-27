@@ -1238,8 +1238,14 @@ defmodule Ecto.Query do
         
   ## Array joins
   
-  `:array` and `:left_array` qualifiers can be used to join with array
-  columns in [Clickhouse.](https://clickhouse.com/docs/en/sql-reference/statements/select/array-join)
+  The `:array` and `:left_array` qualifiers can be used to join with array
+  columns in [Clickhouse:](https://clickhouse.com/docs/en/sql-reference/statements/select/array-join)
+
+      from at in "arrays_test",
+        array_join: a in "arr",
+        select: %{s: at.s, arr: a}
+
+  Note that only the columns in the base table (i.e. the table referenced in `FROM`) can be used in the array join.
 
   """
   @join_opts [:on | @from_join_opts]
