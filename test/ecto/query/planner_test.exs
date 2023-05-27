@@ -1302,6 +1302,17 @@ defmodule Ecto.Query.PlannerTest do
       |> normalize()
 
     assert inspect(normalized_query) =~ "where: c0.post_id == parent_as(:post).preferences[\"field\"]"
+
+    subquery =
+      Comment
+      |> where([c], c.post_id == json_extract_path(parent_as(:post).prefs, ["field"]))
+
+    normalized_query =
+      from(Post, as: :post)
+      |> join(:inner, [_], s in subquery(subquery), on: true)
+      |> normalize()
+
+    assert inspect(normalized_query) =~ "where: c0.post_id == parent_as(:post).preferences[\"field\"]"
   end
 
   test "normalize: flattens and expands right side of in expressions" do
