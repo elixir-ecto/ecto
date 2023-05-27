@@ -1338,4 +1338,9 @@ defmodule Ecto.Query.Builder do
        when is_atom(var) and is_atom(context) and is_atom(field) do
     {expr, acc}
   end
+
+  defp parse_access_get({{:., _, [{kind, _, [_]}, field]}, _, []} = expr, acc)
+       when kind in [:as, :parent_as] and is_atom(field) do
+    {expr, acc}
+  end
 end
