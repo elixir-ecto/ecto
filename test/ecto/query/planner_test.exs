@@ -99,9 +99,9 @@ defmodule Ecto.Query.PlannerTest do
     def cast(data, _) do
       {:ok, data}
     end
-    
+
     def dump(data, _, _), do: {:ok, data}
-    
+
     def load(data, _, _), do: {:ok, data}
   end
 
@@ -1271,6 +1271,48 @@ defmodule Ecto.Query.PlannerTest do
 
     assert inspect(normalized_query) =~
              "where: c0.custom_map[\"field\"] == \"value\", select: [c0.custom_map[\"field\"], c0.custom_embed[\"nested_custom_map\"][\"field\"]]>"
+  end
+
+  test "normalize: json_extract_path with as/1" do
+    normalized_query =
+      Comment
+      |> join(:inner, [_], p in Post, as: :post, on: true)
+      |> where([p], as(:post).prefs["field"] == "value")
+      |> normalize()
+
+    assert inspect(normalized_query) =~ "where: p1.preferences[\"field\"] == \"value\""
+
+    normalized_query =
+      Comment
+      |> join(:inner, [_], p in Post, as: :post, on: true)
+      |> where([p], json_extract_path(as(:post).prefs, ["field"]) == "value")
+      |> normalize()
+
+    assert inspect(normalized_query) =~ "where: p1.preferences[\"field\"] == \"value\""
+  end
+
+  test "normalize: json_extract_path with parent_as/1" do
+    subquery =
+      Comment
+      |> where([c], c.post_id == parent_as(:post).prefs["field"])
+
+    normalized_query =
+      from(Post, as: :post)
+      |> join(:inner, [_], s in subquery(subquery), on: true)
+      |> normalize()
+
+    assert inspect(normalized_query) =~ "where: c0.post_id == parent_as(:post).preferences[\"field\"]"
+
+    subquery =
+      Comment
+      |> where([c], c.post_id == json_extract_path(parent_as(:post).prefs, ["field"]))
+
+    normalized_query =
+      from(Post, as: :post)
+      |> join(:inner, [_], s in subquery(subquery), on: true)
+      |> normalize()
+
+    assert inspect(normalized_query) =~ "where: c0.post_id == parent_as(:post).preferences[\"field\"]"
   end
 
   test "normalize: flattens and expands right side of in expressions" do

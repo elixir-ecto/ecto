@@ -1135,7 +1135,7 @@ defmodule Ecto.Query.Planner do
 
       {:map, _} ->
         :ok
-      
+
       {:parameterized, type, _} ->
         validate_json_path!(path, field, type)
 
@@ -1267,14 +1267,15 @@ defmodule Ecto.Query.Planner do
   end
 
   defp prewalk({:json_extract_path, meta, [json_field, path]}, kind, query, expr, acc, _adapter) do
-    {{:., dot_meta, [{:&, amp_meta, [ix]}, field]}, expr_meta, []} = json_field
+    {{:., dot_meta, [left, field]}, expr_meta, []} = json_field
+    {ix, ix_expr, ix_query} = get_ix!(left, kind, query)
 
-    type = type!(kind, query, expr, ix, field)
+    type = type!(kind, ix_query, expr, ix, field)
     validate_json_path!(path, field, type)
 
-    field_source = kind |> get_source!(query, ix) |> field_source(field)
+    field_source = kind |> get_source!(ix_query, ix) |> field_source(field)
 
-    json_field = {{:., dot_meta, [{:&, amp_meta, [ix]}, field_source]}, expr_meta, []}
+    json_field = {{:., dot_meta, [ix_expr, field_source]}, expr_meta, []}
     {{:json_extract_path, meta, [json_field, path]}, acc}
   end
 
