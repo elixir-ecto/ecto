@@ -107,6 +107,17 @@ defmodule Ecto.Schema do
   database with the help of `Ecto.Repo`. On the other hand, embedded
   schemas cannot be queried directly (they are not queryable).
 
+  > #### `use Ecto.Schema` {: .info}
+  >
+  > When you `use Ecto.Schema`, it will:
+  >
+  > - import `Ecto.Schema` macros `schema/2` and `embedded_schema/1`
+  > - register default values for module attributes that can be overridden, such as
+  > `@primary_key` and `@timestamp_opts`
+  > - define reflection functions such as `__schema__/1` and `__changeset__/1`
+  >
+  > We detail those throughout the module documentation.
+
   ## Redacting fields
 
   A field marked with `redact: true` will display a value of `**redacted**`
@@ -1656,7 +1667,7 @@ defmodule Ecto.Schema do
   that, when using embedded schemas with databases like PG or MySQL,
   make sure all of your types can be JSON encoded/decoded correctly.
   Ecto provides this guarantee for all built-in types.
-  
+
   When decoding, if a key exists in the database not defined in the
   schema, it'll be ignored. If a field exists in the schema thats not
   in the database, it's value will be `nil`.

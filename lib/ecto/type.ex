@@ -81,6 +81,11 @@ defmodule Ecto.Type do
   Note: `nil` values are always bypassed and cannot be handled by
   custom types.
 
+  > #### `use Ecto.Type` {: .info}
+  >
+  > When you `use Ecto.Type`, it will set `@behaviour Ecto.Type` and define
+  > default, overridable implementations for `c:embed_as/1` and `c:equal?/2`.
+
   ## Custom types and primary keys
 
   Remember that, if you change the type of your primary keys,
