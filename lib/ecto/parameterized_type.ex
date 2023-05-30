@@ -68,6 +68,7 @@ defmodule Ecto.ParameterizedType do
   schemaless changesets), you can use `init/2`.
 
   > #### `use Ecto.ParameterizedType` {: .info}
+  >
   > When you `use Ecto.ParameterizedType`, it will set
   > `@behaviour Ecto.ParameterizedType` and define default, overridable
   > implementations for `c:embed_as/2` and `c:equal?/3`.

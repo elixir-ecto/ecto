@@ -82,6 +82,7 @@ defmodule Ecto.Type do
   custom types.
 
   > #### `use Ecto.Type` {: .info}
+  >
   > When you `use Ecto.Type`, it will set `@behaviour Ecto.Type` and define
   > default, overridable implementations for `c:embed_as/1` and `c:equal?/2`.
 

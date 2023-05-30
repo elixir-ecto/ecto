@@ -108,12 +108,15 @@ defmodule Ecto.Schema do
   schemas cannot be queried directly (they are not queryable).
 
   > #### `use Ecto.Schema` {: .info}
+  >
   > When you `use Ecto.Schema`, it will:
+  >
   > - import `Ecto.Schema` macros `schema/2` and `embedded_schema/1`
-  > - register default values for module attributes that can be overriden, such as
+  > - register default values for module attributes that can be overridden, such as
   > `@primary_key` and `@timestamp_opts`
-  > - register other module attributes that are used by `Ecto.Schema` to provide
-  > reflection through the `__schema__/1` and `__changeset__/1` functions
+  > - define reflection functions such as `__schema__/1` and `__changeset__/1`
+  >
+  > We detail those throughout the module documentation.
 
   ## Redacting fields
 
