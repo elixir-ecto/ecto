@@ -308,10 +308,13 @@ movie
 
 ```elixir
 # Params represent data from a form, API, CLI, etc
-params = [
-  %{"id" => 1, "name" => "Andy Dufresne"},
-  %{"name" => "Red", "age" => 60}
-]
+params = %{
+  "director" => "Frank Darabont",
+  "characters" => [
+    %{"id" => 1, "name" => "Andy Dufresne"},
+    %{"name" => "Red", "age" => 60}
+  ]
+}
 
 movie =
   Repo.get_by!(Movie, title: "The Shawshank Redemption")
@@ -322,9 +325,9 @@ IO.inspect(movie.characters)
 
 {:ok, movie} =
   movie
-  |> change()
-  |> cast_assoc(:characters, params)
-  |> Repo.update
+  |> cast(params, ["director"])
+  |> cast_assoc(:characters)
+  |> Repo.update()
 
 IO.inspect(movie.characters)
 #=> [%{id: 1, name: "Andy", age: 50},
@@ -337,3 +340,5 @@ When using `Ecto.Changeset.cast_assoc/3`:
 * Existing entries with matching IDs are updated.
 * Existing entries without matching IDs will raise
   but it can be configured using `:on_replace`.
+* Additional options are supported to customize
+  casting, sorting, and deletion
