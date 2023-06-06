@@ -1067,7 +1067,7 @@ defmodule Ecto.Changeset do
 
       defp child_changeset(child, _changes, position) do
         child
-        |> put_change(:position, position)
+        |> change(position: position)
       end
 
   And by passing it to `:with`, it will be called with the final position of the
