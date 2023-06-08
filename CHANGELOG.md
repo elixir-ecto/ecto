@@ -1,5 +1,24 @@
 # Changelog for v3.x
 
+## v3.10.2 (2023-06-07)
+
+### Enhancements
+
+  * [Ecto.Changeset] Support a three-arity function with position on `cast_assoc` and `cast_embed`
+  * [Ecto.Changeset] Add support for maps in `validate_length/3`
+  * [Ecto.Changeset] Add `:nulls_distinct` option to `unsafe_validate_unique`
+  * [Ecto.Query] Support `array_join` type for ClickHouse adapter
+  * [Ecto.Query.API] Support parameterized and custom map types in json path validation
+
+### Bug fixes
+
+  * [Ecto.Repo] Respect parent prefix in `Repo.aggregate`
+  * [Ecto.Query.API] Fix late binding in `json_extract_path`
+
+### Deprecations
+
+  * Deprecate MFAs on `:with`
+
 ## v3.10.1 (2023-04-12)
 
 ### Bug fixes
