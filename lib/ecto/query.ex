@@ -1348,10 +1348,10 @@ defmodule Ecto.Query do
       |> with_cte("category_tree", as: fragment(@raw_sql_category_tree))
       |> join(:inner, [p], c in "category_tree", on: c.id == p.category_id)
 
-  If you don't have any Ecto schema pointing to the CTE table, you can pass a
+  You can also query over the CTE table itself. In such cases, you can pass
   tuple with the CTE table name as the first element and an Ecto schema as the second
   element. This will cast the result rows to Ecto structs as long as the Ecto
-  schema maps to the same fields in the CTE table:
+  schema maps over the same fields in the CTE table:
 
       {"category_tree", Category}
       |> recursive_ctes(true)
@@ -1359,6 +1359,14 @@ defmodule Ecto.Query do
       |> join(:left, [c], p in assoc(c, :products))
       |> group_by([c], c.id)
       |> select([c, p], %{c | products_count: count(p.id)})
+
+  Keep in mind that the query above will inherit all properties from the `Category` schema,
+  include a `@schema_prefix` if any is set. In such cases, you can disable those properties
+  by setting them as option:
+
+      from(cte in {"category_tree", Category}, prefix: nil)
+      |> recursive_ctes(true)
+      |> with_cte("category_tree", as: ^category_tree_query)
 
   Keyword syntax is not supported for this feature.
 
