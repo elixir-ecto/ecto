@@ -1359,6 +1359,16 @@ defmodule Ecto.Query do
       |> join(:left, [c], p in assoc(c, :products))
       |> group_by([c], c.id)
       |> select([c, p], %{c | products_count: count(p.id)})
+  
+  For the above example, because the `{"category_tree", Category}` tuple is a Queryable,
+  if your Ecto schema has a prefix set, selecting on the CTE table will default to
+  the CTE table prefixed with the Ecto schema defined prefix.
+  In order to avoid selecting from the CTE table using the Ecto schema prefix, 
+  you can pass a new From query and specify a prefix on it instead:
+  
+      from(cte in {"category_tree", Category}, prefix: nil)
+      |> recursive_ctes(true)
+      |> with_cte("category_tree", as: ^category_tree_query)
 
   Keyword syntax is not supported for this feature.
 
