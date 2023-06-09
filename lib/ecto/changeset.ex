@@ -1094,10 +1094,10 @@ defmodule Ecto.Changeset do
 
     * `:with` - the function to build the changeset from params. Defaults to the
       `changeset/2` function of the associated module. It can be an anonymous
-      function that expects two arguments, a changeset to be modified and its
-      parameters. For associations with cardinality `:many`, functions with arity
-      3 are accepted, and the third argument will be the position of the associated
-      element in the list, or `nil`, if the changeset is being replaced.
+      function that expects two arguments: the associated struct to be cast and its
+      parameters. It must return a changeset. For associations with cardinality `:many`,
+      functions with arity 3 are accepted, and the third argument will be the position
+      of the associated element in the list, or `nil`, if the association is being replaced.
 
     * `:drop_param` - the parameter name which keeps a list of indexes to drop
       from the relation parameters
@@ -1141,10 +1141,10 @@ defmodule Ecto.Changeset do
 
     * `:with` - the function to build the changeset from params. Defaults to the
       `changeset/2` function of the associated module. It must be an anonymous
-      function that expects two arguments, a changeset to be modified and its
-      parameters. For associations with cardinality `:many`, functions with arity
-      3 are accepted, and the third argument will be the position of the associated
-      element in the list, or `nil`, if the changeset is being replaced.
+      function that expects two arguments: the embedded struct to be cast and its
+      parameters. It must return a changeset. For embeds with cardinality `:many`,
+      functions with arity 3 are accepted, and the third argument will be the position
+      of the associated element in the list, or `nil`, if the embed is being replaced.
 
     * `:drop_param` - the parameter name which keeps a list of indexes to drop
       from the relation parameters
