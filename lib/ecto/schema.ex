@@ -113,7 +113,7 @@ defmodule Ecto.Schema do
   >
   > - import `Ecto.Schema` macros `schema/2` and `embedded_schema/1`
   > - register default values for module attributes that can be overridden, such as
-  > `@primary_key` and `@timestamp_opts`
+  > `@primary_key` and `@timestamps_opts`
   > - define reflection functions such as `__schema__/1` and `__changeset__/1`
   >
   > We detail those throughout the module documentation.
