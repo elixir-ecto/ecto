@@ -22,9 +22,8 @@ jobs:
           - "1.13.4-erlang-22.3.4.20-alpine-3.14.0"
           - "1.11.4-erlang-21.3.8.24-alpine-3.13.3"
     steps:
-      - uses: actions/checkout@v2
-      - name: Download released earthly
-        run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.8/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
+      - uses: earthly/actions-setup@v1
+      - uses: actions/checkout@v3
       - name: ecto integration-test under ${{matrix.elixirbase}}
         run: earthly -P --ci --build-arg ELIXIR_BASE=${{matrix.elixirbase}} +integration-test
   unit-test:
@@ -40,9 +39,8 @@ jobs:
           - "1.13.4-erlang-22.3.4.20-alpine-3.14.0"
           - "1.10.4-erlang-21.3.8.24-alpine-3.13.3"
     steps:
-      - uses: actions/checkout@v2
-      - name: Download released earthly
-        run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.8/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
+      - uses: earthly/actions-setup@v1
+      - uses: actions/checkout@v3
       - name: ecto test under ${{matrix.elixirbase}}
         run: earthly -P --ci --build-arg ELIXIR_BASE=${{matrix.elixirbase}} +test
   lint:
@@ -56,8 +54,7 @@ jobs:
         elixirbase:
           - "1.13.4-erlang-24.3.4.2-alpine-3.16.0"
     steps:
-      - uses: actions/checkout@v2
-      - name: Download released earthly
-        run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.8/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
+      - uses: earthly/actions-setup@v1
+      - uses: actions/checkout@v3
       - name: ecto lint under ${{matrix.elixirbase}}
         run: earthly -P --ci --build-arg ELIXIR_BASE=${{matrix.elixirbase}} +lint
