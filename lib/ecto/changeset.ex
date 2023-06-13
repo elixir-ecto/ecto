@@ -2244,6 +2244,17 @@ defmodule Ecto.Changeset do
       iex> changeset.errors
       [title: {"cannot be foo", []}]
 
+      iex> changeset = change(%Post{}, %{title: "foo"})
+      iex> changeset = validate_change changeset, :title, fn :title, title  ->
+      ...>   if title == "foo" do
+      ...>     [title: {"cannot be foo", additional: "info"}]
+      ...>   else
+      ...>     []
+      ...>   end
+      ...> end
+      iex> changeset.errors
+      [title: {"cannot be foo", [additional: "info"]}]
+
   """
   @spec validate_change(t, atom, (atom, term -> [{atom, String.t} | {atom, {String.t, Keyword.t}}])) :: t
   def validate_change(%Changeset{} = changeset, field, validator) when is_atom(field) do
