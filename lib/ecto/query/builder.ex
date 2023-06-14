@@ -757,6 +757,9 @@ defmodule Ecto.Query.Builder do
   def validate_type!({:field, _, [{var, _, context}, field]}, vars, _env)
     when is_atom(var) and is_atom(context) and is_atom(field),
     do: {find_var!(var, vars), field}
+  def validate_type!({:field, _, [{var, _, context}, {:^, _, [field]}]}, vars, _env)
+    when is_atom(var) and is_atom(context),
+    do: {find_var!(var, vars), field}
 
   def validate_type!(type, _vars, _env) do
     error! "type/2 expects an alias, atom, initialized parameterized type or " <>
