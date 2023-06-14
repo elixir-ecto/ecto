@@ -344,6 +344,7 @@ defmodule Ecto.Query.BuilderTest do
     assert validate_type!(quote do :string end, [], env) == :string
     assert validate_type!(quote do x.title end, [x: 0], env) == {0, :title}
     assert validate_type!(quote do field(x, :title) end, [x: 0], env) == {0, :title}
+    assert validate_type!(quote do field(x, ^:title) end, [x: 0], env) == {0, :title}
 
     assert_raise Ecto.Query.CompileError, ~r"^type/2 expects an alias, atom", fn ->
       validate_type!(quote do "string" end, [x: 0], env)
