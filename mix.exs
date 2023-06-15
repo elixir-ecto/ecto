@@ -77,7 +77,7 @@ defmodule Ecto.MixProject do
         # Ecto.Schema.Metadata,
         # Mix.Ecto,
 
-        "Types": [
+        Types: [
           Ecto.Enum,
           Ecto.ParameterizedType,
           Ecto.Type,
@@ -125,8 +125,8 @@ defmodule Ecto.MixProject do
       "guides/howtos/Replicas and dynamic repositories.md",
       "guides/howtos/Schemaless queries.md",
       "guides/howtos/Test factories.md",
-      "cheatsheets/crud.cheatmd",
-      "cheatsheets/associations.cheatmd",
+      "guides/cheatsheets/crud.cheatmd",
+      "guides/cheatsheets/associations.cheatmd",
       "CHANGELOG.md"
     ]
   end
