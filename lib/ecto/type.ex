@@ -824,7 +824,9 @@ defmodule Ecto.Type do
     end
   end
 
-  defp cast_integer(term) when is_binary(term) do
+  # We check for the byte size to avoid creating unecessary large integers
+  # which would never map to a database key (u64 is 20 digits only).
+  defp cast_integer(term) when is_binary(term) and byte_size(term) < 32 do
     case Integer.parse(term) do
       {integer, ""} -> {:ok, integer}
       _ -> :error
@@ -1410,15 +1412,15 @@ defmodule Ecto.Type do
     {:ok, acc}
   end
 
-  defp to_i(nil), do: nil
-  defp to_i(int) when is_integer(int), do: int
-
-  defp to_i(bin) when is_binary(bin) do
+  defp to_i(bin) when is_binary(bin) and byte_size(bin) < 32 do
     case Integer.parse(bin) do
       {int, ""} -> int
       _ -> nil
     end
   end
+
+  defp to_i(int) when is_integer(int), do: int
+  defp to_i(_), do: nil
 
   defp maybe_truncate_usec({:ok, struct}), do: {:ok, truncate_usec(struct)}
   defp maybe_truncate_usec(:error), do: :error
