@@ -91,7 +91,8 @@ defmodule Ecto.TestAdapter do
         prefix: opts[:prefix]
       })
 
-    send(self(), {:insert_all, meta, rows})
+    sorted = if is_list(rows), do: Enum.map(rows, &Enum.sort/1), else: rows
+    send(self(), {:insert_all, meta, sorted})
     {1, nil}
   end
 
