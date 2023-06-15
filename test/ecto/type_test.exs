@@ -216,6 +216,10 @@ defmodule Ecto.TypeTest do
     refute match?(:string, {:param, :any_datetime})
   end
 
+  test "integer" do
+    assert cast(:integer, String.duplicate("1", 64)) == :error
+  end
+
   test "decimal" do
     assert cast(:decimal, "1.0") == {:ok, Decimal.new("1.0")}
     assert cast(:decimal, 1.0) == {:ok, Decimal.new("1.0")}
