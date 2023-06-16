@@ -1,4 +1,5 @@
-<img width="250" src="https://github.com/elixir-ecto/ecto/raw/master/guides/images/logo.png" alt="Ecto">
+<img width="250" src="https://github.com/elixir-ecto/ecto/raw/master/guides/images/logo.png#gh-light-mode-only" alt="Ecto">
+<img width="250" src="https://github.com/elixir-ecto/ecto/raw/master/guides/images/logo-white.png#gh-dark-mode-only" alt="Ecto">
 
 ---
 
