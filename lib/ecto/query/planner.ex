@@ -1995,6 +1995,10 @@ defmodule Ecto.Query.Planner do
                   havings: [], preloads: [], assocs: [], distinct: nil, lock: nil,
                   windows: [], combinations: []} ->
         query
+      _ when operation == :delete_all ->
+        error! query, "`#{operation}` allows only `with_cte`, `where`, `select`, and `join` expressions. " <>
+                      "You can exclude unwanted expressions from a query by using " <>
+                      "Ecto.Query.exclude/2. Error found"
       _ ->
         error! query, "`#{operation}` allows only `with_cte`, `where` and `join` expressions. " <>
                       "You can exclude unwanted expressions from a query by using " <>
