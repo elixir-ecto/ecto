@@ -1202,7 +1202,11 @@ defmodule Ecto.Repo do
 
       MyRepo.delete_all(Post)
 
-      from(p in Post, where: p.id < 10) |> MyRepo.delete_all
+      from(p in Post, where: p.id < 10) |> MyRepo.delete_all()
+
+      # With returning results, if supported by the database.
+      {_count, posts} = from(p in Post, where: p.id < 10, select: p) |> MyRepo.delete_all()
+
   """
   @doc group: "Query API"
   @callback delete_all(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) ::
