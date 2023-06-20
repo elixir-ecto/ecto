@@ -3,7 +3,6 @@ import Kernel, except: [apply: 2]
 defmodule Ecto.Query.Builder.Join do
   @moduledoc false
 
-  require Logger
   alias Ecto.Query.Builder
   alias Ecto.Query.{JoinExpr, QueryExpr}
 

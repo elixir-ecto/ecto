@@ -205,7 +205,7 @@ defmodule Ecto.Repo.Preloader do
         loaded? = Ecto.assoc_loaded?(value) and not force?
 
         if loaded? and is_nil(id) and not Ecto.Changeset.Relation.empty?(assoc, value) do
-          Logger.warn """
+          Logger.warning """
           association `#{field}` for `#{inspect(module)}` has a loaded value but \
           its association key `#{owner_key}` is nil. This usually means one of:
 
