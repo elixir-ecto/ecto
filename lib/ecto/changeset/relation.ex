@@ -471,7 +471,7 @@ defmodule Ecto.Changeset.Relation do
       end)
 
     if map_size(map) != counter do
-      Logger.warn """
+      Logger.warning """
       found duplicate primary keys for association/embed `#{inspect(relation.field)}` \
       in `#{inspect(relation.owner)}`. In case of duplicate IDs, only the last entry \
       with the same ID will be kept. Make sure that all entries in `#{inspect(relation.field)}` \
