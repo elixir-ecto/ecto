@@ -601,7 +601,7 @@ defmodule Ecto.Query.PlannerTest do
 
   test "plan: generates a cache key" do
     {_query, _cast_params, _dump_params, key} = plan(from(Post, []))
-    assert key == [:all, {:from, {"posts", Post, 50_009_106, "my_prefix"}, []}]
+    assert key == [:all, {:from, {"posts", Post, 23210922, "my_prefix"}, []}]
 
     query =
       from(
@@ -622,6 +622,7 @@ defmodule Ecto.Query.PlannerTest do
       )
 
     {_query, _cast_params, _dump_params, key} = plan(%{query | prefix: "foo"})
+<<<<<<< HEAD
 
     assert key == [
              :all,
@@ -636,6 +637,16 @@ defmodule Ecto.Query.PlannerTest do
              {:from, {"posts", Post, 50_009_106, "hello"}, ["hint"]},
              {:select, 1}
            ]
+=======
+    assert key == [:all,
+                   {:lock, "foo"},
+                   {:prefix, "foo"},
+                   {:limit, {true, 1}},
+                   {:where, [{:and, {:is_nil, [], [nil]}}, {:or, {:is_nil, [], [nil]}}]},
+                   {:join, [{:inner, {"comments", Comment, 38292156, "world"}, true, ["join hint"]}]},
+                   {:from, {"posts", Post, 23210922, "hello"}, ["hint"]},
+                   {:select, 1}]
+>>>>>>> e779c5c7 (Fix tests)
   end
 
   test "plan: generates a cache key for in based on the adapter" do
