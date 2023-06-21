@@ -160,6 +160,15 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  defmodule MySchemaVirtualEmbed do
+    use Ecto.Schema
+
+    schema "my_schema" do
+      field :x, :string
+      embeds_one :virtual_embed, MyEmbed, virtual: true
+    end
+  end
+
   defmodule MySchemaNoPK do
     use Ecto.Schema
 
