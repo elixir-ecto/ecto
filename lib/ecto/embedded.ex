@@ -28,6 +28,7 @@ defmodule Ecto.Embedded do
     :owner,
     :related,
     :on_cast,
+    virtual: false,
     on_replace: :raise,
     unique: true,
     ordered: true
@@ -144,7 +145,11 @@ defmodule Ecto.Embedded do
   @doc false
   def prepare(changeset, embeds, adapter, repo_action) do
     %{changes: changes, types: types, repo: repo} = changeset
-    prepare(Map.take(changes, embeds), types, adapter, repo, repo_action)
+    #non_virtual_embeds = Enum.reject(embeds, & &1.virtual)
+
+    changes
+    |> Map.take(embeds)
+    |> prepare(types, adapter, repo, repo_action)
   end
 
   defp prepare(embeds, _types, _adapter, _repo, _repo_action) when embeds == %{} do
@@ -153,8 +158,14 @@ defmodule Ecto.Embedded do
 
   defp prepare(embeds, types, adapter, repo, repo_action) do
     Enum.reduce embeds, embeds, fn {name, changeset_or_changesets}, acc ->
-      {:embed, embed} = Map.get(types, name)
-      Map.put(acc, name, prepare_each(embed, changeset_or_changesets, adapter, repo, repo_action))
+      case Map.get(types, name) do
+        {:embed, %{virtual: false} = embed} ->
+          prepared = prepare_each(embed, changeset_or_changesets, adapter, repo, repo_action)
+          Map.put(acc, name, prepared)
+
+        {:embed, %{virtual: true}} ->
+          acc
+      end
     end
   end
 
