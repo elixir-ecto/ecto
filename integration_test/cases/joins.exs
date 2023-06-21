@@ -573,7 +573,8 @@ defmodule Ecto.Integration.JoinsTest do
     query = from(p in Post, join: pl in assoc(p, :permalink),
                             join: c in assoc(p, :comments),
                             preload: [permalink: pl],
-                            select: {p, c})
+                            select: {p, c},
+                            order_by: p.id)
     [{p1, ^c1}, {p1, ^c2}, {p2, ^c3}] = TestRepo.all(query)
     assert p1.permalink == pl1
     assert p2.permalink == pl3

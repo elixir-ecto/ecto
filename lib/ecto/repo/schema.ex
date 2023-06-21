@@ -905,20 +905,26 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp change_parents(changes, struct, assocs) do
-    Enum.reduce assocs, changes, fn {refl, _}, acc ->
+    Enum.reduce assocs, changes, fn {refl, _}, changes ->
       %{field: field, owner_key: owner_key, related_key: related_key} = refl
       related = Map.get(struct, field)
-      value = related && Map.fetch!(related, related_key)
+      owner_key = List.wrap(owner_key)
+      related_key = List.wrap(related_key)
 
-      case Map.fetch(changes, owner_key) do
-        {:ok, current} when current != value ->
-          raise ArgumentError,
-            "cannot change belongs_to association `#{field}` because there is " <>
-            "already a change setting its foreign key `#{owner_key}` to `#{inspect current}`"
+      Ecto.Association.strict_zip(owner_key, related_key)
+      |> Enum.reduce(changes, fn {owner_key, related_key}, changes ->
+        value = related && Map.fetch!(related, related_key)
 
-        _ ->
-          Map.put(acc, owner_key, value)
-      end
+        case Map.fetch(changes, owner_key) do
+          {:ok, current} when current != value ->
+            raise ArgumentError,
+                  "cannot change belongs_to association `#{field}` because there is " <>
+                  "already a change setting its foreign key `#{owner_key}` to `#{inspect(current)}`"
+
+          _ ->
+            Map.put(changes, owner_key, value)
+        end
+      end)
     end
   end
 

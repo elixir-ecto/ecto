@@ -570,4 +570,83 @@ defmodule Ecto.Repo.HasAssocTest do
     loaded = put_in schema.__meta__.state, :loaded
     TestRepo.insert!(loaded)
   end
+
+  defmodule MyCompositeAssoc do
+    use Ecto.Schema
+
+    schema "my_composite_assoc" do
+      field :name, :binary
+      belongs_to :composite_schema, MyCompositeSchema,
+        foreign_key: [:composite_x, :composite_y], references: [:x, :y], type: [:id, :string]
+      timestamps()
+    end
+  end
+
+  defmodule MyCompositeSchema do
+    use Ecto.Schema
+
+    @primary_key false
+    schema "my_composite_schema" do
+      field :x, :id, primary_key: true
+      field :y, :string, primary_key: true
+      has_one :assoc, MyCompositeAssoc, foreign_key: [:composite_x, :composite_y], references: [:x, :y]
+      has_many :assocs, MyCompositeAssoc, foreign_key: [:composite_x, :composite_y], references: [:x, :y]
+    end
+  end
+
+  test "handles assocs with composite keys on insert" do
+    sample = %MyCompositeAssoc{name: "xyz"}
+
+    changeset =
+      %MyCompositeSchema{}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:assoc, sample)
+    schema = TestRepo.insert!(changeset)
+    assoc = schema.assoc
+    assert assoc.id
+    assert assoc.name == "xyz"
+    assert assoc.composite_x == schema.x
+    assert assoc.composite_y == schema.y
+    assert assoc.inserted_at
+
+    changeset =
+      %MyCompositeSchema{}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:assocs, [sample])
+    schema = TestRepo.insert!(changeset)
+    [assoc] = schema.assocs
+    assert assoc.id
+    assert assoc.name == "xyz"
+    assert assoc.composite_x == schema.x
+    assert assoc.composite_y == schema.y
+    assert assoc.inserted_at
+  end
+
+  test "handles assocs with composite keys on update" do
+    sample = %MyCompositeAssoc{name: "xyz"}
+
+    changeset =
+      %MyCompositeSchema{x: 3, y: "a"}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:assoc, sample)
+    schema = TestRepo.update!(changeset)
+    assoc = schema.assoc
+    assert assoc.id
+    assert assoc.name == "xyz"
+    assert assoc.composite_x == 3
+    assert assoc.composite_y == "a"
+    assert assoc.updated_at
+
+    changeset =
+      %MyCompositeSchema{x: 4, y: "b"}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:assocs, [sample])
+    schema = TestRepo.update!(changeset)
+    [assoc] = schema.assocs
+    assert assoc.id
+    assert assoc.name == "xyz"
+    assert assoc.composite_x == 4
+    assert assoc.composite_y == "b" 
+    assert assoc.updated_at
+  end
 end

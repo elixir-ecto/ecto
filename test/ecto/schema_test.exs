@@ -751,6 +751,24 @@ defmodule Ecto.SchemaTest do
       has_one :author, User, references: :pk, foreign_key: :fk
       belongs_to :permalink1, Permalink, references: :pk, foreign_key: :fk
       belongs_to :permalink2, Permalink, references: :pk, type: :string
+      belongs_to :publication1, Publication, references: [:id_1, :id_2],
+        foreign_key: [:publication1_id_1, :publication1_id_2], type: [:integer, :string]
+      belongs_to :publication2, Publication, references: [:id_1, :id_2],
+        foreign_key: [:publication2_id_1, :publication2_id_2], type: :string
+    end
+  end
+
+  defmodule Publication do
+    use Ecto.Schema
+
+    @primary_key false
+    schema "publication" do
+      field :id_1, :integer, primary_key: true
+      field :id_2, :string, primary_key: true
+      has_many :custom_assoc_schemas, CustomAssocSchema, references: [:id_1, :id_2],
+        foreign_key: [:publication_id_1, :publication_id_2]
+      has_one :custom_assoc_schema, CustomAssocSchema, references: [:id_1, :id_2],
+        foreign_key: [:pub_id_1, :pub_id_2]
     end
   end
 
@@ -758,12 +776,20 @@ defmodule Ecto.SchemaTest do
     refl = CustomAssocSchema.__schema__(:association, :posts)
     assert :pk == refl.owner_key
     assert :fk == refl.related_key
+
+    refl = Publication.__schema__(:association, :custom_assoc_schemas)
+    assert [:id_1, :id_2] == refl.owner_key
+    assert [:publication_id_1, :publication_id_2] == refl.related_key
   end
 
   test "has_one options" do
     refl = CustomAssocSchema.__schema__(:association, :author)
     assert :pk == refl.owner_key
     assert :fk == refl.related_key
+
+    refl = Publication.__schema__(:association, :custom_assoc_schema)
+    assert [:id_1, :id_2] == refl.owner_key
+    assert [:pub_id_1, :pub_id_2] == refl.related_key
   end
 
   test "belongs_to options" do
@@ -777,6 +803,17 @@ defmodule Ecto.SchemaTest do
 
     assert CustomAssocSchema.__schema__(:type, :fk) == :string
     assert CustomAssocSchema.__schema__(:type, :permalink2_id) == :string
+
+    refl = CustomAssocSchema.__schema__(:association, :publication1)
+    assert [:publication1_id_1, :publication1_id_2] == refl.owner_key
+    assert [:id_1, :id_2] == refl.related_key
+
+    assert CustomAssocSchema.__schema__(:type, :publication1_id_1) == :integer
+    assert CustomAssocSchema.__schema__(:type, :publication1_id_2) == :string
+
+    # if foreign key type is an atom, use that same type for all foreign key fields
+    assert CustomAssocSchema.__schema__(:type, :publication2_id_1) == :string
+    assert CustomAssocSchema.__schema__(:type, :publication2_id_2) == :string
   end
 
   test "has_* validates option" do
@@ -829,6 +866,20 @@ defmodule Ecto.SchemaTest do
 
         schema "assoc" do
           has_many :posts, Post, references: :pk
+        end
+      end
+    end
+  end
+
+  test "has_* references option has to be set when no primary keys" do
+    message = ~r"need to set :references option for association :posts when schema has no primary key"
+    assert_raise ArgumentError, message, fn ->
+      defmodule CompositePkAssocNoConfig do
+        use Ecto.Schema
+
+        @primary_key false
+        schema "assoc" do
+          has_many :posts, Post
         end
       end
     end

@@ -46,6 +46,33 @@ defmodule Ecto.Repo.ManyToManyTest do
     end
   end
 
+  defmodule MyCompositeAssoc do
+    use Ecto.Schema
+
+    @primary_key false
+    schema "my_composite_assoc" do
+      field :id_1, :id,  primary_key: true
+      field :id_2, :string, primary_key: true
+      field :name, :string
+      many_to_many :my_schemas, Ecto.Repo.ManyToManyTest.MySchema,
+        join_through: "schemas_composite_assocs",
+        join_keys: [[composite_id_1: :id_1, composite_id_2: :id_2],[my_schema_id: :id]]
+      timestamps()
+    end
+  end
+
+  defmodule MySchemaCompositeAssoc do
+    use Ecto.Schema
+
+    schema "schemas_composite_assocs" do
+      field :public, :boolean, default: false
+      belongs_to :my_schema, MySchema
+      belongs_to :my_assoc, MyCompositeAssoc,
+        foreign_key: [:composite_id_1, :composite_id_2], references: [:id_1, :id_2], type: [:id, :string]
+      timestamps()
+    end
+  end
+
   defmodule MySchema do
     use Ecto.Schema
 
@@ -56,7 +83,15 @@ defmodule Ecto.Repo.ManyToManyTest do
       many_to_many :where_assocs, MyAssoc, join_through: "schemas_assocs", join_where: [public: true], on_replace: :delete
       many_to_many :schema_assocs, MyAssoc, join_through: MySchemaAssoc, join_defaults: [public: true]
       many_to_many :schema_prefix_assocs, MyAssoc, join_through: MySchemaPrefixAssoc, join_defaults: [public: true]
+      many_to_many :schema_key_assocs, MyAssoc, join_through: MySchemaAssoc, join_keys: [my_schema_id: :id, my_assoc_id: :id]
       many_to_many :mfa_schema_assocs, MyAssoc, join_through: MySchemaAssoc, join_defaults: {__MODULE__, :send_to_self, [:extra]}
+      many_to_many :composite_assocs, MyCompositeAssoc,
+        join_through: "schemas_composite_assocs",
+        join_keys: [[my_schema_id: :id], [composite_id_1: :id_1, composite_id_2: :id_2]]
+      many_to_many :schema_composite_assocs, MyCompositeAssoc,
+        join_through: MySchemaCompositeAssoc,
+        join_keys: [[my_schema_id: :id], [composite_id_1: :id_1, composite_id_2: :id_2]],
+        join_defaults: [public: true]
     end
 
     def send_to_self(struct, owner, extra) do
@@ -133,6 +168,28 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert join.fields[:public]
   end
 
+  test "handles assocs on insert with schema and join keys" do
+    sample = %MyAssoc{x: "xyz"}
+
+    changeset =
+      %MySchema{}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:schema_key_assocs, [sample])
+
+    schema = TestRepo.insert!(changeset)
+    [assoc] = schema.schema_key_assocs
+    assert assoc.id
+    assert assoc.x == "xyz"
+    assert assoc.inserted_at
+    assert_received {:insert, _child}
+    assert_received {:insert, _parent}
+    assert_received {:insert, join}
+
+    # Available from defaults
+    assert join.fields[:my_schema_id] == schema.id
+    assert join.fields[:my_assoc_id] == assoc.id
+  end
+
   test "handles assocs on insert with schema and MFA defaults" do
     sample = %MyAssoc{x: "xyz"}
 
@@ -186,6 +243,67 @@ defmodule Ecto.Repo.ManyToManyTest do
     [assoc] = schema.schema_prefix_assocs
     assert assoc.__meta__.prefix == "prefix"
     assert_received {:insert, %{source: "schemas_prefix_assocs", prefix: "schema_assoc_prefix"}}
+  end
+
+  test "handles assocs with composite keys on insert (parent has normal keys)" do
+    sample = %MyCompositeAssoc{id_1: 1, id_2: "a", name: "xyz"}
+
+    changeset =
+      %MySchema{x: "abc"}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:composite_assocs, [sample])
+    schema = TestRepo.insert!(changeset)
+    [assoc] = schema.composite_assocs
+    assert assoc.id_1 == 1
+    assert assoc.id_2 == "a"
+    assert assoc.name == "xyz"
+    assert assoc.inserted_at
+    assert_received {:insert, _}
+    assert_received {:insert_all, %{source: "schemas_composite_assocs"}, [
+      [composite_id_1: 1, composite_id_2: "a", my_schema_id: 1]
+    ]}
+  end
+
+  test "handles assocs with composite keys on insert (parent has composite keys)" do
+    sample = %MySchema{x: "abc"}
+
+    changeset =
+      %MyCompositeAssoc{id_1: 1, id_2: "a", name: "xyz"}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:my_schemas, [sample])
+    schema = TestRepo.insert!(changeset)
+    [assoc] = schema.my_schemas
+    assert assoc.id
+    assert assoc.x == "abc"
+    assert_received {:insert, _}
+    assert_received {:insert_all, %{source: "schemas_composite_assocs"}, [
+      [composite_id_1: 1, composite_id_2: "a", my_schema_id: 1]
+    ]}
+  end
+
+  test "handles assocs with composite keys and schema on insert" do
+    sample = %MyCompositeAssoc{id_1: 1, id_2: "a", name: "xyz"}
+
+    changeset =
+      %MySchema{x: "abc"}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:schema_composite_assocs, [sample])
+    schema = TestRepo.insert!(changeset)
+    [assoc] = schema.schema_composite_assocs
+    assert assoc.id_1 == 1
+    assert assoc.id_2 == "a"
+    assert assoc.name == "xyz"
+    assert assoc.inserted_at
+
+    assert_received {:insert, _child}
+    assert_received {:insert, _parent}
+    assert_received {:insert, join}
+
+    # Available from defaults
+    assert join.fields[:my_schema_id] == schema.id
+    assert join.fields[:composite_id_1] == assoc.id_1
+    assert join.fields[:composite_id_2] == assoc.id_2
+    assert join.fields[:public]
   end
 
   test "handles assocs from struct on insert" do

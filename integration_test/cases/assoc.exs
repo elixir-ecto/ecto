@@ -10,6 +10,8 @@ defmodule Ecto.Integration.AssocTest do
   alias Ecto.Integration.PostUser
   alias Ecto.Integration.Comment
   alias Ecto.Integration.Permalink
+  alias Ecto.Integration.CompositePk
+  alias Ecto.Integration.OneToOneCompositePk
 
   test "has_many assoc" do
     p1 = TestRepo.insert!(%Post{title: "1"})
@@ -42,6 +44,21 @@ defmodule Ecto.Integration.AssocTest do
     assert l3.id == lid3
   end
 
+  test "has_one assoc with composite key" do
+    c11 = TestRepo.insert!(%CompositePk{a: 1, b: 1, name: "11"})
+    _c12 = TestRepo.insert!(%CompositePk{a: 1, b: 2, name: "12"})
+    c22 = TestRepo.insert!(%CompositePk{a: 2, b: 2, name: "22"})
+
+    %OneToOneCompositePk{id: id_o11} = TestRepo.insert!(%OneToOneCompositePk{composite_a: 1, composite_b: 1})
+    %OneToOneCompositePk{} = TestRepo.insert!(%OneToOneCompositePk{composite_a: 1, composite_b: 2})
+    %OneToOneCompositePk{id: id_o22} = TestRepo.insert!(%OneToOneCompositePk{composite_a: 2, composite_b: 2})
+
+    [o11, o22] = TestRepo.all(Ecto.assoc([c11, c22], :one_to_one_composite_pk))
+    assert o11.id == id_o11
+    assert o22.id == id_o22
+  end
+
+
   test "belongs_to assoc" do
     %Post{id: pid1} = TestRepo.insert!(%Post{title: "1"})
     %Post{id: pid2} = TestRepo.insert!(%Post{title: "2"})
@@ -53,6 +70,22 @@ defmodule Ecto.Integration.AssocTest do
     assert [p1, p2] = TestRepo.all Ecto.assoc([l1, l2, l3], :post)
     assert p1.id == pid1
     assert p2.id == pid2
+  end
+
+  test "belongs_to assoc with composite key" do
+    TestRepo.insert!(%CompositePk{a: 2, b: 1, name: "foo"})
+    TestRepo.insert!(%CompositePk{a: 2, b: 2, name: "bar"})
+    TestRepo.insert!(%CompositePk{a: 2, b: 3, name: "unused"})
+
+    p1 = TestRepo.insert!(%Post{title: "first", composite_a: 2, composite_b: 1})
+    p2 = TestRepo.insert!(%Post{title: "none"})
+    p3 = TestRepo.insert!(%Post{title: "second", composite_a: 2, composite_b: 2})
+
+    assert [c1, c2] = TestRepo.all Ecto.assoc([p1, p2, p3], :composite)
+    assert c1.a == 2
+    assert c1.b == 1
+    assert c2.a == 2
+    assert c2.b == 2
   end
 
   test "has_many through assoc" do
@@ -229,6 +262,22 @@ defmodule Ecto.Integration.AssocTest do
     [u1, u2, u2] = TestRepo.all Ecto.assoc([p1, p2, p3], :users)
     assert u1.id == uid1
     assert u2.id == uid2
+  end
+
+  test "many_to_many composite PK" do
+    c11 = TestRepo.insert!(%CompositePk{a: 1, b: 1, name: "11"})
+    c12 = TestRepo.insert!(%CompositePk{a: 1, b: 2, name: "12"})
+    c22 = TestRepo.insert!(%CompositePk{a: 2, b: 2, name: "22"})
+
+    TestRepo.insert_all "composite_pk_composite_pk", [[a_1: 1, b_1: 1, a_2: 1, b_2: 2],
+                                                      [a_1: 1, b_1: 1, a_2: 2, b_2: 2],
+                                                      [a_1: 1, b_1: 2, a_2: 2, b_2: 2]]
+
+    assert [^c12, ^c22] = TestRepo.all Ecto.assoc([c11], :composites)
+    assert [^c22] = TestRepo.all Ecto.assoc([c12], :composites)
+    assert [] = TestRepo.all Ecto.assoc([c22], :composites)
+
+    assert [^c12, ^c22, ^c22] = TestRepo.all Ecto.assoc([c11, c12, c22], :composites)
   end
 
   ## Changesets
@@ -725,6 +774,27 @@ defmodule Ecto.Integration.AssocTest do
     assert perma.post_id == nil
   end
 
+  test "belongs_to changeset assoc on composite key" do
+    changeset =
+      %CompositePk{a: 1, b: 2}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_assoc(:posts, [%Post{title: "1"}])
+
+    composite = TestRepo.insert!(changeset)
+    assert [post] = composite.posts
+    assert post.id
+    assert post.composite_a == composite.a
+    assert post.composite_b == composite.b
+    assert post.title == "1"
+
+    composite = TestRepo.get_by! from(CompositePk, preload: [:posts]), [a: composite.a, b: composite.b]
+    assert [%Post{title: "1"}] = composite.posts
+
+    post = TestRepo.get! from(Post, preload: [:composite]), post.id
+    assert post.composite.a == 1
+    assert post.composite.b == 2
+  end
+
   test "inserting struct with associations" do
     tree = %Permalink{
       url: "root",
@@ -748,6 +818,14 @@ defmodule Ecto.Integration.AssocTest do
     assert tree.post.id
     assert length(tree.post.comments) == 2
     assert Enum.all?(tree.post.comments, & &1.id)
+  end
+
+  test "inserting struct with associations on composite keys" do
+    # creates nested belongs_to
+    %Post{composite: composite} =
+      TestRepo.insert! %Post{title: "1", composite: %CompositePk{a: 1, b: 2, name: "name"}}
+
+    assert %CompositePk{a: 1, b: 2, name: "name"} = composite
   end
 
   test "inserting struct with empty associations" do

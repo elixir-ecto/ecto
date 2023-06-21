@@ -6,6 +6,7 @@ defmodule Ecto.Integration.PreloadTest do
 
   alias Ecto.Integration.Post
   alias Ecto.Integration.Comment
+  alias Ecto.Integration.CompositePk
   alias Ecto.Integration.Item
   alias Ecto.Integration.Permalink
   alias Ecto.Integration.User
@@ -347,6 +348,25 @@ defmodule Ecto.Integration.PreloadTest do
     assert [] = pe3.comments
   end
 
+  test "preload composite foreign key with function" do
+    c11 = TestRepo.insert!(%CompositePk{a: 1, b: 1, name: "11"})
+    c12 = TestRepo.insert!(%CompositePk{a: 1, b: 2, name: "12"})
+    c22 = TestRepo.insert!(%CompositePk{a: 2, b: 2, name: "22"})
+    c33 = TestRepo.insert!(%CompositePk{a: 3, b: 3, name: "33"})
+
+    TestRepo.insert!(%Post{title: "1", composite_a: 1, composite_b: 1})
+    TestRepo.insert!(%Post{title: "2", composite_a: 1, composite_b: 1})
+    TestRepo.insert!(%Post{title: "3", composite_a: 1, composite_b: 2})
+    TestRepo.insert!(%Post{title: "4", composite_a: 2, composite_b: 2})
+
+    assert [ce12, ce11, ce33, ce22] = TestRepo.preload([c12, c11, c33, c22],
+                                              posts: fn _ -> TestRepo.all(Post) end)
+    assert [%Post{title: "1"}, %Post{title: "2"}] = ce11.posts
+    assert [%Post{title: "3"}] = ce12.posts
+    assert [%Post{title: "4"}] = ce22.posts
+    assert [] = ce33.posts
+  end
+
   test "preload many_to_many with function" do
     p1 = TestRepo.insert!(%Post{title: "1"})
     p2 = TestRepo.insert!(%Post{title: "2"})
@@ -395,6 +415,52 @@ defmodule Ecto.Integration.PreloadTest do
     assert p1.users == [%{id: uid1}, %{id: uid2}]
     assert p2.users == [%{id: uid3}, %{id: uid4}]
     assert p3.users == [%{id: uid1}, %{id: uid4}]
+  end
+
+  test "preload many_to_many on composite foreign keys with function" do
+    c11 = TestRepo.insert!(%CompositePk{a: 1, b: 1, name: "11"})
+    c12 = TestRepo.insert!(%CompositePk{a: 1, b: 2, name: "12"})
+    c22 = TestRepo.insert!(%CompositePk{a: 2, b: 2, name: "22"})
+
+    TestRepo.insert_all "composite_pk_composite_pk", [[a_1: 1, b_1: 1, a_2: 1, b_2: 2],
+                                                      [a_1: 1, b_1: 1, a_2: 2, b_2: 2],
+                                                      [a_1: 1, b_1: 2, a_2: 1, b_2: 1],
+                                                      [a_1: 2, b_1: 2, a_2: 2, b_2: 2]]
+
+    wrong_preloader = fn composite_ids ->
+      composite_ids_a = Enum.map(composite_ids, &Enum.at(&1, 0))
+      composite_ids_b = Enum.map(composite_ids, &Enum.at(&1, 1))
+      TestRepo.all(
+        from c in CompositePk,
+             join: cc in "composite_pk_composite_pk",
+             on: cc.a_2 == c.a and cc.b_2 == c.b,
+             where: cc.a_1 in ^composite_ids_a and cc.b_1 in ^composite_ids_b,
+             order_by: [c.a, c.b],
+             select: map(c, [:name])
+      )
+    end
+
+    assert_raise RuntimeError, ~r/invalid custom preload for `composites` on `Ecto.Integration.CompositePk`/, fn ->
+      TestRepo.preload([c11, c12, c22], composites: wrong_preloader)
+    end
+
+    right_preloader = fn composite_ids ->
+      composite_ids_a = Enum.map(composite_ids, &Enum.at(&1, 0))
+      composite_ids_b = Enum.map(composite_ids, &Enum.at(&1, 1))
+      TestRepo.all(
+        from c in CompositePk,
+             join: cc in "composite_pk_composite_pk",
+             on: cc.a_2 == c.a and cc.b_2 == c.b,
+             where: cc.a_1 in ^composite_ids_a and cc.b_1 in ^composite_ids_b,
+             order_by: [c.a, c.b],
+             select: {[cc.a_1, cc.b_1], map(c, [:name])}
+      )
+    end
+
+    [c11, c12, c22] = TestRepo.preload([c11, c12, c22], composites: right_preloader)
+    assert c11.composites == [%{name: "12"}, %{name: "22"}]
+    assert c12.composites == [%{name: "11"}]
+    assert c22.composites == [%{name: "22"}]
   end
 
   test "preload with query" do
@@ -607,9 +673,21 @@ defmodule Ecto.Integration.PreloadTest do
 
     assert ExUnit.CaptureLog.capture_log(fn ->
       assert TestRepo.preload(updated, [:author]).author == u1
-    end) =~ ~r/its association key `author_id` is nil/
+    end) =~ ~r/its association keys `\(author_id\)` are nil/
 
     assert TestRepo.preload(updated, [:author], force: true).author == nil
+  end
+
+  test "preload raises with association over composite foreign key is set but without id" do
+    p1 = TestRepo.insert!(%Post{title: "1"})
+    c11 = TestRepo.insert!(%CompositePk{a: 1, b: 1, name: "11"})
+    updated = %{p1 | composite: c11, composite_a: nil, composite_b: nil}
+
+    assert ExUnit.CaptureLog.capture_log(fn ->
+      assert TestRepo.preload(updated, [:composite]).composite == c11
+    end) =~ ~r/its association keys `\(composite_a, composite_b\)` are nil/
+
+    assert TestRepo.preload(updated, [:composite], force: true).composite == nil
   end
 
   test "preload skips already loaded for cardinality one" do

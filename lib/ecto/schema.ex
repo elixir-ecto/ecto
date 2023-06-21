@@ -782,10 +782,12 @@ defmodule Ecto.Schema do
 
     * `:foreign_key` - Sets the foreign key, this should map to a field on the
       other schema, defaults to the underscored name of the current schema
-      suffixed by `_id`
+      suffixed by `_id`. A list denotes a composite foreign key over multiple
+      columns
 
     * `:references` - Sets the key on the current schema to be used for the
-      association, defaults to the primary key on the schema
+      association, defaults to the primary key on the schema. A list can be
+      provided if the primary key is composite
 
     * `:through` - Allow this association to be defined in terms of existing
       associations. Read the section on `:through` associations for more info
@@ -855,6 +857,20 @@ defmodule Ecto.Schema do
           field :parent_id, :integer
           belongs_to :parent, Comment, foreign_key: :parent_id, references: :id, define_field: false
           has_many :children, Comment, foreign_key: :parent_id, references: :id
+        end
+      end
+
+  `has_many` can be defined over a foreign key that spans more than one column.
+
+      defmodule Domain do
+        use Ecto.Schema
+
+        @primary_key false 
+        schema "domains" do
+          field :tld, :string, primary_key: true
+          field :name, :string, primary_key: true
+          has_many :subdomains, Subdomain, foreign_key: [:parent_tld, :parent_name],
+            references: [:tld, :name]
         end
       end
 
@@ -1015,10 +1031,12 @@ defmodule Ecto.Schema do
 
     * `:foreign_key` - Sets the foreign key, this should map to a field on the
       other schema, defaults to the underscored name of the current module
-      suffixed by `_id`
+      suffixed by `_id`. A list denotes a composite foreign key over multiple
+      columns
 
     * `:references`  - Sets the key on the current schema to be used for the
-      association, defaults to the primary key on the schema
+      association, defaults to the primary key on the schema. A list can be
+      provided if the primary key is composite
 
     * `:through` - If this association must be defined in terms of existing
       associations. Read the section in `has_many/3` for more information
@@ -1096,16 +1114,21 @@ defmodule Ecto.Schema do
       of the association suffixed by `_id`. For example, `belongs_to :company`
       will define foreign key of `:company_id`. The associated `has_one` or `has_many`
       field in the other schema should also have its `:foreign_key` option set
-      with the same value.
+      with the same value. If the primary key is composite then a list of keys has
+      to be used
 
     * `:references` - Sets the key on the other schema to be used for the
-      association, defaults to: `:id`
+      association, defaults to: `:id`. A list of keys has to be provided if the
+      primary key is composite
 
     * `:define_field` - When false, does not automatically define a `:foreign_key`
       field, implying the user is defining the field manually elsewhere
 
     * `:type` - Sets the type of automatically defined `:foreign_key`.
-      Defaults to: `:integer` and can be set per schema via `@foreign_key_type`
+      Defaults to: `:integer` and can be set per schema via `@foreign_key_type`.
+      A list of types can be used for composite foreign keys. If `:type` is a
+      single atom and the foreign key is composite, the same type is assumed for
+      all key columns
 
     * `:on_replace` - The action taken on associations when the record is
       replaced when casting or manipulating parent changeset. May be
@@ -1153,6 +1176,17 @@ defmodule Ecto.Schema do
         schema "comments" do
           field :post_id, :integer, ... # custom options
           belongs_to :post, Post, define_field: false
+        end
+      end
+
+  If the references schema has composite primary keys:
+
+      defmodule Comment do
+        use Ecto.Schema
+
+        schema "comments" do
+          belongs_to :publication, Publication, references: [:name, :kind],
+            foreign_key: [:publication_name, :publication_kind], type: [:string, :integer]
         end
       end
 
@@ -1314,7 +1348,9 @@ defmodule Ecto.Schema do
       the join table should reach the current schema and the second
       how the join table should reach the associated schema. In the
       example above, it defaults to: `[post_id: :id, tag_id: :id]`.
-      The keys are inflected from the schema names.
+      The keys are inflected from the schema names. Nested keyword
+      lists have to be used if any of the associated schemas have
+      composite primary keys.
 
     * `:on_delete` - The action taken on associations when the parent record
       is deleted. May be `:nothing` (default) or `:delete_all`.
@@ -1527,6 +1563,25 @@ defmodule Ecto.Schema do
       case Repo.insert(changeset) do
         {:ok, assoc} -> # Assoc was created!
         {:error, changeset} -> # Handle the error
+      end
+
+  ## Composite primary key example
+
+  If the current or referenced schema has a composite primary key, `join_keys`
+  has to be a list containing two keyword lists. The first describes the
+  mapping from the join table to the current schema, the second denotes the
+  mapping from the join table to the associated schema.
+
+      defmodule Project do
+        use Ecto.Schema
+
+        @primary_key false
+        schema "word" do
+          field :spelling, :string, primary_key: true
+          field :language, :string, primary_key: true
+          many_to_many :meanings, Meaning, join_through: "words_meanings",
+            join_keys: [[word_spelling: :spelling, word_language: :language], [meaning_id: :id]]
+        end
       end
   """
   defmacro many_to_many(name, queryable, opts \\ []) do
@@ -2053,20 +2108,28 @@ defmodule Ecto.Schema do
 
   @doc false
   def __belongs_to__(mod, name, queryable, opts) do
+    # opts = Keyword.update(opts, :foreign_key, [:"#{name}_id"], &List.wrap/1)
     opts = Keyword.put_new(opts, :foreign_key, :"#{name}_id")
 
-    foreign_key_name = opts[:foreign_key]
-    foreign_key_type = opts[:type] || Module.get_attribute(mod, :foreign_key_type)
-    foreign_key_type = check_field_type!(mod, name, foreign_key_type, opts)
-    check_options!(foreign_key_type, opts, @valid_belongs_to_options, "belongs_to/3")
+    foreign_key_names = opts[:foreign_key] |> List.wrap
+    foreign_key_types = case opts[:type] || Module.get_attribute(mod, :foreign_key_type) do
+      foreign_key_types when is_list(foreign_key_types) ->
+        foreign_key_types
+      foreign_key_type when is_atom(foreign_key_type) ->
+        List.duplicate(foreign_key_type, length(foreign_key_names))
+    end
+    foreign_key_types = Enum.map(foreign_key_types, &check_field_type!(mod, name, &1, opts))
+    Enum.each(foreign_key_types, &check_options!(&1, opts, @valid_belongs_to_options, "belongs_to/3"))
 
-    if foreign_key_name == name do
+    if name in foreign_key_names do
       raise ArgumentError, "foreign_key #{inspect name} must be distinct from corresponding association name"
     end
 
     if Keyword.get(opts, :define_field, true) do
-      Module.put_attribute(mod, :ecto_changeset_fields, {foreign_key_name, foreign_key_type})
-      define_field(mod, foreign_key_name, foreign_key_type, opts)
+      for {foreign_key_name, foreign_key_type} <- Enum.zip(foreign_key_names, foreign_key_types) do
+        Module.put_attribute(mod, :ecto_changeset_fields, {foreign_key_name, foreign_key_type})
+        define_field(mod, foreign_key_name, foreign_key_type, opts)
+      end
     end
 
     struct =
