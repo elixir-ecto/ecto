@@ -210,7 +210,7 @@ defmodule Ecto.Enum do
 
   @impl true
   def format(%{mappings: mappings}) do
-    "#Ecto.Enum<values: #{inspect Keyword.keys(mappings)}>"
+    "#Ecto.Enum<values: #{inspect(Keyword.keys(mappings))}>"
   end
 
   @doc "Returns the possible values for a given schema or types map and field"

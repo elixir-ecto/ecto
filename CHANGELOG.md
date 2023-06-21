@@ -1,5 +1,11 @@
 # Changelog for v3.x
 
+## v3.11.0-dev
+
+### Adapter changes
+
+  * Adapters now receive `nil` for encoding/decoding
+
 ## v3.10.2 (2023-06-07)
 
 ### Enhancements
@@ -26,7 +32,7 @@
   * [Ecto.Changeset] Consider `sort_param` even if the relation param was not given
   * [Ecto.Query] Correct typespec to avoid Dialyzer warnings
 
-## v3.10.0 (2023-04-10) 
+## v3.10.0 (2023-04-10)
 
 This release contains many improvements to Ecto.Changeset, functions like `Ecto.Changeset.changed?/2` and `field_missing?/2` will help make your code more expressive. Improvements to association and embed handling will also make it easier to manage more complex forms, especially those embedded within Phoenix.LiveView applications.
 

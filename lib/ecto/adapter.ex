@@ -25,7 +25,10 @@ defmodule Ecto.Adapter do
   @doc """
   Ensure all applications necessary to run the adapter are started.
   """
-  @callback ensure_all_started(config :: Keyword.t(), type :: :permanent | :transient | :temporary) ::
+  @callback ensure_all_started(
+              config :: Keyword.t(),
+              type :: :permanent | :transient | :temporary
+            ) ::
               {:ok, [atom]} | {:error, atom}
 
   @doc """
@@ -58,7 +61,7 @@ defmodule Ecto.Adapter do
   connection is then used in the other callbacks implementations, such as
   `Ecto.Adapter.Queryable` and `Ecto.Adapter.Schema`.
   """
-  @callback checkout(adapter_meta, config :: Keyword.t(), (() -> result)) :: result when result: var
+  @callback checkout(adapter_meta, config :: Keyword.t(), (-> result)) :: result when result: var
 
   @doc """
   Returns true if a connection has been checked out.

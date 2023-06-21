@@ -12,16 +12,16 @@ defmodule Ecto.Association.NotLoaded do
   """
 
   @type t :: %__MODULE__{
-    __field__: atom(),
-    __owner__: any(),
-    __cardinality__: atom()
-  }
+          __field__: atom(),
+          __owner__: any(),
+          __cardinality__: atom()
+        }
 
   defstruct [:__field__, :__owner__, :__cardinality__]
 
   defimpl Inspect do
     def inspect(not_loaded, _opts) do
-      msg = "association #{inspect not_loaded.__field__} is not loaded"
+      msg = "association #{inspect(not_loaded.__field__)} is not loaded"
       ~s(#Ecto.Association.NotLoaded<#{msg}>)
     end
   end
@@ -30,15 +30,17 @@ end
 defmodule Ecto.Association do
   @moduledoc false
 
-  @type t :: %{required(:__struct__) => atom,
-               required(:on_cast) => nil | fun,
-               required(:cardinality) => :one | :many,
-               required(:relationship) => :parent | :child,
-               required(:owner) => atom,
-               required(:owner_key) => atom,
-               required(:field) => atom,
-               required(:unique) => boolean,
-               optional(atom) => any}
+  @type t :: %{
+          required(:__struct__) => atom,
+          required(:on_cast) => nil | fun,
+          required(:cardinality) => :one | :many,
+          required(:relationship) => :parent | :child,
+          required(:owner) => atom,
+          required(:owner_key) => atom,
+          required(:field) => atom,
+          required(:unique) => boolean,
+          optional(atom) => any
+        }
 
   alias Ecto.Query.Builder.OrderBy
 
@@ -77,7 +79,7 @@ defmodule Ecto.Association do
       of a `:child` or a `:parent`
 
   """
-  @callback struct(module, field :: atom, opts :: Keyword.t) :: t
+  @callback struct(module, field :: atom, opts :: Keyword.t()) :: t
 
   @doc """
   Invoked after the schema is compiled to validate associations.
@@ -85,7 +87,7 @@ defmodule Ecto.Association do
   Useful for checking if associated modules exist without running
   into deadlocks.
   """
-  @callback after_compile_validation(t, Macro.Env.t) :: :ok | {:error, String.t}
+  @callback after_compile_validation(t, Macro.Env.t()) :: :ok | {:error, String.t()}
 
   @doc """
   Builds a struct for the given association.
@@ -95,7 +97,7 @@ defmodule Ecto.Association do
 
   Invoked by `Ecto.build_assoc/3`.
   """
-  @callback build(t, owner :: Ecto.Schema.t, %{atom => term} | [Keyword.t]) :: Ecto.Schema.t
+  @callback build(t, owner :: Ecto.Schema.t(), %{atom => term} | [Keyword.t()]) :: Ecto.Schema.t()
 
   @doc """
   Returns an association join query.
@@ -115,7 +117,7 @@ defmodule Ecto.Association do
   This callback is invoked when `join: assoc(p, :comments)` is used
   inside queries.
   """
-  @callback joins_query(t) :: Ecto.Query.t
+  @callback joins_query(t) :: Ecto.Query.t()
 
   @doc """
   Returns the association query on top of the given query.
@@ -128,13 +130,14 @@ defmodule Ecto.Association do
 
   This callback is used by `Ecto.assoc/2` and when preloading.
   """
-  @callback assoc_query(t, Ecto.Query.t | nil, values :: [term]) :: Ecto.Query.t
+  @callback assoc_query(t, Ecto.Query.t() | nil, values :: [term]) :: Ecto.Query.t()
 
   @doc """
   Returns information used by the preloader.
   """
   @callback preload_info(t) ::
-              {:assoc, t, {integer, atom} | {integer, atom, Ecto.Type.t()}} | {:through, t, [atom]}
+              {:assoc, t, {integer, atom} | {integer, atom, Ecto.Type.t()}}
+              | {:through, t, [atom]}
 
   @doc """
   Performs the repository change on the association.
@@ -143,15 +146,21 @@ defmodule Ecto.Association do
   and the repository action options. Must return the
   persisted struct (or nil) or the changeset error.
   """
-  @callback on_repo_change(t, parent :: Ecto.Changeset.t, changeset :: Ecto.Changeset.t, Ecto.Adapter.t, Keyword.t) ::
-            {:ok, Ecto.Schema.t | nil} | {:error, Ecto.Changeset.t}
+  @callback on_repo_change(
+              t,
+              parent :: Ecto.Changeset.t(),
+              changeset :: Ecto.Changeset.t(),
+              Ecto.Adapter.t(),
+              Keyword.t()
+            ) ::
+              {:ok, Ecto.Schema.t() | nil} | {:error, Ecto.Changeset.t()}
 
   @doc """
   Retrieves the association from the given schema.
   """
   def association_from_schema!(schema, assoc) do
     schema.__schema__(:association, assoc) ||
-      raise ArgumentError, "schema #{inspect schema} does not have association #{inspect assoc}"
+      raise ArgumentError, "schema #{inspect(schema)} does not have association #{inspect(assoc)}"
   end
 
   @doc """
@@ -170,7 +179,7 @@ defmodule Ecto.Association do
 
   """
   def association_key(module, suffix) do
-    prefix = module |> Module.split |> List.last |> Macro.underscore
+    prefix = module |> Module.split() |> List.last() |> Macro.underscore()
     :"#{prefix}_#{suffix}"
   end
 
@@ -209,17 +218,19 @@ defmodule Ecto.Association do
     relation_list = resolve_through_tables(owner, through, chain_direction)
 
     # Filter out the joins which are redundant
-    filtered_list = Enum.with_index(relation_list)
-    |> Enum.filter(fn
-      # We always keep the first table in the chain since it's our source table for the query
-      {_, 0} -> true
+    filtered_list =
+      Enum.with_index(relation_list)
+      |> Enum.filter(fn
+        # We always keep the first table in the chain since it's our source table for the query
+        {_, 0} ->
+          true
 
-      {rel, _} ->
-        # If the condition is not empty we need to join to the table. Otherwise if the in_key and out_key is the same
-        # then this join is redundant since we can just join to the next table in the chain.
-        rel.in_key != rel.out_key or rel.where != []
-    end)
-    |> Enum.map(&elem(&1, 0))
+        {rel, _} ->
+          # If the condition is not empty we need to join to the table. Otherwise if the in_key and out_key is the same
+          # then this join is redundant since we can just join to the next table in the chain.
+          rel.in_key != rel.out_key or rel.where != []
+      end)
+      |> Enum.map(&elem(&1, 0))
 
     # If we're preloading we don't need the last table since it is the owner table.
     filtered_list = if(join_to == nil, do: Enum.drop(filtered_list, -1), else: filtered_list)
@@ -233,37 +244,44 @@ defmodule Ecto.Association do
 
     # We need to create the query by joining all the tables, and also we need the out_key of the final table to use
     # for the final WHERE clause with values.
-    {_, query, _, dest_out_key} = Enum.reduce(joins, {source, query, counter, source.out_key}, fn curr_rel, {prev_rel, query, counter, _} ->
-      related_queryable = curr_rel.schema
+    {_, query, _, dest_out_key} =
+      Enum.reduce(joins, {source, query, counter, source.out_key}, fn
+        curr_rel, {prev_rel, query, counter, _} ->
+          related_queryable = curr_rel.schema
 
-      next = join(query, :inner, [{src, counter}], dest in ^related_queryable, on: field(src, ^prev_rel.out_key) == field(dest, ^curr_rel.in_key))
-        |> combine_joins_query(curr_rel.where, counter + 1)
+          next =
+            join(query, :inner, [{src, counter}], dest in ^related_queryable,
+              on: field(src, ^prev_rel.out_key) == field(dest, ^curr_rel.in_key)
+            )
+            |> combine_joins_query(curr_rel.where, counter + 1)
 
-      {curr_rel, next, counter + 1, curr_rel.out_key}
-    end)
+          {curr_rel, next, counter + 1, curr_rel.out_key}
+      end)
 
     final_bind = Ecto.Query.Builder.count_binds(query) - 1
 
     values = List.wrap(values)
-    query = case {join_to, values} do
-      {nil, [single_value]} ->
-        query
-        |> where([{dest, final_bind}], field(dest, ^dest_out_key) == ^single_value)
 
-      {nil, values} ->
-        query
-        |> where([{dest, final_bind}], field(dest, ^dest_out_key) in ^values)
+    query =
+      case {join_to, values} do
+        {nil, [single_value]} ->
+          where(query, [{dest, final_bind}], field(dest, ^dest_out_key) == ^single_value)
 
-      {_, _} ->
-        query
-    end
+        {nil, values} ->
+          where(query, [{dest, final_bind}], field(dest, ^dest_out_key) in ^values)
+
+        {_, _} ->
+          query
+      end
 
     combine_assoc_query(query, source.where || [])
   end
 
   defp flatten_through_chain(owner, [], acc), do: {owner, acc}
+
   defp flatten_through_chain(owner, [assoc | tl], acc) do
     refl = association_from_schema!(owner, assoc)
+
     case refl do
       %{through: nested_throughs} ->
         {owner, acc} = flatten_through_chain(owner, nested_throughs, acc)
@@ -288,22 +306,41 @@ defmodule Ecto.Association do
       refl = association_from_schema!(owner, assoc)
       [owner_map | table_list] = table_list
 
-      table_list = case refl do
-        %{join_through: join_through, join_keys: join_keys, join_where: join_where, where: where} ->
-          [{owner_join_key, owner_key}, {related_join_key, related_key}] = join_keys
+      table_list =
+        case refl do
+          %{
+            join_through: join_through,
+            join_keys: join_keys,
+            join_where: join_where,
+            where: where
+          } ->
+            [{owner_join_key, owner_key}, {related_join_key, related_key}] = join_keys
 
-          owner_map = %{owner_map | in_key: owner_key}
-          join_map = %{schema: join_through, out_key: owner_join_key, in_key: related_join_key, where: join_where}
-          related_map = %{schema: refl.related, out_key: related_key, in_key: nil, where: where}
+            owner_map = %{owner_map | in_key: owner_key}
 
-          [related_map, join_map, owner_map | table_list]
+            join_map = %{
+              schema: join_through,
+              out_key: owner_join_key,
+              in_key: related_join_key,
+              where: join_where
+            }
 
-        _ ->
-          owner_map = %{owner_map | in_key: refl.owner_key}
-          related_map = %{schema: refl.related, out_key: refl.related_key, in_key: nil, where: refl.where}
+            related_map = %{schema: refl.related, out_key: related_key, in_key: nil, where: where}
 
-          [related_map, owner_map | table_list]
-      end
+            [related_map, join_map, owner_map | table_list]
+
+          _ ->
+            owner_map = %{owner_map | in_key: refl.owner_key}
+
+            related_map = %{
+              schema: refl.related,
+              out_key: refl.related_key,
+              in_key: nil,
+              where: refl.where
+            }
+
+            [related_map, owner_map | table_list]
+        end
 
       {refl.related, table_list}
     end)
@@ -339,10 +376,21 @@ defmodule Ecto.Association do
   Add the default assoc query where clauses a provided query.
   """
   def combine_assoc_query(query, []), do: query
+
   def combine_assoc_query(%{wheres: []} = query, conditions) do
     {expr, params} = expand_where(conditions, true, [], 0, 0)
-    %{query | wheres: [%Ecto.Query.BooleanExpr{op: :and, expr: expr, params: params, line: __ENV__.line, file: __ENV__.file}]}
+
+    bool_expr = %Ecto.Query.BooleanExpr{
+      op: :and,
+      expr: expr,
+      params: params,
+      line: __ENV__.line,
+      file: __ENV__.file
+    }
+
+    %{query | wheres: [bool_expr]}
   end
+
   def combine_assoc_query(%{wheres: wheres} = query, conditions) do
     {wheres, [where_expr]} = Enum.split(wheres, -1)
     %{params: params, expr: expr} = where_expr
@@ -353,7 +401,7 @@ defmodule Ecto.Association do
   defp expand_where(conditions, expr, params, counter, binding) do
     conjoin_exprs = fn
       true, r -> r
-      l, r-> {:and, [], [l, r]}
+      l, r -> {:and, [], [l, r]}
     end
 
     {expr, params, _counter} =
@@ -393,7 +441,8 @@ defmodule Ecto.Association do
     Enum.reduce(through, {query, counter}, fn current, {acc, counter} ->
       query = join(acc, :inner, [{x, counter}], assoc(x, ^current))
       {query, counter + 1}
-    end) |> elem(0)
+    end)
+    |> elem(0)
   end
 
   @doc """
@@ -411,10 +460,14 @@ defmodule Ecto.Association do
       ** (ArgumentError) association :comments_v1 queryable must be a schema or a {source, schema}. got: "wrong"
   """
   def related_from_query(atom, _name) when is_atom(atom), do: atom
-  def related_from_query({source, schema}, _name) when is_binary(source) and is_atom(schema), do: schema
+
+  def related_from_query({source, schema}, _name) when is_binary(source) and is_atom(schema),
+    do: schema
+
   def related_from_query(queryable, name) do
-    raise ArgumentError, "association #{inspect name} queryable must be a schema or " <>
-      "a {source, schema}. got: #{inspect queryable}"
+    raise ArgumentError,
+          "association #{inspect(name)} queryable must be a schema or " <>
+            "a {source, schema}. got: #{inspect(queryable)}"
   end
 
   @doc """
@@ -443,8 +496,8 @@ defmodule Ecto.Association do
 
   def validate_defaults!(_module, name, defaults) do
     raise ArgumentError,
-          "expected defaults for #{inspect name} to be a keyword list " <>
-            "or a {module, fun, args} tuple, got: `#{inspect defaults}`"
+          "expected defaults for #{inspect(name)} to be a keyword list " <>
+            "or a {module, fun, args} tuple, got: `#{inspect(defaults)}`"
   end
 
   @doc """
@@ -458,25 +511,25 @@ defmodule Ecto.Association do
       {direction, field} when is_atom(direction) and is_atom(field) ->
         unless OrderBy.valid_direction?(direction) do
           raise ArgumentError,
-          "expected `:preload_order` for #{inspect name} to be a keyword list or a list of atoms/fields, " <>
-            "got: `#{inspect preload_order}`, " <>
-            "`#{inspect direction}` is not a valid direction"
+                "expected `:preload_order` for #{inspect(name)} to be a keyword list or a list of atoms/fields, " <>
+                  "got: `#{inspect(preload_order)}`, " <>
+                  "`#{inspect(direction)}` is not a valid direction"
         end
 
         {direction, field}
 
       item ->
         raise ArgumentError,
-          "expected `:preload_order` for #{inspect name} to be a keyword list or a list of atoms/fields, " <>
-            "got: `#{inspect preload_order}`, " <>
-            "`#{inspect item}` is not valid"
+              "expected `:preload_order` for #{inspect(name)} to be a keyword list or a list of atoms/fields, " <>
+                "got: `#{inspect(preload_order)}`, " <>
+                "`#{inspect(item)}` is not valid"
     end)
   end
 
   def validate_preload_order!(name, preload_order) do
     raise ArgumentError,
-      "expected `:preload_order` for #{inspect name} to be a keyword list or a list of atoms/fields, " <>
-        "got: `#{inspect preload_order}`"
+          "expected `:preload_order` for #{inspect(name)} to be a keyword list or a list of atoms/fields, " <>
+            "got: `#{inspect(preload_order)}`"
   end
 
   @doc """
@@ -514,7 +567,6 @@ defmodule Ecto.Association do
       ),
       do: update_in(changeset.data, &Ecto.put_meta(&1, prefix: prefix))
 
-
   def update_parent_prefix(changeset, _),
     do: changeset
 
@@ -535,20 +587,33 @@ defmodule Ecto.Association do
       end)
 
     case valid? do
-      true  -> {:ok, struct}
+      true -> {:ok, struct}
       false -> {:error, changes}
     end
   end
 
-  defp on_repo_change(%{cardinality: :one, field: field} = meta, nil, parent_changeset,
-                      _repo_action, adapter, opts, {parent, changes, halt, valid?}) do
+  defp on_repo_change(
+         %{cardinality: :one, field: field} = meta,
+         nil,
+         parent_changeset,
+         _repo_action,
+         adapter,
+         opts,
+         {parent, changes, halt, valid?}
+       ) do
     if not halt, do: maybe_replace_one!(meta, nil, parent, parent_changeset, adapter, opts)
     {Map.put(parent, field, nil), Map.put(changes, field, nil), halt, valid?}
   end
 
-  defp on_repo_change(%{cardinality: :one, field: field, __struct__: mod} = meta,
-                      %{action: action, data: current} = changeset, parent_changeset,
-                      repo_action, adapter, opts, {parent, changes, halt, valid?}) do
+  defp on_repo_change(
+         %{cardinality: :one, field: field, __struct__: mod} = meta,
+         %{action: action, data: current} = changeset,
+         parent_changeset,
+         repo_action,
+         adapter,
+         opts,
+         {parent, changes, halt, valid?}
+       ) do
     check_action!(meta, action, repo_action)
     if not halt, do: maybe_replace_one!(meta, current, parent, parent_changeset, adapter, opts)
 
@@ -562,15 +627,29 @@ defmodule Ecto.Association do
     end
   end
 
-  defp on_repo_change(%{cardinality: :many, field: field, __struct__: mod} = meta,
-                      changesets, parent_changeset, repo_action, adapter, opts,
-                      {parent, changes, halt, all_valid?}) do
+  defp on_repo_change(
+         %{cardinality: :many, field: field, __struct__: mod} = meta,
+         changesets,
+         parent_changeset,
+         repo_action,
+         adapter,
+         opts,
+         {parent, changes, halt, all_valid?}
+       ) do
     {changesets, structs, halt, valid?} =
       Enum.reduce(changesets, {[], [], halt, true}, fn
         %{action: action} = changeset, {changesets, structs, halt, valid?} ->
           check_action!(meta, action, repo_action)
 
-          case on_repo_change_unless_halted(halt, mod, meta, parent_changeset, changeset, adapter, opts) do
+          case on_repo_change_unless_halted(
+                 halt,
+                 mod,
+                 meta,
+                 parent_changeset,
+                 changeset,
+                 adapter,
+                 opts
+               ) do
             {:ok, nil} ->
               {[changeset | changesets], structs, halt, valid?}
 
@@ -578,23 +657,24 @@ defmodule Ecto.Association do
               {[changeset | changesets], [struct | structs], halt, valid?}
 
             {:error, error_changeset} ->
-              {[error_changeset | changesets], structs, halted?(halt, changeset, error_changeset), false}
+              {[error_changeset | changesets], structs, halted?(halt, changeset, error_changeset),
+               false}
           end
       end)
 
     if valid? do
       {Map.put(parent, field, Enum.reverse(structs)),
-       Map.put(changes, field, Enum.reverse(changesets)),
-       halt, all_valid?}
+       Map.put(changes, field, Enum.reverse(changesets)), halt, all_valid?}
     else
-      {parent,
-       Map.put(changes, field, Enum.reverse(changesets)),
-       halt, false}
+      {parent, Map.put(changes, field, Enum.reverse(changesets)), halt, false}
     end
   end
 
-  defp check_action!(%{related: schema}, :delete, :insert),
-    do: raise(ArgumentError, "got action :delete in changeset for associated #{inspect schema} while inserting")
+  defp check_action!(%{related: schema}, :delete, :insert) do
+    raise ArgumentError,
+          "got action :delete in changeset for associated #{inspect(schema)} while inserting"
+  end
+
   defp check_action!(_, _, _), do: :ok
 
   defp halted?(true, _, _), do: true
@@ -604,22 +684,30 @@ defmodule Ecto.Association do
   defp on_repo_change_unless_halted(true, _mod, _meta, _parent, changeset, _adapter, _opts) do
     {:error, changeset}
   end
+
   defp on_repo_change_unless_halted(false, mod, meta, parent, changeset, adapter, opts) do
     mod.on_repo_change(meta, parent, changeset, adapter, opts)
   end
 
-  defp maybe_replace_one!(%{field: field, __struct__: mod} = meta, current, parent,
-                          parent_changeset, adapter, opts) do
+  defp maybe_replace_one!(
+         %{field: field, __struct__: mod} = meta,
+         current,
+         parent,
+         parent_changeset,
+         adapter,
+         opts
+       ) do
     previous = Map.get(parent, field)
+
     if replaceable?(previous) and primary_key!(previous) != primary_key!(current) do
       changeset = %{Ecto.Changeset.change(previous) | action: :replace}
 
       case mod.on_repo_change(meta, parent_changeset, changeset, adapter, opts) do
         {:ok, _} ->
           :ok
+
         {:error, changeset} ->
-          raise Ecto.InvalidChangesetError,
-            action: changeset.action, changeset: changeset
+          raise Ecto.InvalidChangesetError, action: changeset.action, changeset: changeset
       end
     end
   end
@@ -659,9 +747,24 @@ defmodule Ecto.Association.Has do
   @on_delete_opts [:nothing, :nilify_all, :delete_all]
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :delete_if_exists, :nilify]
   @has_one_on_replace_opts @on_replace_opts ++ [:update]
-  defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key, :on_cast,
-             :queryable, :on_delete, :on_replace, where: [], unique: true, defaults: [],
-             relationship: :child, ordered: false, preload_order: []]
+  defstruct [
+    :cardinality,
+    :field,
+    :owner,
+    :related,
+    :owner_key,
+    :related_key,
+    :on_cast,
+    :queryable,
+    :on_delete,
+    :on_replace,
+    where: [],
+    unique: true,
+    defaults: [],
+    relationship: :child,
+    ordered: false,
+    preload_order: []
+  ]
 
   @impl true
   def after_compile_validation(%{queryable: queryable, related_key: related_key}, env) do
@@ -670,12 +773,16 @@ defmodule Ecto.Association.Has do
     cond do
       compiled == :skip ->
         :ok
+
       compiled == :not_found ->
-        {:error, "associated schema #{inspect queryable} does not exist"}
+        {:error, "associated schema #{inspect(queryable)} does not exist"}
+
       not function_exported?(queryable, :__schema__, 2) ->
-        {:error, "associated module #{inspect queryable} is not an Ecto schema"}
-      is_nil queryable.__schema__(:type, related_key) ->
-        {:error, "associated schema #{inspect queryable} does not have field `#{related_key}`"}
+        {:error, "associated module #{inspect(queryable)} is not an Ecto schema"}
+
+      is_nil(queryable.__schema__(:type, related_key)) ->
+        {:error, "associated schema #{inspect(queryable)} does not have field `#{related_key}`"}
+
       true ->
         :ok
     end
@@ -693,29 +800,34 @@ defmodule Ecto.Association.Has do
       |> get_ref(opts[:references], name)
 
     unless Module.get_attribute(module, :ecto_fields)[ref] do
-      raise ArgumentError, "schema does not have the field #{inspect ref} used by " <>
-        "association #{inspect name}, please set the :references option accordingly"
+      raise ArgumentError,
+            "schema does not have the field #{inspect(ref)} used by " <>
+              "association #{inspect(name)}, please set the :references option accordingly"
     end
 
     if opts[:through] do
-      raise ArgumentError, "invalid association #{inspect name}. When using the :through " <>
-                           "option, the schema should not be passed as second argument"
+      raise ArgumentError,
+            "invalid association #{inspect(name)}. When using the :through " <>
+              "option, the schema should not be passed as second argument"
     end
 
-    on_delete  = Keyword.get(opts, :on_delete, :nothing)
+    on_delete = Keyword.get(opts, :on_delete, :nothing)
+
     unless on_delete in @on_delete_opts do
-      raise ArgumentError, "invalid :on_delete option for #{inspect name}. " <>
-        "The only valid options are: " <>
-        Enum.map_join(@on_delete_opts, ", ", &"`#{inspect &1}`")
+      raise ArgumentError,
+            "invalid :on_delete option for #{inspect(name)}. " <>
+              "The only valid options are: " <>
+              Enum.map_join(@on_delete_opts, ", ", &"`#{inspect(&1)}`")
     end
 
     on_replace = Keyword.get(opts, :on_replace, :raise)
     on_replace_opts = if cardinality == :one, do: @has_one_on_replace_opts, else: @on_replace_opts
 
     unless on_replace in on_replace_opts do
-      raise ArgumentError, "invalid `:on_replace` option for #{inspect name}. " <>
-        "The only valid options are: " <>
-        Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
+      raise ArgumentError,
+            "invalid `:on_replace` option for #{inspect(name)}. " <>
+              "The only valid options are: " <>
+              Enum.map_join(@on_replace_opts, ", ", &"`#{inspect(&1)}`")
     end
 
     defaults = Ecto.Association.validate_defaults!(module, name, opts[:defaults] || [])
@@ -723,7 +835,8 @@ defmodule Ecto.Association.Has do
     where = opts[:where] || []
 
     unless is_list(where) do
-      raise ArgumentError, "expected `:where` for #{inspect name} to be a keyword list, got: `#{inspect where}`"
+      raise ArgumentError,
+            "expected `:where` for #{inspect(name)} to be a keyword list, got: `#{inspect(where)}`"
     end
 
     %__MODULE__{
@@ -743,9 +856,11 @@ defmodule Ecto.Association.Has do
   end
 
   defp get_ref(primary_key, nil, name) when primary_key in [nil, false] do
-    raise ArgumentError, "need to set :references option for " <>
-      "association #{inspect name} when schema has no primary key"
+    raise ArgumentError,
+          "need to set :references option for " <>
+            "association #{inspect(name)} when schema has no primary key"
   end
+
   defp get_ref(primary_key, nil, _name), do: elem(primary_key, 0)
   defp get_ref(_primary_key, references, _name), do: references
 
@@ -756,7 +871,10 @@ defmodule Ecto.Association.Has do
   end
 
   @impl true
-  def joins_query(%{related_key: related_key, owner: owner, owner_key: owner_key, queryable: queryable} = assoc) do
+  def joins_query(
+        %{related_key: related_key, owner: owner, owner_key: owner_key, queryable: queryable} =
+          assoc
+      ) do
     from(o in owner, join: q in ^queryable, on: field(q, ^related_key) == field(o, ^owner_key))
     |> Ecto.Association.combine_joins_query(assoc.where, 1)
   end
@@ -779,8 +897,13 @@ defmodule Ecto.Association.Has do
   end
 
   @impl true
-  def on_repo_change(%{on_replace: :delete_if_exists} = refl, parent_changeset,
-                     %{action: :replace} = changeset, adapter, opts) do
+  def on_repo_change(
+        %{on_replace: :delete_if_exists} = refl,
+        parent_changeset,
+        %{action: :replace} = changeset,
+        adapter,
+        opts
+      ) do
     try do
       on_repo_change(%{refl | on_replace: :delete}, parent_changeset, changeset, adapter, opts)
     rescue
@@ -788,13 +911,19 @@ defmodule Ecto.Association.Has do
     end
   end
 
-  def on_repo_change(%{on_replace: on_replace} = refl, %{data: parent} = parent_changeset,
-                     %{action: :replace} = changeset, adapter, opts) do
-    changeset = case on_replace do
-      :nilify -> %{changeset | action: :update}
-      :update -> %{changeset | action: :update}
-      :delete -> %{changeset | action: :delete}
-    end
+  def on_repo_change(
+        %{on_replace: on_replace} = refl,
+        %{data: parent} = parent_changeset,
+        %{action: :replace} = changeset,
+        adapter,
+        opts
+      ) do
+    changeset =
+      case on_replace do
+        :nilify -> %{changeset | action: :update}
+        :update -> %{changeset | action: :update}
+        :delete -> %{changeset | action: :delete}
+      end
 
     changeset = Ecto.Association.update_parent_prefix(changeset, parent)
 
@@ -815,6 +944,7 @@ defmodule Ecto.Association.Has do
     case apply(repo, action, [changeset, opts]) do
       {:ok, _} = ok ->
         if action == :delete, do: {:ok, nil}, else: ok
+
       {:error, changeset} ->
         original = Map.get(changes, key)
         {:error, put_in(changeset.changes[key], original)}
@@ -823,12 +953,14 @@ defmodule Ecto.Association.Has do
 
   defp update_parent_key(changeset, :delete, _key, _value),
     do: changeset
+
   defp update_parent_key(changeset, _action, key, value),
     do: Ecto.Changeset.put_change(changeset, key, value)
 
   defp parent_key(%{related_key: related_key}, nil) do
     {related_key, nil}
   end
+
   defp parent_key(%{owner_key: owner_key, related_key: related_key}, owner) do
     {related_key, Map.get(owner, owner_key)}
   end
@@ -848,19 +980,21 @@ defmodule Ecto.Association.Has do
   @doc false
   def delete_all(refl, parent, repo_name, opts) do
     if query = on_delete_query(refl, parent) do
-      Ecto.Repo.Queryable.delete_all repo_name, query, opts
+      Ecto.Repo.Queryable.delete_all(repo_name, query, opts)
     end
   end
 
   @doc false
   def nilify_all(%{related_key: related_key} = refl, parent, repo_name, opts) do
     if query = on_delete_query(refl, parent) do
-      Ecto.Repo.Queryable.update_all repo_name, query, [set: [{related_key, nil}]], opts
+      Ecto.Repo.Queryable.update_all(repo_name, query, [set: [{related_key, nil}]], opts)
     end
   end
 
-  defp on_delete_query(%{owner_key: owner_key, related_key: related_key,
-                         queryable: queryable}, parent) do
+  defp on_delete_query(
+         %{owner_key: owner_key, related_key: related_key, queryable: queryable},
+         parent
+       ) do
     if value = Map.get(parent, owner_key) do
       from x in queryable, where: field(x, ^related_key) == ^value
     end
@@ -882,8 +1016,17 @@ defmodule Ecto.Association.HasThrough do
   """
 
   @behaviour Ecto.Association
-  defstruct [:cardinality, :field, :owner, :owner_key, :through, :on_cast,
-             relationship: :child, unique: true, ordered: false]
+  defstruct [
+    :cardinality,
+    :field,
+    :owner,
+    :owner_key,
+    :through,
+    :on_cast,
+    relationship: :child,
+    unique: true,
+    ordered: false
+  ]
 
   @impl true
   def after_compile_validation(_, _) do
@@ -896,17 +1039,20 @@ defmodule Ecto.Association.HasThrough do
 
     refl =
       case through do
-        [h,_|_] ->
+        [h, _ | _] ->
           Module.get_attribute(module, :ecto_assocs)[h]
+
         _ ->
-          raise ArgumentError, ":through expects a list with at least two entries: " <>
-            "the association in the current module and one step through, got: #{inspect through}"
+          raise ArgumentError,
+                ":through expects a list with at least two entries: " <>
+                  "the association in the current module and one step through, got: #{inspect(through)}"
       end
 
     unless refl do
-      raise ArgumentError, "schema does not have the association #{inspect hd(through)} " <>
-        "used by association #{inspect name}, please ensure the association exists and " <>
-        "is defined before the :through one"
+      raise ArgumentError,
+            "schema does not have the association #{inspect(hd(through))} " <>
+              "used by association #{inspect(name)}, please ensure the association exists and " <>
+              "is defined before the :through one"
     end
 
     %__MODULE__{
@@ -914,15 +1060,15 @@ defmodule Ecto.Association.HasThrough do
       cardinality: Keyword.fetch!(opts, :cardinality),
       through: through,
       owner: module,
-      owner_key: refl.owner_key,
+      owner_key: refl.owner_key
     }
   end
 
   @impl true
   def build(%{field: name}, %{__struct__: owner}, _attributes) do
     raise ArgumentError,
-      "cannot build through association `#{inspect name}` for #{inspect owner}. " <>
-      "Instead build the intermediate steps explicitly."
+          "cannot build through association `#{inspect(name)}` for #{inspect(owner)}. " <>
+            "Instead build the intermediate steps explicitly."
   end
 
   @impl true
@@ -933,8 +1079,8 @@ defmodule Ecto.Association.HasThrough do
   @impl true
   def on_repo_change(%{field: name}, _, _, _, _) do
     raise ArgumentError,
-      "cannot insert/update/delete through associations `#{inspect name}` via the repository. " <>
-      "Instead build the intermediate steps explicitly."
+          "cannot insert/update/delete through associations `#{inspect(name)}` via the repository. " <>
+            "Instead build the intermediate steps explicitly."
   end
 
   @impl true
@@ -968,9 +1114,22 @@ defmodule Ecto.Association.BelongsTo do
 
   @behaviour Ecto.Association
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :delete_if_exists, :nilify, :update]
-  defstruct [:field, :owner, :related, :owner_key, :related_key, :queryable, :on_cast,
-             :on_replace, where: [], defaults: [], cardinality: :one, relationship: :parent,
-             unique: true, ordered: false]
+  defstruct [
+    :field,
+    :owner,
+    :related,
+    :owner_key,
+    :related_key,
+    :queryable,
+    :on_cast,
+    :on_replace,
+    where: [],
+    defaults: [],
+    cardinality: :one,
+    relationship: :parent,
+    unique: true,
+    ordered: false
+  ]
 
   @impl true
   def after_compile_validation(%{queryable: queryable, related_key: related_key}, env) do
@@ -979,12 +1138,16 @@ defmodule Ecto.Association.BelongsTo do
     cond do
       compiled == :skip ->
         :ok
+
       compiled == :not_found ->
-        {:error, "associated schema #{inspect queryable} does not exist"}
+        {:error, "associated schema #{inspect(queryable)} does not exist"}
+
       not function_exported?(queryable, :__schema__, 2) ->
-        {:error, "associated module #{inspect queryable} is not an Ecto schema"}
-      is_nil queryable.__schema__(:type, related_key) ->
-        {:error, "associated schema #{inspect queryable} does not have field `#{related_key}`"}
+        {:error, "associated module #{inspect(queryable)} is not an Ecto schema"}
+
+      is_nil(queryable.__schema__(:type, related_key)) ->
+        {:error, "associated schema #{inspect(queryable)} does not have field `#{related_key}`"}
+
       true ->
         :ok
     end
@@ -998,16 +1161,18 @@ defmodule Ecto.Association.BelongsTo do
     on_replace = Keyword.get(opts, :on_replace, :raise)
 
     unless on_replace in @on_replace_opts do
-      raise ArgumentError, "invalid `:on_replace` option for #{inspect name}. " <>
-        "The only valid options are: " <>
-        Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
+      raise ArgumentError,
+            "invalid `:on_replace` option for #{inspect(name)}. " <>
+              "The only valid options are: " <>
+              Enum.map_join(@on_replace_opts, ", ", &"`#{inspect(&1)}`")
     end
 
     defaults = Ecto.Association.validate_defaults!(module, name, opts[:defaults] || [])
     where = opts[:where] || []
 
     unless is_list(where) do
-      raise ArgumentError, "expected `:where` for #{inspect name} to be a keyword list, got: `#{inspect where}`"
+      raise ArgumentError,
+            "expected `:where` for #{inspect(name)} to be a keyword list, got: `#{inspect(where)}`"
     end
 
     %__MODULE__{
@@ -1031,7 +1196,10 @@ defmodule Ecto.Association.BelongsTo do
   end
 
   @impl true
-  def joins_query(%{related_key: related_key, owner: owner, owner_key: owner_key, queryable: queryable} = assoc) do
+  def joins_query(
+        %{related_key: related_key, owner: owner, owner_key: owner_key, queryable: queryable} =
+          assoc
+      ) do
     from(o in owner, join: q in ^queryable, on: field(q, ^related_key) == field(o, ^owner_key))
     |> Ecto.Association.combine_joins_query(assoc.where, 1)
   end
@@ -1058,8 +1226,13 @@ defmodule Ecto.Association.BelongsTo do
     {:ok, nil}
   end
 
-  def on_repo_change(%{on_replace: :delete_if_exists} = refl, parent_changeset,
-                     %{action: :replace} = changeset, adapter, opts) do
+  def on_repo_change(
+        %{on_replace: :delete_if_exists} = refl,
+        parent_changeset,
+        %{action: :replace} = changeset,
+        adapter,
+        opts
+      ) do
     try do
       on_repo_change(%{refl | on_replace: :delete}, parent_changeset, changeset, adapter, opts)
     rescue
@@ -1067,8 +1240,13 @@ defmodule Ecto.Association.BelongsTo do
     end
   end
 
-  def on_repo_change(%{on_replace: on_replace} = refl, parent_changeset,
-                     %{action: :replace} = changeset, adapter, opts) do
+  def on_repo_change(
+        %{on_replace: on_replace} = refl,
+        parent_changeset,
+        %{action: :replace} = changeset,
+        adapter,
+        opts
+      ) do
     changeset =
       case on_replace do
         :delete -> %{changeset | action: :delete}
@@ -1078,12 +1256,19 @@ defmodule Ecto.Association.BelongsTo do
     on_repo_change(refl, parent_changeset, changeset, adapter, opts)
   end
 
-  def on_repo_change(_refl, %{data: parent, repo: repo}, %{action: action} = changeset, _adapter, opts) do
+  def on_repo_change(
+        _refl,
+        %{data: parent, repo: repo},
+        %{action: action} = changeset,
+        _adapter,
+        opts
+      ) do
     changeset = Ecto.Association.update_parent_prefix(changeset, parent)
 
     case apply(repo, action, [changeset, opts]) do
       {:ok, _} = ok ->
         if action == :delete, do: {:ok, nil}, else: ok
+
       {:error, changeset} ->
         {:error, changeset}
     end
@@ -1126,10 +1311,27 @@ defmodule Ecto.Association.ManyToMany do
   @behaviour Ecto.Association
   @on_delete_opts [:nothing, :delete_all]
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
-  defstruct [:field, :owner, :related, :owner_key, :queryable, :on_delete,
-             :on_replace, :join_keys, :join_through, :on_cast, where: [],
-             join_where: [], defaults: [], join_defaults: [], relationship: :child,
-             cardinality: :many, unique: false, ordered: false, preload_order: []]
+  defstruct [
+    :field,
+    :owner,
+    :related,
+    :owner_key,
+    :queryable,
+    :on_delete,
+    :on_replace,
+    :join_keys,
+    :join_through,
+    :on_cast,
+    where: [],
+    join_where: [],
+    defaults: [],
+    join_defaults: [],
+    relationship: :child,
+    cardinality: :many,
+    unique: false,
+    ordered: false,
+    preload_order: []
+  ]
 
   @impl true
   def after_compile_validation(%{queryable: queryable, join_through: join_through}, env) do
@@ -1139,16 +1341,22 @@ defmodule Ecto.Association.ManyToMany do
     cond do
       compiled == :skip ->
         :ok
+
       compiled == :not_found ->
-        {:error, "associated schema #{inspect queryable} does not exist"}
+        {:error, "associated schema #{inspect(queryable)} does not exist"}
+
       not function_exported?(queryable, :__schema__, 2) ->
-        {:error, "associated module #{inspect queryable} is not an Ecto schema"}
+        {:error, "associated module #{inspect(queryable)} is not an Ecto schema"}
+
       join_compiled == :skip ->
         :ok
+
       join_compiled == :not_found ->
-        {:error, ":join_through schema #{inspect join_through} does not exist"}
+        {:error, ":join_through schema #{inspect(join_through)} does not exist"}
+
       not function_exported?(join_through, :__schema__, 2) ->
-        {:error, ":join_through module #{inspect join_through} is not an Ecto schema"}
+        {:error, ":join_through module #{inspect(join_through)} is not an Ecto schema"}
+
       true ->
         :ok
     end
@@ -1166,37 +1374,42 @@ defmodule Ecto.Association.ManyToMany do
     {owner_key, join_keys} =
       case join_keys do
         [{join_owner_key, owner_key}, {join_related_key, related_key}]
-            when is_atom(join_owner_key) and is_atom(owner_key) and
-                 is_atom(join_related_key) and is_atom(related_key) ->
+        when is_atom(join_owner_key) and is_atom(owner_key) and
+               is_atom(join_related_key) and is_atom(related_key) ->
           {owner_key, join_keys}
+
         nil ->
           {:id, default_join_keys(module, related)}
+
         _ ->
           raise ArgumentError,
-            "many_to_many #{inspect name} expect :join_keys to be a keyword list " <>
-            "with two entries, the first being how the join table should reach " <>
-            "the current schema and the second how the join table should reach " <>
-            "the associated schema. For example: #{inspect default_join_keys(module, related)}"
+                "many_to_many #{inspect(name)} expect :join_keys to be a keyword list " <>
+                  "with two entries, the first being how the join table should reach " <>
+                  "the current schema and the second how the join table should reach " <>
+                  "the associated schema. For example: #{inspect(default_join_keys(module, related))}"
       end
 
     unless Module.get_attribute(module, :ecto_fields)[owner_key] do
-      raise ArgumentError, "schema does not have the field #{inspect owner_key} used by " <>
-        "association #{inspect name}, please set the :join_keys option accordingly"
+      raise ArgumentError,
+            "schema does not have the field #{inspect(owner_key)} used by " <>
+              "association #{inspect(name)}, please set the :join_keys option accordingly"
     end
 
-    on_delete  = Keyword.get(opts, :on_delete, :nothing)
+    on_delete = Keyword.get(opts, :on_delete, :nothing)
     on_replace = Keyword.get(opts, :on_replace, :raise)
 
     unless on_delete in @on_delete_opts do
-      raise ArgumentError, "invalid :on_delete option for #{inspect name}. " <>
-        "The only valid options are: " <>
-        Enum.map_join(@on_delete_opts, ", ", &"`#{inspect &1}`")
+      raise ArgumentError,
+            "invalid :on_delete option for #{inspect(name)}. " <>
+              "The only valid options are: " <>
+              Enum.map_join(@on_delete_opts, ", ", &"`#{inspect(&1)}`")
     end
 
     unless on_replace in @on_replace_opts do
-      raise ArgumentError, "invalid `:on_replace` option for #{inspect name}. " <>
-        "The only valid options are: " <>
-        Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
+      raise ArgumentError,
+            "invalid `:on_replace` option for #{inspect(name)}. " <>
+              "The only valid options are: " <>
+              Enum.map_join(@on_replace_opts, ", ", &"`#{inspect(&1)}`")
     end
 
     where = opts[:where] || []
@@ -1206,11 +1419,13 @@ defmodule Ecto.Association.ManyToMany do
     preload_order = Ecto.Association.validate_preload_order!(name, opts[:preload_order] || [])
 
     unless is_list(where) do
-      raise ArgumentError, "expected `:where` for #{inspect name} to be a keyword list, got: `#{inspect where}`"
+      raise ArgumentError,
+            "expected `:where` for #{inspect(name)} to be a keyword list, got: `#{inspect(where)}`"
     end
 
     unless is_list(join_where) do
-      raise ArgumentError, "expected `:join_where` for #{inspect name} to be a keyword list, got: `#{inspect join_where}`"
+      raise ArgumentError,
+            "expected `:join_where` for #{inspect(name)} to be a keyword list, got: `#{inspect(join_where)}`"
     end
 
     if opts[:join_defaults] && is_binary(join_through) do
@@ -1238,18 +1453,25 @@ defmodule Ecto.Association.ManyToMany do
   end
 
   defp default_join_keys(module, related) do
-    [{Ecto.Association.association_key(module, :id), :id},
-     {Ecto.Association.association_key(related, :id), :id}]
+    [
+      {Ecto.Association.association_key(module, :id), :id},
+      {Ecto.Association.association_key(related, :id), :id}
+    ]
   end
 
   @impl true
-  def joins_query(%{owner: owner, queryable: queryable,
-                    join_through: join_through, join_keys: join_keys} = assoc) do
+  def joins_query(
+        %{owner: owner, queryable: queryable, join_through: join_through, join_keys: join_keys} =
+          assoc
+      ) do
     [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
 
     from(o in owner,
-      join: j in ^join_through, on: field(j, ^join_owner_key) == field(o, ^owner_key),
-      join: q in ^queryable, on: field(j, ^join_related_key) == field(q, ^related_key))
+      join: j in ^join_through,
+      on: field(j, ^join_owner_key) == field(o, ^owner_key),
+      join: q in ^queryable,
+      on: field(j, ^join_related_key) == field(q, ^related_key)
+    )
     |> Ecto.Association.combine_joins_query(assoc.where, 2)
     |> Ecto.Association.combine_joins_query(assoc.join_where, 1)
   end
@@ -1260,7 +1482,9 @@ defmodule Ecto.Association.ManyToMany do
 
   @impl true
   def assoc_query(assoc, query, values) do
-    %{queryable: queryable, join_through: join_through, join_keys: join_keys, owner: owner} = assoc
+    %{queryable: queryable, join_through: join_through, join_keys: join_keys, owner: owner} =
+      assoc
+
     [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
 
     owner_key_type = owner.__schema__(:type, owner_key)
@@ -1269,7 +1493,8 @@ defmodule Ecto.Association.ManyToMany do
     # by &1.join_owner_key in ^... to filter down to the associated entries in the related table.
     query =
       from(q in (query || queryable),
-        join: j in ^join_through, on: field(q, ^related_key) == field(j, ^join_related_key),
+        join: j in ^join_through,
+        on: field(q, ^related_key) == field(j, ^join_related_key),
         where: field(j, ^join_owner_key) in type(^values, {:in, ^owner_key_type})
       )
       |> Ecto.Association.combine_assoc_query(assoc.where)
@@ -1294,16 +1519,26 @@ defmodule Ecto.Association.ManyToMany do
   end
 
   @impl true
-  def on_repo_change(%{on_replace: :delete} = refl, parent_changeset,
-                     %{action: :replace}  = changeset, adapter, opts) do
+  def on_repo_change(
+        %{on_replace: :delete} = refl,
+        parent_changeset,
+        %{action: :replace} = changeset,
+        adapter,
+        opts
+      ) do
     on_repo_change(refl, parent_changeset, %{changeset | action: :delete}, adapter, opts)
   end
 
-  def on_repo_change(%{join_keys: join_keys, join_through: join_through, join_where: join_where},
-                     %{repo: repo, data: owner}, %{action: :delete, data: related}, adapter, opts) do
+  def on_repo_change(
+        %{join_keys: join_keys, join_through: join_through, join_where: join_where},
+        %{repo: repo, data: owner},
+        %{action: :delete, data: related},
+        adapter,
+        opts
+      ) do
     [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
-    owner_value = dump! :delete, join_through, owner, owner_key, adapter
-    related_value = dump! :delete, join_through, related, related_key, adapter
+    owner_value = dump!(:delete, join_through, owner, owner_key, adapter)
+    related_value = dump!(:delete, join_through, related, related_key, adapter)
 
     query =
       join_through
@@ -1316,9 +1551,13 @@ defmodule Ecto.Association.ManyToMany do
     {:ok, nil}
   end
 
-  def on_repo_change(%{field: field, join_through: join_through, join_keys: join_keys} = refl,
-                     %{repo: repo, data: owner} = parent_changeset,
-                     %{action: action} = changeset, adapter, opts) do
+  def on_repo_change(
+        %{field: field, join_through: join_through, join_keys: join_keys} = refl,
+        %{repo: repo, data: owner} = parent_changeset,
+        %{action: action} = changeset,
+        adapter,
+        opts
+      ) do
     changeset = Ecto.Association.update_parent_prefix(changeset, owner)
 
     case apply(repo, action, [changeset, opts]) do
@@ -1326,14 +1565,19 @@ defmodule Ecto.Association.ManyToMany do
         [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
 
         if insert_join?(parent_changeset, changeset, field, related_key) do
-          owner_value = dump! :insert, join_through, owner, owner_key, adapter
-          related_value = dump! :insert, join_through, related, related_key, adapter
+          owner_value = dump!(:insert, join_through, owner, owner_key, adapter)
+          related_value = dump!(:insert, join_through, related, related_key, adapter)
           data = %{join_owner_key => owner_value, join_related_key => related_value}
 
           case insert_join(join_through, refl, parent_changeset, data, opts) do
             {:error, join_changeset} ->
-              {:error, %{changeset | errors: join_changeset.errors ++ changeset.errors,
-                                     valid?: join_changeset.valid? and changeset.valid?}}
+              {:error,
+               %{
+                 changeset
+                 | errors: join_changeset.errors ++ changeset.errors,
+                   valid?: join_changeset.valid? and changeset.valid?
+               }}
+
             _ ->
               {:ok, related}
           end
@@ -1347,27 +1591,34 @@ defmodule Ecto.Association.ManyToMany do
   end
 
   defp validate_join_through(name, nil) do
-    raise ArgumentError, "many_to_many #{inspect name} associations require the :join_through option to be given"
+    raise ArgumentError,
+          "many_to_many #{inspect(name)} associations require the :join_through option to be given"
   end
-  defp validate_join_through(_, join_through) when is_atom(join_through) or is_binary(join_through) do
+
+  defp validate_join_through(_, join_through)
+       when is_atom(join_through) or is_binary(join_through) do
     :ok
   end
+
   defp validate_join_through(name, _join_through) do
     raise ArgumentError,
-      "many_to_many #{inspect name} associations require the :join_through option to be " <>
-      "an atom (representing a schema) or a string (representing a table)"
+          "many_to_many #{inspect(name)} associations require the :join_through option to be " <>
+            "an atom (representing a schema) or a string (representing a table)"
   end
 
   defp insert_join?(%{action: :insert}, _, _field, _related_key), do: true
   defp insert_join?(_, %{action: :insert}, _field, _related_key), do: true
+
   defp insert_join?(%{data: owner}, %{data: related}, field, related_key) do
     current_key = Map.fetch!(related, related_key)
-    not Enum.any? Map.fetch!(owner, field), fn child ->
+
+    not Enum.any?(Map.fetch!(owner, field), fn child ->
       Map.get(child, related_key) == current_key
-    end
+    end)
   end
 
-  defp insert_join(join_through, _refl, %{repo: repo, data: owner}, data, opts) when is_binary(join_through) do
+  defp insert_join(join_through, _refl, %{repo: repo, data: owner}, data, opts)
+       when is_binary(join_through) do
     opts = Keyword.put_new(opts, :prefix, owner.__meta__.prefix)
     repo.insert_all(join_through, [data], opts)
   end
@@ -1396,20 +1647,22 @@ defmodule Ecto.Association.ManyToMany do
     do: changeset
 
   defp field!(op, struct, field) do
-    Map.get(struct, field) || raise "could not #{op} join entry because `#{field}` is nil in #{inspect struct}"
+    Map.get(struct, field) ||
+      raise "could not #{op} join entry because `#{field}` is nil in #{inspect(struct)}"
   end
 
   defp dump!(action, join_through, struct, field, adapter) when is_binary(join_through) do
     value = field!(action, struct, field)
-    type  = struct.__struct__.__schema__(:type, field)
+    type = struct.__struct__.__schema__(:type, field)
 
     case Ecto.Type.adapter_dump(adapter, type, value) do
       {:ok, value} ->
         value
+
       :error ->
         raise Ecto.ChangeError,
-          "value `#{inspect value}` for `#{inspect struct.__struct__}.#{field}` " <>
-            "in `#{action}` does not match type #{Ecto.Type.format(type)}"
+              "value `#{inspect(value)}` for `#{inspect(struct.__struct__)}.#{field}` " <>
+                "in `#{action}` does not match type #{Ecto.Type.format(type)}"
     end
   end
 
@@ -1436,8 +1689,11 @@ defmodule Ecto.Association.ManyToMany do
 
     if value = Map.get(parent, owner_key) do
       owner_type = owner.__schema__(:type, owner_key)
-      query = from j in join_through, where: field(j, ^join_owner_key) == type(^value, ^owner_type)
-      Ecto.Repo.Queryable.delete_all repo_name, query, opts
+
+      query =
+        from j in join_through, where: field(j, ^join_owner_key) == type(^value, ^owner_type)
+
+      Ecto.Repo.Queryable.delete_all(repo_name, query, opts)
     end
   end
 end

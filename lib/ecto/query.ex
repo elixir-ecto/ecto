@@ -324,8 +324,8 @@ defmodule Ecto.Query do
   The keyword-based and pipe-based examples are equivalent. The downside
   of using macros is that the binding must be specified for every operation.
   However, since keyword-based and pipe-based examples are equivalent, the
-  bindingless syntax also works for macros. Please note that the following 
-  example is not completely equivalent to the previous example, 
+  bindingless syntax also works for macros. Please note that the following
+  example is not completely equivalent to the previous example,
   as it does not return the name but rather the `User` struct:
 
       "users"
@@ -395,10 +395,26 @@ defmodule Ecto.Query do
   and not access its field directly. Authors of adapters
   may read its contents, but never modify them.
   """
-  defstruct [prefix: nil, sources: nil, from: nil, joins: [], aliases: %{}, wheres: [], select: nil,
-             order_bys: [], limit: nil, offset: nil, group_bys: [], combinations: [], updates: [],
-             havings: [], preloads: [], assocs: [], distinct: nil, lock: nil, windows: [],
-             with_ctes: nil]
+  defstruct prefix: nil,
+            sources: nil,
+            from: nil,
+            joins: [],
+            aliases: %{},
+            wheres: [],
+            select: nil,
+            order_bys: [],
+            limit: nil,
+            offset: nil,
+            group_bys: [],
+            combinations: [],
+            updates: [],
+            havings: [],
+            preloads: [],
+            assocs: [],
+            distinct: nil,
+            lock: nil,
+            windows: [],
+            with_ctes: nil
 
   defmodule FromExpr do
     @moduledoc false
@@ -427,12 +443,24 @@ defmodule Ecto.Query do
 
   defmodule JoinExpr do
     @moduledoc false
-    defstruct [:qual, :source, :on, :file, :line, :assoc, :as, :ix, :prefix, params: [], hints: []]
+    defstruct [
+      :qual,
+      :source,
+      :on,
+      :file,
+      :line,
+      :assoc,
+      :as,
+      :ix,
+      :prefix,
+      params: [],
+      hints: []
+    ]
   end
 
   defmodule WithExpr do
     @moduledoc false
-    defstruct [recursive: false, queries: []]
+    defstruct recursive: false, queries: []
   end
 
   defmodule LimitExpr do
@@ -784,9 +812,13 @@ defmodule Ecto.Query do
   """
   def subquery(query, opts \\ []) do
     subquery = wrap_in_subquery(query)
+
     case Keyword.fetch(opts, :prefix) do
-      {:ok, prefix} when is_binary(prefix) or is_nil(prefix) -> put_in(subquery.query.prefix, prefix)
-      :error -> subquery
+      {:ok, prefix} when is_binary(prefix) or is_nil(prefix) ->
+        put_in(subquery.query.prefix, prefix)
+
+      :error ->
+        subquery
     end
   end
 
@@ -794,8 +826,19 @@ defmodule Ecto.Query do
   defp wrap_in_subquery(%Ecto.Query{} = query), do: %Ecto.SubQuery{query: query}
   defp wrap_in_subquery(queryable), do: %Ecto.SubQuery{query: Ecto.Queryable.to_query(queryable)}
 
-  @joins [:join, :inner_join, :cross_join, :cross_lateral_join, :left_join, :right_join, :full_join,
-          :inner_lateral_join, :left_lateral_join, :array_join, :left_array_join]
+  @joins [
+    :join,
+    :inner_join,
+    :cross_join,
+    :cross_lateral_join,
+    :left_join,
+    :right_join,
+    :full_join,
+    :inner_lateral_join,
+    :left_lateral_join,
+    :array_join,
+    :left_array_join
+  ]
 
   @doc """
   Puts the given prefix in a query.
@@ -856,12 +899,14 @@ defmodule Ecto.Query do
   defp do_exclude(%Ecto.Query{} = query, :join) do
     %{query | joins: [], aliases: Map.take(query.aliases, [query.from.as])}
   end
+
   defp do_exclude(%Ecto.Query{} = query, join_keyword) when join_keyword in @joins do
     qual = join_qual(join_keyword)
     {excluded, remaining} = Enum.split_with(query.joins, &(&1.qual == qual))
     aliases = Map.drop(query.aliases, Enum.map(excluded, & &1.as))
     %{query | joins: remaining, aliases: aliases}
   end
+
   defp do_exclude(%Ecto.Query{} = query, :where), do: %{query | wheres: []}
   defp do_exclude(%Ecto.Query{} = query, :order_by), do: %{query | order_bys: []}
   defp do_exclude(%Ecto.Query{} = query, :group_by), do: %{query | group_bys: []}
@@ -957,7 +1002,10 @@ defmodule Ecto.Query do
     end
 
     {kw, as, prefix, hints} = collect_as_and_prefix_and_hints(kw, nil, nil, nil)
-    {quoted, binds, count_bind} = Builder.From.build(expr, __CALLER__, as, prefix, List.wrap(hints))
+
+    {quoted, binds, count_bind} =
+      Builder.From.build(expr, __CALLER__, as, prefix, List.wrap(hints))
+
     from(kw, __CALLER__, count_bind, quoted, to_query_binds(binds))
   end
 
@@ -966,7 +1014,7 @@ defmodule Ecto.Query do
   @binds [:lock, :where, :or_where, :select, :distinct, :order_by, :group_by, :windows] ++
            [:having, :or_having, :limit, :offset, :preload, :update, :select_merge, :with_ctes]
 
-  defp from([{type, expr}|t], env, count_bind, quoted, binds) when type in @binds do
+  defp from([{type, expr} | t], env, count_bind, quoted, binds) when type in @binds do
     # If all bindings are integer indexes keep AST Macro expandable to %Query{},
     # otherwise ensure that quoted code is evaluated before macro call
     quoted =
@@ -986,7 +1034,7 @@ defmodule Ecto.Query do
     from(t, env, count_bind, quoted, binds)
   end
 
-  defp from([{type, expr}|t], env, count_bind, quoted, binds) when type in @no_binds do
+  defp from([{type, expr} | t], env, count_bind, quoted, binds) when type in @no_binds do
     quoted =
       quote do
         Ecto.Query.unquote(type)(unquote(quoted), unquote(expr))
@@ -995,7 +1043,7 @@ defmodule Ecto.Query do
     from(t, env, count_bind, quoted, binds)
   end
 
-  defp from([{join, expr}|t], env, count_bind, quoted, binds) when join in @joins do
+  defp from([{join, expr} | t], env, count_bind, quoted, binds) when join in @joins do
     qual = join_qual(join)
     {t, on, as, prefix, hints} = collect_on(t, nil, nil, nil, nil)
 
@@ -1005,20 +1053,21 @@ defmodule Ecto.Query do
     from(t, env, count_bind, quoted, to_query_binds(binds))
   end
 
-  defp from([{:with_ties, _value}|_], _env, _count_bind, _quoted, _binds) do
-    Builder.error! "`with_ties` keyword must immediately follow a limit"
+  defp from([{:with_ties, _value} | _], _env, _count_bind, _quoted, _binds) do
+    Builder.error!("`with_ties` keyword must immediately follow a limit")
   end
 
-  defp from([{:on, _value}|_], _env, _count_bind, _quoted, _binds) do
-    Builder.error! "`on` keyword must immediately follow a join"
+  defp from([{:on, _value} | _], _env, _count_bind, _quoted, _binds) do
+    Builder.error!("`on` keyword must immediately follow a join")
   end
 
-  defp from([{key, _value}|_], _env, _count_bind, _quoted, _binds) when key in @from_join_opts do
-    Builder.error! "`#{key}` keyword must immediately follow a from/join"
+  defp from([{key, _value} | _], _env, _count_bind, _quoted, _binds)
+       when key in @from_join_opts do
+    Builder.error!("`#{key}` keyword must immediately follow a from/join")
   end
 
-  defp from([{key, _value}|_], _env, _count_bind, _quoted, _binds) do
-    Builder.error! "unsupported #{inspect key} in keyword query expression"
+  defp from([{key, _value} | _], _env, _count_bind, _quoted, _binds) do
+    Builder.error!("unsupported #{inspect(key)} in keyword query expression")
   end
 
   defp from([], _env, _count_bind, quoted, _binds) do
@@ -1060,8 +1109,10 @@ defmodule Ecto.Query do
 
   defp collect_with_ties([{:with_ties, with_ties} | t], nil),
     do: collect_with_ties(t, with_ties)
+
   defp collect_with_ties([{:with_ties, _} | _], _),
-    do: Builder.error! "`with_ties` keyword was given more than once to the same limit"
+    do: Builder.error!("`with_ties` keyword was given more than once to the same limit")
+
   defp collect_with_ties(t, with_ties),
     do: {t, with_ties}
 
@@ -1072,23 +1123,31 @@ defmodule Ecto.Query do
 
   defp collect_on([{:on, on} | t], nil, as, prefix, hints),
     do: collect_on(t, on, as, prefix, hints)
+
   defp collect_on([{:on, expr} | t], on, as, prefix, hints),
     do: collect_on(t, {:and, [], [on, expr]}, as, prefix, hints)
+
   defp collect_on(t, on, as, prefix, hints),
     do: {t, on, as, prefix, hints}
 
   defp collect_as_and_prefix_and_hints([{:as, as} | t], nil, prefix, hints),
     do: collect_as_and_prefix_and_hints(t, as, prefix, hints)
+
   defp collect_as_and_prefix_and_hints([{:as, _} | _], _, _, _),
-    do: Builder.error! "`as` keyword was given more than once to the same from/join"
+    do: Builder.error!("`as` keyword was given more than once to the same from/join")
+
   defp collect_as_and_prefix_and_hints([{:prefix, prefix} | t], as, nil, hints),
     do: collect_as_and_prefix_and_hints(t, as, {:ok, prefix}, hints)
+
   defp collect_as_and_prefix_and_hints([{:prefix, _} | _], _, _, _),
-    do: Builder.error! "`prefix` keyword was given more than once to the same from/join"
+    do: Builder.error!("`prefix` keyword was given more than once to the same from/join")
+
   defp collect_as_and_prefix_and_hints([{:hints, hints} | t], as, prefix, nil),
     do: collect_as_and_prefix_and_hints(t, as, prefix, hints)
+
   defp collect_as_and_prefix_and_hints([{:hints, _} | _], _, _, _),
-    do: Builder.error! "`hints` keyword was given more than once to the same from/join"
+    do: Builder.error!("`hints` keyword was given more than once to the same from/join")
+
   defp collect_as_and_prefix_and_hints(t, as, prefix, hints),
     do: {t, as, prefix, hints}
 
@@ -1235,9 +1294,9 @@ defmodule Ecto.Query do
       from e in Event,
         hints: [sample: sample_threshold()],
         select: e
-        
+
   ## Array joins
-  
+
   The `:array` and `:left_array` qualifiers can be used to join with array
   columns in [Clickhouse:](https://clickhouse.com/docs/en/sql-reference/statements/select/array-join)
 
@@ -1251,13 +1310,15 @@ defmodule Ecto.Query do
   @join_opts [:on | @from_join_opts]
 
   defmacro join(query, qual, binding \\ [], expr, opts \\ [])
+
   defmacro join(query, qual, binding, expr, opts)
            when is_list(binding) and is_list(opts) do
     {t, on, as, prefix, hints} = collect_on(opts, nil, nil, nil, nil)
 
     with [{key, _} | _] <- t do
-      raise ArgumentError, "invalid option `#{key}` passed to Ecto.Query.join/5, " <>
-                             "valid options are: #{inspect(@join_opts)}"
+      raise ArgumentError,
+            "invalid option `#{key}` passed to Ecto.Query.join/5, " <>
+              "valid options are: #{inspect(@join_opts)}"
     end
 
     query
@@ -1266,13 +1327,15 @@ defmodule Ecto.Query do
   end
 
   defmacro join(_query, _qual, binding, _expr, opts) when is_list(opts) do
-    raise ArgumentError, "invalid binding passed to Ecto.Query.join/5, should be " <>
-                           "list of variables, got: #{Macro.to_string(binding)}"
+    raise ArgumentError,
+          "invalid binding passed to Ecto.Query.join/5, should be " <>
+            "list of variables, got: #{Macro.to_string(binding)}"
   end
 
   defmacro join(_query, _qual, _binding, _expr, opts) do
-    raise ArgumentError, "invalid opts passed to Ecto.Query.join/5, should be " <>
-                           "list, got: #{Macro.to_string(opts)}"
+    raise ArgumentError,
+          "invalid opts passed to Ecto.Query.join/5, should be " <>
+            "list, got: #{Macro.to_string(opts)}"
   end
 
   @doc ~S'''
@@ -1385,7 +1448,7 @@ defmodule Ecto.Query do
     with_query = opts[:as]
 
     if !with_query do
-      Builder.error! "`as` option must be specified"
+      Builder.error!("`as` option must be specified")
     end
 
     Builder.CTE.build(query, name, with_query, opts[:materialized], __CALLER__)
@@ -2430,13 +2493,16 @@ defmodule Ecto.Query do
 
   def first(%Ecto.Query{} = query, nil) do
     query = %{query | limit: limit()}
+
     case query do
       %{order_bys: []} ->
         %{query | order_bys: [order_by_pk(query, :asc)]}
+
       %{} ->
         query
     end
   end
+
   def first(queryable, nil), do: first(Ecto.Queryable.to_query(queryable), nil)
   def first(queryable, key), do: first(order_by(queryable, ^key), nil)
 
@@ -2467,12 +2533,15 @@ defmodule Ecto.Query do
 
   defp order_by_pk(query, dir) do
     schema = assert_schema!(query)
-    pks    = schema.__schema__(:primary_key)
-    expr   = for pk <- pks, do: {dir, field(0, pk)}
+    pks = schema.__schema__(:primary_key)
+    expr = for pk <- pks, do: {dir, field(0, pk)}
     %QueryExpr{expr: expr, file: __ENV__.file, line: __ENV__.line}
   end
 
-  defp assert_schema!(%{from: %Ecto.Query.FromExpr{source: {_source, schema}}}) when schema != nil, do: schema
+  defp assert_schema!(%{from: %Ecto.Query.FromExpr{source: {_source, schema}}})
+       when schema != nil,
+       do: schema
+
   defp assert_schema!(query) do
     raise Ecto.QueryError, query: query, message: "expected a from expression with a schema"
   end
@@ -2496,14 +2565,14 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  Applies a callback function to a query if it doesn't contain the given named binding. 
+  Applies a callback function to a query if it doesn't contain the given named binding.
   Otherwise, returns the original query.
 
-  The callback function must accept a queryable and return an `Ecto.Query` struct 
-  that contains the provided named binding, otherwise an error is raised. It can also 
+  The callback function must accept a queryable and return an `Ecto.Query` struct
+  that contains the provided named binding, otherwise an error is raised. It can also
   accept second argument which is the atom representing the name of a binding.
-  
-  For example, one might use this function as a convenience to conditionally add a new 
+
+  For example, one might use this function as a convenience to conditionally add a new
   named join to a query:
 
       if has_named_binding?(query, :comments) do
@@ -2516,9 +2585,9 @@ defmodule Ecto.Query do
 
       with_named_binding(query, :comments, fn  query, binding ->
         join(query, :left, [p], a in assoc(p, ^binding), as: ^binding)
-      end) 
+      end)
 
-  For more information on named bindings see "Named bindings" in this module doc or `has_named_binding/2`. 
+  For more information on named bindings see "Named bindings" in this module doc or `has_named_binding/2`.
   """
   def with_named_binding(%Ecto.Query{} = query, key, fun) do
     if has_named_binding?(query, key) do
@@ -2535,23 +2604,27 @@ defmodule Ecto.Query do
     |> Ecto.Queryable.to_query()
     |> with_named_binding(key, fun)
   end
-  
-  defp apply_binding_callback(query, fun, _key) when is_function(fun, 1), do: query |> fun.() 
+
+  defp apply_binding_callback(query, fun, _key) when is_function(fun, 1), do: query |> fun.()
   defp apply_binding_callback(query, fun, key) when is_function(fun, 2), do: query |> fun.(key)
+
   defp apply_binding_callback(_query, fun, _key) do
-    raise ArgumentError, "callback function for with_named_binding/3 should accept one or two arguments, got: #{inspect(fun)}"
+    raise ArgumentError,
+          "callback function for with_named_binding/3 should accept one or two arguments, got: #{inspect(fun)}"
   end
-  
+
   defp raise_on_invalid_callback_return(%Ecto.Query{} = query, key) do
     if has_named_binding?(query, key) do
       query
     else
-      raise RuntimeError, "callback function for with_named_binding/3 should create a named binding for key #{inspect(key)}"
+      raise RuntimeError,
+            "callback function for with_named_binding/3 should create a named binding for key #{inspect(key)}"
     end
   end
 
   defp raise_on_invalid_callback_return(other, _key) do
-    raise RuntimeError, "callback function for with_named_binding/3 should return an Ecto.Query struct, got: #{inspect(other)}"
+    raise RuntimeError,
+          "callback function for with_named_binding/3 should return an Ecto.Query struct, got: #{inspect(other)}"
   end
 
   @doc """

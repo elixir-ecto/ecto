@@ -31,14 +31,14 @@ defimpl Ecto.Queryable, for: Atom do
       module.__schema__(:query)
     rescue
       UndefinedFunctionError ->
-        message = if :code.is_loaded(module) do
-          "the given module does not provide a schema"
-        else
-          "the given module does not exist"
-        end
+        message =
+          if :code.is_loaded(module) do
+            "the given module does not provide a schema"
+          else
+            "the given module does not exist"
+          end
 
-        raise Protocol.UndefinedError,
-          protocol: @protocol, value: module, description: message
+        raise Protocol.UndefinedError, protocol: @protocol, value: module, description: message
     end
   end
 end

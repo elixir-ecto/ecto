@@ -401,11 +401,11 @@ defmodule Ecto do
   @doc """
   Returns the schema primary keys as a keyword list.
   """
-  @spec primary_key(Ecto.Schema.t) :: Keyword.t
+  @spec primary_key(Ecto.Schema.t()) :: Keyword.t()
   def primary_key(%{__struct__: schema} = struct) do
-    Enum.map schema.__schema__(:primary_key), fn(field) ->
+    Enum.map(schema.__schema__(:primary_key), fn field ->
       {field, Map.fetch!(struct, field)}
-    end
+    end)
   end
 
   @doc """
@@ -414,7 +414,7 @@ defmodule Ecto do
   Raises `Ecto.NoPrimaryKeyFieldError` if the schema has no
   primary key field.
   """
-  @spec primary_key!(Ecto.Schema.t) :: Keyword.t
+  @spec primary_key!(Ecto.Schema.t()) :: Keyword.t()
   def primary_key!(%{__struct__: schema} = struct) do
     case primary_key(struct) do
       [] -> raise Ecto.NoPrimaryKeyFieldError, schema: schema
@@ -474,7 +474,7 @@ defmodule Ecto do
   end
 
   defp drop_meta(%{} = attrs), do: Map.drop(attrs, [:__struct__, :__meta__])
-  defp drop_meta([_|_] = attrs), do: Keyword.drop(attrs, [:__struct__, :__meta__])
+  defp drop_meta([_ | _] = attrs), do: Keyword.drop(attrs, [:__struct__, :__meta__])
 
   @doc """
   Builds a query for the association in the given struct or structs.
@@ -523,10 +523,14 @@ defmodule Ecto do
     refl = %{owner_key: owner_key} = Ecto.Association.association_from_schema!(schema, assoc)
 
     values =
-      Enum.uniq for(struct <- structs,
-        assert_struct!(schema, struct),
-        key = Map.fetch!(struct, owner_key),
-        do: key)
+      Enum.uniq(
+        for(
+          struct <- structs,
+          assert_struct!(schema, struct),
+          key = Map.fetch!(struct, owner_key),
+          do: key
+        )
+      )
 
     case assocs do
       [] ->
@@ -534,7 +538,10 @@ defmodule Ecto do
         %{module.assoc_query(refl, nil, values) | prefix: prefix}
 
       assocs ->
-        %{Ecto.Association.filter_through_chain(schema, [assoc | assocs], values) | prefix: prefix}
+        %{
+          Ecto.Association.filter_through_chain(schema, [assoc | assocs], values)
+          | prefix: prefix
+        }
     end
   end
 
@@ -596,10 +603,13 @@ defmodule Ecto do
   """
   def get_meta(struct, :context),
     do: struct.__meta__.context
+
   def get_meta(struct, :state),
     do: struct.__meta__.state
+
   def get_meta(struct, :source),
     do: struct.__meta__.source
+
   def get_meta(struct, :prefix),
     do: struct.__meta__.prefix
 
@@ -615,9 +625,13 @@ defmodule Ecto do
 
   Please refer to the `Ecto.Schema.Metadata` module for more information.
   """
-  @spec put_meta(Ecto.Schema.schema, meta) :: Ecto.Schema.schema
-        when meta: [source: Ecto.Schema.source, prefix: Ecto.Schema.prefix,
-                    context: Ecto.Schema.Metadata.context, state: Ecto.Schema.Metadata.state]
+  @spec put_meta(Ecto.Schema.schema(), meta) :: Ecto.Schema.schema()
+        when meta: [
+               source: Ecto.Schema.source(),
+               prefix: Ecto.Schema.prefix(),
+               context: Ecto.Schema.Metadata.context(),
+               state: Ecto.Schema.Metadata.state()
+             ]
   def put_meta(%{__meta__: meta} = struct, opts) do
     case put_or_noop_meta(opts, meta, false) do
       :noop -> struct
@@ -625,7 +639,7 @@ defmodule Ecto do
     end
   end
 
-  defp put_or_noop_meta([{key, value}|t], meta, updated?) do
+  defp put_or_noop_meta([{key, value} | t], meta, updated?) do
     case meta do
       %{^key => ^value} -> put_or_noop_meta(t, meta, updated?)
       _ -> put_or_noop_meta(t, put_meta(meta, key, value), true)
@@ -639,7 +653,7 @@ defmodule Ecto do
     if state in [:built, :loaded, :deleted] do
       %{meta | state: state}
     else
-      raise ArgumentError, "invalid state #{inspect state}"
+      raise ArgumentError, "invalid state #{inspect(state)}"
     end
   end
 
@@ -656,13 +670,14 @@ defmodule Ecto do
   end
 
   defp put_meta(_meta, key, _value) do
-    raise ArgumentError, "unknown meta key #{inspect key}"
+    raise ArgumentError, "unknown meta key #{inspect(key)}"
   end
 
   defp assert_struct!(module, %{__struct__: struct}) do
     if struct != module do
-      raise ArgumentError, "expected a homogeneous list containing the same struct, " <>
-                           "got: #{inspect module} and #{inspect struct}"
+      raise ArgumentError,
+            "expected a homogeneous list containing the same struct, " <>
+              "got: #{inspect(module)} and #{inspect(struct)}"
     else
       true
     end
@@ -695,12 +710,16 @@ defmodule Ecto do
       [%Setting{...}, ...]
   """
   @spec embedded_load(
-              module_or_map :: module | map(),
-              data :: map(),
-              format :: atom()
-            ) :: Ecto.Schema.t() | map()
+          module_or_map :: module | map(),
+          data :: map(),
+          format :: atom()
+        ) :: Ecto.Schema.t() | map()
   def embedded_load(schema_or_types, data, format) do
-    Ecto.Schema.Loader.unsafe_load(schema_or_types, data, &Ecto.Type.embedded_load(&1, &2, format))
+    Ecto.Schema.Loader.unsafe_load(
+      schema_or_types,
+      data,
+      &Ecto.Type.embedded_load(&1, &2, format)
+    )
   end
 
   @doc """
@@ -715,6 +734,10 @@ defmodule Ecto do
   """
   @spec embedded_dump(Ecto.Schema.t(), format :: atom()) :: map()
   def embedded_dump(%schema{} = data, format) do
-    Ecto.Schema.Loader.safe_dump(data, schema.__schema__(:dump), &Ecto.Type.embedded_dump(&1, &2, format))
+    Ecto.Schema.Loader.safe_dump(
+      data,
+      schema.__schema__(:dump),
+      &Ecto.Type.embedded_dump(&1, &2, format)
+    )
   end
 end
