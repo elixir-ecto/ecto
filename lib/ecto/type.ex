@@ -890,9 +890,6 @@ defmodule Ecto.Type do
   def adapter_load(adapter, {:parameterized, module, params} = type, value) do
     process_loaders(adapter.loaders(module.type(params), type), {:ok, value}, adapter)
   end
-  def adapter_load(_adapter, _type, nil) do
-    {:ok, nil}
-  end
   def adapter_load(adapter, type, value) do
     if of_base_type?(type, value) do
       {:ok, value}
@@ -913,9 +910,6 @@ defmodule Ecto.Type do
   @doc false
   def adapter_dump(adapter, {:parameterized, module, params} = type, value) do
     process_dumpers(adapter.dumpers(module.type(params), type), {:ok, value}, adapter)
-  end
-  def adapter_dump(_adapter, type, nil) do
-    dump(type, nil)
   end
   def adapter_dump(adapter, type, value) do
     process_dumpers(adapter.dumpers(type(type), type), {:ok, value}, adapter)
