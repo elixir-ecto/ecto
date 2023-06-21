@@ -471,7 +471,7 @@ defmodule Ecto.Changeset.Relation do
       end)
 
     if map_size(map) != counter do
-      Logger.warn """
+      log_warn """
       found duplicate primary keys for association/embed `#{inspect(relation.field)}` \
       in `#{inspect(relation.owner)}`. In case of duplicate IDs, only the last entry \
       with the same ID will be kept. Make sure that all entries in `#{inspect(relation.field)}` \
@@ -568,4 +568,11 @@ defmodule Ecto.Changeset.Relation do
     do: cardinality_to_empty(cardinality)
 
   defp not_loaded_to_empty(loaded), do: loaded
+  
+  # TODO: remove once we depend on Elixir 1.11+, which introduces Logger.warning/1.
+  if macro_exported?(Logger, :warning, 1) do
+    defp log_warn(message), do: Logger.warning(message)
+  else
+    defp log_warn(message), do: Logger.warn(message)
+  end
 end

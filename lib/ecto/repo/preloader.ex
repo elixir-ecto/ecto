@@ -205,7 +205,7 @@ defmodule Ecto.Repo.Preloader do
         loaded? = Ecto.assoc_loaded?(value) and not force?
 
         if loaded? and is_nil(id) and not Ecto.Changeset.Relation.empty?(assoc, value) do
-          Logger.warn """
+          log_warn """
           association `#{field}` for `#{inspect(module)}` has a loaded value but \
           its association key `#{owner_key}` is nil. This usually means one of:
 
@@ -601,5 +601,12 @@ defmodule Ecto.Repo.Preloader do
 
   defp filter_and_reraise(exception, stacktrace) do
     reraise exception, Enum.reject(stacktrace, &match?({__MODULE__, _, _, _}, &1))
+  end
+  
+  # TODO: remove once we depend on Elixir 1.11+, which introduces Logger.warning/1.
+  if macro_exported?(Logger, :warning, 1) do
+    defp log_warn(message), do: Logger.warning(message)
+  else
+    defp log_warn(message), do: Logger.warn(message)
   end
 end

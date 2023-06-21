@@ -3151,7 +3151,7 @@ defmodule Ecto.Changeset do
     end)
 
     if is_nil(current) do
-      Logger.warn """
+      log_warn """
       the current value of `#{field}` is `nil` and will not be used as a filter for optimistic locking. \
       To ensure `#{field}` is never `nil`, consider setting a default value.
       """
@@ -3824,6 +3824,13 @@ defmodule Ecto.Changeset do
     |> Enum.reverse()
     |> merge_keyword_keys(msg_func, changeset)
     |> merge_related_keys(changes, types, msg_func, &traverse_validations/2)
+  end
+
+  # TODO: remove once we depend on Elixir 1.11+, which introduces Logger.warning/1.
+  if macro_exported?(Logger, :warning, 1) do
+    defp log_warn(message), do: Logger.warning(message)
+  else
+    defp log_warn(message), do: Logger.warn(message)
   end
 end
 
