@@ -6,6 +6,7 @@ defmodule Ecto.Integration.RepoTest do
 
   alias Ecto.Integration.Post
   alias Ecto.Integration.Order
+  alias Ecto.Integration.Item
   alias Ecto.Integration.User
   alias Ecto.Integration.Comment
   alias Ecto.Integration.Permalink
