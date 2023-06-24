@@ -1503,6 +1503,46 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == [upvotes: {"yada", validation: :number, kind: :greater_than, number: 100}]
   end
 
+  test "validate_number/3 with shorthands" do
+    changeset = changeset(%{"upvotes" => 3})
+                |> validate_number(:upvotes, gt: 0)
+    assert changeset.valid?
+    assert changeset.errors == []
+    assert validations(changeset) == [upvotes: {:number, [gt: 0]}]
+
+    # Single error
+    changeset = changeset(%{"upvotes" => -1})
+                |> validate_number(:upvotes, gt: 0)
+    refute changeset.valid?
+    assert changeset.errors == [upvotes: {"must be greater than %{number}", validation: :number, kind: :gt, number: 0}]
+    assert validations(changeset) == [upvotes: {:number, [gt: 0]}]
+
+    # Non equality error
+    changeset = changeset(%{"upvotes" => 1})
+                |> validate_number(:upvotes, ne: 1)
+    refute changeset.valid?
+    assert changeset.errors == [upvotes: {"must be not equal to %{number}", validation: :number, kind: :ne, number: 1}]
+    assert validations(changeset) == [upvotes: {:number, [ne: 1]}]
+
+    # Multiple validations
+    changeset = changeset(%{"upvotes" => 5})
+                |> validate_number(:upvotes, gt: 0, lt: 10)
+    assert changeset.valid?
+    assert changeset.errors == []
+    assert validations(changeset) == [upvotes: {:number, [gt: 0, lt: 10]}]
+
+    # Multiple validations with multiple errors
+    changeset = changeset(%{"upvotes" => 3})
+                |> validate_number(:upvotes, ge: 100, le: 0)
+    refute changeset.valid?
+    assert changeset.errors == [upvotes: {"must be greater than or equal to %{number}", validation: :number, kind: :ge, number: 100}]
+
+    # Multiple validations with custom message errors
+    changeset = changeset(%{"upvotes" => 3})
+                |> validate_number(:upvotes, ge: 100, le: 0, message: "spruce")
+    assert changeset.errors == [upvotes: {"spruce", validation: :number, kind: :ge, number: 100}]
+  end
+
   test "validate_number/3 with decimal" do
     changeset = changeset(%{"decimal" => Decimal.new(1)})
                 |> validate_number(:decimal, greater_than: Decimal.new(-3))

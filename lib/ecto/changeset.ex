@@ -377,7 +377,7 @@ defmodule Ecto.Changeset do
   @typedoc since: "3.11.0"
   @type empty_value :: (term() -> boolean()) | binary() | list() | map() | tuple()
 
-  @number_validators %{
+  @base_number_validators %{
     less_than: {&</2, "must be less than %{number}"},
     greater_than: {&>/2, "must be greater than %{number}"},
     less_than_or_equal_to: {&<=/2, "must be less than or equal to %{number}"},
@@ -385,6 +385,20 @@ defmodule Ecto.Changeset do
     equal_to: {&==/2, "must be equal to %{number}"},
     not_equal_to: {&!=/2, "must be not equal to %{number}"}
   }
+
+  @number_validator_shorthands %{
+    less_than:                :lt,
+    greater_than:             :gt,
+    less_than_or_equal_to:    :le,
+    greater_than_or_equal_to: :ge,
+    equal_to:                 :eq,
+    not_equal_to:             :ne
+  }
+
+  @number_validators for {long_hand, short_hand} <- @number_validator_shorthands,
+                         validator = @base_number_validators[long_hand],
+                         into: @base_number_validators,
+                         do: {short_hand, validator}
 
   @relations [:embed, :assoc]
   @match_types [:exact, :suffix, :prefix]
@@ -3046,12 +3060,12 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:less_than`
-    * `:greater_than`
-    * `:less_than_or_equal_to`
-    * `:greater_than_or_equal_to`
-    * `:equal_to`
-    * `:not_equal_to`
+    * `:less_than` (or `:lt`)
+    * `:greater_than` (or `:gt`)
+    * `:less_than_or_equal_to` (or `:le`)
+    * `:greater_than_or_equal_to` (or `:ge`)
+    * `:equal_to` (or `:eq`)
+    * `:not_equal_to` (or `:ne`)
     * `:message` - the message on failure, defaults to one of:
       * "must be less than %{number}"
       * "must be greater than %{number}"
@@ -3065,6 +3079,8 @@ defmodule Ecto.Changeset do
       validate_number(changeset, :count, less_than: 3)
       validate_number(changeset, :pi, greater_than: 3, less_than: 4)
       validate_number(changeset, :the_answer_to_life_the_universe_and_everything, equal_to: 42)
+      validate_number(changeset, :pi_with_shorthand, gt: Decimal.new("3.1"), lt: Decimal.new("3.2"))
+      validate_number(changeset, :anything_but_one_hundred, ne: 100)
 
   """
   @spec validate_number(t, atom, Keyword.t()) :: t
@@ -3097,7 +3113,12 @@ defmodule Ecto.Changeset do
 
             :error ->
               supported_options =
-                @number_validators |> Map.keys() |> Enum.map_join("\n", &"  * #{inspect(&1)}")
+                @base_number_validators
+                |> Map.keys()
+                |> Enum.map_join(
+                  "\n",
+                  &"  * #{inspect(&1)} (or #{inspect(@number_validator_shorthands[&1])})"
+                )
 
               raise ArgumentError, """
               unknown option #{inspect(spec_key)} given to validate_number/3
@@ -3159,13 +3180,14 @@ defmodule Ecto.Changeset do
   defp decimal_new(term) when is_float(term), do: Decimal.from_float(term)
   defp decimal_new(term), do: Decimal.new(term)
 
-  defp decimal_compare(:lt, spec), do: spec in [:less_than, :less_than_or_equal_to, :not_equal_to]
+  defp decimal_compare(:lt, spec),
+    do: spec in [:less_than, :less_than_or_equal_to, :not_equal_to, :lt, :le, :ne]
 
   defp decimal_compare(:gt, spec),
-    do: spec in [:greater_than, :greater_than_or_equal_to, :not_equal_to]
+    do: spec in [:greater_than, :greater_than_or_equal_to, :not_equal_to, :gt, :ge, :ne]
 
   defp decimal_compare(:eq, spec),
-    do: spec in [:equal_to, :less_than_or_equal_to, :greater_than_or_equal_to]
+    do: spec in [:equal_to, :less_than_or_equal_to, :greater_than_or_equal_to, :eq, :le, :ge]
 
   @doc """
   Validates that the given parameter matches its confirmation.
