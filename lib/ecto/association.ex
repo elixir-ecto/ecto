@@ -1326,7 +1326,7 @@ defmodule Ecto.Association.ManyToMany do
   @behaviour Ecto.Association
   @on_delete_opts [:nothing, :delete_all]
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
-<<<<<<< Updated upstream
+
   defstruct [
     :field,
     :owner,
@@ -1338,6 +1338,7 @@ defmodule Ecto.Association.ManyToMany do
     :join_keys,
     :join_through,
     :on_cast,
+    :preload_order_source,
     where: [],
     join_where: [],
     defaults: [],
@@ -1346,14 +1347,8 @@ defmodule Ecto.Association.ManyToMany do
     cardinality: :many,
     unique: false,
     ordered: false,
-    preload_order: []
+    preload_order: [],
   ]
-=======
-  defstruct [:field, :owner, :related, :owner_key, :queryable, :on_delete,
-             :on_replace, :join_keys, :join_through, :on_cast, :preload_order_source,
-             where: [], join_where: [], defaults: [], join_defaults: [], relationship: :child,
-             cardinality: :many, unique: false, ordered: false, preload_order: []]
->>>>>>> Stashed changes
 
   @impl true
   def after_compile_validation(%{queryable: queryable, join_through: join_through}, env) do

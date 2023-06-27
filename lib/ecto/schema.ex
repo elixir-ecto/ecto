@@ -2126,7 +2126,6 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :ecto_changeset_fields, {name, {:assoc, struct}})
   end
 
-<<<<<<< Updated upstream
   @valid_many_to_many_options [
     :join_through,
     :join_defaults,
@@ -2137,11 +2136,9 @@ defmodule Ecto.Schema do
     :unique,
     :where,
     :join_where,
-    :preload_order
+    :preload_order,
+    :preload_order_source
   ]
-=======
-  @valid_many_to_many_options [:join_through, :join_defaults, :join_keys, :on_delete, :defaults, :on_replace, :unique, :where, :join_where, :preload_order, :preload_order_source]
->>>>>>> Stashed changes
 
   @doc false
   def __many_to_many__(mod, name, queryable, opts) do
