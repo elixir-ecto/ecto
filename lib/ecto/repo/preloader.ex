@@ -318,7 +318,7 @@ defmodule Ecto.Repo.Preloader do
   defp preload_order(assoc, query, related_field) do
     order_pos =
       case assoc do
-        %{preload_order_source: :join } -> 1
+        %{preload_order_source: :join} -> 1
         _ -> 0
       end
 
