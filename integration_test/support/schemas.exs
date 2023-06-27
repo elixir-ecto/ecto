@@ -58,7 +58,7 @@ defmodule Ecto.Integration.Post do
       join_through: "posts_users", on_delete: :delete_all, on_replace: :delete
     many_to_many :ordered_users, Ecto.Integration.User, join_through: "posts_users", preload_order: [desc: :name]
     many_to_many :ordered_users_by_join, Ecto.Integration.User,
-      join_through: Ecto.Integration.PostUser, preload_order: [desc: :user_id], preload_order_source: :join
+      join_through: "posts_users", preload_order: [desc: :user_id], preload_order_source: :join
     many_to_many :unique_users, Ecto.Integration.User,
       join_through: "posts_users", unique: true
     many_to_many :constraint_users, Ecto.Integration.User,
@@ -134,7 +134,7 @@ defmodule Ecto.Integration.PostUser do
   """
   use Ecto.Integration.Schema
 
-  schema "posts_users" do
+  schema "posts_users_pk" do
     belongs_to :user, Ecto.Integration.User
     belongs_to :post, Ecto.Integration.Post
     timestamps()
