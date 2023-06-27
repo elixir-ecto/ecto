@@ -57,6 +57,8 @@ defmodule Ecto.Integration.Post do
     many_to_many :users, Ecto.Integration.User,
       join_through: "posts_users", on_delete: :delete_all, on_replace: :delete
     many_to_many :ordered_users, Ecto.Integration.User, join_through: "posts_users", preload_order: [desc: :name]
+    many_to_many :ordered_users_by_join, Ecto.Integration.User,
+      join_through: "posts_users", preload_order: [desc: :user_id], preload_order_source: :join
     many_to_many :unique_users, Ecto.Integration.User,
       join_through: "posts_users", unique: true
     many_to_many :constraint_users, Ecto.Integration.User,

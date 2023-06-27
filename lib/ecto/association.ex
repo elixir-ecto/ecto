@@ -533,6 +533,18 @@ defmodule Ecto.Association do
   end
 
   @doc """
+  Validates `preload_order_source` for association named `name`.
+  """
+  def validate_preload_order_source!(_name, order_source) when order_source in [:assoc, :join],
+    do: order_source
+
+  def validate_preload_order_source!(name, order_source) do
+    raise ArgumentError,
+      "expected `:preload_order_source` for #{inspect name} to be `:assoc` or `:join`, " <>
+        "got: `#{inspect order_source}`"
+  end
+
+  @doc """
   Merges source from query into to the given schema.
 
   In case the query does not have a source, returns
@@ -1306,11 +1318,15 @@ defmodule Ecto.Association.ManyToMany do
       for many to many associations
     * `join_defaults` - A list of defaults for join associations
     * `preload_order` - Default `order_by` of the association, used only by preload
+    * `preload_order_source` - The source that `preload_order` is applied to.
+      Either `:assoc` for the association's table or `:join` for the join table.
+      Defaults to `:assoc`
   """
 
   @behaviour Ecto.Association
   @on_delete_opts [:nothing, :delete_all]
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
+<<<<<<< Updated upstream
   defstruct [
     :field,
     :owner,
@@ -1332,6 +1348,12 @@ defmodule Ecto.Association.ManyToMany do
     ordered: false,
     preload_order: []
   ]
+=======
+  defstruct [:field, :owner, :related, :owner_key, :queryable, :on_delete,
+             :on_replace, :join_keys, :join_through, :on_cast, :preload_order_source,
+             where: [], join_where: [], defaults: [], join_defaults: [], relationship: :child,
+             cardinality: :many, unique: false, ordered: false, preload_order: []]
+>>>>>>> Stashed changes
 
   @impl true
   def after_compile_validation(%{queryable: queryable, join_through: join_through}, env) do
@@ -1417,6 +1439,7 @@ defmodule Ecto.Association.ManyToMany do
     defaults = Ecto.Association.validate_defaults!(module, name, opts[:defaults] || [])
     join_defaults = Ecto.Association.validate_defaults!(module, name, opts[:join_defaults] || [])
     preload_order = Ecto.Association.validate_preload_order!(name, opts[:preload_order] || [])
+    preload_order_source = Ecto.Association.validate_preload_order_source!(name, opts[:preload_order_source] || :assoc)
 
     unless is_list(where) do
       raise ArgumentError,
@@ -1448,7 +1471,8 @@ defmodule Ecto.Association.ManyToMany do
       unique: Keyword.get(opts, :unique, false),
       defaults: defaults,
       where: where,
-      preload_order: preload_order
+      preload_order: preload_order,
+      preload_order_source: preload_order_source
     }
   end
 

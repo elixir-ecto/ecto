@@ -316,11 +316,17 @@ defmodule Ecto.Repo.Preloader do
     """
 
   defp preload_order(assoc, query, related_field) do
+    order_pos =
+      case assoc.preload_order_source do
+        :assoc -> 0
+        :join -> 1
+      end
+
     custom_order_by = Enum.map(assoc.preload_order, fn
       {direction, field} ->
-        {direction, related_key_to_field(query, {0, field})}
+        {direction, related_key_to_field(query, {order_pos, field})}
       field ->
-        {:asc, related_key_to_field(query, {0, field})}
+        {:asc, related_key_to_field(query, {order_pos, field})}
     end)
 
     [{:asc, related_field} | custom_order_by]

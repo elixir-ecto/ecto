@@ -1375,6 +1375,10 @@ defmodule Ecto.Schema do
       whenever the `:tags` associations is preloaded, the tags will be order by the `:foo` field.
       See `Ecto.Query.order_by/3` for more examples.
 
+    * `preload_order_source` - The source that `:preload_order` is applied to.
+      Either `:assoc` for the association's table or `:join` for the join table.
+      Defaults to `:assoc`
+
   ## Using Ecto.assoc/2
 
   One of the benefits of using `many_to_many` is that Ecto will avoid
@@ -2122,6 +2126,7 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :ecto_changeset_fields, {name, {:assoc, struct}})
   end
 
+<<<<<<< Updated upstream
   @valid_many_to_many_options [
     :join_through,
     :join_defaults,
@@ -2134,6 +2139,9 @@ defmodule Ecto.Schema do
     :join_where,
     :preload_order
   ]
+=======
+  @valid_many_to_many_options [:join_through, :join_defaults, :join_keys, :on_delete, :defaults, :on_replace, :unique, :where, :join_where, :preload_order, :preload_order_source]
+>>>>>>> Stashed changes
 
   @doc false
   def __many_to_many__(mod, name, queryable, opts) do
