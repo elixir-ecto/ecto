@@ -1347,7 +1347,7 @@ defmodule Ecto.Association.ManyToMany do
     cardinality: :many,
     unique: false,
     ordered: false,
-    preload_order: [],
+    preload_order: []
   ]
 
   @impl true
