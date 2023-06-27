@@ -575,6 +575,7 @@ defmodule Ecto.Integration.PreloadTest do
     assert [%{name: "foo"}, %{name: "bar"}] = post.ordered_users
   end
 
+  @tag :wtf
   test "custom preload_order with ordering by the join table" do
     post1 = TestRepo.insert!(%Post{users: [%User{name: "bar"}, %User{name: "foo"}], title: "1"})
     post2 = TestRepo.insert!(%Post{users: [%User{name: "baz"}, %User{name: "foz"}], title: "2"})
