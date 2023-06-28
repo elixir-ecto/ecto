@@ -3502,7 +3502,10 @@ defmodule Ecto.Changeset do
 
     * `:message` - the message in case the constraint check fails.
       Defaults to "is invalid"
-    * `:name` - the name of the constraint. Required. It can be a string or a `Regex`
+    * `:name` - the constraint name. By default, the constraint
+      name is inferred from the table + field. If this option is given,
+      the `field` argument only indicates the field the error will be
+      added to. May be required explicitly for complex cases
     * `:match` - how the changeset constraint name is matched against the
       repo constraint, may be `:exact`, `:suffix` or `:prefix`. Defaults to
       `:exact`. `:suffix` matches any repo constraint which `ends_with?` `:name`
@@ -3551,8 +3554,9 @@ defmodule Ecto.Changeset do
       defaults to "has already been taken"
 
     * `:name` - the constraint name. By default, the constraint
-      name is inferred from the table + field(s). May be required
-      explicitly for complex cases
+      name is inferred from the table + field. If this option is given,
+      the `field` argument only indicates the field the error will be
+      added to. May be required explicitly for complex cases
 
     * `:match` - how the changeset constraint name is matched against the
       repo constraint, may be `:exact`, `:suffix` or `:prefix`. Defaults to
@@ -3708,8 +3712,9 @@ defmodule Ecto.Changeset do
     * `:message` - the message in case the constraint check fails,
       defaults to "does not exist"
     * `:name` - the constraint name. By default, the constraint
-      name is inferred from the table + field. May be required
-      explicitly for complex cases
+      name is inferred from the table + field. If this option is given,
+      the `field` argument only indicates the field the error will be
+      added to. May be required explicitly for complex cases
     * `:match` - how the changeset constraint name is matched against the
       repo constraint, may be `:exact`, `:suffix` or `:prefix`. Defaults to
       `:exact`. `:suffix` matches any repo constraint which `ends_with?` `:name`
@@ -3756,8 +3761,9 @@ defmodule Ecto.Changeset do
     * `:message` - the message in case the constraint check fails,
       defaults to "does not exist"
     * `:name` - the constraint name. By default, the constraint
-      name is inferred from the table + association field.
-      May be required explicitly for complex cases
+      name is inferred from the table + field. If this option is given,
+      the `field` argument only indicates the field the error will be
+      added to. May be required explicitly for complex cases
     * `:match` - how the changeset constraint name is matched against the
       repo constraint, may be `:exact`, `:suffix` or `:prefix`. Defaults to
       `:exact`. `:suffix` matches any repo constraint which `ends_with?` `:name`
@@ -3814,8 +3820,9 @@ defmodule Ecto.Changeset do
       defaults to "is still associated with this entry" (for `has_one`)
       and "are still associated with this entry" (for `has_many`)
     * `:name` - the constraint name. By default, the constraint
-      name is inferred from the association table + association
-      field. May be required explicitly for complex cases
+      name is inferred from the table + field. If this option is given,
+      the `field` argument only indicates the field the error will be
+      added to. May be required explicitly for complex cases
     * `:match` - how the changeset constraint name is matched against the
       repo constraint, may be `:exact`, `:suffix` or `:prefix`. Defaults to
       `:exact`. `:suffix` matches any repo constraint which `ends_with?` `:name`
@@ -3857,8 +3864,9 @@ defmodule Ecto.Changeset do
     * `:message` - the message in case the constraint check fails,
       defaults to "violates an exclusion constraint"
     * `:name` - the constraint name. By default, the constraint
-      name is inferred from the table + field. May be required
-      explicitly for complex cases
+      name is inferred from the table + field. If this option is given,
+      the `field` argument only indicates the field the error will be
+      added to. May be required explicitly for complex cases
     * `:match` - how the changeset constraint name is matched against the
       repo constraint, may be `:exact`, `:suffix` or `:prefix`. Defaults to
       `:exact`. `:suffix` matches any repo constraint which `ends_with?` `:name`
