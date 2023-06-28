@@ -1783,7 +1783,7 @@ defmodule Ecto.Query.Planner do
 
   @all_exprs [with_cte: :with_ctes, distinct: :distinct, select: :select, from: :from, join: :joins,
               where: :wheres, group_by: :group_bys, having: :havings, windows: :windows,
-              combination: :combinations, order_by: :order_bys, limit: :limit, offset: :offset]
+              combination: :combinations, order_by: :order_bys, limit: :limit, offset: :offset, update: :updates]
 
   # Although joins come before updates in the actual query,
   # the on fields are moved to where, so they effectively
