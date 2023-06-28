@@ -1051,7 +1051,7 @@ defmodule Ecto.Query.Planner do
           # We don't want to use normalize_subquery_select because we are
           # going to prepare the whole query ourselves next.
           {_, _, inner_query} = rewrite_subquery_select_expr(inner_query, true)
-          {inner_query, counter} = traverse_exprs(inner_query, :all, counter, fun)
+          {inner_query, counter} = traverse_exprs(inner_query, :all_cte, counter, fun)
 
           # Now compute the fields as keyword lists so we emit AS in Ecto query.
           %{select: %{expr: expr, take: take, aliases: aliases}} = inner_query
@@ -1783,8 +1783,9 @@ defmodule Ecto.Query.Planner do
 
   @all_exprs [with_cte: :with_ctes, distinct: :distinct, select: :select, from: :from, join: :joins,
               where: :wheres, group_by: :group_bys, having: :havings, windows: :windows,
-              combination: :combinations, order_by: :order_bys, limit: :limit, offset: :offset, update: :updates]
-
+              combination: :combinations, order_by: :order_bys, limit: :limit, offset: :offset]
+  @all_cte_exprs @all_exprs ++ [update: :updates]
+  
   # Although joins come before updates in the actual query,
   # the on fields are moved to where, so they effectively
   # need to come later for MySQL. This means subqueries
@@ -1803,6 +1804,7 @@ defmodule Ecto.Query.Planner do
     exprs =
       case operation do
         :all -> @all_exprs
+        :all_cte -> @all_cte_exprs
         :insert_all -> @all_exprs
         :update_all -> @update_all_exprs
         :delete_all -> @delete_all_exprs
