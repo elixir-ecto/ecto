@@ -1042,6 +1042,7 @@ defmodule Ecto.Query.Planner do
 
   defp validate_and_increment(:with_cte, query, with_expr, counter, _operation, adapter) do
     fun = &validate_and_increment(&1, &2, &3, &4, :all, adapter)
+
     {queries, counter} =
       Enum.reduce with_expr.queries, {[], counter}, fn
         {name, opts, %Ecto.Query{} = inner_query}, {queries, counter} ->
