@@ -103,6 +103,10 @@ defmodule Ecto.Query.Builder.CTE do
   end
 
   @doc false
+  def apply_cte(_with_expr, _name, %{updates: []}, _materialized, :update_all)  do
+    raise("`:update_all` CTEs must contain an update expression")
+  end
+
   def apply_cte(nil, name, with_query, materialized, operation) when is_boolean(materialized) do
     %Ecto.Query.WithExpr{queries: [{name, %{materialized: materialized, operation: operation}, with_query}]}
   end

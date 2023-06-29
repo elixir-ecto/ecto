@@ -113,4 +113,13 @@ defmodule Ecto.Query.Builder.CTETest do
     assert [{"cte", %{}, %Ecto.Query.QueryExpr{expr: expr}}] = query.with_ctes.queries
     assert {:fragment, [], [raw: "query"]} = expr
   end
+
+  test "must specify :updates with :update_all" do
+    msg = ~r"`:update_all` CTEs must contain an update expression"
+
+    assert_raise RuntimeError, msg, fn ->
+      cte_query = from(p in "posts")
+      with_cte(%Ecto.Query{}, "name", as: ^cte_query, operation: :update_all)
+    end
+  end
 end
