@@ -1051,7 +1051,7 @@ defmodule Ecto.Query.Planner do
           # We don't want to use normalize_subquery_select because we are
           # going to prepare the whole query ourselves next.
           {_, _, inner_query} = rewrite_subquery_select_expr(inner_query, true)
-          {inner_query, counter} = traverse_exprs(inner_query, :all, counter, fun)
+          {inner_query, counter} = traverse_exprs(inner_query, opts.operation, counter, fun)
 
           # Now compute the fields as keyword lists so we emit AS in Ecto query.
           %{select: %{expr: expr, take: take, aliases: aliases}} = inner_query
