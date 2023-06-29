@@ -75,6 +75,15 @@ defmodule Ecto.Query.Builder.CTE do
   """
   @spec apply(Ecto.Queryable.t, bitstring, Ecto.Queryable.t, nil | boolean(), nil | :all | :update_all | :delete_all | :insert_all) :: Ecto.Query.t
   # Runtime
+  def apply(query, name, with_query, materialized, nil) do
+    apply(query, name, with_query, materialized, :all)
+  end
+  
+  def apply(_query, _name, _with_query, _materialized, operation) 
+    when operation not in [:all, :update_all, :delete_all, :insert_all] do
+    Builder.error!("`operation` option must be one of :all, :update_all, :delete_all, :insert_all")
+  end
+  
   def apply(%Ecto.Query{with_ctes: with_expr} = query, name, %_{} = with_query, materialized, operation) do
     %{query | with_ctes: apply_cte(with_expr, name, with_query, materialized, operation)}
   end

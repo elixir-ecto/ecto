@@ -1046,19 +1046,12 @@ defmodule Ecto.Query.Planner do
     {queries, counter} =
       Enum.reduce with_expr.queries, {[], counter}, fn
         {name, opts, %Ecto.Query{} = inner_query}, {queries, counter} ->
-          operation = case opts[:operation] do
-            :update_all -> :update_all
-            :delete_all -> :delete_all
-            :insert_all -> :insert_all
-            _ -> :all
-          end
-
           inner_query = put_in(inner_query.aliases[@parent_as], query)
 
           # We don't want to use normalize_subquery_select because we are
           # going to prepare the whole query ourselves next.
           {_, _, inner_query} = rewrite_subquery_select_expr(inner_query, true)
-          {inner_query, counter} = traverse_exprs(inner_query, operation, counter, fun)
+          {inner_query, counter} = traverse_exprs(inner_query, opts[:operation], counter, fun)
 
           # Now compute the fields as keyword lists so we emit AS in Ecto query.
           %{select: %{expr: expr, take: take, aliases: aliases}} = inner_query
@@ -1806,6 +1799,10 @@ defmodule Ecto.Query.Planner do
 
   # Traverse all query components with expressions.
   # Therefore from, preload, assocs and lock are not traversed.
+  defp traverse_exprs(query, nil, acc, fun) do
+    traverse_exprs(query, :all, acc, fun)
+  end
+
   defp traverse_exprs(query, operation, acc, fun) do
     exprs =
       case operation do

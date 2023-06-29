@@ -1473,10 +1473,6 @@ defmodule Ecto.Query do
     if !with_query do
       Builder.error!("`as` option must be specified")
     end
-    
-    unless operation in [nil, :all, :update_all, :delete_all, :insert_all] do
-      Builder.error!("`operation` option must be one of :all, :update_all, :delete_all, :insert_all")
-    end
 
     Builder.CTE.build(query, name, with_query, opts[:materialized], operation, __CALLER__)
   end
