@@ -1364,8 +1364,8 @@ defmodule Ecto.Query do
     * `:materialized` - a boolean indicating whether the CTE should
     be materialized. If blank, the database's default behaviour
     will be used (only supported by Postgrex, for the built-in adapters)
-    * `:operation` - one of `:all`, `:update_all`, `:delete_all`, `:insert_all` 
-    indicating the operation type of the CTE query. If blank, it defaults to `:all`, 
+    * `:operation` - one of `:all`, `:update_all`, or `:delete_all`
+    indicating the operation type of the CTE query. If blank, it defaults to `:all`,
     making the CTE query a SELECT query. (only supported by Postgres built-in adapter)
 
   ## Recursive CTEs
@@ -1433,9 +1433,9 @@ defmodule Ecto.Query do
       from(cte in {"category_tree", Category}, prefix: nil)
       |> recursive_ctes(true)
       |> with_cte("category_tree", as: ^category_tree_query)
-      
+
   For Postgres built-in adapter, it is possible to define data-modifying CTE queries:
-  
+
       update_categories_query =
         Category
         |> where([c], is_nil(c.parent_id))
@@ -1445,12 +1445,12 @@ defmodule Ecto.Query do
       {"update_categories", Category}
       |> with_cte("update_categories", as: ^update_categories_query, operation: :update_all)
       |> select([c], c)
-      
-  Note: In order to retrieve the updates rows from a CTE query, the parent query 
+
+  Note: In order to retrieve the updates rows from a CTE query, the parent query
   must select rows from the CTE table instead of the table referenced by the CTE query.
   For example, `"update_categories"` will return updates rows for `"category"` table, but
   selecting from `"category"` table directly will return unaffected rows.
-  For more details see Postgres documentation on data-modifying CTEs and how these work 
+  For more details see Postgres documentation on data-modifying CTEs and how these work
   with snapshots.
 
   Keyword syntax is not supported for this feature.
