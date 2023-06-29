@@ -35,9 +35,9 @@ defmodule Ecto.Query.Builder.CTE do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t, Macro.t, Macro.t, nil | boolean(), Macro.Env.t) :: Macro.t
-  def build(query, name, cte, materialized, env) do
-    Builder.apply_query(query, __MODULE__, [escape(name, env), build_cte(name, cte, env), materialized], env)
+  @spec build(Macro.t, Macro.t, Macro.t, nil | boolean(), nil | :all | :update_all | :delete_all | :insert_all, Macro.Env.t) :: Macro.t
+  def build(query, name, cte, materialized, operation, env) do
+    Builder.apply_query(query, __MODULE__, [escape(name, env), build_cte(name, cte, env), materialized, operation], env)
   end
 
   @spec build_cte(Macro.t, Macro.t, Macro.Env.t) :: Macro.t
@@ -73,40 +73,40 @@ defmodule Ecto.Query.Builder.CTE do
   @doc """
   The callback applied by `build/4` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, bitstring, Ecto.Queryable.t, nil | boolean()) :: Ecto.Query.t
+  @spec apply(Ecto.Queryable.t, bitstring, Ecto.Queryable.t, nil | boolean(), nil | :all | :update_all | :delete_all | :insert_all) :: Ecto.Query.t
   # Runtime
-  def apply(%Ecto.Query{with_ctes: with_expr} = query, name, %_{} = with_query, materialized) do
-    %{query | with_ctes: apply_cte(with_expr, name, with_query, materialized)}
+  def apply(%Ecto.Query{with_ctes: with_expr} = query, name, %_{} = with_query, materialized, operation) do
+    %{query | with_ctes: apply_cte(with_expr, name, with_query, materialized, operation)}
   end
 
   # Compile
-  def apply(%Ecto.Query{with_ctes: with_expr} = query, name, with_query, materialized) do
+  def apply(%Ecto.Query{with_ctes: with_expr} = query, name, with_query, materialized, operation) do
     update = quote do
-      Ecto.Query.Builder.CTE.apply_cte(unquote(with_expr), unquote(name), unquote(with_query), unquote(materialized))
+      Ecto.Query.Builder.CTE.apply_cte(unquote(with_expr), unquote(name), unquote(with_query), unquote(materialized), unquote(operation))
     end
 
     %{query | with_ctes: update}
   end
 
   # Runtime catch-all
-  def apply(query, name, with_query, materialized) do
-    apply(Ecto.Queryable.to_query(query), name, with_query, materialized)
+  def apply(query, name, with_query, materialized, operation) do
+    apply(Ecto.Queryable.to_query(query), name, with_query, materialized, operation)
   end
 
   @doc false
-  def apply_cte(nil, name, with_query, materialized) when is_boolean(materialized) do
-    %Ecto.Query.WithExpr{queries: [{name, %{materialized: materialized}, with_query}]}
+  def apply_cte(nil, name, with_query, materialized, operation) when is_boolean(materialized) do
+    %Ecto.Query.WithExpr{queries: [{name, %{materialized: materialized, operation: operation}, with_query}]}
   end
 
-  def apply_cte(nil, name, with_query, _materialized)  do
-    %Ecto.Query.WithExpr{queries: [{name, %{}, with_query}]}
+  def apply_cte(nil, name, with_query, _materialized, operation)  do
+    %Ecto.Query.WithExpr{queries: [{name, %{operation: operation}, with_query}]}
   end
 
-  def apply_cte(%Ecto.Query.WithExpr{queries: queries} = with_expr, name, with_query, materialized) when is_boolean(materialized) do
-    %{with_expr | queries:  List.keystore(queries, name, 0, {name, %{materialized: materialized}, with_query})}
+  def apply_cte(%Ecto.Query.WithExpr{queries: queries} = with_expr, name, with_query, materialized, operation) when is_boolean(materialized) do
+    %{with_expr | queries:  List.keystore(queries, name, 0, {name, %{materialized: materialized, operation: operation}, with_query})}
   end
 
-  def apply_cte(%Ecto.Query.WithExpr{queries: queries} = with_expr, name, with_query, _materialized) do
-    %{with_expr | queries:  List.keystore(queries, name, 0, {name, %{}, with_query})}
+  def apply_cte(%Ecto.Query.WithExpr{queries: queries} = with_expr, name, with_query, _materialized, operation) do
+    %{with_expr | queries:  List.keystore(queries, name, 0, {name, %{operation: operation}, with_query})}
   end
 end
