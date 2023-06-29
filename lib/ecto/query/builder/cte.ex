@@ -35,7 +35,7 @@ defmodule Ecto.Query.Builder.CTE do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t, Macro.t, Macro.t, nil | boolean(), nil | :all | :update_all | :delete_all | :insert_all, Macro.Env.t) :: Macro.t
+  @spec build(Macro.t, Macro.t, Macro.t, nil | boolean(), nil | :all | :update_all | :delete_all , Macro.Env.t) :: Macro.t
   def build(query, name, cte, materialized, operation, env) do
     Builder.apply_query(query, __MODULE__, [escape(name, env), build_cte(name, cte, env), materialized, operation], env)
   end
@@ -73,17 +73,17 @@ defmodule Ecto.Query.Builder.CTE do
   @doc """
   The callback applied by `build/4` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, bitstring, Ecto.Queryable.t, nil | boolean(), nil | :all | :update_all | :delete_all | :insert_all) :: Ecto.Query.t
+  @spec apply(Ecto.Queryable.t, bitstring, Ecto.Queryable.t, nil | boolean(), nil | :all | :update_all | :delete_all) :: Ecto.Query.t
   # Runtime
   def apply(query, name, with_query, materialized, nil) do
     apply(query, name, with_query, materialized, :all)
   end
-  
-  def apply(_query, _name, _with_query, _materialized, operation) 
-    when operation not in [:all, :update_all, :delete_all, :insert_all] do
-    Builder.error!("`operation` option must be one of :all, :update_all, :delete_all, :insert_all")
+
+  def apply(_query, _name, _with_query, _materialized, operation)
+    when operation not in [:all, :update_all, :delete_all] do
+    Builder.error!("`operation` option must be one of :all, :update_all, or :delete_all")
   end
-  
+
   def apply(%Ecto.Query{with_ctes: with_expr} = query, name, %_{} = with_query, materialized, operation) do
     %{query | with_ctes: apply_cte(with_expr, name, with_query, materialized, operation)}
   end

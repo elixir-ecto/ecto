@@ -757,11 +757,11 @@ defmodule Ecto.Query.Planner do
     Enum.reduce queries, cache_and_params, fn
       {name, opts, %Ecto.Query{} = query}, {cache, params} ->
         {_, params, inner_cache} = traverse_cache(query, :all, {[], params}, adapter)
-        {merge_cache({key, name, opts[:materialized], inner_cache}, cache, inner_cache != :nocache), params}
+        {merge_cache({key, name, opts[:materialized], opts[:operation], inner_cache}, cache, inner_cache != :nocache), params}
 
       {name, opts, %Ecto.Query.QueryExpr{} = query_expr}, {cache, params} ->
         {params, cacheable?} = cast_and_merge_params(:with_cte, query, query_expr, params, adapter)
-        {merge_cache({key, name, opts[:materialized], expr_to_cache(query_expr)}, cache, cacheable?), params}
+        {merge_cache({key, name, opts[:materialized], opts[:operation], expr_to_cache(query_expr)}, cache, cacheable?), params}
     end
   end
 
