@@ -6,6 +6,17 @@
 
   * Adapters now receive `nil` for encoding/decoding
 
+## v3.10.3 (2023-07-07)
+
+### Enhancements
+
+  * [Ecto.Query] Allow dynamic `field/2` in `type/2`
+
+### Bug fixes
+
+  * [Ecto.Changesets] Limit the largest integer to less than 32 digits
+  * [Ecto.Type] Limit the largest integer to less than 32 digits
+
 ## v3.10.2 (2023-06-07)
 
 ### Enhancements
@@ -69,6 +80,17 @@ Queries have also been improved to support LIMIT WITH TIES as well as materializ
   * [Ecto.Changeset] Raise when change provided to `validate_format/4` is not a string
   * [Ecto.Query] Fix bug in `json_extract_path` where maps were not allowed to be nested inside of embeds
   * [Ecto.Schema] Allow inline embeds to overwrite conflicting aliases
+
+## v3.9.6 (2023-07-07)
+
+### Enhancements
+
+  * [Ecto.Query] Allow dynamic `field/2` in `type/2`
+
+### Bug fixes
+
+  * [Ecto.Changesets] Limit the largest integer to less than 32 digits
+  * [Ecto.Type] Limit the largest integer to less than 32 digits
 
 ## v3.9.5 (2023-03-22)
 
