@@ -1,5 +1,12 @@
 # Changelog for v3.x
 
+## v3.9.6 (2023-07-07)
+
+### Bug fixes
+
+  * [Ecto.Changesets] Limit the largest integer to less than 32 digits
+  * [Ecto.Type] Limit the largest integer to less than 32 digits
+
 ## v3.9.5 (2023-03-22)
 
 ### Bug fixes
