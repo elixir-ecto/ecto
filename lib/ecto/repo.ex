@@ -99,6 +99,11 @@ defmodule Ecto.Repo do
     * `:telemetry_options` - Extra options to attach to telemetry event name.
       See the next section for more information
 
+  ## Adapter-Specific Errors
+
+  Many of the functions in this module may raise adapter-specific errors, such as `PostgrexError`.
+  This can happen, for example, when the underlying database cannot execute the specified query.
+
   ## Telemetry events
 
   There are two types of telemetry events. The ones emitted by Ecto and the
