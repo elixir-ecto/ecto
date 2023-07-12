@@ -2100,7 +2100,7 @@ defmodule Ecto.Repo do
   @callback transaction(fun_or_multi :: fun | Ecto.Multi.t(), opts :: Keyword.t()) ::
               {:ok, any}
               | {:error, any}
-              | {:error, Ecto.Multi.name(), any, %{Ecto.Multi.name() => any}}
+              | Ecto.Multi.failure()
 
   @doc """
   Returns true if the current process is inside a transaction.

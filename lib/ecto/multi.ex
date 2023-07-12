@@ -148,6 +148,14 @@ defmodule Ecto.Multi do
   5}`.
   """
   @type name :: any
+
+  @typedoc """
+  Result of a failed transaction using a Multi.
+  """
+  @type failure ::
+          {:error, failed_operation :: Ecto.Multi.name(), failed_value :: any(),
+           changes_so_far :: %{Ecto.Multi.name() => any}}
+
   @type t :: %__MODULE__{operations: operations, names: names}
 
   @doc """
