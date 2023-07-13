@@ -182,6 +182,7 @@ defmodule Ecto.Query.Builder do
     end
 
     {frags, params_acc} = Enum.map_reduce(frags, params_acc, &escape_fragment(&1, &2, vars, env))
+
     {{:{}, [], [:fragment, [], merge_fragments(pieces, frags)]}, params_acc}
   end
 
@@ -694,8 +695,24 @@ defmodule Ecto.Query.Builder do
     end
   end
 
+  defp escape_fragment({:splice, _meta, [expr]}, params_acc, _vars, _env) do
+    case expr do
+      {:^, _, [expr]} ->
+          checked = quote do: Ecto.Query.Builder.splice!(unquote(expr))
+          escaped = {:{}, [], [:splice, [], [checked]]}
+          {escaped, params_acc}
+
+      _ ->
+        error! "splice/1 in fragment expects an interpolated list, such as splice(^[1, 2, 3]), got `#{Macro.to_string(expr)}`"
+    end
+  end
+
   defp escape_fragment(expr, params_acc, vars, env) do
     escape(expr, :any, params_acc, vars, env)
+  end
+
+  defp merge_fragments([h1|t1], [{:{}, [], [:splice, [], [list]]}|t2]) do
+    quote do: [{:raw, unquote(h1)} | Ecto.Query.Builder.merge_splice(unquote(list), unquote(t1), unquote(t2))]
   end
 
   defp merge_fragments([h1|t1], [h2|t2]),
@@ -703,6 +720,14 @@ defmodule Ecto.Query.Builder do
 
   defp merge_fragments([h1], []),
     do: [{:raw, h1}]
+
+  def merge_splice([h], pieces, frags) do
+    [{:expr, h} | merge_fragments(pieces, frags)]
+  end
+
+  def merge_splice([h|t], pieces, frags) do
+    [{:expr, h}, {:raw, ", ", } | merge_splice(t, pieces, frags)]
+  end
 
   for {agg, arity} <- @dynamic_aggregates do
     defp call_type(unquote(agg), unquote(arity)), do: {:any, :any}
@@ -1081,6 +1106,20 @@ defmodule Ecto.Query.Builder do
     else
       raise ArgumentError,
             "literal(^value) expects `value` to be a string, got `#{inspect(literal)}`"
+    end
+  end
+
+  @doc """
+  Called by escaper at runtime to verify splice in fragments.
+  """
+  def splice!(value) do
+    case value do
+      [_ | _] ->
+        value
+
+      _ ->
+        raise ArgumentError,
+              "splice(^value) expects `value` to be a non-empty list, got `#{inspect(value)}`"
     end
   end
 

@@ -780,10 +780,10 @@ defmodule Ecto.QueryTest do
 
       excluded_left_lateral_query = exclude(left_lateral_query, :left_lateral_join)
       assert excluded_left_lateral_query.joins == base.joins
-      
+
       excluded_array_query = exclude(array_query, :array_join)
       assert excluded_array_query.joins == base.joins
-      
+
       excluded_left_array_query = exclude(left_array_query, :left_array_join)
       assert excluded_left_array_query.joins == base.joins
     end
@@ -868,13 +868,13 @@ defmodule Ecto.QueryTest do
       assert map_size(excluded_left_lateral_join_query.aliases) == original_aliases_number - 1
       refute Map.has_key?(excluded_left_lateral_join_query.aliases, :blogs_ll)
       assert Map.has_key?(excluded_left_lateral_join_query.aliases, :base)
-      
+
       excluded_array_join_query = exclude(query, :array_join)
       assert length(excluded_array_join_query.joins) == original_joins_number - 1
       assert map_size(excluded_array_join_query.aliases) == original_aliases_number - 1
       refute Map.has_key?(excluded_array_join_query.aliases, :blogs_a)
       assert Map.has_key?(excluded_array_join_query.aliases, :base)
-      
+
       excluded_left_array_join_query = exclude(query, :left_array_join)
       assert length(excluded_left_array_join_query.joins) == original_joins_number - 1
       assert map_size(excluded_left_array_join_query.aliases) == original_aliases_number - 1
@@ -989,6 +989,16 @@ defmodule Ecto.QueryTest do
       assert_raise ArgumentError, "literal(^value) expects `value` to be a string, got `123`", fn ->
         from p in "posts", select: fragment("? COLLATE ?", p.name, literal(^123))
       end
+    end
+
+    @tag :splice
+    test "supports list splicing" do
+      a = 2
+      b = 3
+      query = from p in "posts", where: p.id in fragment("(?, ?, ?)", 1, splice(^[a, b, 4]), 5)
+
+      IO.inspect query.wheres
+      IO.inspect query
     end
 
     test "keeps UTF-8 encoding" do
