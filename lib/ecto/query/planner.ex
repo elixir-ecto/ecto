@@ -783,14 +783,6 @@ defmodule Ecto.Query.Planner do
         %Ecto.SubQuery{params: subparams, cache: cache} = Enum.fetch!(expr.subqueries, i)
         {Enum.reverse(subparams, acc), cacheable? and cache != :nocache}
 
-      {{:splice, splice_params}, :any}, {acc, cacheable?} ->
-        Enum.reduce(splice_params, {acc, cacheable?}, fn v, {acc, cacheable?} ->
-          case cast_param(kind, query, expr, v, :any, adapter) do
-            {cast_v, {:in, dump_v}} -> {split_in_params(cast_v, dump_v, acc), false}
-            cast_v_and_dump_v -> {[cast_v_and_dump_v | acc], cacheable?}
-          end
-        end)
-
       {v, type}, {acc, cacheable?} ->
         case cast_param(kind, query, expr, v, type, adapter) do
           {cast_v, {:in, dump_v}} -> {split_in_params(cast_v, dump_v, acc), false}

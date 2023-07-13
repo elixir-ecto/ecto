@@ -695,14 +695,12 @@ defmodule Ecto.Query.Builder do
     end
   end
 
-  defp escape_fragment({:splice, _meta, [expr]}, {params, acc}, _vars, _env) do
+  defp escape_fragment({:splice, _meta, [expr]}, params_acc, _vars, _env) do
     case expr do
       {:^, _, [expr]} ->
           checked = quote do: Ecto.Query.Builder.splice!(unquote(expr))
-          num_spliced = quote do: length(unquote(checked))
-          escaped = {:{}, [], [:splice, [], [length(params), num_spliced]]}
-          params = [{{:splice, checked}, :any} | params]
-          {escaped, {params, acc}}
+          escaped = {:{}, [], [:splice, [], [checked]]}
+          {escaped, params_acc}
 
       _ ->
         error! "splice/1 in fragment expects an interpolated list, such as splice(^[1, 2, 3]), got `#{Macro.to_string(expr)}`"
@@ -713,8 +711,8 @@ defmodule Ecto.Query.Builder do
     escape(expr, :any, params_acc, vars, env)
   end
 
-  defp merge_fragments([h1|t1], [{:{}, [], [:splice, [], [start_ix, num_spliced]]}|t2]) do
-    quote do: [{:raw, unquote(h1)} | Ecto.Query.Builder.merge_splice(unquote(start_ix), unquote(num_spliced), unquote(t1), unquote(t2))]
+  defp merge_fragments([h1|t1], [{:{}, [], [:splice, [], [list]]}|t2]) do
+    quote do: [{:raw, unquote(h1)} | Ecto.Query.Builder.merge_splice(unquote(list), unquote(t1), unquote(t2))]
   end
 
   defp merge_fragments([h1|t1], [h2|t2]),
@@ -723,12 +721,12 @@ defmodule Ecto.Query.Builder do
   defp merge_fragments([h1], []),
     do: [{:raw, h1}]
 
-  def merge_splice(ix, 1, pieces, frags) do
-    [{:expr, {:{}, [], [:^, [], [ix]]}} | merge_fragments(pieces, frags)]
+  def merge_splice([h], pieces, frags) do
+    [{:expr, h} | merge_fragments(pieces, frags)]
   end
 
-  def merge_splice(ix, num_left, pieces, frags) do
-    [{:expr, {:{}, [], [:^, [], [ix]]}}, {:raw, ", ", } | merge_splice(ix + 1, num_left - 1, pieces, frags)]
+  def merge_splice([h|t], pieces, frags) do
+    [{:expr, h}, {:raw, ", ", } | merge_splice(t, pieces, frags)]
   end
 
   for {agg, arity} <- @dynamic_aggregates do

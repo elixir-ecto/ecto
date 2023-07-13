@@ -1539,16 +1539,6 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
-  @tag :splice
-  test "normalize: fragment splice" do
-    a = 2
-    b = 3
-    query = from(p in "posts", where: p.id in fragment("(?, ?, ?)", ^1, splice(^[a, b, 4]), 5), select: p.id) |> normalize()
-
-    IO.inspect query.wheres
-    IO.inspect query
-  end
-
   test "normalize: select with map/2" do
     query = Post |> select([p], map(p, [:id, :title])) |> normalize()
     assert query.select.expr == {:&, [], [0]}
