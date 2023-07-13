@@ -65,6 +65,7 @@ defmodule Ecto.Query.Builder.Filter do
   def build(kind, op, query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
     {expr, {params, acc}} = escape(kind, expr, 0, binding, env)
+
     params = Builder.escape_params(params)
     subqueries = Enum.reverse(acc.subqueries)
 

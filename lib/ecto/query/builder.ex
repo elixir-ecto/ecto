@@ -90,17 +90,9 @@ defmodule Ecto.Query.Builder do
 
   # param interpolation
   def escape({:^, _, [arg]}, type, {params, acc}, _vars, _env) do
-      case params do
-        {:^, [], params} ->
-          expr = {:{}, [], [:^, [], [quote do: length(unquote(params))]]}
-          params = {:^, [], quote do: [{unquote(arg), unquote(type)} | unquote(params)]}
-          {expr, {params, acc}}
-
-        _ ->
-          expr = {:{}, [], [:^, [], [length(params)]]}
-          params = [{arg, type} | params]
-          {expr, {params, acc}}
-      end
+    expr = {:{}, [], [:^, [], [length(params)]]}
+    params = [{arg, type} | params]
+    {expr, {params, acc}}
   end
 
   # tagged types
@@ -703,13 +695,12 @@ defmodule Ecto.Query.Builder do
     end
   end
 
-  defp escape_fragment({:splice, _meta, [expr]}, {params, acc}, _vars, _env) do
+  defp escape_fragment({:splice, _meta, [expr]}, params_acc, _vars, _env) do
     case expr do
       {:^, _, [expr]} ->
           checked = quote do: Ecto.Query.Builder.splice!(unquote(expr))
-          escaped = {:{}, [], [:splice, [], [quote do: [length(unquote(params)), length(unquote(checked))]]]}
-          params = {:^, [], quote do: Enum.reduce(unquote(checked), unquote(params), &[{&1, :any} | &2])}
-          {escaped, {params, acc}}
+          escaped = {:{}, [], [:splice, [], [checked]]}
+          {escaped, params_acc}
 
       _ ->
         error! "splice/1 in fragment expects an interpolated list, such as splice(^[1, 2, 3]), got `#{Macro.to_string(expr)}`"
@@ -720,8 +711,8 @@ defmodule Ecto.Query.Builder do
     escape(expr, :any, params_acc, vars, env)
   end
 
-  defp merge_fragments([h1|t1], [{:{}, [], [:splice, [], [[start_ix, len]]]}|t2]) do
-    quote do: [{:raw, unquote(h1)} | Ecto.Query.Builder.merge_splice(unquote(start_ix), unquote(len), unquote(t1), unquote(t2))]
+  defp merge_fragments([h1|t1], [{:{}, [], [:splice, [], [list]]}|t2]) do
+    quote do: [{:raw, unquote(h1)} | Ecto.Query.Builder.merge_splice(unquote(list), unquote(t1), unquote(t2))]
   end
 
   defp merge_fragments([h1|t1], [h2|t2]),
@@ -730,12 +721,12 @@ defmodule Ecto.Query.Builder do
   defp merge_fragments([h1], []),
     do: [{:raw, h1}]
 
-  def merge_splice(ix, 1, pieces, frags) do
-    [{:expr, {:^, [], [ix]}} | merge_fragments(pieces, frags)]
+  def merge_splice([h], pieces, frags) do
+    [{:expr, h} | merge_fragments(pieces, frags)]
   end
 
-  def merge_splice(ix, num_left, pieces, frags) do
-    [{:expr, {:^, [], [ix]}}, {:raw, ", ", } | merge_splice(ix + 1, num_left - 1, pieces, frags)]
+  def merge_splice([h|t], pieces, frags) do
+    [{:expr, h}, {:raw, ", ", } | merge_splice(t, pieces, frags)]
   end
 
   for {agg, arity} <- @dynamic_aggregates do
@@ -818,7 +809,6 @@ defmodule Ecto.Query.Builder do
   Escape the params entries list.
   """
   @spec escape_params(list()) :: list()
-  def escape_params({:^, [], list}), do: quote do: Enum.reverse(unquote(list))
   def escape_params(list), do: Enum.reverse(list)
 
   @doc """

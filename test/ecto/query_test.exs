@@ -995,7 +995,7 @@ defmodule Ecto.QueryTest do
     test "supports list splicing" do
       a = 2
       b = 3
-      query = from p in "posts", where: p.id in fragment("(?, ?, ?)", ^1, splice(^[a, b, 4]), ^5)
+      query = from p in "posts", where: p.id in fragment("(?, ?, ?)", 1, splice(^[a, b, 4]), 5)
 
       IO.inspect query.wheres
       IO.inspect query
