@@ -259,7 +259,7 @@ defmodule Ecto.Embedded do
       {key, _source, :binary_id} ->
         Map.put_new_lazy(changes, key, fn -> adapter.autogenerate(:embed_id) end)
 
-      {_key, :id} ->
+      {_key, _source, :id} ->
         raise ArgumentError,
               "embedded schema `#{inspect(schema)}` cannot autogenerate `:id` primary keys, " <>
                 "those are typically used for auto-incrementing constraints. " <>
