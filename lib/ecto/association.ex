@@ -996,7 +996,14 @@ defmodule Ecto.Association.Has do
          parent
        ) do
     if value = Map.get(parent, owner_key) do
-      from x in queryable, where: field(x, ^related_key) == ^value
+      query = from x in queryable, where: field(x, ^related_key) == ^value
+
+      parent
+      |> Ecto.get_meta(:prefix)
+      |> case do
+        nil -> query
+        prefix -> Ecto.Query.put_query_prefix(query, prefix)
+      end
     end
   end
 end

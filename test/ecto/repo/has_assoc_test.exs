@@ -41,9 +41,49 @@ defmodule Ecto.Repo.HasAssocTest do
       has_one :assoc, MyAssoc, on_replace: :delete
       has_one :nilify_assoc, MyAssoc, on_replace: :nilify
       has_one :delete_assoc, MyAssoc
+      has_one :on_delete_delete_assoc, MyAssoc, on_delete: :delete_all
+      has_one :on_delete_nilify_assoc, MyAssoc, on_delete: :nilify_all
       has_many :assocs, MyAssoc, on_replace: :delete
       has_many :delete_assocs, MyAssoc
+      has_many :on_delete_delete_assocs, MyAssoc, on_delete: :delete_all
+      has_many :on_delete_nilify_assocs, MyAssoc, on_delete: :nilify_all
     end
+  end
+
+  test "on delete deleting has_one assoc preserves parent schema prefix" do
+    %MySchema{id: 1}
+    |> Ecto.put_meta(prefix: "prefix")
+    |> Ecto.Changeset.change
+    |> TestRepo.delete!()
+
+    assert_received {:delete_all, %{prefix: "prefix", from: %{source: {"my_assoc", _}}}}
+  end
+
+  test "on delete deleting has_many assocs preserves parent schema prefix" do
+    %MySchema{id: 1}
+    |> Ecto.put_meta(prefix: "prefix")
+    |> Ecto.Changeset.change
+    |> TestRepo.delete!()
+
+    assert_received {:delete_all, %{prefix: "prefix", from: %{source: {"my_assoc", _}}}}
+  end
+
+  test "on delete nilifying has_one assoc preserves parent schema prefix" do
+    %MySchema{id: 1}
+    |> Ecto.put_meta(prefix: "prefix")
+    |> Ecto.Changeset.change
+    |> TestRepo.delete!()
+
+    assert_received {:update_all, %{prefix: "prefix", from: %{source: {"my_assoc", _}}}}
+  end
+
+  test "on delete nilifying has_many assocs preserves parent schema prefix" do
+    %MySchema{id: 1}
+    |> Ecto.put_meta(prefix: "prefix")
+    |> Ecto.Changeset.change
+    |> TestRepo.delete!()
+
+    assert_received {:update_all, %{prefix: "prefix", from: %{source: {"my_assoc", _}}}}
   end
 
   test "handles assocs on insert" do
