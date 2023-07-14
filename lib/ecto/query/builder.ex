@@ -182,7 +182,6 @@ defmodule Ecto.Query.Builder do
     end
 
     {frags, params_acc} = Enum.map_reduce(frags, params_acc, &escape_fragment(&1, &2, vars, env))
-
     {{:{}, [], [:fragment, [], merge_fragments(pieces, frags)]}, params_acc}
   end
 
