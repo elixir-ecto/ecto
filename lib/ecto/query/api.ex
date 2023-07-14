@@ -416,10 +416,36 @@ defmodule Ecto.Query.API do
 
   Ecto will then escape it and make it part of the query.
 
+
   > #### Literals and query caching {: .warning}
   >
   > Because literals are made part of the query, each interpolated
   > literal will generate a separate query, with its own cache.
+
+  ## Splicing
+
+  Sometimes you may need to interpolate a variable number of arguments
+  into the same fragment. For example, when overriding Ecto's default
+  `where` behaviour for Postgres:
+
+      from p in Post, where: fragment("? in (?, ?)", p.id, val1, val2)
+
+  The example above will only work if you know the number of arguments
+  upfront. If it can vary, the above will not work.
+
+  You can address this by telling Ecto to splice a list argument into
+  the fragment:
+
+      from p in Post, where: fragment("? in (?)", p.id, splice(^val_list))
+
+  This will let Ecto know it should expand the values of the list into
+  separate fragment arguments. For example:
+
+      from p in Post, where: fragment("? in (?)", p.id, splice(^[1, 2, 3]))
+
+  would be expanded into
+
+      from p in Post, where: fragment("? in (?,?,?)", p.id, ^1, ^2, ^3)
 
   ## Defining custom functions using macros and fragment
 
@@ -452,6 +478,17 @@ defmodule Ecto.Query.API do
 
   """
   def fragment(fragments), do: doc! [fragments]
+
+  @doc """
+    Allows a list argument to be spliced into a fragment.
+
+        from p in Post, where: fragment("? in (?)", p.id, splice(^[1, 2, 3]))
+
+    The example above will be transformed at runtime into the following:
+
+        from p in Post, where: fragment("? in (?,?,?)", p.id, ^1, ^2, ^3)
+  """
+  def splice(list), do: doc! [list]
 
   @doc """
   Allows a field to be dynamically accessed.
