@@ -785,13 +785,14 @@ defmodule Ecto.Query.Planner do
 
       {v, type}, {acc, cacheable?} ->
         case cast_param(kind, query, expr, v, type, adapter) do
-          {cast_v, {:in, dump_v}} -> {split_in_params(cast_v, dump_v, acc), false}
+          {cast_v, {:in, dump_v}} -> {split_variadic_params(cast_v, dump_v, acc), false}
+          {cast_v, {:splice, dump_v}} -> {split_variadic_params(cast_v, dump_v, acc), cacheable?}
           cast_v_and_dump_v -> {[cast_v_and_dump_v | acc], cacheable?}
         end
     end
   end
 
-  defp split_in_params(cast_v, dump_v, acc) do
+  defp split_variadic_params(cast_v, dump_v, acc) do
     Enum.zip(cast_v, dump_v) |> Enum.reverse(acc)
   end
 
@@ -1246,6 +1247,11 @@ defmodule Ecto.Query.Planner do
     end
 
     {{quantifier, meta, [subquery]}, acc}
+  end
+
+  defp prewalk({:splice, splice_meta, [{:^, meta, [_]}, length]}, _kind, _query, _expr, acc, _adapter) do
+    param = {:^, meta, [acc, length]}
+    {{:splice, splice_meta, [param]}, acc + length}
   end
 
   defp prewalk({{:., dot_meta, [left, field]}, meta, []},

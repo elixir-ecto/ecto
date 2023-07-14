@@ -74,8 +74,8 @@ defmodule Ecto.Query.Builder do
   with `^index` in the query where index is a number indexing into the
   map.
   """
-  @spec escape(Macro.t, quoted_type | {:in, quoted_type} | {:out, quoted_type}, {list, acc},
-               Keyword.t, Macro.Env.t | {Macro.Env.t, fun}) :: {Macro.t, {list, acc}}
+  @spec escape(Macro.t, quoted_type | {:in, quoted_type} | {:out, quoted_type} | {:splice, quoted_type},
+               {list, acc}, Keyword.t, Macro.Env.t | {Macro.Env.t, fun}) :: {Macro.t, {list, acc}}
   def escape(expr, type, params_acc, vars, env)
 
   # var.x - where var is bound
@@ -694,6 +694,20 @@ defmodule Ecto.Query.Builder do
     end
   end
 
+  defp escape_fragment({:splice, _meta, [splice]}, params_acc, vars, env) do
+    case splice do
+      {:^, _, [value]} = expr ->
+        checked = quote do: Ecto.Query.Builder.splice!(unquote(value))
+        length = quote do: length(unquote(checked))
+        {expr, params_acc} = escape(expr, {:splice, :any}, params_acc, vars, env)
+        escaped =  {:{}, [], [:splice, [], [expr, length]]}
+        {escaped, params_acc}
+
+      _ ->
+        error! "splice/1 in fragment expects an interpolated value, such as splice(^value), got `#{Macro.to_string(splice)}`"
+    end
+  end
+
   defp escape_fragment(expr, params_acc, vars, env) do
     escape(expr, :any, params_acc, vars, env)
   end
@@ -1081,6 +1095,18 @@ defmodule Ecto.Query.Builder do
     else
       raise ArgumentError,
             "literal(^value) expects `value` to be a string, got `#{inspect(literal)}`"
+    end
+  end
+
+  @doc """
+  Called by escaper at runtime to verify splice in fragments.
+  """
+  def splice!(value) do
+    if is_list(value) do
+      value
+    else
+      raise ArgumentError,
+            "splice(^value) expects `value` to be a list, got `#{inspect(value)}`"
     end
   end
 
