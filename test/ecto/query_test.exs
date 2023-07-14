@@ -1009,6 +1009,10 @@ defmodule Ecto.QueryTest do
                expr: {:^, _, [2]},
                raw: ")"
              ] = parts
+
+      assert_raise ArgumentError, "splice(^value) expects `value` to be a list, got `234`", fn ->
+        from p in "posts", where: p.id in fragment("(?)", splice(^234))
+      end
     end
 
     test "keeps UTF-8 encoding" do
