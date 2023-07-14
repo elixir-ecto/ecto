@@ -416,7 +416,6 @@ defmodule Ecto.Query.API do
 
   Ecto will then escape it and make it part of the query.
 
-
   > #### Literals and query caching {: .warning}
   >
   > Because literals are made part of the query, each interpolated
