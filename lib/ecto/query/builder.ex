@@ -697,11 +697,11 @@ defmodule Ecto.Query.Builder do
   defp escape_fragment({:splice, _meta, [splice]}, params_acc, vars, env) do
     case splice do
       {:^, _, [value]} = expr ->
-          checked = quote do: Ecto.Query.Builder.splice!(unquote(value))
-          length = quote do: length(unquote(checked))
-          {expr, params_acc} = escape(expr, {:splice, :any}, params_acc, vars, env)
-          escaped =  {:{}, [], [:splice, [], [expr, length]]}
-          {escaped, params_acc}
+        checked = quote do: Ecto.Query.Builder.splice!(unquote(value))
+        length = quote do: length(unquote(checked))
+        {expr, params_acc} = escape(expr, {:splice, :any}, params_acc, vars, env)
+        escaped =  {:{}, [], [:splice, [], [expr, length]]}
+        {escaped, params_acc}
 
       _ ->
         error! "splice/1 in fragment expects an interpolated list, such as splice(^[1, 2, 3]), got `#{Macro.to_string(splice)}`"
