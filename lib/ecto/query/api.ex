@@ -479,13 +479,13 @@ defmodule Ecto.Query.API do
   def fragment(fragments), do: doc! [fragments]
 
   @doc """
-    Allows a list argument to be spliced into a fragment.
+  Allows a list argument to be spliced into a fragment.
 
-        from p in Post, where: fragment("? in (?)", p.id, splice(^[1, 2, 3]))
+      from p in Post, where: fragment("? in (?)", p.id, splice(^[1, 2, 3]))
 
-    The example above will be transformed at runtime into the following:
+  The example above will be transformed at runtime into the following:
 
-        from p in Post, where: fragment("? in (?,?,?)", p.id, ^1, ^2, ^3)
+      from p in Post, where: fragment("? in (?,?,?)", p.id, ^1, ^2, ^3)
   """
   def splice(list), do: doc! [list]
 
