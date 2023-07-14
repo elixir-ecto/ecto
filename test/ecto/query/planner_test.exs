@@ -1354,6 +1354,24 @@ defmodule Ecto.Query.PlannerTest do
     assert query.group_bys == []
   end
 
+  test "normalize: fragment with splicing" do
+    two = 2
+    three = 3
+
+    {query, cast_params, dump_params, _} =
+      from(c in Comment)
+      |> where([c], c.id in fragment("(?, ?, ?)", ^1, splice(^[two, three, 4]), ^5))
+      |> normalize_with_params()
+
+    assert cast_params == [1, 2, 3, 4, 5]
+    assert dump_params == [1, 2, 3, 4, 5]
+
+    {:in, _, [_, {:fragment, _, parts}]} = hd(query.wheres).expr
+    assert [_, _, _, {:expr, {:splice, _, [{:^, _, [start_ix, length]}]}}, _, _, _] = parts
+    assert start_ix == 1
+    assert length == 3
+  end
+
   describe "normalize: CTEs" do
     test "single-level" do
       %{with_ctes: with_expr} =

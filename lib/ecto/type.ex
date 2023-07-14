@@ -211,6 +211,7 @@ defmodule Ecto.Type do
     utc_datetime_usec naive_datetime_usec time_usec
   )a
   @composite ~w(array map maybe in param)a
+  @variadic ~w(in splice)a
 
   @doc """
   Returns the underlying schema type for the custom type.
@@ -507,9 +508,9 @@ defmodule Ecto.Type do
     end
   end
 
-  def dump({:in, type}, value, dumper) do
+  def dump({qual, type}, value, dumper) when qual in @variadic do
     case dump({:array, type}, value, dumper) do
-      {:ok, value} -> {:ok, {:in, value}}
+      {:ok, value} -> {:ok, {qual, value}}
       :error -> :error
     end
   end
@@ -795,7 +796,7 @@ defmodule Ecto.Type do
   defp cast_fun(:utc_datetime_usec), do: &maybe_pad_usec(cast_utc_datetime(&1))
   defp cast_fun({:param, :any_datetime}), do: &cast_any_datetime(&1)
   defp cast_fun({:parameterized, mod, params}), do: &mod.cast(&1, params)
-  defp cast_fun({:in, type}), do: cast_fun({:array, type})
+  defp cast_fun({qual, type}) when qual in @variadic, do: cast_fun({:array, type})
 
   defp cast_fun({:array, {:parameterized, _, _} = type}) do
     fun = cast_fun(type)

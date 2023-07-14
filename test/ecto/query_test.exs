@@ -991,14 +991,24 @@ defmodule Ecto.QueryTest do
       end
     end
 
-    @tag :splice
     test "supports list splicing" do
-      a = 2
-      b = 3
-      query = from p in "posts", where: p.id in fragment("(?, ?, ?)", 1, splice(^[a, b, 4]), 5)
+      two = 2
+      three = 3
 
-      IO.inspect query.wheres
-      IO.inspect query
+      query =
+        from p in "posts", where: p.id in fragment("(?, ?, ?)", ^1, splice(^[two, three, 4]), ^5)
+
+      assert {:in, _, [_, {:fragment, _, parts}]} = hd(query.wheres).expr
+
+      assert [
+               raw: "(",
+               expr: {:^, _, [0]},
+               raw: ", ",
+               expr: {:splice, _, [{:^, _, [1]}]},
+               raw: ", ",
+               expr: {:^, _, [2]},
+               raw: ")"
+             ] = parts
     end
 
     test "keeps UTF-8 encoding" do
