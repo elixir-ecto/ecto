@@ -1004,7 +1004,7 @@ defmodule Ecto.QueryTest do
                raw: "(",
                expr: {:^, _, [0]},
                raw: ", ",
-               expr: {:splice, _, [{:^, _, [1]}]},
+               expr: {:splice, _, [{:^, _, [1]}, 3]},
                raw: ", ",
                expr: {:^, _, [2]},
                raw: ")"

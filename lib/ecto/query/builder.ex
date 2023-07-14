@@ -694,15 +694,17 @@ defmodule Ecto.Query.Builder do
     end
   end
 
-  defp escape_fragment({:splice, _meta, [spliced]}, params_acc, vars, env) do
-    case spliced do
-      {:^, _, [_]} = expr ->
+  defp escape_fragment({:splice, _meta, [splice]}, params_acc, vars, env) do
+    case splice do
+      {:^, _, [value]} = expr ->
+          checked = quote do: Ecto.Query.Builder.splice!(unquote(value))
+          length = quote do: length(unquote(checked))
           {expr, params_acc} = escape(expr, {:splice, :any}, params_acc, vars, env)
-          escaped =  {:{}, [], [:splice, [], [expr]]}
+          escaped =  {:{}, [], [:splice, [], [expr, length]]}
           {escaped, params_acc}
 
       _ ->
-        error! "splice/1 in fragment expects an interpolated list, such as splice(^[1, 2, 3]), got `#{Macro.to_string(spliced)}`"
+        error! "splice/1 in fragment expects an interpolated list, such as splice(^[1, 2, 3]), got `#{Macro.to_string(splice)}`"
     end
   end
 
@@ -1093,6 +1095,18 @@ defmodule Ecto.Query.Builder do
     else
       raise ArgumentError,
             "literal(^value) expects `value` to be a string, got `#{inspect(literal)}`"
+    end
+  end
+
+  @doc """
+  Called by escaper at runtime to verify splice in fragments.
+  """
+  def splice!(value) do
+    if is_list(value) do
+      value
+    else
+      raise ArgumentError,
+            "splice(^value) expects `value` to be a list, got `#{inspect(value)}`"
     end
   end
 

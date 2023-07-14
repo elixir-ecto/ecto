@@ -10,7 +10,6 @@ defmodule Ecto.Query.Planner do
 
   @parent_as __MODULE__
   @aggs ~w(count avg min max sum row_number rank dense_rank percent_rank cume_dist ntile lag lead first_value last_value nth_value)a
-  @variadic ~w(in splice)a
 
   @doc """
   Converts a query to a list of joins.
@@ -786,7 +785,8 @@ defmodule Ecto.Query.Planner do
 
       {v, type}, {acc, cacheable?} ->
         case cast_param(kind, query, expr, v, type, adapter) do
-          {cast_v, {qual, dump_v}} when qual in @variadic -> {split_variadic_params(cast_v, dump_v, acc), false}
+          {cast_v, {:in, dump_v}} -> {split_variadic_params(cast_v, dump_v, acc), false}
+          {cast_v, {:splice, dump_v}} -> {split_variadic_params(cast_v, dump_v, acc), cacheable?}
           cast_v_and_dump_v -> {[cast_v_and_dump_v | acc], cacheable?}
         end
     end
@@ -1249,10 +1249,9 @@ defmodule Ecto.Query.Planner do
     {{quantifier, meta, [subquery]}, acc}
   end
 
-  defp prewalk({:splice, in_meta, [{:^, meta, [param]}]}, _kind, _query, expr, acc, _adapter) do
-    {v, _t} = Enum.fetch!(expr.params, param)
-    length = length(v)
-    {{:splice, in_meta, [{:^, meta, [acc, length]}]}, acc + length}
+  defp prewalk({:splice, splice_meta, [{:^, meta, [_]}, length]}, _kind, _query, _expr, acc, _adapter) do
+    param = {:^, meta, [acc, length]}
+    {{:splice, splice_meta, [param]}, acc + length}
   end
 
   defp prewalk({{:., dot_meta, [left, field]}, meta, []},
