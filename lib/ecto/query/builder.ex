@@ -704,7 +704,7 @@ defmodule Ecto.Query.Builder do
         {escaped, params_acc}
 
       _ ->
-        error! "splice/1 in fragment expects an interpolated list, such as splice(^[1, 2, 3]), got `#{Macro.to_string(splice)}`"
+        error! "splice/1 in fragment expects an interpolated value, such as splice(^value), got `#{Macro.to_string(splice)}`"
     end
   end
 
