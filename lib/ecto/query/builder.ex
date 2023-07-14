@@ -699,8 +699,8 @@ defmodule Ecto.Query.Builder do
     case spliced do
       {:^, _, [_]} = expr ->
           {expr, params_acc} = escape(expr, {:splice, :any}, params_acc, vars, env)
-          escaped_splice =  {:{}, [], [:splice, [], [expr]]}
-          {escaped_splice, params_acc}
+          escaped =  {:{}, [], [:splice, [], [expr]]}
+          {escaped, params_acc}
 
       _ ->
         error! "splice/1 in fragment expects an interpolated list, such as splice(^[1, 2, 3]), got `#{Macro.to_string(spliced)}`"
