@@ -163,6 +163,31 @@ defmodule Ecto.Repo.EmbeddedTest do
     assert errors == %{embeds: [%{}, %{id: ["has already been taken"]}]}
   end
 
+  test "raise when trying to autogenerate embed primary keys with type `:id`" do
+    defmodule EmbedWithPrimaryKeyTypeId do
+      use Ecto.Schema
+
+      @primary_key {:id, :id, autogenerate: true}
+      embedded_schema do
+      end
+    end
+
+    defmodule SchemaWithPrimaryKeyTypeIdEmbed do
+      use Ecto.Schema
+
+      schema "" do
+        embeds_one :embed, EmbedWithPrimaryKeyTypeId
+      end
+    end
+
+    embed = struct(EmbedWithPrimaryKeyTypeId)
+    schema = struct(SchemaWithPrimaryKeyTypeIdEmbed, embed: embed)
+
+    assert_raise ArgumentError, ~r/cannot autogenerate `:id` primary keys/, fn ->
+      TestRepo.insert!(schema)
+    end
+  end
+
   ## update
 
   test "skips embeds on update when not changing" do
