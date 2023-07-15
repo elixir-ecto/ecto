@@ -324,7 +324,7 @@ defmodule Ecto.Repo.Preloader do
           unless Ecto.Query.Builder.OrderBy.valid_direction?(direction) do
             raise ArgumentError,
                   "`:preload_order` must specify valid directions, " <>
-                    "got: #{inspect(preload_order)}, `#{inspect(direction)}` is not a valid direction"
+                    "got: `#{inspect(preload_order)}`, `#{inspect(direction)}` is not a valid direction"
           end
 
           {direction, dynamic_to_field(query, dynamic)}
@@ -341,7 +341,7 @@ defmodule Ecto.Repo.Preloader do
         other ->
           raise ArgumentError,
                 "`:preload_order` must resolve to a keyword list or a list of atoms/fields, " <>
-                  "got: #{inspect(preload_order)}, `#{inspect(other)}` is not valid"
+                  "got: `#{inspect(preload_order)}`, `#{inspect(other)}` is not valid"
       end)
 
     [{:asc, related_field} | custom_order_by]
@@ -357,7 +357,7 @@ defmodule Ecto.Repo.Preloader do
       other ->
         raise ArgumentError,
               "`:preload_order` must resolve to a keyword list or a list of atoms/fields, " <>
-                "got: #{inspect(other)}"
+                "got: `#{inspect(other)}`"
     end
   end
 
@@ -366,7 +366,7 @@ defmodule Ecto.Repo.Preloader do
       raise ArgumentError,
             """
             dynamic expressions inside `:preload_order` must have the correct number of bindings,
-            got: #{inspect(dynamic)} for query:
+            got: `#{inspect(dynamic)}` for query:
 
             #{Inspect.Ecto.Query.to_string(query)}
             """
@@ -381,7 +381,7 @@ defmodule Ecto.Repo.Preloader do
       _ ->
         raise ArgumentError,
               "dynamic expressions inside `:preload_order` must resolve to a field, " <>
-                "got: #{inspect(dynamic)}"
+                "got: `#{inspect(dynamic)}`"
     end
   end
 
