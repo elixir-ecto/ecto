@@ -524,16 +524,16 @@ defmodule Ecto.Association do
 
       item ->
         raise ArgumentError,
-              "expected `:preload_order` for #{inspect(name)} to be a keyword list, a list of atoms/fields, " <>
-                "or a {module, fun, args} tuple, got: `#{inspect(preload_order)}`, " <>
+              "expected `:preload_order` for #{inspect(name)} to be a keyword list or a list of atoms/fields, " <>
+                "got: `#{inspect(preload_order)}`, " <>
                 "`#{inspect(item)}` is not valid"
     end)
   end
 
   def validate_preload_order!(name, preload_order) do
     raise ArgumentError,
-          "expected `:preload_order` for #{inspect(name)} to be a keyword list or a list of atoms/fields, " <>
-            "got: `#{inspect(preload_order)}`"
+          "expected `:preload_order` for #{inspect(name)} to be a keyword list, a list of atoms/fields " <>
+            "or a {Mod, fun, args} tuple, got: `#{inspect(preload_order)}`"
   end
 
   @doc """
