@@ -1371,14 +1371,13 @@ defmodule Ecto.Schema do
 
     * `:preload_order` - Sets the default `order_by` when preloading the association.
       It may either be a keyword list/list of fields (see `Ecto.Query.order_by/3`) or
-      a MFA tuple that returns a keyword list/list of fields. If specifying a keyword
-      list, the ordering applies to the association's table and not the join table.
-      Ordering by the join table can be achieved by specifying a MFA tuple that utilizes
-      `Ecto.Query.dynamic/2`. For example, you may create a function that returns the
-      following: `[desc: dynamic([assoc, join], join.updated_at)]`. Please note the ordering
-      of the bindings: the association always comes first and then the join table. If you
-      specify a custom preload query, the bindings for that query come first and then the
-      binding for the join table.
+      a MFA tuple, such as `{Mod, fun, []}`. If specifying a keyword list/list of fields,
+      the ordering applies to the association's table and not the join table. Ordering by
+      the join table can be achieved by specifying a MFA tuple that utilizes
+      `Ecto.Query.dynamic/2`. For example, you may specify `{Mod, fun, []}` where `Mod.fun()`
+      returns `[desc: dynamic([assoc, join], join.updated_at)]`. Please note the ordering of
+      the bindings: the association come before the join table. If you specify a custom preload
+      query, the bindings for that query come before the join table.
 
   ## Using Ecto.assoc/2
 
