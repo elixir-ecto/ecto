@@ -1376,7 +1376,7 @@ defmodule Ecto.Schema do
       the join table can be achieved by specifying a MFA tuple that utilizes
       `Ecto.Query.dynamic/2`. For example, you may specify `{Mod, fun, []}` where `Mod.fun()`
       returns `[desc: dynamic([assoc, join], join.updated_at)]`. Please note the ordering of
-      the bindings: the association come before the join table. If you specify a custom preload
+      the bindings: the association comes before the join table. If you specify a custom preload
       query, the bindings for that query come before the join table.
 
   ## Using Ecto.assoc/2
