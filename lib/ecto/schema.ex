@@ -1378,7 +1378,7 @@ defmodule Ecto.Schema do
       following: `[desc: dynamic([assoc, join], join.updated_at)]`. Please note the ordering
       of the bindings: the association always comes first and then the join table. If you
       specify a custom preload query, the bindings for that query come first and then the
-      binding for a join table.
+      binding for the join table.
 
   ## Using Ecto.assoc/2
 
