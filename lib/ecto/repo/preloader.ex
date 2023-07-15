@@ -316,20 +316,73 @@ defmodule Ecto.Repo.Preloader do
     """
 
   defp preload_order(assoc, query, related_field) do
-    order_pos =
-      case assoc do
-        %{preload_order_source: :join} -> 1
-        _ -> 0
-      end
+    preload_order = resolve_preload_order(assoc.preload_order)
 
-    custom_order_by = Enum.map(assoc.preload_order, fn
-      {direction, field} ->
-        {direction, related_key_to_field(query, {order_pos, field})}
-      field ->
-        {:asc, related_key_to_field(query, {order_pos, field})}
-    end)
+    custom_order_by =
+      Enum.map(preload_order, fn
+        {direction, %Ecto.Query.DynamicExpr{} = dynamic} ->
+          unless Ecto.Query.Builder.OrderBy.valid_direction?(direction) do
+            raise ArgumentError,
+                  "`:preload_order` must specify valid directions, " <>
+                    "got: #{inspect(preload_order)}, `#{inspect(direction)}` is not a valid direction"
+          end
+
+          {direction, dynamic_to_field(query, dynamic)}
+
+        {direction, field} ->
+          {direction, related_key_to_field(query, {0, field})}
+
+        %Ecto.Query.DynamicExpr{} = dynamic ->
+          {:asc, dynamic_to_field(query, dynamic)}
+
+        field when is_atom(field) ->
+          {:asc, related_key_to_field(query, {0, field})}
+
+        other ->
+          raise ArgumentError,
+                "`:preload_order` must resolve to a keyword list or a list of atoms/fields, " <>
+                  "got: #{inspect(preload_order)}, `#{inspect(other)}` is not valid"
+      end)
 
     [{:asc, related_field} | custom_order_by]
+  end
+
+  defp resolve_preload_order(order) when is_list(order), do: order
+
+  defp resolve_preload_order({m, f, a}) do
+    case apply(m, f, a) do
+      order when is_list(order) ->
+        order
+
+      other ->
+        raise ArgumentError,
+              "`:preload_order` must resolve to a keyword list or a list of atoms/fields, " <>
+                "got: #{inspect(other)}"
+    end
+  end
+
+  defp dynamic_to_field(query, dynamic) do
+    unless length(dynamic.binding) == Ecto.Query.Builder.count_binds(query) do
+      raise ArgumentError,
+            """
+            dynamic expressions inside `:preload_order` must have the correct number of bindings,
+            got: #{inspect(dynamic)} for query:
+
+            #{Inspect.Ecto.Query.to_string(query)}
+            """
+    end
+
+    {expr, _, _, _, _, _} = Ecto.Query.Builder.Dynamic.fully_expand(%Ecto.Query{}, dynamic)
+
+    case expr do
+      {{:., _, [{:&, _, [_ix]}, _field]}, [], []} = field_ast ->
+        field_ast
+
+      _ ->
+        raise ArgumentError,
+              "dynamic expressions inside `:preload_order` must resolve to a field, " <>
+                "got: #{inspect(dynamic)}"
+    end
   end
 
   defp related_key_to_field(query, {pos, key, field_type}) do

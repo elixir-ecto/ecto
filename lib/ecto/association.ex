@@ -503,6 +503,10 @@ defmodule Ecto.Association do
   @doc """
   Validates `preload_order` for association named `name`.
   """
+  def validate_preload_order!(_name, {mod, fun, args} = preload_order)
+      when is_atom(mod) and is_atom(fun) and is_list(args),
+      do: preload_order
+
   def validate_preload_order!(name, preload_order) when is_list(preload_order) do
     Enum.map(preload_order, fn
       field when is_atom(field) ->
@@ -520,8 +524,8 @@ defmodule Ecto.Association do
 
       item ->
         raise ArgumentError,
-              "expected `:preload_order` for #{inspect(name)} to be a keyword list or a list of atoms/fields, " <>
-                "got: `#{inspect(preload_order)}`, " <>
+              "expected `:preload_order` for #{inspect(name)} to be a keyword list, a list of atoms/fields, " <>
+                "or a {module, fun, args} tuple, got: `#{inspect(preload_order)}`, " <>
                 "`#{inspect(item)}` is not valid"
     end)
   end
@@ -530,18 +534,6 @@ defmodule Ecto.Association do
     raise ArgumentError,
           "expected `:preload_order` for #{inspect(name)} to be a keyword list or a list of atoms/fields, " <>
             "got: `#{inspect(preload_order)}`"
-  end
-
-  @doc """
-  Validates `preload_order_source` for association named `name`.
-  """
-  def validate_preload_order_source!(_name, order_source) when order_source in [:assoc, :join],
-    do: order_source
-
-  def validate_preload_order_source!(name, order_source) do
-    raise ArgumentError,
-      "expected `:preload_order_source` for #{inspect name} to be `:assoc` or `:join`, " <>
-        "got: `#{inspect order_source}`"
   end
 
   @doc """
@@ -1318,9 +1310,6 @@ defmodule Ecto.Association.ManyToMany do
       for many to many associations
     * `join_defaults` - A list of defaults for join associations
     * `preload_order` - Default `order_by` of the association, used only by preload
-    * `preload_order_source` - The source that `preload_order` is applied to.
-      Either `:assoc` for the association's table or `:join` for the join table.
-      Defaults to `:assoc`
   """
 
   @behaviour Ecto.Association
@@ -1338,7 +1327,6 @@ defmodule Ecto.Association.ManyToMany do
     :join_keys,
     :join_through,
     :on_cast,
-    :preload_order_source,
     where: [],
     join_where: [],
     defaults: [],
@@ -1434,7 +1422,6 @@ defmodule Ecto.Association.ManyToMany do
     defaults = Ecto.Association.validate_defaults!(module, name, opts[:defaults] || [])
     join_defaults = Ecto.Association.validate_defaults!(module, name, opts[:join_defaults] || [])
     preload_order = Ecto.Association.validate_preload_order!(name, opts[:preload_order] || [])
-    preload_order_source = Ecto.Association.validate_preload_order_source!(name, opts[:preload_order_source] || :assoc)
 
     unless is_list(where) do
       raise ArgumentError,
@@ -1466,8 +1453,7 @@ defmodule Ecto.Association.ManyToMany do
       unique: Keyword.get(opts, :unique, false),
       defaults: defaults,
       where: where,
-      preload_order: preload_order,
-      preload_order_source: preload_order_source
+      preload_order: preload_order
     }
   end
 

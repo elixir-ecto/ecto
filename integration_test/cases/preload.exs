@@ -575,14 +575,14 @@ defmodule Ecto.Integration.PreloadTest do
     assert [%{name: "foo"}, %{name: "bar"}] = post.ordered_users
   end
 
-  test "custom preload_order with ordering by the join table" do
-    post1 = TestRepo.insert!(%Post{users: [%User{name: "bar"}, %User{name: "foo"}], title: "1"})
-    post2 = TestRepo.insert!(%Post{users: [%User{name: "baz"}, %User{name: "foz"}], title: "2"})
+  test "custom preload_order with mfa" do
+    post1 = TestRepo.insert!(%Post{users: [%User{id: 1, name: "bar"}, %User{id: 2, name: "foo"}], title: "1"})
+    post2 = TestRepo.insert!(%Post{users: [%User{id: 4, name: "baz"}, %User{id: 3, name: "foz"}], title: "2"})
 
-    [post1, post2] = TestRepo.preload([post1, post2], [:ordered_users_by_join], log: :error)
+    [post1, post2] = TestRepo.preload([post1, post2], [:ordered_users_by_join_table], log: :error)
 
-    assert [%{name: "foo"}, %{name: "bar"}] = post1.ordered_users_by_join
-    assert [%{name: "foz"}, %{name: "baz"}] = post2.ordered_users_by_join
+    assert [%{id: 2}, %{id: 1}] = post1.ordered_users_by_join_table
+    assert [%{id: 4}, %{id: 3}] = post2.ordered_users_by_join_table
   end
 
   ## Others

@@ -1369,15 +1369,16 @@ defmodule Ecto.Schema do
     * `:join_where` - A filter for the join table. See "Filtering associations"
       in `has_many/3`
 
-    * `:preload_order` - Sets the default `order_by` of the association.
-      It is used when the association is preloaded.
-      For example, if you set `Post.many_to_many :tags, Tag, join_through: "posts_tags", preload_order: [asc: :foo]`,
-      whenever the `:tags` associations is preloaded, the tags will be order by the `:foo` field.
-      See `Ecto.Query.order_by/3` for more examples.
-
-    * `preload_order_source` - The source that `:preload_order` is applied to.
-      Either `:assoc` for the association's table or `:join` for the join table.
-      Defaults to `:assoc`
+    * `:preload_order` - Sets the default `order_by` when preloading the association.
+      It may either be a keyword list/list of fields (see `Ecto.Query.order_by/3`) or
+      a MFA tuple that returns a keyword list/list of fields. If specifying a keyword
+      list, the ordering applies to the association's table and not the join table.
+      Ordering by the join table can be achieved by specifying a MFA tuple that utilizes
+      `Ecto.Query.dynamic/2`. For example, you may create a function that returns the
+      following: `[desc: dynamic([assoc, join], join.updated_at)]`. Please note the ordering
+      of the bindings: the association always comes first and then the join table. If you
+      specify a custom preload query, the bindings for that query come first and then the
+      binding for a join table.
 
   ## Using Ecto.assoc/2
 
@@ -2136,8 +2137,7 @@ defmodule Ecto.Schema do
     :unique,
     :where,
     :join_where,
-    :preload_order,
-    :preload_order_source
+    :preload_order
   ]
 
   @doc false

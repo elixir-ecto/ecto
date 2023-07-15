@@ -1009,53 +1009,6 @@ defmodule Ecto.SchemaTest do
         end
       end
     end
-
-    test "preload order source" do
-      defmodule OrderSourceAssoc do
-        use Ecto.Schema
-
-        schema "assoc" do
-          many_to_many :posts, Post, join_through: "join_table", preload_order: [:text], preload_order_source: :assoc
-        end
-      end
-
-      assert OrderSourceAssoc.__schema__(:association, :posts).preload_order_source == :assoc
-
-      defmodule OrderSourceJoin do
-        use Ecto.Schema
-
-        schema "assoc" do
-          many_to_many :posts, Post, join_through: "join_table", preload_order: [:text], preload_order_source: :join
-        end
-      end
-
-      assert OrderSourceJoin.__schema__(:association, :posts).preload_order_source == :join
-
-      defmodule OrderSourceDefault do
-        use Ecto.Schema
-
-        schema "assoc" do
-          many_to_many :posts, Post, join_through: "join_table", preload_order: [:text]
-        end
-      end
-
-      assert OrderSourceDefault.__schema__(:association, :posts).preload_order_source == :assoc
-    end
-
-    test "invalid preload order source" do
-      message = "expected `:preload_order_source` for :posts to be `:assoc` or `:join`, " <>
-                  "got: `:invalid`"
-
-      assert_raise ArgumentError, message, fn ->
-        defmodule Assoc do
-          use Ecto.Schema
-
-          schema "assoc" do
-            many_to_many :posts, Post, join_through: "join_table", preload_order: [:text], preload_order_source: :invalid
-          end
-        end
-      end
-    end
   end
 
   test "raises on :source field not using atom key" do
