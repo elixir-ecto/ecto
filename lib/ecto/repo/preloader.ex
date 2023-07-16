@@ -351,25 +351,24 @@ defmodule Ecto.Repo.Preloader do
                   "got: `#{inspect(other)}`"
       end
 
-    order =
-      Enum.map(order, fn
-        {direction, field} when is_atom(field) or is_struct(field, DynamicExpr) ->
-          unless Ecto.Query.Builder.OrderBy.valid_direction?(direction) do
-            raise ArgumentError,
-                  "`:preload_order` must specify valid directions, " <>
-                    "got: `#{inspect(order)}`, `#{inspect(direction)}` is not a valid direction"
-          end
-
-          {direction, field}
-
-        field when is_atom(field) or is_struct(field, DynamicExpr) ->
-          field
-
-        other ->
+    Enum.each(order, fn
+      {direction, field} when is_atom(field) or is_struct(field, DynamicExpr) ->
+        unless Ecto.Query.Builder.OrderBy.valid_direction?(direction) do
           raise ArgumentError,
-                "`:preload_order` must resolve to a keyword list or a list of atoms/fields, " <>
-                  "got: `#{inspect(order)}`, `#{inspect(other)}` is not valid"
-      end)
+                "`:preload_order` must specify valid directions, " <>
+                  "got: `#{inspect(order)}`, `#{inspect(direction)}` is not a valid direction"
+        end
+
+        :ok
+
+      field when is_atom(field) or is_struct(field, DynamicExpr) ->
+        :ok
+
+      other ->
+        raise ArgumentError,
+              "`:preload_order` must resolve to a keyword list or a list of atoms/fields, " <>
+                "got: `#{inspect(order)}`, `#{inspect(other)}` is not valid"
+    end)
 
     add_preload_order(order, query)
   end
