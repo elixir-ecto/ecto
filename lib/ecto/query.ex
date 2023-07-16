@@ -1753,7 +1753,7 @@ defmodule Ecto.Query do
 
   `order_by` may be invoked or listed in a query many times. New expressions
   can be appended or preprended to the existing ones. The behaviour is controlled
-  through the `:position` option. By default, new expressions are appended.
+  through the `:mode` option. By default, new expressions are appended.
 
   `order_by` also accepts a list of atoms where each atom refers to a field in
   source or a keyword list where the direction is given as key and the field
@@ -1761,7 +1761,7 @@ defmodule Ecto.Query do
 
   ## Options
 
-    * `:position` - where to place the order expression relative to the
+    * `:mode` - where to place the order expression relative to the
       ones that already exist. Can be `:append`, to place it after the
       current orderings, or `:prepend`, to place it before the current
       orderings. Defaults to `:append`
@@ -1815,7 +1815,7 @@ defmodule Ecto.Query do
 
   """
   defmacro order_by(query, binding \\ [], expr, opts \\ []) do
-    Builder.OrderBy.build(query, binding, expr, opts[:position], __CALLER__)
+    Builder.OrderBy.build(query, binding, expr, opts, __CALLER__)
   end
 
   @doc """

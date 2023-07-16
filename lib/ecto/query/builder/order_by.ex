@@ -14,6 +14,9 @@ defmodule Ecto.Query.Builder.OrderBy do
     :desc_nulls_first
   ]
 
+  @modes [:append, :prepend]
+  @default_mode :append
+
   @doc """
   Returns `true` if term is a valid order_by direction; otherwise returns `false`.
 
@@ -129,6 +132,16 @@ defmodule Ecto.Query.Builder.OrderBy do
   defp to_field(field), do: {{:., [], [{:&, [], [0]}, field]}, [], []}
 
   @doc """
+  Called at runtime to verify the ordering mode
+  """
+  def mode!(nil), do: @default_mode
+  def mode!(mode) when mode in @modes, do: mode
+
+  def mode!(mode) do
+    raise ArgumentError, "expected `:mode` to be `:append` or `:prepend`, got: #{inspect(mode)}"
+  end
+
+  @doc """
   Shared between order_by and distinct.
   """
   def order_by_or_distinct!(kind, query, exprs, params) do
@@ -148,10 +161,10 @@ defmodule Ecto.Query.Builder.OrderBy do
   @doc """
   Called at runtime to assemble order_by.
   """
-  def order_by!(query, exprs, position, file, line) do
+  def order_by!(query, exprs, mode, file, line) do
     {expr, params} = order_by_or_distinct!(:order_by, query, exprs, [])
     expr = %Ecto.Query.QueryExpr{expr: expr, params: Enum.reverse(params), line: line, file: file}
-    apply(query, expr, position)
+    apply(query, expr, mode)
   end
 
   defp dynamic_or_field!(kind, %Ecto.Query.DynamicExpr{} = dynamic, query, {params, count}) do
@@ -176,43 +189,45 @@ defmodule Ecto.Query.Builder.OrderBy do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t, [Macro.t], Macro.t, :append | :prepend | nil, Macro.Env.t) :: Macro.t
-  def build(query, _binding, {:^, _, [var]}, position, env) do
+  @spec build(Macro.t, [Macro.t], Macro.t, Macro.t, Macro.Env.t) :: Macro.t
+  def build(query, _binding, {:^, _, [var]}, opts, env) do
     quote do
-      Ecto.Query.Builder.OrderBy.order_by!(unquote(query), unquote(var), unquote(position), unquote(env.file), unquote(env.line))
+      mode = Ecto.Query.Builder.OrderBy.mode!(unquote(opts)[:mode])
+      Ecto.Query.Builder.OrderBy.order_by!(unquote(query), unquote(var), mode, unquote(env.file), unquote(env.line))
     end
   end
 
-  def build(query, binding, expr, position, env) do
+  def build(query, binding, expr, opts, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
     {expr, {params, _acc}} = escape(:order_by, expr, {[], %{}}, binding, env)
     params = Builder.escape_params(params)
+    mode = quote do: Ecto.Query.Builder.OrderBy.mode!(unquote(opts)[:mode])
 
     order_by = quote do: %Ecto.Query.QueryExpr{
                            expr: unquote(expr),
                            params: unquote(params),
                            file: unquote(env.file),
                            line: unquote(env.line)}
-    Builder.apply_query(query, __MODULE__, [order_by, position], env)
+    Builder.apply_query(query, __MODULE__, [order_by, mode], env)
   end
 
   @doc """
   The callback applied by `build/4` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, term, :append | :prepend | nil) :: Ecto.Query.t
-  def apply(%Ecto.Query{} = query, expr, nil) do
-    apply(query, expr, :append)
+  @spec apply(Ecto.Queryable.t, term, :append | :prepend) :: Ecto.Query.t
+  def apply(%Ecto.Query{order_bys: orders} = query, expr, mode) do
+    %{query | order_bys: apply_orders(orders, expr, mode)}
   end
-  def apply(%Ecto.Query{order_bys: order_bys} = query, expr, :append) do
-    %{query | order_bys: order_bys ++ [expr]}
+  def apply(query, expr, mode) do
+    apply(Ecto.Queryable.to_query(query), expr, mode)
   end
-  def apply(%Ecto.Query{order_bys: order_bys} = query, expr, :prepend) do
-    %{query | order_bys: [expr | order_bys]}
-  end
-  def apply(%Ecto.Query{}, _expr, position) do
-    Builder.error!("the `:position` option must be `:append` or `:prepend`, got: #{inspect(position)}")
-  end
-  def apply(query, expr, position) do
-    apply(Ecto.Queryable.to_query(query), expr, position)
+
+  def apply_orders(orders, expr, :append), do: orders ++ [expr]
+  def apply_orders(orders, expr, :prepend), do: [expr | orders]
+
+  def apply_orders(orders, expr, mode) do
+    quote do
+      Ecto.Query.Builder.OrderBy.apply_orders(unquote(orders), unquote(expr), unquote(mode))
+    end
   end
 end
