@@ -575,6 +575,16 @@ defmodule Ecto.Integration.PreloadTest do
     assert [%{name: "foo"}, %{name: "bar"}] = post.ordered_users
   end
 
+  test "custom preload_order with mfa" do
+    post1 = TestRepo.insert!(%Post{users: [%User{name: "bar"}, %User{name: "foo"}], title: "1"})
+    post2 = TestRepo.insert!(%Post{users: [%User{name: "baz"}, %User{name: "foz"}], title: "2"})
+
+    [post1, post2] = TestRepo.preload([post1, post2], [:ordered_users_by_join_table], log: :error)
+
+    assert [%{name: "foo"}, %{name: "bar"}] = post1.ordered_users_by_join_table
+    assert [%{name: "foz"}, %{name: "baz"}] = post2.ordered_users_by_join_table
+  end
+
   ## Others
 
   @tag :invalid_prefix

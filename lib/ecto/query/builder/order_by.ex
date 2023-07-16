@@ -1,4 +1,4 @@
-import Kernel, except: [apply: 2]
+import Kernel, except: [apply: 3]
 
 defmodule Ecto.Query.Builder.OrderBy do
   @moduledoc false
@@ -13,6 +13,9 @@ defmodule Ecto.Query.Builder.OrderBy do
     :desc_nulls_last,
     :desc_nulls_first
   ]
+
+  @modes [:append, :prepend]
+  @default_mode :append
 
   @doc """
   Returns `true` if term is a valid order_by direction; otherwise returns `false`.
@@ -129,6 +132,23 @@ defmodule Ecto.Query.Builder.OrderBy do
   defp to_field(field), do: {{:., [], [{:&, [], [0]}, field]}, [], []}
 
   @doc """
+  Called at runtime to verify the ordering mode
+  """
+  def mode!(order_opts) do
+    case order_opts[:mode] do
+      nil ->
+        @default_mode
+
+      mode when mode in @modes ->
+        mode
+
+      other ->
+        raise ArgumentError,
+              "expected `:mode` to be `:append` or `:prepend`, got: #{inspect(other)}"
+    end
+  end
+
+  @doc """
   Shared between order_by and distinct.
   """
   def order_by_or_distinct!(kind, query, exprs, params) do
@@ -148,10 +168,11 @@ defmodule Ecto.Query.Builder.OrderBy do
   @doc """
   Called at runtime to assemble order_by.
   """
-  def order_by!(query, exprs, file, line) do
+  def order_by!(query, exprs, order_opts, file, line) do
+    mode = Ecto.Query.Builder.OrderBy.mode!(order_opts)
     {expr, params} = order_by_or_distinct!(:order_by, query, exprs, [])
     expr = %Ecto.Query.QueryExpr{expr: expr, params: Enum.reverse(params), line: line, file: file}
-    apply(query, expr)
+    apply(query, expr, mode)
   end
 
   defp dynamic_or_field!(kind, %Ecto.Query.DynamicExpr{} = dynamic, query, {params, count}) do
@@ -176,34 +197,47 @@ defmodule Ecto.Query.Builder.OrderBy do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
-  def build(query, _binding, {:^, _, [var]}, env) do
+  @spec build(Macro.t, [Macro.t], Macro.t, Macro.t, Macro.Env.t) :: Macro.t
+  def build(query, _binding, {:^, _, [var]}, order_opts, env) do
     quote do
-      Ecto.Query.Builder.OrderBy.order_by!(unquote(query), unquote(var), unquote(env.file), unquote(env.line))
+      Ecto.Query.Builder.OrderBy.order_by!(unquote(query), unquote(var), unquote(order_opts), unquote(env.file), unquote(env.line))
     end
   end
 
-  def build(query, binding, expr, env) do
+  def build(query, binding, expr, order_opts, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
     {expr, {params, _acc}} = escape(:order_by, expr, {[], %{}}, binding, env)
     params = Builder.escape_params(params)
+    mode = quote do: Ecto.Query.Builder.OrderBy.mode!(unquote(order_opts))
 
     order_by = quote do: %Ecto.Query.QueryExpr{
                            expr: unquote(expr),
                            params: unquote(params),
                            file: unquote(env.file),
                            line: unquote(env.line)}
-    Builder.apply_query(query, __MODULE__, [order_by], env)
+    Builder.apply_query(query, __MODULE__, [order_by, mode], env)
   end
 
   @doc """
   The callback applied by `build/4` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.t
-  def apply(%Ecto.Query{order_bys: order_bys} = query, expr) do
-    %{query | order_bys: order_bys ++ [expr]}
+  @spec apply(Ecto.Queryable.t, term, term) :: Ecto.Query.t
+  def apply(%Ecto.Query{order_bys: orders} = query, expr, mode) do
+    %{query | order_bys: update_order_bys(orders, expr, mode)}
   end
-  def apply(query, expr) do
-    apply(Ecto.Queryable.to_query(query), expr)
+  def apply(query, expr, mode) do
+    apply(Ecto.Queryable.to_query(query), expr, mode)
+  end
+
+  @doc """
+  Updates the `order_bys` value for a query.
+  """
+  def update_order_bys(orders, expr, :append), do: orders ++ [expr]
+  def update_order_bys(orders, expr, :prepend), do: [expr | orders]
+
+  def update_order_bys(orders, expr, mode) do
+    quote do
+      Ecto.Query.Builder.OrderBy.update_order_bys(unquote(orders), unquote(expr), unquote(mode))
+    end
   end
 end

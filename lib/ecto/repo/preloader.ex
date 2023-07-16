@@ -6,6 +6,8 @@ defmodule Ecto.Repo.Preloader do
   require Ecto.Query
   require Logger
 
+  alias Ecto.Query.DynamicExpr
+
   @doc """
   Transforms a result set based on query preloads, loading
   the associations onto their parent schema.
@@ -242,13 +244,13 @@ defmodule Ecto.Repo.Preloader do
 
   defp fetch_query(ids, %{cardinality: card} = assoc, repo_name, query, prefix, related_key, take, tuplet) do
     query = assoc.__struct__.assoc_query(assoc, query, Enum.uniq(ids))
-    field = related_key_to_field(query, related_key)
+    related_field_ast = related_key_to_field(query, related_key)
 
     # Normalize query
     query = %{Ecto.Query.Planner.ensure_select(query, take || true) | prefix: prefix}
 
     # Add the related key to the query results
-    query = update_in query.select.expr, &{:{}, [], [field, &1]}
+    query = update_in query.select.expr, &{:{}, [], [related_field_ast, &1]}
 
     # If we are returning many results, we must sort by the key too
     query =
@@ -261,10 +263,13 @@ defmodule Ecto.Repo.Preloader do
                   "select the parent's foreign key"
 
         {:many, _} ->
+          query = add_preload_order(assoc.preload_order, query)
+
           update_in query.order_bys, fn order_bys ->
-            [%Ecto.Query.QueryExpr{expr: preload_order(assoc, query, field), params: [],
+            [%Ecto.Query.QueryExpr{expr: [asc: related_field_ast], params: [],
                                    file: __ENV__.file, line: __ENV__.line}|order_bys]
           end
+
         {:one, _} ->
           query
       end
@@ -315,17 +320,6 @@ defmodule Ecto.Repo.Preloader do
     Expected a tuple with ID and struct, got: #{inspect(entry)}
     """
 
-  defp preload_order(assoc, query, related_field) do
-    custom_order_by = Enum.map(assoc.preload_order, fn
-      {direction, field} ->
-        {direction, related_key_to_field(query, {0, field})}
-      field ->
-        {:asc, related_key_to_field(query, {0, field})}
-    end)
-
-    [{:asc, related_field} | custom_order_by]
-  end
-
   defp related_key_to_field(query, {pos, key, field_type}) do
     field_ast = related_key_to_field(query, {pos, key})
 
@@ -338,6 +332,46 @@ defmodule Ecto.Repo.Preloader do
 
   defp related_key_pos(_query, pos) when pos >= 0, do: pos
   defp related_key_pos(query, pos), do: Ecto.Query.Builder.count_binds(query) + pos
+
+  defp add_preload_order([], query), do: query
+
+  defp add_preload_order(order, query) when is_list(order) do
+    Ecto.Query.order_by(query, [q], ^order, mode: :prepend)
+  end
+
+  defp add_preload_order({m, f, a}, query) do
+    order =
+      case apply(m, f, a) do
+        order when is_list(order) ->
+          order
+
+        other ->
+          raise ArgumentError,
+                "`:preload_order` must resolve to a keyword list or a list of atoms/fields, " <>
+                  "got: `#{inspect(other)}`"
+      end
+
+    Enum.each(order, fn
+      {direction, field} when is_atom(field) or is_struct(field, DynamicExpr) ->
+        unless Ecto.Query.Builder.OrderBy.valid_direction?(direction) do
+          raise ArgumentError,
+                "`:preload_order` must specify valid directions, " <>
+                  "got: `#{inspect(order)}`, `#{inspect(direction)}` is not a valid direction"
+        end
+
+        :ok
+
+      field when is_atom(field) or is_struct(field, DynamicExpr) ->
+        :ok
+
+      other ->
+        raise ArgumentError,
+              "`:preload_order` must resolve to a keyword list or a list of atoms/fields, " <>
+                "got: `#{inspect(order)}`, `#{inspect(other)}` is not valid"
+    end)
+
+    add_preload_order(order, query)
+  end
 
   defp unzip_ids([{k, v}|t], acc1, acc2), do: unzip_ids(t, [k|acc1], [v|acc2])
   defp unzip_ids([], acc1, acc2), do: {acc1, acc2}

@@ -28,6 +28,7 @@ defmodule Ecto.Integration.Post do
   """
   use Ecto.Integration.Schema
   import Ecto.Changeset
+  import Ecto.Query, only: [dynamic: 2]
 
   schema "posts" do
     field :counter, :id # Same as integer
@@ -57,6 +58,8 @@ defmodule Ecto.Integration.Post do
     many_to_many :users, Ecto.Integration.User,
       join_through: "posts_users", on_delete: :delete_all, on_replace: :delete
     many_to_many :ordered_users, Ecto.Integration.User, join_through: "posts_users", preload_order: [desc: :name]
+    many_to_many :ordered_users_by_join_table, Ecto.Integration.User,
+      join_through: "posts_users", preload_order: {__MODULE__, :preload_order, []}
     many_to_many :unique_users, Ecto.Integration.User,
       join_through: "posts_users", unique: true
     many_to_many :constraint_users, Ecto.Integration.User,
@@ -65,6 +68,10 @@ defmodule Ecto.Integration.Post do
     has_many :comments_authors_permalinks, through: [:comments_authors, :permalink]
     has_one :post_user_composite_pk, Ecto.Integration.PostUserCompositePk
     timestamps()
+  end
+
+  def preload_order() do
+    [desc: dynamic([assoc, join], join.user_id)]
   end
 
   def changeset(schema, params) do

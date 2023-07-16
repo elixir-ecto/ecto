@@ -422,7 +422,7 @@ defmodule Ecto.SchemaTest do
     end
   end
 
-  test "skipping validations on invalid types" do 
+  test "skipping validations on invalid types" do
     defmodule SchemaSkipValidationsDefault do
       use Ecto.Schema
 
@@ -969,8 +969,18 @@ defmodule Ecto.SchemaTest do
   end
 
   describe "preload_order option" do
+    test "allows MFA" do
+      defmodule MFA do
+        use Ecto.Schema
+
+        schema "assoc" do
+          many_to_many :posts, Post, join_through: "through", preload_order: {__MODULE__, :fun, []}
+        end
+      end
+    end
+
     test "invalid option" do
-      message = "expected `:preload_order` for :posts to be a keyword list or a list of atoms/fields, got: `:title`"
+      message = "expected `:preload_order` for :posts to be a keyword list, a list of atoms/fields or a {Mod, fun, args} tuple, got: `:title`"
       assert_raise ArgumentError, message, fn ->
         defmodule ThroughMatch do
           use Ecto.Schema
