@@ -214,20 +214,23 @@ defmodule Ecto.Query.Builder.OrderBy do
   @doc """
   The callback applied by `build/4` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, term, :append | :prepend) :: Ecto.Query.t
+  @spec apply(Ecto.Queryable.t, term, term) :: Ecto.Query.t
   def apply(%Ecto.Query{order_bys: orders} = query, expr, mode) do
-    %{query | order_bys: apply_orders(orders, expr, mode)}
+    %{query | order_bys: update_order_bys(orders, expr, mode)}
   end
   def apply(query, expr, mode) do
     apply(Ecto.Queryable.to_query(query), expr, mode)
   end
 
-  def apply_orders(orders, expr, :append), do: orders ++ [expr]
-  def apply_orders(orders, expr, :prepend), do: [expr | orders]
+  @doc """
+  Updates the `order_bys` value for a query.
+  """
+  def update_order_bys(orders, expr, :append), do: orders ++ [expr]
+  def update_order_bys(orders, expr, :prepend), do: [expr | orders]
 
-  def apply_orders(orders, expr, mode) do
+  def update_order_bys(orders, expr, mode) do
     quote do
-      Ecto.Query.Builder.OrderBy.apply_orders(unquote(orders), unquote(expr), unquote(mode))
+      Ecto.Query.Builder.OrderBy.update_order_bys(unquote(orders), unquote(expr), unquote(mode))
     end
   end
 end
