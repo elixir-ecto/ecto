@@ -134,11 +134,18 @@ defmodule Ecto.Query.Builder.OrderBy do
   @doc """
   Called at runtime to verify the ordering mode
   """
-  def mode!(nil), do: @default_mode
-  def mode!(mode) when mode in @modes, do: mode
+  def mode!(order_opts) do
+    case order_opts[:mode] do
+      nil ->
+        @default_mode
 
-  def mode!(mode) do
-    raise ArgumentError, "expected `:mode` to be `:append` or `:prepend`, got: #{inspect(mode)}"
+      mode when mode in @modes ->
+        mode
+
+      other ->
+        raise ArgumentError,
+              "expected `:mode` to be `:append` or `:prepend`, got: #{inspect(other)}"
+    end
   end
 
   @doc """
@@ -161,7 +168,8 @@ defmodule Ecto.Query.Builder.OrderBy do
   @doc """
   Called at runtime to assemble order_by.
   """
-  def order_by!(query, exprs, mode, file, line) do
+  def order_by!(query, exprs, order_opts, file, line) do
+    mode = Ecto.Query.Builder.OrderBy.mode!(order_opts)
     {expr, params} = order_by_or_distinct!(:order_by, query, exprs, [])
     expr = %Ecto.Query.QueryExpr{expr: expr, params: Enum.reverse(params), line: line, file: file}
     apply(query, expr, mode)
@@ -190,18 +198,17 @@ defmodule Ecto.Query.Builder.OrderBy do
   runtime work.
   """
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.t, Macro.Env.t) :: Macro.t
-  def build(query, _binding, {:^, _, [var]}, opts, env) do
+  def build(query, _binding, {:^, _, [var]}, order_opts, env) do
     quote do
-      mode = Ecto.Query.Builder.OrderBy.mode!(unquote(opts)[:mode])
-      Ecto.Query.Builder.OrderBy.order_by!(unquote(query), unquote(var), mode, unquote(env.file), unquote(env.line))
+      Ecto.Query.Builder.OrderBy.order_by!(unquote(query), unquote(var), unquote(order_opts), unquote(env.file), unquote(env.line))
     end
   end
 
-  def build(query, binding, expr, opts, env) do
+  def build(query, binding, expr, order_opts, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
     {expr, {params, _acc}} = escape(:order_by, expr, {[], %{}}, binding, env)
     params = Builder.escape_params(params)
-    mode = quote do: Ecto.Query.Builder.OrderBy.mode!(unquote(opts)[:mode])
+    mode = quote do: Ecto.Query.Builder.OrderBy.mode!(unquote(order_opts))
 
     order_by = quote do: %Ecto.Query.QueryExpr{
                            expr: unquote(expr),
