@@ -88,6 +88,35 @@ defmodule Ecto.Query.Builder.OrderByTest do
         escape(:order_by, quote do [desc: selected_as("ident")] end, {[], %{}}, [], __ENV__)
       end
     end
+
+    test "accepts :position option" do
+      query = order_by("q", [q], [:title])
+      %{order_bys: append_order_bys} = order_by(query, [q], [:append,], position: :append)
+      %{order_bys: prepend_order_bys} = order_by(query, [q], [:prepend], position: :prepend)
+      %{order_bys: default_order_bys} = order_by(query, [q], [:append])
+
+      assert [
+               %{expr: [asc: {{:., _, [_, :title]}, _, _}]},
+               %{expr: [asc: {{:., _, [_, :append]}, _, _}]}
+             ] = append_order_bys
+
+      assert [
+               %{expr: [asc: {{:., _, [_, :prepend]}, _, _}]},
+               %{expr: [asc: {{:., _, [_, :title]}, _, _}]}
+             ] = prepend_order_bys
+
+      assert [
+               %{expr: [asc: {{:., _, [_, :title]}, _, _}]},
+               %{expr: [asc: {{:., _, [_, :append]}, _, _}]}
+             ] = default_order_bys
+
+
+      error_msg = "the `:position` option must be `:append` or `:prepend`, got: :invalid"
+
+      assert_raise Ecto.Query.CompileError, error_msg, fn ->
+        order_by(query, [q], [:invalid], position: :invalid)
+      end
+    end
   end
 
   describe "at runtime" do

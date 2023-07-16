@@ -719,7 +719,7 @@ defmodule Ecto.Query.API do
   referencing it outside of select statements.
 
   This comes in handy when, for instance, you would like to use the calculated
-  value in `Ecto.Query.group_by/3` or `Ecto.Query.order_by/3`:
+  value in `Ecto.Query.group_by/3` or `Ecto.Query.order_by/4`:
 
       from p in Post,
         select: %{

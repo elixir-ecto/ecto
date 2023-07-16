@@ -736,7 +736,7 @@ defmodule Ecto.Query do
 
       windows: [ordered_names: [order_by: e.name]]
 
-  It works exactly as the keyword query version of `order_by/3`.
+  It works exactly as the keyword query version of `order_by/4`.
 
   ### :frame
 
@@ -1752,11 +1752,19 @@ defmodule Ecto.Query do
   "nulls first" or "nulls last" is specific to each database implementation.
 
   `order_by` may be invoked or listed in a query many times. New expressions
-  are always appended to the previous ones.
+  can be appended or preprended to the existing ones. The behaviour is controlled
+  through the `:position` option. By default, new expressions are appended.
 
   `order_by` also accepts a list of atoms where each atom refers to a field in
   source or a keyword list where the direction is given as key and the field
   to order as value.
+
+  ## Options
+
+    * `:position` - where to place the order expression relative to the
+      ones that already exist. Can be `:append`, to place it after the
+      current orderings, or `:prepend`, to place it before the current
+      orderings. Defaults to `:append`
 
   ## Keywords examples
 
@@ -1806,8 +1814,8 @@ defmodule Ecto.Query do
       City |> order_by(^order_by_param) # Keyword list
 
   """
-  defmacro order_by(query, binding \\ [], expr) do
-    Builder.OrderBy.build(query, binding, expr, __CALLER__)
+  defmacro order_by(query, binding \\ [], expr, opts \\ []) do
+    Builder.OrderBy.build(query, binding, expr, opts[:position], __CALLER__)
   end
 
   @doc """

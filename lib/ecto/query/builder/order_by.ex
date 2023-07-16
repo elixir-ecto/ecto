@@ -1,4 +1,4 @@
-import Kernel, except: [apply: 2]
+import Kernel, except: [apply: 3]
 
 defmodule Ecto.Query.Builder.OrderBy do
   @moduledoc false
@@ -148,10 +148,10 @@ defmodule Ecto.Query.Builder.OrderBy do
   @doc """
   Called at runtime to assemble order_by.
   """
-  def order_by!(query, exprs, file, line) do
+  def order_by!(query, exprs, position, file, line) do
     {expr, params} = order_by_or_distinct!(:order_by, query, exprs, [])
     expr = %Ecto.Query.QueryExpr{expr: expr, params: Enum.reverse(params), line: line, file: file}
-    apply(query, expr)
+    apply(query, expr, position)
   end
 
   defp dynamic_or_field!(kind, %Ecto.Query.DynamicExpr{} = dynamic, query, {params, count}) do
@@ -176,14 +176,14 @@ defmodule Ecto.Query.Builder.OrderBy do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
-  def build(query, _binding, {:^, _, [var]}, env) do
+  @spec build(Macro.t, [Macro.t], Macro.t, :append | :prepend | nil, Macro.Env.t) :: Macro.t
+  def build(query, _binding, {:^, _, [var]}, position, env) do
     quote do
-      Ecto.Query.Builder.OrderBy.order_by!(unquote(query), unquote(var), unquote(env.file), unquote(env.line))
+      Ecto.Query.Builder.OrderBy.order_by!(unquote(query), unquote(var), unquote(position), unquote(env.file), unquote(env.line))
     end
   end
 
-  def build(query, binding, expr, env) do
+  def build(query, binding, expr, position, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
     {expr, {params, _acc}} = escape(:order_by, expr, {[], %{}}, binding, env)
     params = Builder.escape_params(params)
@@ -193,17 +193,26 @@ defmodule Ecto.Query.Builder.OrderBy do
                            params: unquote(params),
                            file: unquote(env.file),
                            line: unquote(env.line)}
-    Builder.apply_query(query, __MODULE__, [order_by], env)
+    Builder.apply_query(query, __MODULE__, [order_by, position], env)
   end
 
   @doc """
   The callback applied by `build/4` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.t
-  def apply(%Ecto.Query{order_bys: order_bys} = query, expr) do
+  @spec apply(Ecto.Queryable.t, term, :append | :prepend | nil) :: Ecto.Query.t
+  def apply(%Ecto.Query{} = query, expr, nil) do
+    apply(query, expr, :append)
+  end
+  def apply(%Ecto.Query{order_bys: order_bys} = query, expr, :append) do
     %{query | order_bys: order_bys ++ [expr]}
   end
-  def apply(query, expr) do
-    apply(Ecto.Queryable.to_query(query), expr)
+  def apply(%Ecto.Query{order_bys: order_bys} = query, expr, :prepend) do
+    %{query | order_bys: [expr | order_bys]}
+  end
+  def apply(%Ecto.Query{}, _expr, position) do
+    Builder.error!("the `:position` option must be `:append` or `:prepend`, got: #{inspect(position)}")
+  end
+  def apply(query, expr, position) do
+    apply(Ecto.Queryable.to_query(query), expr, position)
   end
 end
