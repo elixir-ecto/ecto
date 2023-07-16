@@ -169,7 +169,7 @@ defmodule Ecto.Query.Builder.OrderBy do
   Called at runtime to assemble order_by.
   """
   def order_by!(query, exprs, order_opts, file, line) do
-    mode = Ecto.Query.Builder.OrderBy.mode!(order_opts)
+    mode = mode!(order_opts)
     {expr, params} = order_by_or_distinct!(:order_by, query, exprs, [])
     expr = %Ecto.Query.QueryExpr{expr: expr, params: Enum.reverse(params), line: line, file: file}
     apply(query, expr, mode)
