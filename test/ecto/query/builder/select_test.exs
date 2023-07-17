@@ -421,9 +421,16 @@ defmodule Ecto.Query.Builder.SelectTest do
       escaped_alias1 = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :id]}, [], []}, :ident]}
       escaped_alias2 = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :id]}, [], []}, :ident2]}
 
-      query = from p in "posts", select: {selected_as(p.id, ^:ident), selected_as(p.id, :ident2)}
-      assert %{ident: _, ident2: _} = query.select.aliases
-      assert {:{}, [], [escaped_alias1, escaped_alias2]} == query.select.expr
+      query1 = from p in "posts", select: {selected_as(p.id, ^:ident), selected_as(p.id, :ident2)}
+      query2 = from p in "posts", select: {selected_as(p.id, :ident), selected_as(p.id, ^:ident2)}
+      query3 = from p in "posts", select: {selected_as(p.id, ^:ident), selected_as(p.id, ^:ident2)}
+
+      assert query1.select.expr == query2.select.expr
+      assert query2.select.expr == query3.select.expr
+      assert query1.select.aliases == query2.select.aliases
+      assert query2.select.aliases == query3.select.aliases
+      assert %{ident: _, ident2: _} = query1.select.aliases
+      assert {:{}, [], [escaped_alias1, escaped_alias2]} == query1.select.expr
 
       message = "expected atom in selected_as/2, got: `\"ident\"`"
 
