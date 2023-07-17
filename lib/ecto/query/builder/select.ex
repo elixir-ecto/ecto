@@ -314,8 +314,8 @@ defmodule Ecto.Query.Builder.Select do
     end
   end
 
-  def escape_aliases(%{} = aliases), do: {:%{}, [], Map.to_list(aliases)}
-  def escape_aliases(aliases), do: aliases
+  defp escape_aliases(%{} = aliases), do: {:%{}, [], Map.to_list(aliases)}
+  defp escape_aliases(aliases), do: aliases
 
   @doc """
   The callback applied by `build/5` to build the query.
