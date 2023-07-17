@@ -174,7 +174,7 @@ defmodule Ecto.Query.Builder.OrderByTest do
              [{1, {0, :foo}}, {"bar", {0, :bar}}, {2, {0, :baz}}, {"bat", {0, :bat}}]
     end
 
-    test "supports dynamic names in selected_as/1" do
+    test "supports interpolated atomnames in selected_as/1" do
       query = from p in "posts", select: selected_as(p.id, :ident), order_by: selected_as(^:ident)
       assert [asc: {:selected_as, [], [:ident]}] = hd(query.order_bys).expr
 
