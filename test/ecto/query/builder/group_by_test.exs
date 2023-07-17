@@ -69,7 +69,7 @@ defmodule Ecto.Query.Builder.GroupByTest do
 
     test "supports interpolated atom names in selected_as/1" do
       query = from p in "posts", select: selected_as(p.id, :ident), group_by: selected_as(^:ident)
-      assert [{:selected_as, [], [:ident]}]  = hd(query.group_bys).expr
+      assert [{:selected_as, [], [:ident]}] = hd(query.group_bys).expr
 
       message = "expected atom in selected_as/1, got: `\"ident\"`"
 

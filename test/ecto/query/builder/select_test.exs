@@ -422,6 +422,7 @@ defmodule Ecto.Query.Builder.SelectTest do
       escaped_alias2 = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :id]}, [], []}, :ident2]}
 
       query = from p in "posts", select: {selected_as(p.id, ^:ident), selected_as(p.id, :ident2)}
+      assert %{ident: _, ident2: _} = query.select.aliases
       assert {:{}, [], [escaped_alias1, escaped_alias2]} == query.select.expr
 
       message = "expected atom in selected_as/2, got: `\"ident\"`"
@@ -439,12 +440,12 @@ defmodule Ecto.Query.Builder.SelectTest do
       select = :select
       merge = :merge
       query = from p in "posts", select: %{v: selected_as(p.visits, ^select)}, select_merge: %{title: selected_as(p.title, ^merge)}
-      assert {:%{}, [], [v: escaped_select_alias, title: escaped_merge_alias]} == query.select.expr
+      assert query.select.expr == {:%{}, [], [v: escaped_select_alias, title: escaped_merge_alias]}
       assert %{select: _, merge: _} = query.select.aliases
 
       # merging into a source
       query = from c in Comment, select_merge: %{title: selected_as(c.title, ^:merge)}
-      assert {:merge, [], [{:&, [], [0]}, {:%{}, [], [title: escaped_merge_alias]}]} == query.select.expr
+      assert query.select.expr == {:merge, [], [{:&, [], [0]}, {:%{}, [], [title: escaped_merge_alias]}]}
       assert %{merge: _} = query.select.aliases
     end
 
