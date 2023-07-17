@@ -416,13 +416,10 @@ defmodule Ecto.Query.Builder do
     """
   end
 
-  def escape({:selected_as, _, [name]}, _type, params_acc, _vars, _env) when is_atom(name) do
+  def escape({:selected_as, _, [name]}, _type, params_acc, _vars, _env) do
+    name = quoted_atom!(name, "selected_as/1")
     expr = {:{}, [], [:selected_as, [], [name]]}
     {expr, params_acc}
-  end
-
-  def escape({:selected_as, _, [name]}, _type, _params_acc, _vars, _env) do
-    error! "selected_as/1 expects `name` to be an atom, got `#{inspect(name)}`"
   end
 
   def escape({quantifier, meta, [subquery]}, type, params_acc, vars, env) when quantifier in [:all, :any, :exists] do
@@ -1272,7 +1269,7 @@ defmodule Ecto.Query.Builder do
   @doc """
   Called by the select escaper at compile time and dynamic builder at runtime to track select aliases
   """
-  def add_select_alias(aliases, name) do
+  def add_select_alias(aliases, name) when is_map(aliases) and is_atom(name) do
     case aliases do
       %{^name => _} ->
         error! "the alias `#{inspect(name)}` has been specified more than once using `selected_as/2`"
@@ -1280,6 +1277,16 @@ defmodule Ecto.Query.Builder do
       aliases ->
         Map.put(aliases, name, @select_alias_dummy_value)
     end
+  end
+
+  def add_select_alias(aliases, name) do
+    aliases =
+      case aliases do
+        %{} -> Macro.escape(aliases)
+        aliases -> aliases
+      end
+
+    quote do: Ecto.Query.Builder.add_select_alias(unquote(aliases), unquote(name))
   end
 
   @doc """

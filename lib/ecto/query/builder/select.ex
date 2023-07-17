@@ -112,15 +112,12 @@ defmodule Ecto.Query.Builder.Select do
   end
 
   # aliased values
-  defp escape({:selected_as, _, [expr, name]}, {params, acc}, vars, env) when is_atom(name) do
+  defp escape({:selected_as, _, [expr, name]}, {params, acc}, vars, env) do
+    name = Builder.quoted_atom!(name, "selected_as/2")
     {escaped, {params, acc}} = Builder.escape(expr, :any, {params, acc}, vars, env)
     expr = {:{}, [], [:selected_as, [], [escaped, name]]}
     aliases = Builder.add_select_alias(acc.aliases, name)
     {expr, {params, %{acc | aliases: aliases}}}
-  end
-
-  defp escape({:selected_as, _, [_expr, name]}, {_params, _acc}, _vars, _env) do
-    Builder.error! "selected_as/2 expects `name` to be an atom, got `#{inspect(name)}`"
   end
 
   defp escape(expr, params_acc, vars, env) do
@@ -296,7 +293,7 @@ defmodule Ecto.Query.Builder.Select do
     {expr, {params, acc}} = escape(expr, binding, env)
     params = Builder.escape_params(params)
     take = {:%{}, [], Map.to_list(acc.take)}
-    aliases = {:%{}, [], Map.to_list(acc.aliases)}
+    aliases = escape_aliases(acc.aliases)
 
     select = quote do: %Ecto.Query.SelectExpr{
                          expr: unquote(expr),
@@ -316,6 +313,9 @@ defmodule Ecto.Query.Builder.Select do
       end
     end
   end
+
+  defp escape_aliases(%{} = aliases), do: {:%{}, [], Map.to_list(aliases)}
+  defp escape_aliases(aliases), do: aliases
 
   @doc """
   The callback applied by `build/5` to build the query.
