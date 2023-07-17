@@ -175,7 +175,7 @@ defmodule Ecto.Query.Builder.SelectTest do
     end
 
     test "raises if name given to selected_as/2 is not an atom" do
-      message = "selected_as/2 expects `name` to be an atom, got `\"ident\"`"
+      message = "expected literal atom or interpolated value in selected_as/2, got: `\"ident\"`"
 
       assert_raise Ecto.Query.CompileError, message, fn ->
         escape(quote do selected_as(p.id, "ident") end, [], __ENV__)
@@ -415,6 +415,37 @@ defmodule Ecto.Query.Builder.SelectTest do
         assert length(query.select.subqueries) == 3
         assert query.select.params == [{:subquery, 0}, {:subquery, 1}, {ignore_template_id, {0, :from_template_id}}, {:subquery, 2}]
       end
+    end
+
+    test "supports dynamic names in selected_as/2" do
+      escaped_alias1 = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :id]}, [], []}, :ident]}
+      escaped_alias2 = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :id]}, [], []}, :ident2]}
+
+      query = from p in "posts", select: {selected_as(p.id, ^:ident), selected_as(p.id, :ident2)}
+      assert {:{}, [], [escaped_alias1, escaped_alias2]} == query.select.expr
+
+      message = "expected atom in selected_as/2, got: `\"ident\"`"
+
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        from p in "posts", select: selected_as(p.id, ^"ident")
+      end
+    end
+
+    test "supports dynamic names in selected_as/2 with select_merge" do
+      escaped_select_alias = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :visits]}, [], []}, :select]}
+      escaped_merge_alias = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :title]}, [], []}, :merge]}
+
+      # merging into a map
+      select = :select
+      merge = :merge
+      query = from p in "posts", select: %{v: selected_as(p.visits, ^select)}, select_merge: %{title: selected_as(p.title, ^merge)}
+      assert {:%{}, [], [v: escaped_select_alias, title: escaped_merge_alias]} == query.select.expr
+      assert %{select: _, merge: _} = query.select.aliases
+
+      # merging into a source
+      query = from c in Comment, select_merge: %{title: selected_as(c.title, ^:merge)}
+      assert {:merge, [], [{:&, [], [0]}, {:%{}, [], [title: escaped_merge_alias]}]} == query.select.expr
+      assert %{merge: _} = query.select.aliases
     end
 
     test "raises on list or tuple values in interpolated map" do

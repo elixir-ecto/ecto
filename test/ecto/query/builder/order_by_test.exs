@@ -78,7 +78,7 @@ defmodule Ecto.Query.Builder.OrderByTest do
     end
 
     test "raises if name given to selected_as/1 is not an atom" do
-      message = "selected_as/1 expects `name` to be an atom, got `\"ident\"`"
+      message = "expected literal atom or interpolated value in selected_as/1, got: `\"ident\"`"
 
       assert_raise Ecto.Query.CompileError, message, fn ->
         escape(:order_by, quote do selected_as("ident") end, {[], %{}}, [], __ENV__)
@@ -172,6 +172,17 @@ defmodule Ecto.Query.Builder.OrderByTest do
              "[asc: &0.foo() == ^0 and &0.bar() == ^1, desc: &0.bar(), asc: &0.baz() == ^2 and &0.bat() == ^3]"
       assert order_by.params ==
              [{1, {0, :foo}}, {"bar", {0, :bar}}, {2, {0, :baz}}, {"bat", {0, :bat}}]
+    end
+
+    test "supports dynamic names in selected_as/1" do
+      query = from p in "posts", select: selected_as(p.id, :ident), order_by: selected_as(^:ident)
+      assert [asc: {:selected_as, [], [:ident]}] = hd(query.order_bys).expr
+
+      message = "expected atom in selected_as/1, got: `\"ident\"`"
+
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        from p in "posts", select: selected_as(p.id, :ident), order_by: selected_as(^"ident")
+      end
     end
 
     test "raises on invalid direction" do
