@@ -1360,6 +1360,17 @@ defmodule Ecto.Integration.RepoTest do
       end
     end
 
+    test "map update on association" do
+      p = TestRepo.insert!(%Post{})
+      TestRepo.insert!(%Comment{post_id: p.id, text: "comment text"})
+      TestRepo.insert!(%Comment{})
+
+      query =
+        from(c in Comment, left_join: p in Post, on: c.post_id == p.id, select: %{p | temp: c.text})
+
+      assert [%Post{:temp => "comment text"}, nil] = TestRepo.all(query)
+    end
+
     test "take with structs" do
       %{id: pid1} = TestRepo.insert!(%Post{title: "1"})
       %{id: pid2} = TestRepo.insert!(%Post{title: "2"})
