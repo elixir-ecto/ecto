@@ -439,6 +439,18 @@ defmodule Ecto.Query.Builder.SelectTest do
       end
     end
 
+    test "supports interpolated atom names in selected_as/2 with dynamic/2" do
+      escaped_alias = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :title]}, [], []}, :alias]}
+      escaped_alias2 = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :title]}, [], []}, :alias2]}
+
+      select_fields = %{title: dynamic([p], selected_as(p.title, ^:alias))}
+      merge_fields = %{title2: dynamic([p], selected_as(p.title, ^:alias2))}
+
+      query = from p in "posts", select: ^select_fields, select_merge: ^merge_fields
+      assert {:%{}, [], [title: escaped_alias, title2: escaped_alias2]} == query.select.expr
+      assert %{alias: _, alias2: _} = query.select.aliases
+    end
+
     test "supports interpolated atom names in selected_as/2 with select_merge" do
       escaped_select_alias = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :visits]}, [], []}, :select]}
       escaped_merge_alias = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :title]}, [], []}, :merge]}
