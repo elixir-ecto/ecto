@@ -479,6 +479,17 @@ defmodule Ecto.Query.API do
   def fragment(fragments), do: doc! [fragments]
 
   @doc """
+  Allows a literal identifier to be injected into a fragment:
+
+      collation = "es_ES"
+      fragment("? COLLATE ?", ^name, ^collation)
+
+  The example above will inject `collation` into the query as
+  a literal identifier instead of a query parameter.
+  """
+  def literal(binary), do: doc! [binary]
+
+  @doc """
   Allows a list argument to be spliced into a fragment.
 
       from p in Post, where: fragment("? in (?)", p.id, splice(^[1, 2, 3]))
