@@ -485,7 +485,9 @@ defmodule Ecto.Query.API do
       fragment("? COLLATE ?", ^name, literal(^collation))
 
   The example above will inject `collation` into the query as
-  a literal identifier instead of a query parameter.
+  a literal identifier instead of a query parameter. Note that
+  each different value of `collation` will emit a different query,
+  which will be independently prepared and cached.
   """
   def literal(binary), do: doc! [binary]
 
