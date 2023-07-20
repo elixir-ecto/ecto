@@ -279,7 +279,7 @@ defmodule Ecto.Repo.HasAssocTest do
 
   test "duplicate pk on insert" do
     assocs = [%MyAssoc{x: "xyz", id: 1} |> Ecto.Changeset.change,
-              %MyAssoc{x: "abc", id: 1} |> Ecto.Changeset.change]
+              %MyAssoc{} |> Ecto.Changeset.change(%{x: "abc", id: 1})]
     changeset =
       %MySchema{}
       |> Ecto.Changeset.change

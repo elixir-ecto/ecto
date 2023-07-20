@@ -152,7 +152,7 @@ defmodule Ecto.Repo.EmbeddedTest do
 
   test "duplicate pk on insert" do
     embeds = [%MyEmbed{x: "xyz", id: @uuid} |> Ecto.Changeset.change,
-              %MyEmbed{x: "abc", id: @uuid} |> Ecto.Changeset.change]
+              %MyEmbed{} |> Ecto.Changeset.change(%{x: "abc", id: @uuid})]
     changeset =
       %MySchema{}
       |> Ecto.Changeset.change
