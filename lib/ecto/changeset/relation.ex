@@ -515,9 +515,9 @@ defmodule Ecto.Changeset.Relation do
   defp change_pk(pks) do
     fn %Changeset{} = cs ->
       Enum.map(pks, fn pk ->
-        case Map.fetch(cs.changes, pk) do
-          {:ok, pk_value} -> pk_value
-          :error -> Map.get(cs.data, pk)
+        case cs.changes do
+          %{^pk => pk_value} -> pk_value
+          _ -> Map.get(cs.data, pk)
         end
       end)
     end
