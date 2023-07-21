@@ -162,6 +162,24 @@ defmodule Ecto.Query.Builder do
   end
 
   # fragments
+  def escape({:sigil_f, _sigil_meta, [{:<<>>, _meta, pieces}, _modifiers]}, given_type, params_acc, vars, env) do
+    query =
+      pieces
+      |> Enum.map(fn
+        "" <> binary -> binary
+        _ -> "?"
+      end)
+      |> Enum.join()
+
+    frags =
+      Enum.flat_map(pieces, fn
+        {:"::", _, [{_, _, [val]} | _]} -> [val]
+        _ -> []
+      end)
+
+    escape({:fragment, [], [query | frags]}, given_type, params_acc, vars, env)
+  end
+
   def escape({:fragment, _, [query]}, _type, params_acc, vars, env) when is_list(query) do
     {escaped, params_acc} =
       Enum.map_reduce(query, params_acc, &escape_kw_fragment(&1, &2, vars, env))
