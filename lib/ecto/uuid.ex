@@ -20,8 +20,9 @@ defmodule Ecto.UUID do
 
   @doc """
   Casts either a string in the canonical, human-readable UUID format or a
-  16-byte binary to a UUID in its canonical, human-readable UUID format. If
-  `uuid` is neither of these, `:error` will be returned.
+  16-byte binary to a UUID in its canonical, human-readable UUID format.
+
+  If `uuid` is neither of these, `:error` will be returned.
 
   Since both binaries and strings are represent as binaries, this means some
   strings you may not expect are actually also valid UUIDs in their binary form
