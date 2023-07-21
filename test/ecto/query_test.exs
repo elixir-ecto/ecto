@@ -1133,4 +1133,22 @@ defmodule Ecto.QueryTest do
       assert inspect(reverse_order(q)) == inspect(order_by(q, desc: :id))
     end
   end
+
+  describe "sigil_f/1" do
+    test "builds a fragment without interpolation" do
+      assert inspect(select("t", ~f"NOW()")) == inspect(select("t", fragment("NOW()")))
+    end
+
+    test "builds a fragment with one interpolation" do
+      assert inspect(select("t", [t], ~f"LOWER(#{t.email})")) ==
+               inspect(select("t", [t], fragment("LOWER(?)", t.email)))
+    end
+
+    test "builds a fragment with multiple interpolation" do
+      date = ~D[2020-01-01]
+
+      assert inspect(select("t", [t], ~f"GREATEST(#{t.date}, #{^date})")) ==
+               inspect(select("t", [t], fragment("GREATEST(?, ?)", t.date, ^date)))
+    end
+  end
 end

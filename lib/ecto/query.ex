@@ -2694,4 +2694,51 @@ defmodule Ecto.Query do
           end)
     }
   end
+
+  @doc """
+  Syntax sugar for writing fragments with interpolations.
+
+      dynamic([user: user], ~f\"""
+        CASE
+          WHEN \#{user.role == :admin} THEN 3
+          WHEN \#{user.role == :manager} THEN 2
+          ELSE 1
+        END
+      \""")
+
+  Is equivalent to
+
+      dynamic([user: user], fragment(
+        \"""
+          CASE
+            WHEN ? THEN 3
+            WHEN ? THEN 2
+            ELSE 1
+          END
+        \""",
+        user.role == :admin,
+        user.role == :manager
+      ))
+
+  But with the benefit of interpolated values being in the right place.
+  """
+  defmacro sigil_f({:<<>>, _meta, pieces}, _) do
+    query =
+      pieces
+      |> Enum.map(fn
+        "" <> binary -> binary
+        _ -> "?"
+      end)
+      |> Enum.join()
+
+    args =
+      Enum.flat_map(pieces, fn
+        {:"::", _, [{_, _, [val]} | _]} -> [val]
+        _ -> []
+      end)
+
+    quote do
+      fragment(unquote_splicing([query | args]))
+    end
+  end
 end
