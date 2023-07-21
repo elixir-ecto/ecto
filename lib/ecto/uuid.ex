@@ -19,9 +19,34 @@ defmodule Ecto.UUID do
   def type, do: :uuid
 
   @doc """
-  Casts to a UUID.
+  Casts either a string in the canonical, human-readable UUID format or a
+  16-byte binary to a UUID in its canonical, human-readable UUID format.
+
+  If `uuid` is neither of these, `:error` will be returned.
+
+  Since both binaries and strings are represent as binaries, this means some
+  strings you may not expect are actually also valid UUIDs in their binary form
+  and so will be casted into their string form.
+
+  If you need further-restricted behavior or validation, you should define your
+  own custom `Ecto.Type`. There is also `Ecto.UUID.load/1` if you only want to
+  process `raw` UUIDs, which may be a more suitable reverse operation to
+  `Ecto.UUID.dump/1`.
+
+  ## Examples
+
+      iex> Ecto.UUID.cast(<<0x60, 0x1D, 0x74, 0xE4, 0xA8, 0xD3, 0x4B, 0x6E,
+      ...>                  0x83, 0x65, 0xED, 0xDB, 0x4C, 0x89, 0x33, 0x27>>)
+      {:ok, "601d74e4-a8d3-4b6e-8365-eddb4c893327"}
+
+      iex> Ecto.UUID.cast("601d74e4-a8d3-4b6e-8365-eddb4c893327")
+      {:ok, "601d74e4-a8d3-4b6e-8365-eddb4c893327"}
+
+      iex> Ecto.UUID.cast("warehouse worker")
+      {:ok, "77617265-686f-7573-6520-776f726b6572"}
   """
   @spec cast(t | raw | any) :: {:ok, t} | :error
+  def cast(uuid)
   def cast(
         <<a1, a2, a3, a4, a5, a6, a7, a8, ?-, b1, b2, b3, b4, ?-, c1, c2, c3, c4, ?-, d1, d2, d3,
           d4, ?-, e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12>>
@@ -42,10 +67,10 @@ defmodule Ecto.UUID do
   Same as `cast/1` but raises `Ecto.CastError` on invalid arguments.
   """
   @spec cast!(t | raw | any) :: t
-  def cast!(value) do
-    case cast(value) do
+  def cast!(uuid) do
+    case cast(uuid) do
       {:ok, hex_uuid} -> hex_uuid
-      :error -> raise Ecto.CastError, type: __MODULE__, value: value
+      :error -> raise Ecto.CastError, type: __MODULE__, value: uuid
     end
   end
 
@@ -78,7 +103,8 @@ defmodule Ecto.UUID do
   @doc """
   Converts a string representing a UUID into a raw binary.
   """
-  @spec dump(t | any) :: {:ok, raw} | :error
+  @spec dump(uuid_string :: t | any) :: {:ok, raw} | :error
+  def dump(uuid_string)
   def dump(
         <<a1, a2, a3, a4, a5, a6, a7, a8, ?-, b1, b2, b3, b4, ?-, c1, c2, c3, c4, ?-, d1, d2, d3,
           d4, ?-, e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12>>
@@ -125,10 +151,10 @@ defmodule Ecto.UUID do
   Same as `dump/1` but raises `Ecto.ArgumentError` on invalid arguments.
   """
   @spec dump!(t | any) :: raw
-  def dump!(value) do
-    case dump(value) do
+  def dump!(uuid) do
+    case dump(uuid) do
       {:ok, raw_uuid} -> raw_uuid
-      :error -> raise ArgumentError, "cannot dump given UUID to binary: #{inspect(value)}"
+      :error -> raise ArgumentError, "cannot dump given UUID to binary: #{inspect(uuid)}"
     end
   end
 

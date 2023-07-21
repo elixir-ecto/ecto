@@ -1,5 +1,6 @@
 defmodule Ecto.UUIDTest do
   use ExUnit.Case, async: true
+  doctest Ecto.UUID
 
   @test_uuid "601d74e4-a8d3-4b6e-8365-eddb4c893327"
   @test_uuid_upper_case "601D74E4-A8D3-4B6E-8365-EDDB4C893327"
