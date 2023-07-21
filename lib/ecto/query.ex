@@ -2722,7 +2722,7 @@ defmodule Ecto.Query do
 
   But with the benefit of interpolated values being in the right place.
   """
-  defmacro sigil_f({:<<>>, _meta, pieces}, _) do
+  defmacro sigil_f({:<<>>, meta, pieces}, _) do
     query =
       pieces
       |> Enum.map(fn
@@ -2737,8 +2737,6 @@ defmodule Ecto.Query do
         _ -> []
       end)
 
-    quote do
-      fragment(unquote_splicing([query | args]))
-    end
+    {:fragment, meta, [query | args]}
   end
 end
