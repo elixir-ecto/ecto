@@ -974,6 +974,25 @@ defmodule Ecto.QueryTest do
       end
     end
 
+    test "raises at compile time when mixing interpolation and positional arguments" do
+      assert_raise Ecto.Query.CompileError,
+                   ~r/fragment\(...\) does not allow mixing interpolation and positional arguments/, fn ->
+        quote_and_eval from p in "posts", where: fragment("GREATEST(#{t.date}, ?)", t.other)
+      end
+    end
+
+    test "builds a fragment with one interpolation" do
+      assert inspect(select("t", [t], fragment("LOWER(#{t.email})"))) ==
+               inspect(select("t", [t], fragment("LOWER(?)", t.email)))
+    end
+
+    test "builds a fragment with multiple interpolation" do
+      date = ~D[2020-01-01]
+
+      assert inspect(select("t", [t], fragment("GREATEST(#{t.date}, #{^date})"))) ==
+               inspect(select("t", [t], fragment("GREATEST(?, ?)", t.date, ^date)))
+    end
+
     test "supports literals" do
       query = from p in "posts", select: fragment("? COLLATE ?", p.name, literal(^"es_ES"))
       assert {:fragment, _, parts} = query.select.expr
@@ -1131,24 +1150,6 @@ defmodule Ecto.QueryTest do
     test "reverses by primary key with no order" do
       q = from(p in Schema)
       assert inspect(reverse_order(q)) == inspect(order_by(q, desc: :id))
-    end
-  end
-
-  describe "sigil_f/1" do
-    test "builds a fragment without interpolation" do
-      assert inspect(select("t", ~f"NOW()")) == inspect(select("t", fragment("NOW()")))
-    end
-
-    test "builds a fragment with one interpolation" do
-      assert inspect(select("t", [t], ~f"LOWER(#{t.email})")) ==
-               inspect(select("t", [t], fragment("LOWER(?)", t.email)))
-    end
-
-    test "builds a fragment with multiple interpolation" do
-      date = ~D[2020-01-01]
-
-      assert inspect(select("t", [t], ~f"GREATEST(#{t.date}, #{^date})")) ==
-               inspect(select("t", [t], fragment("GREATEST(?, ?)", t.date, ^date)))
     end
   end
 end

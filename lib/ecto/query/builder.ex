@@ -162,7 +162,7 @@ defmodule Ecto.Query.Builder do
   end
 
   # fragments
-  def escape({:sigil_f, _sigil_meta, [{:<<>>, _meta, pieces}, _modifiers]}, given_type, params_acc, vars, env) do
+  def escape({:fragment, _sigil_meta, [{:<<>>, _meta, pieces} | rest]}, given_type, params_acc, vars, env) do
     query =
       pieces
       |> Enum.map(fn
@@ -176,6 +176,10 @@ defmodule Ecto.Query.Builder do
         {:"::", _, [{_, _, [val]} | _]} -> [val]
         _ -> []
       end)
+
+    if not Enum.empty?(frags) and not Enum.empty?(rest) do
+      error! "fragment\(...\) does not allow mixing interpolation and positional arguments"
+    end
 
     escape({:fragment, [], [query | frags]}, given_type, params_acc, vars, env)
   end
