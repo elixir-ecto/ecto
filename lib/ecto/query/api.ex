@@ -446,6 +446,16 @@ defmodule Ecto.Query.API do
 
       from p in Post, where: fragment("? in (?,?,?)", p.id, ^1, ^2, ^3)
 
+  ## Interpolation
+
+  As an alternative splicing, fragments also support safe interpolations
+  as a syntax sugar for splicing, so the query above could be rewriten as
+
+      from p in Post, where: fragment("#{p.id} in (#{^1},#{^2},#{^3})")
+
+  Which has the benefit of more easily understanding where each expression
+  is used.
+
   ## Defining custom functions using macros and fragment
 
   You can add a custom Ecto query function using macros.  For example
@@ -477,35 +487,6 @@ defmodule Ecto.Query.API do
 
   """
   def fragment(fragments), do: doc! [fragments]
-
-  @doc ~S'''
-  Syntax sugar for writing fragments with interpolations.
-
-      dynamic([user: user], ~f"""
-        CASE
-          WHEN #{user.role == :admin} THEN 3
-          WHEN #{user.role == :manager} THEN 2
-          ELSE 1
-        END
-      """)
-
-  Is equivalent to
-
-      dynamic([user: user], fragment(
-        """
-          CASE
-            WHEN ? THEN 3
-            WHEN ? THEN 2
-            ELSE 1
-          END
-        """,
-        user.role == :admin,
-        user.role == :manager
-      ))
-
-  But with the benefit of interpolated values being in the right place.
-  '''
-  def sigil_f(ast, modifiers), do: doc! [ast, modifiers]
 
   @doc """
   Allows a literal identifier to be injected into a fragment:
