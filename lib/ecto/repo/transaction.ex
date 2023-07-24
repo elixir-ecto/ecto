@@ -16,9 +16,19 @@ defmodule Ecto.Repo.Transaction do
     return = &adapter.rollback(adapter_meta, &1)
 
     case Ecto.Multi.__apply__(multi, repo, wrap, return) do
-      {:ok, values} -> {:ok, values}
-      {:error, {key, error_value, values}} -> {:error, key, error_value, values}
-      {:error, operation} -> raise "operation #{inspect operation} is manually rolling back, which is not supported by Ecto.Multi"
+      {:ok, values} -> 
+        {:ok, values}
+
+      {:error, {key, error_value, values}} -> 
+        {:error, key, error_value, values}
+
+      {:error, operation} -> 
+        raise """
+          Operation #{inspect operation} is manually rolling back, which is not supported by Ecto.Multi.
+
+          This can occur if you try to commit an outer transaction when the inner transaction has failed 
+          (and rolled back). Instead, allow the outer transaction to fail as well and handle the error case.
+        """
     end
   end
 
