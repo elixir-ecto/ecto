@@ -717,6 +717,35 @@ defmodule Ecto.Query.PlannerTest do
     assert deeper_level_union_query.sources == {{"comments", Comment, "global"}}
   end
 
+  test "plan: cache key for select with subquery" do
+    subquery = select(Comment, 1)
+
+    {_, _, _, key} =
+      from(Post, as: :post)
+      |> select([p], %{title: p.title, comment_count: subquery(subquery)})
+      |> plan()
+
+    assert key ==
+             [
+               :all,
+               {:aliases, %{post: 0}},
+               {:from, {"posts", Ecto.Query.PlannerTest.Post, 111_065_921, "my_prefix"}, []},
+               {:select,
+                {{:%{}, [],
+                  [
+                    title: {{:., [], [{:&, [], [0]}, :title]}, [], []},
+                    comment_count: {:subquery, 0}
+                  ]},
+                 [
+                   subquery: [
+                     :all,
+                     {:from, {"comments", Ecto.Query.PlannerTest.Comment, 38_292_156, nil}, []},
+                     {:select, 1}
+                   ]
+                 ]}}
+             ]
+  end
+
   describe "plan: CTEs" do
     test "with uncacheable queries are uncacheable" do
       {_, _, _, cache} =

@@ -766,7 +766,10 @@ defmodule Ecto.Query.Planner do
   end
 
   defp expr_to_cache(%QueryExpr{expr: expr}), do: expr
-  defp expr_to_cache(%SelectExpr{expr: expr}), do: expr
+  defp expr_to_cache(%SelectExpr{expr: expr, subqueries: []}), do: expr
+  defp expr_to_cache(%SelectExpr{expr: expr, subqueries: subqueries}) do
+    {expr, Enum.map(subqueries, fn %{cache: cache} -> {:subquery, cache} end)}
+  end
   defp expr_to_cache(%BooleanExpr{op: op, expr: expr, subqueries: []}), do: {op, expr}
   defp expr_to_cache(%BooleanExpr{op: op, expr: expr, subqueries: subqueries}) do
     # Alternate implementation could be replace {:subquery, i} expression in expr.
