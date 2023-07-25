@@ -5,7 +5,7 @@ defmodule Friends.Mixfile do
     [
       app: :friends,
       version: "0.1.0",
-      elixir: "~> 1.4",
+      elixir: "~> 1.12",
       build_embedded: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases()
@@ -28,13 +28,13 @@ defmodule Friends.Mixfile do
   defp deps do
     # Normally you would specify a version of Ecto, like this:
     #
-    # {:ecto, "~> 3.0"}
+    # {:ecto, "~> 3.10"}
     #
     # It is not done in this instance because we want to refer to the local Ecto.
     [
       {:ecto, path: "../..", override: true},
       {:postgrex, ">= 0.0.0"},
-      {:ecto_sql, "~> 3.0"},
+      {:ecto_sql, "~> 3.10"},
       {:jason, "~> 1.0"}
     ]
   end
