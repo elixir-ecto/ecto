@@ -761,8 +761,12 @@ defmodule Ecto.Query do
   If any other value is given, it is converted to a query via
   `Ecto.Queryable` and wrapped in the `Ecto.SubQuery` struct.
 
-  `subquery` is supported in `from`, `join`, and `where`, in the
-  form `p.x in subquery(q)`.
+  `subquery` is supported in:
+
+    * `from`,
+    * `join`,
+    * `where`, in the form `p.x in subquery(q)`,
+    * `select` and `select_merge`, in the form of `%{field: subquery(...)}`.
 
   ## Examples
 
@@ -809,6 +813,11 @@ defmodule Ecto.Query do
 
   If you need to refer to a parent binding which is not known when writing the subquery,
   you can use `parent_as` as shown in the examples under "Named bindings" in this module doc.
+
+  You can also use subquery directly in `select` and `select_merge`:
+
+      comments_count = from(c in Comment, where: c.post_id == parent_as(:post).id, select: count())
+      from(p in Post, as: :post, select: %{id: p.id, comments: subquery(comments_count)})
   """
   def subquery(query, opts \\ []) do
     subquery = wrap_in_subquery(query)
