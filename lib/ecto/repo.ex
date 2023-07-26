@@ -1143,9 +1143,9 @@ defmodule Ecto.Repo do
     * `:prefix` - the prefix to fetch preloads from. By default, queries
       will use the same prefix as the first struct in the given collection.
       This option allows the prefix to be changed.
-    * `:stream_fun` - Function to use to perform parallel preloads, defaults
-    to `Task.async_stream/3`. The function is expected to have the same signature
-    as `Task.async_stream/3`.
+    * `:on_preloader_spawn` - when preloads are done in parallel, this function
+    will be called in the processes that perform the preloads. This can be useful
+    for context propagation for traces.
 
   See the ["Shared options"](#module-shared-options) section at the module
   documentation for more options.
