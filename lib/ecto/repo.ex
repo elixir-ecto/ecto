@@ -1143,6 +1143,9 @@ defmodule Ecto.Repo do
     * `:prefix` - the prefix to fetch preloads from. By default, queries
       will use the same prefix as the first struct in the given collection.
       This option allows the prefix to be changed.
+    * `:on_preloader_spawn` - when preloads are done in parallel, this function
+      will be called in the processes that perform the preloads. This can be useful
+      for context propagation for traces.
 
   See the ["Shared options"](#module-shared-options) section at the module
   documentation for more options.

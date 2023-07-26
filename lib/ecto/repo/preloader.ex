@@ -133,9 +133,13 @@ defmodule Ecto.Repo.Preloader do
       # it does not do so in automatic mode, hence this line is
       # still necessary.
       opts = Keyword.put_new(opts, :caller, self())
+      on_preloader_spawn = Keyword.get(opts, :on_preloader_spawn, fn -> :ok end)
 
       preloaders
-      |> Task.async_stream(&(&1.({adapter_meta, opts})), timeout: :infinity)
+      |> Task.async_stream(fn preloader ->
+        on_preloader_spawn.()
+        preloader.({adapter_meta, opts})
+      end, timeout: :infinity)
       |> Enum.map(fn {:ok, assoc} -> assoc end)
     else
       Enum.map(preloaders, &(&1.({adapter_meta, opts})))
