@@ -1856,6 +1856,12 @@ defmodule Ecto.Query do
   Combines result sets of multiple queries. The `select` of each query
   must be exactly the same, with the same types in the same order.
 
+  > ### Selecting literal atoms {: .warning}
+  >
+  > When selecting a literal atom, its value must be the same across
+  > all queries. Otherwise, the value from the parent query will be
+  > applied to all other queries.
+
   Union expression returns only unique rows as if each query returned
   distinct results. This may cause a performance penalty. If you need
   to combine multiple result sets without removing duplicate rows
@@ -1902,6 +1908,12 @@ defmodule Ecto.Query do
   Combines result sets of multiple queries. The `select` of each query
   must be exactly the same, with the same types in the same order.
 
+  > ### Selecting literal atoms {: .warning}
+  >
+  > When selecting a literal atom, its value must be the same across
+  > all queries. Otherwise, the value from the parent query will be
+  > applied to all other queries.
+
   Note that the operations `order_by`, `limit` and `offset` of the
   current `query` apply to the result of the union. `order_by` must
   be specified in one of the following ways, since the union of two
@@ -1942,6 +1954,12 @@ defmodule Ecto.Query do
   Takes the difference of the result sets of multiple queries. The
   `select` of each query must be exactly the same, with the same
   types in the same order.
+
+  > ### Selecting literal atoms {: .warning}
+  >
+  > When selecting a literal atom, its value must be the same across
+  > all queries. Otherwise, the value from the parent query will be
+  > applied to all other queries.
 
   Except expression returns only unique rows as if each query returned
   distinct results. This may cause a performance penalty. If you need
@@ -1989,6 +2007,12 @@ defmodule Ecto.Query do
   `select` of each query must be exactly the same, with the same
   types in the same order.
 
+  > ### Selecting literal atoms {: .warning}
+  >
+  > When selecting a literal atom, its value must be the same across
+  > all queries. Otherwise, the value from the parent query will be
+  > applied to all other queries.
+
   Note that the operations `order_by`, `limit` and `offset` of the
   current `query` apply to the result of the set difference. `order_by`
   must be specified in one of the following ways, since the set difference
@@ -2029,6 +2053,12 @@ defmodule Ecto.Query do
   Takes the overlap of the result sets of multiple queries. The
   `select` of each query must be exactly the same, with the same
   types in the same order.
+
+  > ### Selecting literal atoms {: .warning}
+  >
+  > When selecting a literal atom, its value must be the same across
+  > all queries. Otherwise, the value from the parent query will be
+  > applied to all other queries.
 
   Intersect expression returns only unique rows as if each query returned
   distinct results. This may cause a performance penalty. If you need
@@ -2075,6 +2105,12 @@ defmodule Ecto.Query do
   Takes the overlap of the result sets of multiple queries. The
   `select` of each query must be exactly the same, with the same
   types in the same order.
+
+  > ### Selecting literal atoms {: .warning}
+  >
+  > When selecting a literal atom, its value must be the same across
+  > all queries. Otherwise, the value from the parent query will be
+  > applied to all other queries.
 
   Note that the operations `order_by`, `limit` and `offset` of the
   current `query` apply to the result of the set difference. `order_by`
