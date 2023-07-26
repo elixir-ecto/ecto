@@ -1845,10 +1845,13 @@ defmodule Ecto.Query do
   A union query expression.
 
   Combines result sets of multiple queries. The `select` of each query
-  must be exactly the same, with the same types in the same order. When
-  selecting a literal atom, its value must be the same all queries.
-  Otherwise, the value from the parent query wille be applied to all
-  other queries.
+  must be exactly the same, with the same types in the same order.
+
+  > ### Selecting literal atoms {: .warning}
+  >
+  > When selecting a literal atom, its value must be the same all queries.
+  > Otherwise, the value from the parent query will be applied to all
+  > other queries.
 
   Union expression returns only unique rows as if each query returned
   distinct results. This may cause a performance penalty. If you need
@@ -1894,10 +1897,13 @@ defmodule Ecto.Query do
   A union all query expression.
 
   Combines result sets of multiple queries. The `select` of each query
-  must be exactly the same, with the same types in the same order. When
-  selecting a literal atom, its value must be the same all queries.
-  Otherwise, the value from the parent query wille be applied to all
-  other queries.
+  must be exactly the same, with the same types in the same order.
+
+  > ### Selecting literal atoms {: .warning}
+  >
+  > When selecting a literal atom, its value must be the same all queries.
+  > Otherwise, the value from the parent query will be applied to all
+  > other queries.
 
   Note that the operations `order_by`, `limit` and `offset` of the
   current `query` apply to the result of the union. `order_by` must
@@ -1938,9 +1944,13 @@ defmodule Ecto.Query do
 
   Takes the difference of the result sets of multiple queries. The
   `select` of each query must be exactly the same, with the same
-  types in the same order. When selecting a literal atom, its value
-  must be the same all queries. Otherwise, the value from the parent
-  query wille be applied to all other queries.
+  types in the same order.
+
+  > ### Selecting literal atoms {: .warning}
+  >
+  > When selecting a literal atom, its value must be the same all queries.
+  > Otherwise, the value from the parent query will be applied to all
+  > other queries.
 
   Except expression returns only unique rows as if each query returned
   distinct results. This may cause a performance penalty. If you need
@@ -1986,9 +1996,13 @@ defmodule Ecto.Query do
 
   Takes the difference of the result sets of multiple queries. The
   `select` of each query must be exactly the same, with the same
-  types in the same order.  When selecting a literal atom, its value
-  must be the same all queries. Otherwise, the value from the parent
-  query wille be applied to all other queries.
+  types in the same order.
+
+  > ### Selecting literal atoms {: .warning}
+  >
+  > When selecting a literal atom, its value must be the same all queries.
+  > Otherwise, the value from the parent query will be applied to all
+  > other queries.
 
   Note that the operations `order_by`, `limit` and `offset` of the
   current `query` apply to the result of the set difference. `order_by`
@@ -2029,9 +2043,13 @@ defmodule Ecto.Query do
 
   Takes the overlap of the result sets of multiple queries. The
   `select` of each query must be exactly the same, with the same
-  types in the same order. When selecting a literal atom, its value
-  must be the same all queries. Otherwise, the value from the parent
-  query wille be applied to all other queries.
+  types in the same order.
+
+  > ### Selecting literal atoms {: .warning}
+  >
+  > When selecting a literal atom, its value must be the same all queries.
+  > Otherwise, the value from the parent query will be applied to all
+  > other queries.
 
   Intersect expression returns only unique rows as if each query returned
   distinct results. This may cause a performance penalty. If you need
@@ -2077,9 +2095,13 @@ defmodule Ecto.Query do
 
   Takes the overlap of the result sets of multiple queries. The
   `select` of each query must be exactly the same, with the same
-  types in the same order. When selecting a literal atom, its value
-  must be the same all queries. Otherwise, the value from the parent
-  query wille be applied to all other queries.
+  types in the same order.
+
+  > ### Selecting literal atoms {: .warning}
+  >
+  > When selecting a literal atom, its value must be the same all queries.
+  > Otherwise, the value from the parent query will be applied to all
+  > other queries.
 
   Note that the operations `order_by`, `limit` and `offset` of the
   current `query` apply to the result of the set difference. `order_by`
