@@ -1798,13 +1798,14 @@ defmodule Ecto.RepoTest do
 
     test "preload with :on_preloader_spawn" do
       test_process = self()
-      fun = fn -> send(test_process, :callback_ran) end
+      fun = fn -> send(test_process, {:callback_ran, self()}) end
 
       %MySchemaWithMultiAssoc{parent_id: 1, mother_id: 2}
       |> PrepareRepo.preload([:parent, :mother], [on_preloader_spawn: fun])
 
-      assert_received :callback_ran
-      assert_received :callback_ran
+      assert_received {:callback_ran, pid1} when pid1 != self()
+      assert_received {:callback_ran, pid2} when pid2 != self()
+      assert pid1 != pid2
     end
   end
 
