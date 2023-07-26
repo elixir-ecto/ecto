@@ -85,6 +85,16 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  defmodule MySchemaWithMultiAssoc do
+    use Ecto.Schema
+
+    schema "my_schema" do
+      field :n, :integer
+      belongs_to :parent, MyParent
+      belongs_to :mother, MyParent
+    end
+  end
+
   defmodule MySchemaWithPrefixedAssoc do
     use Ecto.Schema
 
@@ -1784,6 +1794,17 @@ defmodule Ecto.RepoTest do
       PrepareRepo.preload(%MySchemaWithAssoc{parent_id: 1}, :parent, [hello: :world])
       assert_received {:all, query, _}
       assert query.from.source == {"my_parent", Ecto.RepoTest.MyParent}
+    end
+
+    test "preload with :on_preloader_spawn" do
+      test_process = self()
+      fun = fn -> send(test_process, :callback_ran) end
+
+      %MySchemaWithMultiAssoc{parent_id: 1, mother_id: 2}
+      |> PrepareRepo.preload([:parent, :mother], [on_preloader_spawn: fun])
+
+      assert_received :callback_ran
+      assert_received :callback_ran
     end
   end
 
