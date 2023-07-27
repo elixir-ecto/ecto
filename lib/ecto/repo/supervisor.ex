@@ -52,6 +52,7 @@ defmodule Ecto.Repo.Supervisor do
   def compile_config(_repo, opts) do
     otp_app = Keyword.fetch!(opts, :otp_app)
     adapter = opts[:adapter]
+    log = Keyword.get(opts, :log, :debug)
 
     unless adapter do
       raise ArgumentError, "missing :adapter option on use Ecto.Repo"
@@ -70,6 +71,11 @@ defmodule Ecto.Repo.Supervisor do
     unless Ecto.Adapter in behaviours do
       raise ArgumentError,
             "expected :adapter option given to Ecto.Repo to list Ecto.Adapter as a behaviour"
+    end
+
+    unless log in ~w(false debug info notice warning error critical alert emergency)a do
+      raise ArgumentError,
+          "expected :log option given to Ecto.Repo to be one of Logger.level/0 or false"
     end
 
     {otp_app, adapter, behaviours}
