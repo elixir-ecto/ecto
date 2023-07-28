@@ -707,9 +707,16 @@ defmodule Ecto.RepoTest do
 
       query = from(e in MySchema, where: e.x == "123", update: [set: [x: "321"]])
       TestRepo.update_all(query, [])
+      TestRepo.update_all(query)
 
       assert_raise Ecto.QueryError, fn ->
-        TestRepo.update_all from(e in MySchema, order_by: e.x), set: [x: "321"]
+        from(e in MySchema, order_by: e.x)
+        |> TestRepo.update_all(set: [x: "321"])
+      end
+
+      assert_raise Ecto.QueryError, fn ->
+        from(e in MySchema)
+        |> TestRepo.update_all()
       end
     end
   end
