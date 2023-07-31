@@ -554,20 +554,32 @@ defmodule Ecto.QueryTest do
       assert query.from.hints == ["hello", "world"]
     end
 
-    test "binary values are expected to be compile-time strings or list of strings" do
+    test "supports interpolation through unsafe_fragment" do
+      hint = "fragment"
+      query = from "posts", hints: unsafe_fragment(^hint)
+      assert query.from.hints == ["fragment"]
+
+      hint = "hint"
+      query = from "posts", hints: ["string", unsafe_fragment(^hint)]
+      assert query.from.hints == ["string", "hint"]
+    end
+
+    test "are expected to be strings or unsafe fragments that evaluate to strings" do
       assert_raise Ecto.Query.CompileError, ~r"`hints` must be a compile time string", fn ->
         quote_and_eval(from "posts", hints: 123)
       end
 
       assert_raise Ecto.Query.CompileError, ~r"`hints` must be a compile time string", fn ->
-        quote_and_eval(from "posts", join: "comments", on: true, hints: 123)
+        quote_and_eval(from "posts", hints: ["string", :atom])
       end
-    end
 
-    test "tuple values are not checked for contents" do
-      hint = "hint_from_config"
-      query = from "posts", hints: [dynamic: hint, number: 123]
-      assert query.from.hints == [dynamic: hint, number: 123]
+      assert_raise Ecto.Query.CompileError, ~r"`hints` must be a compile time string", fn ->
+        quote_and_eval(from "posts", hints: unsafe_fragment(^123))
+      end
+
+      assert_raise Ecto.Query.CompileError, ~r"`hints` must be a compile time string", fn ->
+        quote_and_eval(from "posts", hints: ["string", unsafe_fragment(123)])
+      end
     end
   end
 

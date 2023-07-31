@@ -948,6 +948,36 @@ defmodule Ecto.Query do
   a value that implements the `Ecto.Queryable` protocol
   and the second argument the expression.
 
+  ## Hints
+
+  The `hints` keyword can be used to specify query hints:
+
+      from p in Post,
+        hints: ["USE INDEX FOO"],
+        where: p.title == "title"
+
+  It can also be used as a general mechanism for adding statements that
+  come after the `from` clause. For example, it can be used to enable
+  table sampling:
+
+      from p in Post,
+        hints: "TABLESAMPLE SYSTEM(1)"
+
+  `from` hints must be a (list of) compile-time strings or unsafe fragments. An unsafe
+  fragment can be used to specify dynamic hints:
+
+      sample = "SYSTEM_ROWS(1)"
+
+      from p in Post,
+        hints: ["TABLESAMPLE", unsafe_fragment(^sample)]
+
+  > ### Unsafe Fragments {: .warning}
+  >
+  > The output of `unsafe_fragment/1` will be injected directly into the
+  > resulting SQL statement without being escaped. For this reason, input
+  > from uncontrolled sources, such as user input, should **never** be used.
+  > Otherwise, it could lead to harmful SQL injection attacks.
+
   ## Keywords examples
 
       # `in` expression
@@ -957,7 +987,7 @@ defmodule Ecto.Query do
       from(City, limit: 1)
 
       # Fragment with user-defined function and predefined columns
-      from(f in fragment("my_table_valued_function(arg)"), select: f.x))
+      from(f in fragment("my_table_valued_function(arg)"), select: f.x)
 
       # Fragment with built-in function and undefined columns
       from(f in fragment("select generate_series(?::integer, ?::integer) as x", ^0, ^10), select: f.x)
@@ -1281,7 +1311,7 @@ defmodule Ecto.Query do
 
   ## Hints
 
-  `from` and `join` also support index hints, as found in databases such as
+  `join` also supports table hints, as found in databases such as
   [MySQL](https://dev.mysql.com/doc/refman/8.0/en/index-hints.html),
   [MSSQL](https://docs.microsoft.com/en-us/sql/t-sql/queries/hints-transact-sql-table?view=sql-server-2017) and
   [Clickhouse](https://clickhouse.tech/docs/en/sql-reference/statements/select/sample/).
@@ -1297,12 +1327,7 @@ defmodule Ecto.Query do
   Keep in mind you want to use hints rarely, so don't forget to read the database
   disclaimers about such functionality.
 
-  Hints must be static compile-time strings when they are specified as (list of) strings.
-  Certain Ecto adapters may also accept dynamic hints using the tuple form:
-
-      from e in Event,
-        hints: [sample: sample_threshold()],
-        select: e
+  Join hints must be static compile-time strings when they are specified as (list of) strings.
 
   ## Array joins
 

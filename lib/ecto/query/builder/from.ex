@@ -60,8 +60,8 @@ defmodule Ecto.Query.Builder.From do
         escape_source(other, env)
     end
   end
-  
-  @typep hints :: [String.t() | {atom, term}]
+
+  @typep hints :: [String.t() | Macro.t()]
 
   @doc """
   Builds a quoted expression.
@@ -73,12 +73,7 @@ defmodule Ecto.Query.Builder.From do
   @spec build(Macro.t(), Macro.Env.t(), atom, {:ok, String.t | nil} | nil, hints) ::
           {Macro.t(), Keyword.t(), non_neg_integer | nil}
   def build(query, env, as, prefix, hints) do
-    unless Enum.all?(hints, &is_valid_hint/1) do
-      Builder.error!(
-        "`hints` must be a compile time string, list of strings, a tuple, or a list of tuples " <>
-          "got: `#{Macro.to_string(hints)}`"
-      )
-    end
+    hints = Enum.map(hints, &hint!(&1))
 
     prefix = case prefix do
       nil -> nil
@@ -146,6 +141,34 @@ defmodule Ecto.Query.Builder.From do
   def prefix!(prefix), do: raise("`prefix` must be a string, got: #{inspect(prefix)}")
 
   @doc """
+  Validates hints at compile time and runtime
+  """
+  def hint!(hint) when is_binary(hint), do: hint
+
+  def hint!({:unsafe_fragment, _, [fragment]}) do
+    case fragment do
+      {:^, _, [value]} ->
+        quote do: Ecto.Query.Builder.From.hint!(unquote(value))
+
+      hint when is_binary(hint) ->
+        hint
+
+      other ->
+        Builder.error!(
+          "`hints` must be a compile time string, unsafe fragment of the form `unsafe_fragment(^...)`, " <>
+            "or list containing either, got: `#{Macro.to_string(other)}`"
+        )
+    end
+  end
+
+  def hint!(other) do
+    Builder.error!(
+      "`hints` must be a compile time string, unsafe fragment of the form `unsafe_fragment(^...)`, " <>
+        "or list containing either, got: `#{Macro.to_string(other)}`"
+    )
+  end
+
+  @doc """
   The callback applied by `build/2` to build the query.
   """
   @spec apply(Ecto.Queryable.t(), non_neg_integer, Macro.t(), {:ok, String.t} | nil, hints) :: Ecto.Query.t()
@@ -193,10 +216,6 @@ defmodule Ecto.Query.Builder.From do
 
   defp maybe_apply_hints(query, []), do: query
   defp maybe_apply_hints(query, hints), do: update_in(query.from.hints, &(&1 ++ hints))
-
-  defp is_valid_hint(hint) when is_binary(hint), do: true
-  defp is_valid_hint({_key, _val}), do: true
-  defp is_valid_hint(_), do: false
 
   defp check_binds(query, count) do
     if count > 1 and count > Builder.count_binds(query) do
