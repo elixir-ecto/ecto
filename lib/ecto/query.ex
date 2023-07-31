@@ -974,8 +974,9 @@ defmodule Ecto.Query do
   > ### Unsafe Fragments {: .warning}
   >
   > The output of `unsafe_fragment/1` will be injected directly into the
-  > SQL statement without being escaped. For this reason, user input should
-  > **never** be used because it can lead to SQL injections.
+  > resulting SQL statement without being escaped. For this reason, input
+  > from uncontrolled sources, such as user input, should **never** be used.
+  > Otherwise, it could lead to harmful SQL injection attacks.
 
   ## Keywords examples
 
