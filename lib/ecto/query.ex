@@ -956,8 +956,8 @@ defmodule Ecto.Query do
         hints: ["USE INDEX FOO"],
         where: p.title == "title"
 
-  They can also be used as general mechanism for adding statements that
-  come after the `from` clause. For example, they can be used to enable
+  It can also be used as a general mechanism for adding statements that
+  come after the `from` clause. For example, it can be used to enable
   table sampling:
 
       from p in Post,
