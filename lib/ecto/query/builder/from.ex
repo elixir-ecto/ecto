@@ -150,9 +150,6 @@ defmodule Ecto.Query.Builder.From do
       {:^, _, [value]} ->
         quote do: Ecto.Query.Builder.From.hint!(unquote(value))
 
-      hint when is_binary(hint) ->
-        hint
-
       other ->
         Builder.error!(
           "`hints` must be a compile time string, unsafe fragment of the form `unsafe_fragment(^...)`, " <>
