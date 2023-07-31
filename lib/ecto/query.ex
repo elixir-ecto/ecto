@@ -957,7 +957,7 @@ defmodule Ecto.Query do
         where: p.title == "title"
 
   They can also be used as general mechanism for adding statements that
-  come after the `from` clause. For example, they can be used to enabled
+  come after the `from` clause. For example, they can be used to enable
   table sampling:
 
       from p in Post,
