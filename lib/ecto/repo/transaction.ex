@@ -24,10 +24,13 @@ defmodule Ecto.Repo.Transaction do
 
       {:error, operation} -> 
         raise """
-        operation #{inspect operation} is manually rolling back, which is not supported by Ecto.Multi.
+        operation #{inspect operation} is rolling back unexpectedly.
 
-        This can occur if you try to commit an outer transaction when the inner transaction has failed 
-        (and rolled back). Instead, allow the outer transaction to fail as well and handle the error case.
+        This can happen if `repo.rollback/1` is manually called, which is not \
+        supported by `Ecto.Multi`. It can also occur if a nested transaction \
+        has rolled back and its error is not bubbled up to the outer multi. \
+        Nested transactions are discouraged when using `Ecto.Multi`. Consider \
+        flattening out the transaction instead.
         """
     end
   end
