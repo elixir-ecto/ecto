@@ -966,10 +966,10 @@ defmodule Ecto.Query do
   `from` hints must be a (list of) compile-time strings or unsafe fragments. An unsafe
   fragment can be used to specify dynamic hints:
 
-      sample_method = "SYSTEM_ROWS"
+      sample = "SYSTEM_ROWS(1)"
 
       from p in Post,
-        hints: ["TABLESAMPLE ", unsafe_fragment(^sample_method), "(1)"]
+        hints: ["TABLESAMPLE", unsafe_fragment(^sample)]
 
   > ### Unsafe Fragments {: .warning}
   >
