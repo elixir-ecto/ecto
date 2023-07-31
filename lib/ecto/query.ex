@@ -1311,7 +1311,7 @@ defmodule Ecto.Query do
 
   ## Hints
 
-  `join` also supports index hints, as found in databases such as
+  `join` also supports table hints, as found in databases such as
   [MySQL](https://dev.mysql.com/doc/refman/8.0/en/index-hints.html),
   [MSSQL](https://docs.microsoft.com/en-us/sql/t-sql/queries/hints-transact-sql-table?view=sql-server-2017) and
   [Clickhouse](https://clickhouse.tech/docs/en/sql-reference/statements/select/sample/).
