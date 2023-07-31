@@ -975,7 +975,7 @@ defmodule Ecto.Query do
   >
   > The output of `unsafe_fragment/1` will be injected directly into the
   > SQL statement without being escaped. For this reason, user input should
-  > **never** be used.
+  > **never** be used because it can lead to SQL injections.
 
   ## Keywords examples
 
