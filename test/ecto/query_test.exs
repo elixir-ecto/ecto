@@ -557,11 +557,11 @@ defmodule Ecto.QueryTest do
     test "supports interpolation through unsafe_fragment" do
       hint = "fragment"
       query = from "posts", hints: unsafe_fragment(^hint)
-      assert query.from.hints == [{:unsafe_fragment, "fragment"}]
+      assert query.from.hints == ["fragment"]
 
       hint = "hint"
       query = from "posts", hints: ["string", unsafe_fragment(^hint)]
-      assert query.from.hints == ["string", {:unsafe_fragment, "hint"}]
+      assert query.from.hints == ["string", "hint"]
     end
 
     test "are expected to be strings or unsafe fragments that evaluate to strings" do

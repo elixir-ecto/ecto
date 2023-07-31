@@ -148,10 +148,7 @@ defmodule Ecto.Query.Builder.From do
   def hint!({:unsafe_fragment, _, [fragment]}) do
     case fragment do
       {:^, _, [value]} ->
-        quote do
-          checked = Ecto.Query.Builder.From.hint!(unquote(value))
-          {:unsafe_fragment, checked}
-        end
+        quote do: Ecto.Query.Builder.From.hint!(unquote(value))
 
       hint when is_binary(hint) ->
         hint
