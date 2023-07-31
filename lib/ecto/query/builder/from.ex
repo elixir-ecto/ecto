@@ -150,7 +150,7 @@ defmodule Ecto.Query.Builder.From do
       {:^, _, [value]} ->
         quote do: Ecto.Query.Builder.From.hint!(unquote(value))
 
-      other ->
+      _ ->
         Builder.error!(
           "`unsafe_fragment/1` in `hints` expects an interpolated value, such as " <>
             "unsafe_fragment(^value), got: `#{Macro.to_string(fragment)}`"
