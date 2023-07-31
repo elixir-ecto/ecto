@@ -577,8 +577,10 @@ defmodule Ecto.QueryTest do
         quote_and_eval(from "posts", hints: unsafe_fragment(^123))
       end
 
-      assert_raise Ecto.Query.CompileError, ~r"`hints` must be a compile time string", fn ->
-        quote_and_eval(from "posts", hints: ["string", unsafe_fragment(123)])
+      msg = ~r"`unsafe_fragment/1` in `hints` expects an interpolated value"
+
+      assert_raise Ecto.Query.CompileError, msg, fn ->
+        quote_and_eval(from "posts", hints: ["string", unsafe_fragment("123")])
       end
     end
   end
