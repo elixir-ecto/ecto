@@ -155,16 +155,16 @@ defmodule Ecto.Query.Builder.From do
 
       other ->
         Builder.error!(
-          "`hints` must be a compile time string, an unsafe fragment of the form `unsafe_fragment(^...)`, " <>
-            "or a list containing either, got: `#{Macro.to_string(other)}`"
+          "`hints` must be a compile time string, unsafe fragment of the form `unsafe_fragment(^...)`, " <>
+            "or list containing either, got: `#{Macro.to_string(other)}`"
         )
     end
   end
 
   def hint!(other) do
     Builder.error!(
-      "`hints` must be a compile time string, an unsafe fragment of the form `unsafe_fragment(^...)`, " <>
-        "or a list containing either, got: `#{Macro.to_string(other)}`"
+      "`hints` must be a compile time string, unsafe fragment of the form `unsafe_fragment(^...)`, " <>
+        "or list containing either, got: `#{Macro.to_string(other)}`"
     )
   end
 
