@@ -16,9 +16,22 @@ defmodule Ecto.Repo.Transaction do
     return = &adapter.rollback(adapter_meta, &1)
 
     case Ecto.Multi.__apply__(multi, repo, wrap, return) do
-      {:ok, values} -> {:ok, values}
-      {:error, {key, error_value, values}} -> {:error, key, error_value, values}
-      {:error, operation} -> raise "operation #{inspect operation} is manually rolling back, which is not supported by Ecto.Multi"
+      {:ok, values} -> 
+        {:ok, values}
+
+      {:error, {key, error_value, values}} -> 
+        {:error, key, error_value, values}
+
+      {:error, operation} -> 
+        raise """
+        operation #{inspect operation} is rolling back unexpectedly.
+
+        This can happen if `repo.rollback/1` is manually called, which is not \
+        supported by `Ecto.Multi`. It can also occur if a nested transaction \
+        has rolled back and its error is not bubbled up to the outer multi. \
+        Nested transactions are discouraged when using `Ecto.Multi`. Consider \
+        flattening out the transaction instead.
+        """
     end
   end
 
