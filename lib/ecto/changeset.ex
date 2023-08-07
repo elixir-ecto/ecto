@@ -275,7 +275,7 @@ defmodule Ecto.Changeset do
   persisted to the database, such as schemaless changesets, you may need
   to explicitly set the action to one specific value. Frameworks such as
   Phoenix [use the action value to define how HTML forms should
-  act](https://hexdocs.pm/phoenix_html/Phoenix.HTML.Form.html#module-a-note-on-errors).
+  act](https://hexdocs.pm/phoenix_live_view/Phoenix.Component.html#form/1-a-note-on-errors).
 
   Instead of setting the action manually, you may use `apply_action/2` that
   emulates operations such as `c:Ecto.Repo.insert`. `apply_action/2` will return
