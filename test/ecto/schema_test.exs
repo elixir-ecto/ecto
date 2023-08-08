@@ -1093,7 +1093,7 @@ defmodule Ecto.SchemaTest do
 
     test "invalid option" do
       message =
-        "expected `:preload_order` for :posts to be a keyword list or a list of atoms/fields, got: `:title`"
+        "expected `:preload_order` for :posts to be a keyword list, a list of atoms/fields or a {Mod, fun, args} tuple, got: `:title`"
 
       assert_raise ArgumentError, message, fn ->
         defmodule ThroughMatch do

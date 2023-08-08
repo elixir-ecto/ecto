@@ -1620,6 +1620,10 @@ defmodule Ecto.Schema do
       This is useful when attaching to an existing database. The value should be
       an atom.
 
+    * `:load_in_query` - When false, the field will not be loaded when
+      selecting the whole struct in a query, such as `from p in Post, select: p`.
+      Defaults to `true`.
+
   ## Examples
 
       defmodule Order do
@@ -1685,7 +1689,6 @@ defmodule Ecto.Schema do
         field :name, :string
         field :age,  :integer
       end
-
 
   Defining embedded schema in such a way will define a `Parent.Child` module
   with the appropriate struct. In order to properly cast the embedded schema.
@@ -1788,6 +1791,10 @@ defmodule Ecto.Schema do
     * `:source` - Defines the name that is to be used in database for this field.
       This is useful when attaching to an existing database. The value should be
       an atom.
+
+    * `:load_in_query` - When false, the field will not be loaded when
+      selecting the whole struct in a query, such as `from p in Post, select: p`.
+      Defaults to `true`.
 
   ## Examples
 
@@ -2186,7 +2193,7 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :ecto_changeset_fields, {name, {:assoc, struct}})
   end
 
-  @valid_embeds_one_options [:on_replace, :source]
+  @valid_embeds_one_options [:on_replace, :source, :load_in_query]
 
   @doc false
   def __embeds_one__(mod, name, schema, opts) when is_atom(schema) do
@@ -2199,7 +2206,7 @@ defmodule Ecto.Schema do
           "`embeds_one/3` expects `schema` to be a module name, but received #{inspect(schema)}"
   end
 
-  @valid_embeds_many_options [:on_replace, :source]
+  @valid_embeds_many_options [:on_replace, :source, :load_in_query]
 
   @doc false
   def __embeds_many__(mod, name, schema, opts) when is_atom(schema) do
