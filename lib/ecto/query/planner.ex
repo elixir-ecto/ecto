@@ -1475,7 +1475,7 @@ defmodule Ecto.Query.Planner do
     case collect_fields(left, fields, from, query, take, keep_literals?, %{}) do
       {{:source, :from}, fields, left_from} ->
         {right, right_fields, _} =
-          collect_fields(right, [] , left_from, query, take, keep_literals?, %{})
+          collect_fields(right, [], left_from, query, take, keep_literals?, %{})
 
         {from_expr, from_source, from_fields} = left_from
         from = {{:merge, from_expr, right}, from_source, from_fields ++ Enum.reverse(right_fields)}
