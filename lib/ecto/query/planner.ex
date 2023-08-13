@@ -1447,22 +1447,6 @@ defmodule Ecto.Query.Planner do
     {put_in(query.select.fields, fields), select}
   end
 
-  defp expand_derived_fields(fields, query, select_expr, adapter) do
-    Enum.map(fields, fn
-      {{:., [], [{:&, [], [ix]}, field]}, [], []} = field_expr ->
-        source = get_source!(:select, query, ix)
-
-        if derived_mfa = derived_mfa(source, field) do
-          expand_derived_expr(derived_mfa, ix, query, select_expr, adapter)
-        else
-          field_expr
-        end
-
-      field_expr ->
-        field_expr
-    end)
-  end
-
   # Handling of source
 
   # The idea of collect_fields is to collect all fields used in select.
@@ -2004,6 +1988,22 @@ defmodule Ecto.Query.Planner do
   end
 
   defp derived_mfa(_, _), do: nil
+
+  defp expand_derived_fields(fields, query, select_expr, adapter) do
+    Enum.map(fields, fn
+      {{:., [], [{:&, [], [ix]}, field]}, [], []} = field_expr ->
+        source = get_source!(:select, query, ix)
+
+        if derived_mfa = derived_mfa(source, field) do
+          expand_derived_expr(derived_mfa, ix, query, select_expr, adapter)
+        else
+          field_expr
+        end
+
+      field_expr ->
+        field_expr
+    end)
+  end
 
   defp expand_derived_expr({m, f, a}, source_ix, query, expr, adapter) do
     %DynamicExpr{fun: fun} = apply(m, f, a)
