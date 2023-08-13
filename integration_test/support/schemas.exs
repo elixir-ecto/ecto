@@ -46,7 +46,6 @@ defmodule Ecto.Integration.Post do
     field :links, {:map, :string}
     field :intensities, {:map, :float}
     field :posted, :date
-    field :derived, :decimal, derived_as: {__MODULE__, :derived, []}
     has_many :comments, Ecto.Integration.Comment, on_delete: :delete_all, on_replace: :delete
     has_many :force_comments, Ecto.Integration.Comment, on_replace: :delete_if_exists
     has_many :ordered_comments, Ecto.Integration.Comment, preload_order: [:text]
@@ -69,10 +68,6 @@ defmodule Ecto.Integration.Post do
     has_many :comments_authors_permalinks, through: [:comments_authors, :permalink]
     has_one :post_user_composite_pk, Ecto.Integration.PostUserCompositePk
     timestamps()
-  end
-
-  def derived() do
-    dynamic([p], p.counter + p.visits)
   end
 
   def preload_order() do

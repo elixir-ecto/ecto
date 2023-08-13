@@ -40,7 +40,6 @@ defmodule Ecto.Query.PlannerTest do
       field :posted, :naive_datetime
       field :uuid, :binary_id
       field :crazy_comment, :string
-      field :json, :map
 
       belongs_to :post, Ecto.Query.PlannerTest.Post
 
@@ -122,7 +121,6 @@ defmodule Ecto.Query.PlannerTest do
       field :payload, :map, load_in_query: false
       field :status, Ecto.Enum, values: [:draft, :published, :deleted]
       field :parameterized_map, ParameterizedMap
-      field :derived, :string, derived_as: {__MODULE__, :derived, []}
 
       embeds_one :meta, PostMeta
       embeds_many :metas, PostMeta
@@ -133,6 +131,15 @@ defmodule Ecto.Query.PlannerTest do
       many_to_many :crazy_comments, Comment, join_through: CommentPost, where: [text: "crazycomment"]
       many_to_many :crazy_comments_with_list, Comment, join_through: CommentPost, where: [text: {:in, ["crazycomment1", "crazycomment2"]}], join_where: [deleted: true]
       many_to_many :crazy_comments_without_schema, Comment, join_through: "comment_posts", join_where: [deleted: true]
+    end
+  end
+
+  defmodule Derived do
+    use Ecto.Schema
+
+    schema "derived" do
+      field :visits, :integer
+      field :derived, :string, derived_as: {__MODULE__, :derived, []}
     end
 
     def derived() do
@@ -181,44 +188,50 @@ defmodule Ecto.Query.PlannerTest do
     # [{{:., [type: :integer], [{:&, [], [0]}, :visits]}, [], []}]
 
     # 1. select the field by itself
-    q = from p in Post, select: p.derived
+    q = from p in Derived, select: p.derived
     {q, _, _, select} = normalize_with_params(q)
     IO.inspect select
     IO.inspect q.select.fields
 
-    # 2. select the field inside of another data structure
-    q = from p in Post, select: %{derived: p.derived}
+    # 2. select the field with take
+    q = from p in Derived, select: [:derived]
     {q, _, _, select} = normalize_with_params(q)
     IO.inspect select
     IO.inspect q.select.fields
 
-    # 3. select entire struct
-    q = from p in Post, select: p
+    # 3. select the field inside of another data structure
+    q = from p in Derived, select: %{derived: p.derived}
     {q, _, _, select} = normalize_with_params(q)
     IO.inspect select
     IO.inspect q.select.fields
 
-    # 4. select from assoc struct
-    q = from p1 in Post, join: p2 in Post, select: p2
+    # 4. select entire struct
+    q = from p in Derived, select: p
     {q, _, _, select} = normalize_with_params(q)
     IO.inspect select
     IO.inspect q.select.fields
 
-    # 5. select from assoc field
-    q = from p1 in Post, join: p2 in Post, select: p2.derived
+    # 5. select from assoc struct
+    q = from p1 in Derived, join: p2 in Derived, select: p2
     {q, _, _, select} = normalize_with_params(q)
     IO.inspect select
     IO.inspect q.select.fields
 
-    #6. select from subquery
-    q = from p1 in subquery(from p2 in Post, select: p2.derived), select: p1
+    # 6. select from assoc field
+    q = from p1 in Derived, join: p2 in Derived, select: p2.derived
+    {q, _, _, select} = normalize_with_params(q)
+    IO.inspect select
+    IO.inspect q.select.fields
+
+    # 7. select from subquery
+    q = from p1 in subquery(from p2 in Derived, select: p2.derived), select: p1
     {q, _, _, _} = normalize_with_params(q)
     IO.inspect q.from.source.query.select.fields
 
-    #7. select from cte
+    # 8. select from cte
     q =
-      from(p in Post)
-      |> with_cte("cte", as: ^from(p2 in Post, select: p2))
+      from(p in Derived)
+      |> with_cte("cte", as: ^from(p2 in Derived, select: p2))
       |> join(:inner, [p], c in "cte", on: c.id == p.id)
       |> select([p1, c], c)
     {q, _, _, _} = normalize_with_params(q)
