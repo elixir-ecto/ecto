@@ -1042,7 +1042,7 @@ defmodule Ecto.SchemaTest do
 
   describe "type :any" do
     test "raises on non-virtual" do
-      assert_raise ArgumentError, ~r"only virtual fields can have type :any", fn ->
+      assert_raise ArgumentError, ~r"only virtual and derived fields can have type :any", fn ->
         defmodule FieldAny do
           use Ecto.Schema
 

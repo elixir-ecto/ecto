@@ -498,6 +498,7 @@ defmodule Ecto.Schema do
       Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_virtual_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_query_fields, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_derived_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_field_sources, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_embeds, accumulate: true)
@@ -525,7 +526,8 @@ defmodule Ecto.Schema do
     :type,
     :where,
     :references,
-    :skip_default_validation
+    :skip_default_validation,
+    :derived_as
   ]
 
   @doc """
@@ -627,6 +629,7 @@ defmodule Ecto.Schema do
         fields = @ecto_fields |> Enum.reverse()
         query_fields = @ecto_query_fields |> Enum.reverse()
         virtual_fields = @ecto_virtual_fields |> Enum.reverse()
+        derived_fields = @ecto_derived_fields |> Enum.reverse()
         field_sources = @ecto_field_sources |> Enum.reverse()
         assocs = @ecto_assocs |> Enum.reverse()
         embeds = @ecto_embeds |> Enum.reverse()
@@ -657,6 +660,7 @@ defmodule Ecto.Schema do
         def __schema__(:loaded), do: unquote(Macro.escape(loaded))
         def __schema__(:redact_fields), do: unquote(redacted_fields)
         def __schema__(:virtual_fields), do: unquote(Enum.map(virtual_fields, &elem(&1, 0)))
+        def __schema__(:derived_fields), do: unquote(Enum.map(derived_fields, &{elem(&1, 0), Macro.escape(elem(&1, 2))}))
 
         def __schema__(:autogenerate_fields),
           do: unquote(Enum.flat_map(autogenerate, &elem(&1, 0)))
@@ -671,7 +675,7 @@ defmodule Ecto.Schema do
         end
 
         for clauses <-
-              Ecto.Schema.__schema__(fields, field_sources, assocs, embeds, virtual_fields),
+              Ecto.Schema.__schema__(fields, field_sources, assocs, embeds, virtual_fields, derived_fields),
             {args, body} <- clauses do
           def __schema__(unquote_splicing(args)), do: unquote(body)
         end
@@ -2004,9 +2008,9 @@ defmodule Ecto.Schema do
     # better to raise unknown type first than unsupported option.
     type = check_field_type!(mod, name, type, opts)
 
-    if type == :any && !opts[:virtual] do
+    if type == :any && !opts[:virtual] && !opts[:derived_expr] do
       raise ArgumentError,
-            "only virtual fields can have type :any, " <>
+            "only virtual and derived fields can have type :any, " <>
               "invalid type for field #{inspect(name)}"
     end
 
@@ -2025,48 +2029,64 @@ defmodule Ecto.Schema do
       Module.put_attribute(mod, :ecto_redact_fields, name)
     end
 
-    if virtual? do
-      Module.put_attribute(mod, :ecto_virtual_fields, {name, type})
-    else
-      source = opts[:source] || Module.get_attribute(mod, :field_source_mapper).(name)
+    cond do
+      derived_as = opts[:derived_as] ->
+        validate_derived_as!(derived_as)
 
-      if not is_atom(source) do
-        raise ArgumentError,
-              "the :source for field `#{name}` must be an atom, got: #{inspect(source)}"
-      end
+        if opts[:read_after_writes] do
+          Module.put_attribute(mod, :ecto_raw, name)
+        end
 
-      if name != source do
-        Module.put_attribute(mod, :ecto_field_sources, {name, source})
-      end
+        if Keyword.get(opts, :load_in_query, true) do
+          Module.put_attribute(mod, :ecto_query_fields, {name, type})
+        end
 
-      if raw = opts[:read_after_writes] do
-        Module.put_attribute(mod, :ecto_raw, name)
-      end
+        Module.put_attribute(mod, :ecto_derived_fields, {name, type, derived_as})
+        Module.put_attribute(mod, :ecto_fields, {name, type})
 
-      case gen = opts[:autogenerate] do
-        {_, _, _} ->
-          store_mfa_autogenerate!(mod, name, type, gen)
+      virtual? ->
+        Module.put_attribute(mod, :ecto_virtual_fields, {name, type})
 
-        true ->
-          store_type_autogenerate!(mod, name, source || name, type, pk?)
+      true ->
+        source = opts[:source] || Module.get_attribute(mod, :field_source_mapper).(name)
 
-        _ ->
-          :ok
-      end
+        if not is_atom(source) do
+          raise ArgumentError,
+                "the :source for field `#{name}` must be an atom, got: #{inspect(source)}"
+        end
 
-      if raw && gen do
-        raise ArgumentError, "cannot mark the same field as autogenerate and read_after_writes"
-      end
+        if name != source do
+          Module.put_attribute(mod, :ecto_field_sources, {name, source})
+        end
 
-      if pk? do
-        Module.put_attribute(mod, :ecto_primary_keys, name)
-      end
+        if raw = opts[:read_after_writes] do
+          Module.put_attribute(mod, :ecto_raw, name)
+        end
 
-      if Keyword.get(opts, :load_in_query, true) do
-        Module.put_attribute(mod, :ecto_query_fields, {name, type})
-      end
+        case gen = opts[:autogenerate] do
+          {_, _, _} ->
+            store_mfa_autogenerate!(mod, name, type, gen)
 
-      Module.put_attribute(mod, :ecto_fields, {name, type})
+          true ->
+            store_type_autogenerate!(mod, name, source || name, type, pk?)
+
+          _ ->
+            :ok
+        end
+
+        if raw && gen do
+          raise ArgumentError, "cannot mark the same field as autogenerate and read_after_writes"
+        end
+
+        if pk? do
+          Module.put_attribute(mod, :ecto_primary_keys, name)
+        end
+
+        if Keyword.get(opts, :load_in_query, true) do
+          Module.put_attribute(mod, :ecto_query_fields, {name, type})
+        end
+
+        Module.put_attribute(mod, :ecto_fields, {name, type})
     end
   end
 
@@ -2267,7 +2287,7 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __schema__(fields, field_sources, assocs, embeds, virtual_fields) do
+  def __schema__(fields, field_sources, assocs, embeds, virtual_fields, derived_fields) do
     load =
       for {name, type} <- fields do
         if alias = field_sources[name] do
@@ -2285,6 +2305,11 @@ defmodule Ecto.Schema do
     field_sources_quoted =
       for {name, _type} <- fields do
         {[:field_source, name], field_sources[name] || name}
+      end
+
+    derived_fields_quoted =
+      for {name, _type, {m, f, a}} <- derived_fields do
+        {[:derived_field, name], {:{}, [], [m, f, a]}}
       end
 
     types_quoted =
@@ -2320,6 +2345,7 @@ defmodule Ecto.Schema do
 
     catch_all = [
       {[:field_source, quote(do: _)], nil},
+      {[:derived_field, quote(do: _)], nil},
       {[:type, quote(do: _)], nil},
       {[:virtual_type, quote(do: _)], nil},
       {[:association, quote(do: _)], nil},
@@ -2329,6 +2355,7 @@ defmodule Ecto.Schema do
     [
       single_arg,
       field_sources_quoted,
+      derived_fields_quoted,
       types_quoted,
       virtual_types_quoted,
       assoc_quoted,
@@ -2370,6 +2397,15 @@ defmodule Ecto.Schema do
         raise ArgumentError,
               "value #{inspect(value)} is invalid for type #{Ecto.Type.format(type)}, can't set default"
     end
+  end
+
+  defp validate_derived_as!({mod, fun, args} = derived_as)
+       when is_atom(mod) and is_atom(fun) and is_list(args),
+       do: derived_as
+
+  defp validate_derived_as!(derived_as) do
+    raise ArgumentError,
+          "expected `:derived_as`to be a {Mod, fun, args} tuple, got: `#{inspect(derived_as)}`"
   end
 
   defp check_options!(opts, valid, fun_arity) do

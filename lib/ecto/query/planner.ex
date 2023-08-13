@@ -308,6 +308,7 @@ defmodule Ecto.Query.Planner do
     {schema_or_source, expr, %{select: select} = query} = rewrite_subquery_select_expr(query, source?)
     {expr, _} = prewalk(expr, :select, query, select, 0, adapter)
     {{:map, types}, fields, _from} = collect_fields(expr, [], :none, query, select.take, true, %{})
+    fields = expand_derived_fields(fields, query, select, adapter)
     # types must take into account selected_as/2 aliases so that the correct fields are
     # referenced when the outer query selects the entire subquery
     types = normalize_subquery_types(types, Enum.reverse(fields), query.select.aliases, [])
@@ -981,7 +982,7 @@ defmodule Ecto.Query.Planner do
     query
     |> normalize_query(operation, adapter, counter)
     |> elem(0)
-    |> normalize_select(keep_literals?(operation, query))
+    |> normalize_select(keep_literals?(operation, query), adapter)
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
@@ -1099,7 +1100,7 @@ defmodule Ecto.Query.Planner do
     {combinations, counter} =
       Enum.reduce combinations, {[], counter}, fn {type, combination_query}, {combinations, counter} ->
         {combination_query, counter} = traverse_exprs(combination_query, operation, counter, fun)
-        {combination_query, _} = combination_query |> normalize_select(true)
+        {combination_query, _} = combination_query |> normalize_select(true, adapter)
         {[{type, combination_query} | combinations], counter}
       end
 
@@ -1160,7 +1161,7 @@ defmodule Ecto.Query.Planner do
     try do
       inner_query = put_in inner_query.aliases[@parent_as], query
       {inner_query, counter} = normalize_query(inner_query, :all, adapter, counter)
-      {inner_query, _} = normalize_select(inner_query, true)
+      {inner_query, _} = normalize_select(inner_query, true, adapter)
       {_, inner_query} = pop_in(inner_query.aliases[@parent_as])
 
       inner_query =
@@ -1258,11 +1259,43 @@ defmodule Ecto.Query.Planner do
   end
 
   defp prewalk({{:., dot_meta, [left, field]}, meta, []},
-               kind, query, expr, acc, _adapter) do
+               kind, query, expr, acc, adapter) do
     {ix, ix_expr, ix_query} = get_ix!(left, kind, query)
-    extra = if kind == :select, do: [type: type!(kind, ix_query, expr, ix, field)], else: []
-    field = field_source(get_source!(kind, ix_query, ix), field)
-    {{{:., extra ++ dot_meta, [ix_expr, field]}, meta, []}, acc}
+    source = get_source!(kind, ix_query, ix)
+    derived_mfa = derived_mfa(source, field)
+
+    # Derived fields go into the metadata for select expressions
+    # to be expanded during collect_fields. This lets us retain
+    # the field type specified in the schema. For other clauses,
+    # such as where, group by, order by, etc... the type does
+    # not matter so the derived field is expanded right away.
+
+    extra =
+      cond do
+        kind == :select and derived_mfa ->
+          type = type!(kind, ix_query, expr, ix, field)
+          derived_expr = expand_derived_expr(derived_mfa, ix, query, expr, adapter)
+          [type: type, derived: derived_expr]
+
+        kind == :select ->
+          [type: type!(kind, ix_query, expr, ix, field)]
+
+        true ->
+          []
+      end
+
+    field = field_source(source, field)
+
+    cond do
+      kind == :select ->
+        {{{:., extra ++ dot_meta, [ix_expr, field]}, meta, []}, acc}
+
+      derived_mfa ->
+        {expand_derived_expr(derived_mfa, ix, query, expr, adapter), acc}
+
+      true ->
+        {{{:., dot_meta, [ix_expr, field]}, meta, []}, acc}
+    end
   end
 
   defp prewalk({:^, meta, [ix]}, _kind, _query, _expr, acc, _adapter) when is_integer(ix) do
@@ -1360,11 +1393,11 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp normalize_select(%{select: nil} = query, _keep_literals?) do
+  defp normalize_select(%{select: nil} = query, _keep_literals?, _adapter) do
     {query, nil}
   end
 
-  defp normalize_select(query, keep_literals?) do
+  defp normalize_select(query, keep_literals?, adapter) do
     %{assocs: assocs, preloads: preloads, select: select} = query
     %{take: take, expr: expr} = select
     {tag, from_take} = Map.get(take, 0, {:any, []})
@@ -1401,6 +1434,8 @@ defmodule Ecto.Query.Planner do
           {Enum.reverse(fields), [], :none}
       end
 
+    fields = expand_derived_fields(fields, query, select, adapter)
+
     select = %{
       preprocess: preprocess,
       postprocess: postprocess,
@@ -1410,6 +1445,22 @@ defmodule Ecto.Query.Planner do
     }
 
     {put_in(query.select.fields, fields), select}
+  end
+
+  defp expand_derived_fields(fields, query, select_expr, adapter) do
+    Enum.map(fields, fn
+      {{:., [], [{:&, [], [ix]}, field]}, [], []} = field_expr ->
+        source = get_source!(:select, query, ix)
+
+        if derived_mfa = derived_mfa(source, field) do
+          expand_derived_expr(derived_mfa, ix, query, select_expr, adapter)
+        else
+          field_expr
+        end
+
+      field_expr ->
+        field_expr
+    end)
   end
 
   # Handling of source
@@ -1424,7 +1475,7 @@ defmodule Ecto.Query.Planner do
     case collect_fields(left, fields, from, query, take, keep_literals?, %{}) do
       {{:source, :from}, fields, left_from} ->
         {right, right_fields, _} =
-          collect_fields(right, [], left_from, query, take, keep_literals?, %{})
+          collect_fields(right, [] , left_from, query, take, keep_literals?, %{})
 
         {from_expr, from_source, from_fields} = left_from
         from = {{:merge, from_expr, right}, from_source, from_fields ++ Enum.reverse(right_fields)}
@@ -1499,6 +1550,7 @@ defmodule Ecto.Query.Planner do
 
   defp collect_fields({{:., dot_meta, [{:&, _, [_]}, _]}, _, []} = expr,
                       fields, from, _query, _take, _keep_literals?, _drop) do
+    expr = Keyword.get(dot_meta, :derived, expr)
     {{:value, Keyword.fetch!(dot_meta, :type)}, [expr | fields], from}
   end
 
@@ -1946,6 +1998,40 @@ defmodule Ecto.Query.Planner do
   defp field_source(_, field) do
     field
   end
+
+  defp derived_mfa({source, schema, _}, field) when is_binary(source) and schema != nil do
+    schema.__schema__(:derived_field, field)
+  end
+
+  defp derived_mfa(_, _), do: nil
+
+  defp expand_derived_expr({m, f, a}, source_ix, query, expr, adapter) do
+    %DynamicExpr{fun: fun} = apply(m, f, a)
+    {dynamic_expr, _, _, _} = fun.(query)
+
+    dynamic_expr =
+      Macro.postwalk(dynamic_expr, fn
+        {:&, dynamic_meta, [_dynamic_ix]} ->
+          {:&, dynamic_meta, [source_ix]}
+
+        {kind, _, [_]} when kind in [:as, :parent_as] ->
+          raise "no parent_as/as"
+
+        {:^, _ ,[_]} ->
+          raise "no interpolations"
+
+        {:subquery, _} ->
+          raise "no subquery"
+
+        expr ->
+          expr
+      end)
+
+      {dynamic_expr, _acc} = prewalk(dynamic_expr, :select, query, expr, 0, adapter)
+      dynamic_expr
+  end
+
+  defp expand_derived_expr(_, _, _, _, _), do: nil
 
   defp cte_fields([key | rest_keys], [{key, select_expr} | rest_fields], aliases) do
     [{key, select_expr} | cte_fields(rest_keys, rest_fields, aliases)]
