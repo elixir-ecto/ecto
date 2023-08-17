@@ -330,7 +330,7 @@ IO.inspect(movie.characters)
   |> Repo.update()
 
 IO.inspect(movie.characters)
-#=> [%{id: 1, name: "Andy", age: 50},
+#=> [%{id: 1, name: "Andy Dufresne", age: 50},
 #=>  %{id: 2, name: "Red", age: 60}]
 ```
 
