@@ -764,7 +764,7 @@ defmodule Ecto.Type do
       {:ok, ~U[2014-04-17 14:00:00Z]}
       iex> cast(:utc_datetime, "2014-04-17T14:00:00.030Z")
       {:ok, ~U[2014-04-17 14:00:00Z]}
-      ex> cast(:utc_datetime, "2014-04-17T12:00:00-02:00")
+      iex> cast(:utc_datetime, "2014-04-17T12:00:00-02:00")
       {:ok, ~U[2014-04-17 14:00:00Z]}
 
   """
