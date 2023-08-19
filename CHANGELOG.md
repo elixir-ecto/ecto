@@ -5,13 +5,13 @@
 ### Enhancements
 
   * [Ecto.Association] Allow `preload_order` to take MFAs for `many_to_many` associations. This allows ordering by the join table
-  * [Ecto.Preload] Add `:on_preload_spawn` option to `preload/3`
   * [Ecto.Query] Add `:operation` option to `with_cte/3`. This allows CTEs to perform updates and deletes
   * [Ecto.Query] Support `splice(^...)` in `fragment`
   * [Ecto.Query] Add `mode` option to `order_by/4`
   * [Ecto.Query] Allow `selected_as/1` and `selected_as/2` to take interpolated names
   * [Ecto.Query] Allow map update syntax to work with `nil` values in `select`
   * [Ecto.Query] Allow hints to inject SQL using `unsafe_fragment`
+  * [Ecto.Repo] Add `:on_preload_spawn` option to `preload/3`
   * [Ecto.Schema] Support `:load_in_query` option for embeds
 
 ### Bug fixes
