@@ -831,7 +831,7 @@ defmodule Ecto.Schema do
       For example, if you set `Post.has_many :comments, preload_order: [asc: :content]`,
       whenever the `:comments` associations is preloaded,
       the comments will be order by the `:content` field.
-      See `Ecto.Query.order_by/4` for more examples.
+      See `Ecto.Query.order_by/3` for more examples.
 
   ## Examples
 
@@ -1371,7 +1371,7 @@ defmodule Ecto.Schema do
 
     * `:preload_order` - Sets the default `order_by` when preloading the association.
       It may be a keyword list/list of fields or an MFA tuple, such as `{Mod, fun, []}`.
-      Both cases must resolve to a valid `order_by` expression. See `Ecto.Query.order_by/4`
+      Both cases must resolve to a valid `order_by` expression. See `Ecto.Query.order_by/3`
       to learn more about about ordering expressions.
       See the [preload order](#many_to_many/3-preload-order) section below to learn how
       this option can be utilized

@@ -736,7 +736,7 @@ defmodule Ecto.Query do
 
       windows: [ordered_names: [order_by: e.name]]
 
-  It works exactly as the keyword query version of `order_by/4`.
+  It works exactly as the keyword query version of `order_by/3`.
 
   ### :frame
 
