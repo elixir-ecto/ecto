@@ -9,7 +9,7 @@ Let's imagine we are building a system that supports a model for relationships b
 ```elixir
 defmodule MyApp.Accounts.Person do
   use Ecto.Schema
-  
+
   alias MyApp.Accounts.Person
   alias MyApp.Relationships.Relationship
 
@@ -43,7 +43,7 @@ end
 
 In our example, we implement an intermediate schema, `MyApp.Relationships.Relationship`, on our `:join_through` option and pass in a pair of ids that we will be creating a unique index on in our database migration. By implementing an intermediate schema, we make it easy to add additional attributes and functionality to relationships in the future.
 
-We had to create an additional `many_to_many` `:reverse_relationships` call with an inverse of the `:join_keys` in order to finish the other half of the association. This ensures that both sides of the relationship will get added in the database when either side completes a successful relationship request. 
+We had to create an additional `many_to_many` `:reverse_relationships` call with an inverse of the `:join_keys` in order to finish the other half of the association. This ensures that both sides of the relationship will get added in the database when either side completes a successful relationship request.
 
 The person who is the inverse of the relationship will have the relationship struct stored in a list under the "reverse_relationships" key. We can then construct queries for both `:relationships` and `:reverse_relationships` with the proper `:preload`:
 
@@ -94,16 +94,10 @@ def change do
     [:person_id, :relation_id],
     name: :relationships_person_id_relation_id_index
   )
-
-  create unique_index(
-    :relationships,
-    [:relation_id, :person_id],
-    name: :relationships_relation_id_person_id_index
-  )
 end
 ```
 
-We create indexes on both the `:person_id` and `:relation_id` for quicker access in the future. Then, we create one unique index on the `:relationships` and another unique index on the inverse of `:relationships` to ensure that people cannot have duplicate relationships. Lastly, we pass a name to the `:name` option to help clarify the unique constraint when working with our changeset.
+We create indexes on both the `:person_id` and `:relation_id` for quicker access in the future. Then, we create one unique index on the `:relationships` to ensure that people cannot have duplicate relationships. Lastly, we pass a name to the `:name` option to help clarify the unique constraint when working with our changeset.
 
 ```elixir
 # In MyApp.Relationships.Relationship
@@ -116,10 +110,6 @@ def changeset(struct, params \\ %{}) do
     [:person_id, :relation_id],
     name: :relationships_person_id_relation_id_index
   )
-  |> Ecto.Changeset.unique_constraint(
-    [:relation_id, :person_id],
-    name: :relationships_relation_id_person_id_index
-  )
 end
 ```
 
@@ -127,7 +117,7 @@ Due to the self-referential nature, we will only need to cast the `:join_keys` i
 
 ## Summary
 
-In this guide we used `many_to_many` associations to implement a self-referencing symmetric relationship. 
+In this guide we used `many_to_many` associations to implement a self-referencing symmetric relationship.
 
 Our goal was to allow "people" to associate to different "people". Further, we wanted to lay a strong foundation for code organization and maintainability into the future. We have done this by creating intermediate tables, two separate functional core modules, a clear naming strategy, an inverse association, and by using `many_to_many` `:join_keys` to automatically manage those join tables.
 
