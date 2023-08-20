@@ -89,34 +89,14 @@ defmodule Ecto.Query.Builder.OrderByTest do
       end
     end
 
-    test "accepts :mode option" do
+    test "prepend_order_by" do
       query = order_by("q", [q], [:title])
-      opts = [mode: :prepend]
-      %{order_bys: prepend_order_bys} = order_by(query, [q], [:prepend], opts)
-      %{order_bys: append_order_bys} = order_by(query, [q], [:append], mode: :append)
-      %{order_bys: default_order_bys} = order_by(query, [q], [:append])
+      %{order_bys: order_bys} = prepend_order_by(query, [q], [:prepend])
 
       assert [
                %{expr: [asc: {{:., _, [_, :prepend]}, _, _}]},
                %{expr: [asc: {{:., _, [_, :title]}, _, _}]}
-             ] = prepend_order_bys
-
-      assert [
-               %{expr: [asc: {{:., _, [_, :title]}, _, _}]},
-               %{expr: [asc: {{:., _, [_, :append]}, _, _}]}
-             ] = append_order_bys
-
-      assert [
-               %{expr: [asc: {{:., _, [_, :title]}, _, _}]},
-               %{expr: [asc: {{:., _, [_, :append]}, _, _}]}
-             ] = default_order_bys
-
-
-      error_msg = "expected `:mode` to be `:append` or `:prepend`, got: :invalid"
-
-      assert_raise ArgumentError, error_msg, fn ->
-        order_by(query, [q], [:invalid], mode: :invalid)
-      end
+             ] = order_bys
     end
   end
 
@@ -128,36 +108,6 @@ defmodule Ecto.Query.Builder.OrderByTest do
       assert order_by("q", [q], [^key]).order_bys == order_by("q", [q], [asc: q.title]).order_bys
       assert order_by("q", [q], [desc: ^key]).order_bys == order_by("q", [q], [desc: q.title]).order_bys
       assert order_by("q", [q], [{^dir, ^key}]).order_bys == order_by("q", [q], [desc: q.title]).order_bys
-    end
-
-    test "accepts :mode option" do
-      query = order_by("q", [q], [:title])
-      opts = [mode: :prepend]
-      %{order_bys: prepend_order_bys} = order_by(query, [q], ^[:prepend], opts)
-      %{order_bys: append_order_bys} = order_by(query, [q], ^[:append], mode: :append)
-      %{order_bys: default_order_bys} = order_by(query, [q], ^[:append])
-
-      assert [
-               %{expr: [asc: {{:., _, [_, :prepend]}, _, _}]},
-               %{expr: [asc: {{:., _, [_, :title]}, _, _}]}
-             ] = prepend_order_bys
-
-      assert [
-               %{expr: [asc: {{:., _, [_, :title]}, _, _}]},
-               %{expr: [asc: {{:., _, [_, :append]}, _, _}]}
-             ] = append_order_bys
-
-      assert [
-               %{expr: [asc: {{:., _, [_, :title]}, _, _}]},
-               %{expr: [asc: {{:., _, [_, :append]}, _, _}]}
-             ] = default_order_bys
-
-
-      error_msg = "expected `:mode` to be `:append` or `:prepend`, got: :invalid"
-
-      assert_raise ArgumentError, error_msg, fn ->
-        order_by(query, [q], ^[:invalid], mode: :invalid)
-      end
     end
 
     test "supports dynamic expressions" do

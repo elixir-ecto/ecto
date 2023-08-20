@@ -1809,19 +1809,11 @@ defmodule Ecto.Query do
   "nulls first" or "nulls last" is specific to each database implementation.
 
   `order_by` may be invoked or listed in a query many times. New expressions
-  can be appended or preprended to the existing ones. The behaviour is controlled
-  through the `:mode` option. By default, new expressions are appended.
+  are appended to the existing ones.
 
   `order_by` also accepts a list of atoms where each atom refers to a field in
   source or a keyword list where the direction is given as key and the field
   to order as value.
-
-  ## Options
-
-    * `:mode` - where to place the order expression relative to the
-      ones that already exist. Can be `:append`, to place it after the
-      current orderings, or `:prepend`, to place it before the current
-      orderings. Defaults to `:append`
 
   ## Keywords examples
 
@@ -1871,8 +1863,15 @@ defmodule Ecto.Query do
       City |> order_by(^order_by_param) # Keyword list
 
   """
-  defmacro order_by(query, binding \\ [], expr, opts \\ []) do
-    Builder.OrderBy.build(query, binding, expr, opts, __CALLER__)
+  defmacro order_by(query, binding \\ [], expr) do
+    Builder.OrderBy.build(query, binding, expr, :append, __CALLER__)
+  end
+
+  @doc """
+  Same as `order_by` except new expressions will be prepended to existing ones.
+  """
+  defmacro prepend_order_by(query, binding \\ [], expr) do
+    Builder.OrderBy.build(query, binding, expr, :prepend, __CALLER__)
   end
 
   @doc """
