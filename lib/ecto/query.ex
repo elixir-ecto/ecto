@@ -1868,7 +1868,7 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  Same as `order_by` except new expressions will be prepended to existing ones.
+  Same as `order_by/3` except new expressions will be prepended to existing ones.
   """
   defmacro prepend_order_by(query, binding \\ [], expr) do
     Builder.OrderBy.build(query, binding, expr, :prepend, __CALLER__)
