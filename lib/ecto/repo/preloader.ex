@@ -340,7 +340,7 @@ defmodule Ecto.Repo.Preloader do
   defp add_preload_order([], query), do: query
 
   defp add_preload_order(order, query) when is_list(order) do
-    Ecto.Query.order_by(query, [q], ^order, mode: :prepend)
+    Ecto.Query.prepend_order_by(query, [q], ^order)
   end
 
   defp add_preload_order({m, f, a}, query) do
