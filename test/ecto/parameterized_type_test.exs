@@ -50,6 +50,7 @@ defmodule Ecto.ParameterizedTypeTest do
   test "operations" do
     assert Ecto.Type.type(@p_self_type) == :custom
     assert Ecto.Type.type(@p_dump_type) == :custom
+    assert Ecto.Type.type({:maybe, @p_self_type}) == :custom
 
     assert Ecto.Type.embed_as(@p_self_type, :foo) == :self
     assert Ecto.Type.embed_as(@p_dump_type, :foo) == :dump
