@@ -413,7 +413,7 @@ defmodule Ecto.Type do
   def type({:parameterized, type, params}), do: type.type(params)
   def type({:array, type}), do: {:array, type(type)}
   def type({:map, type}), do: {:map, type(type)}
-  def type({:maybe, type}), do: type
+  def type({:maybe, type}), do: type(type)
   def type(type) when type in @base, do: type
   def type(type) when is_atom(type), do: type.type()
   def type(type), do: type
