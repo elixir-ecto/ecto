@@ -137,11 +137,11 @@ defmodule Ecto.Query.InspectTest do
 
     assert i(from(x in Post, cross_lateral_join: y in Comment, on: x.id == y.id)) ==
            ~s{from p0 in Inspect.Post, cross_lateral_join: c1 in Inspect.Comment, on: p0.id == c1.id}
-           
-    assert i(from(x in Post, array_join: y in "arr")) == 
+
+    assert i(from(x in Post, array_join: y in "arr")) ==
            ~s{from p0 in Inspect.Post, array_join: a1 in "arr", on: true}
-    
-    assert i(from(x in Post, left_array_join: y in "arr")) == 
+
+    assert i(from(x in Post, left_array_join: y in "arr")) ==
            ~s{from p0 in Inspect.Post, left_array_join: a1 in "arr", on: true}
 
     binding = :comments
@@ -494,6 +494,11 @@ defmodule Ecto.Query.InspectTest do
   test "parameterized types after planner" do
     query = from(x in Post, select: type(^"foo", ^Ecto.ParameterizedType.init(MyParameterizedType, param: :foo))) |> plan()
     assert i(query) == ~s<from p0 in Inspect.Post, select: type(^..., {:parameterized, Ecto.Query.InspectTest.MyParameterizedType, :foo})>
+  end
+
+  test "values lists" do
+    query = from v in values([%{a: 1, b: 2, c: 3}], %{a: :integer, b: :integer, c: :integer})
+    assert i(query) == "from v0 in values (a, b, c)"
   end
 
   def plan(query) do
