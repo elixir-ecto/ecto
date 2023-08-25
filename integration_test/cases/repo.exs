@@ -2206,7 +2206,7 @@ defmodule Ecto.Integration.RepoTest do
           join: v2 in values(values2, types),
           on: v1.visits == v2.visits
 
-      assert TestRepo.all(query) == [%{bid: uuid, visits: 1.0}]
+      assert TestRepo.all(query) == [%{bid: uuid, visits: 1}]
     end
 
     test "delete_all" do
