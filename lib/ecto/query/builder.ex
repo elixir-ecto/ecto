@@ -792,6 +792,84 @@ defmodule Ecto.Query.Builder do
     do: {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: value, type: expected]}]}
 
   @doc """
+  Escape a values list and extract its parameters
+  """
+  @spec escape_values_list(Macro.t(), Macro.t()) :: {Macro.t(), Macro.t()}
+  def escape_values_list(values_list, types) do
+    fields =
+      quote do
+        Ecto.Query.Builder.values_list_fields(unquote(values_list))
+      end
+
+    types =
+      quote do
+        Ecto.Query.Builder.values_list_types!(unquote(fields), unquote(types))
+      end
+
+    params =
+      quote do
+        Ecto.Query.Builder.values_list_params!(unquote(values_list), unquote(types))
+      end
+
+    num_rows = quote do: length(unquote(values_list))
+
+    {{:{}, [], [:values, [], [types, num_rows]]}, params}
+  end
+
+  @doc """
+  Extract the field names from a values list
+  """
+  @spec values_list_fields(list(map)) :: map()
+  def values_list_fields(values_list) do
+    fields =
+      Enum.reduce(values_list, %{}, fn values, fields ->
+        Enum.reduce(values, fields, fn {field, _}, fields ->
+          Map.put(fields, field, true)
+        end)
+      end)
+
+    Map.keys(fields)
+  end
+
+  @doc """
+  Extract the types from a values list
+  """
+  @spec values_list_types!(list(), map()) :: Keyword.t()
+  def values_list_types!(fields, types) do
+    Enum.map(fields, fn field->
+      case types do
+        %{^field => type} ->
+          {field, type}
+
+        _ ->
+          raise ArgumentError,
+                "values/2 must declare the type for every field. " <>
+                  "The type was not given for field `#{field}`"
+      end
+    end)
+  end
+
+  @doc """
+  Extract the parameters from a values list
+  """
+  @spec values_list_params!(list(map), Keyword.t()) :: list()
+  def values_list_params!(values_list, types) do
+    Enum.reduce(values_list, [], fn values, params ->
+      Enum.reduce(types, params, fn {field, type}, params ->
+        case values do
+          %{^field => value} ->
+            [{value, type} | params]
+
+          _ ->
+            raise ArgumentError,
+                  "each member of a values list must have the same fields. " <>
+                    "Missing field `#{field}` in #{inspect(values)}"
+        end
+      end)
+    end)
+  end
+
+  @doc """
   Escape the params entries list.
   """
   @spec escape_params(list()) :: list()

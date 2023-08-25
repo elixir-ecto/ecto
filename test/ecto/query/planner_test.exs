@@ -162,6 +162,8 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "plan: merges all parameters" do
+    uuid = Ecto.UUID.generate()
+    {:ok, dump_uuid} = Ecto.UUID.dump(uuid)
     union = from p in Post, select: {p.title, ^"union"}
     subquery = from Comment, where: [text: ^"subquery"]
 
@@ -172,6 +174,8 @@ defmodule Ecto.Query.PlannerTest do
         on: c.text == ^"join",
         join: p in Post,
         on: f.title == p.title,
+        join: v in values([%{bid: uuid, text: "values"}], %{bid: Ecto.UUID, text: :string}),
+        on: v.text == ^"on_values",
         left_join: d in assoc(p, :comments),
         union_all: ^union,
         windows: [foo: [partition_by: fragment("?", ^"windows")]],
@@ -185,11 +189,13 @@ defmodule Ecto.Query.PlannerTest do
     {_query, cast_params, dump_params, _key} = plan(query)
 
     assert cast_params ==
-             ["select", "fragment_source1", "fragment_source2", "subquery", "join", "where", "group_by", "having", "windows"] ++
+             ["select", "fragment_source1", "fragment_source2", "subquery", "join"] ++
+               [uuid, "values", "on_values", "where", "group_by", "having", "windows"] ++
                ["union", "order_by", 0, 1]
 
     assert dump_params ==
-             ["select", "fragment_source1", "fragment_source2", "subquery", "join", "where", "group_by", "having", "windows"] ++
+             ["select", "fragment_source1", "fragment_source2", "subquery", "join"] ++
+               [dump_uuid, "values", "on_values", "where", "group_by", "having", "windows"] ++
                ["union", "order_by", 0, 1]
   end
 
@@ -202,6 +208,12 @@ defmodule Ecto.Query.PlannerTest do
   test "plan: fragment from cannot have preloads" do
     assert_raise Ecto.QueryError, ~r"cannot preload associations with a fragment source", fn ->
       plan(from f in fragment("select 1"), preload: :field)
+    end
+  end
+
+  test "plan: values list from cannot have preloads" do
+    assert_raise Ecto.QueryError, ~r"cannot preload associations with a values source", fn ->
+      plan(from v in values([%{num: 1}], %{num: :integer}), preload: :field)
     end
   end
 
@@ -510,6 +522,8 @@ defmodule Ecto.Query.PlannerTest do
         lock: "foo",
         where: is_nil(nil),
         or_where: is_nil(nil),
+        join: v in values([%{num: 1}, %{num: 10}], %{num: :integer}),
+        on: true,
         join: c in Comment,
         on: true,
         hints: ["join hint"],
@@ -524,7 +538,11 @@ defmodule Ecto.Query.PlannerTest do
                    {:prefix, "foo"},
                    {:limit, {true, 1}},
                    {:where, [{:and, {:is_nil, [], [nil]}}, {:or, {:is_nil, [], [nil]}}]},
-                   {:join, [{:inner, {"comments", Comment, 38292156, "world"}, true, ["join hint"]}]},
+                   {:join,
+                    [
+                      {:inner, {{:values, [], [[num: :integer], 2]}, nil}, true, []},
+                      {:inner, {"comments", Comment, 38_292_156, "world"}, true, ["join hint"]}
+                    ]},
                    {:from, {"posts", Post, 111065921, "hello"}, ["hint"]},
                    {:select, 1}]
   end
@@ -1399,6 +1417,50 @@ defmodule Ecto.Query.PlannerTest do
     assert [_, _, _, {:expr, {:splice, _, [{:^, _, [start_ix, length]}]}}, _, _, _] = parts
     assert start_ix == 1
     assert length == 3
+  end
+
+  test "normalize: from values list" do
+    uuid = Ecto.UUID.generate()
+    values = [%{bid: uuid, num: 1}, %{bid: uuid, num: 2}]
+    types = %{bid: Ecto.UUID, num: :integer}
+    q = from(v in values(values, types)) |> normalize()
+
+    start_param_ix = 0
+    types_kw = [bid: :uuid, num: :integer]
+
+    assert q.from.source == {:values, [], [types_kw, start_param_ix, length(values)]}
+    assert q.select.fields == [{{:., [], [{:&, [], [0]}, :bid]}, [], []}, {{:., [], [{:&, [], [0]}, :num]}, [], []}]
+  end
+
+  test "normalize: join values list" do
+    uuid = Ecto.UUID.generate()
+    values = [%{bid: uuid, num: 1}, %{bid: uuid, num: 2}]
+    types = %{bid: Ecto.UUID, num: :integer}
+    q = from(f in fragment("select ?", ^1), join: v in values(values, types), on: true, select: v) |> normalize()
+
+    start_param_ix = 1
+    types_kw = [bid: :uuid, num: :integer]
+    [join] = q.joins
+
+    assert join.source == {:values, [], [types_kw, start_param_ix, length(values)]}
+    assert q.select.fields == [{{:., [], [{:&, [], [1]}, :bid]}, [], []}, {{:., [], [{:&, [], [1]}, :num]}, [], []}]
+  end
+
+  test "normalize: select a value list field" do
+    # Field exists
+    uuid = Ecto.UUID.generate()
+    values = [%{bid: uuid, num: 1}, %{bid: uuid, num: 2}]
+    types = %{bid: Ecto.UUID, num: :integer}
+    q = from(v in values(values, types), select: v.bid) |> normalize()
+
+    assert q.select.fields == [{{:., [type: Ecto.UUID], [{:&, [], [0]}, :bid]}, [], []}]
+
+    # Field does not exist
+    msg = ~r"field `bad` in `select` does not exist in values list"
+
+    assert_raise Ecto.QueryError, msg, fn ->
+      from(v in values(values, types), select: v.bad) |> normalize()
+    end
   end
 
   describe "normalize: CTEs" do

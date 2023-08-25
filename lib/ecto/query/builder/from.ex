@@ -46,9 +46,13 @@ defmodule Ecto.Query.Builder.From do
 
   defp escape_source(query, env) do
     case Macro.expand_once(query, env) do
-      {:fragment, _, _} = fragment->
+      {:fragment, _, _} = fragment ->
         {fragment, {params, _acc}} = Builder.escape(fragment, :any, {[], %{}}, [], env)
         {fragment, Builder.escape_params(params)}
+
+      {:values, _, [values_list, types]} ->
+        {expr, params} = Builder.escape_values_list(values_list, types)
+        {expr, quote do: Builder.escape_params(unquote(params))}
 
       ^query ->
         case query do
@@ -110,6 +114,10 @@ defmodule Ecto.Query.Builder.From do
       {{:{}, _, [:fragment, _, _]} = fragment, params} ->
         {:ok, prefix} = prefix || {:ok, nil}
         {query(prefix, fragment, params, as, hints, env.file, env.line), binds, 1}
+
+      {{:{}, _, [:values, _, _]} = values, params} ->
+        {:ok, prefix} = prefix || {:ok, nil}
+        {query(prefix, values, params, as, hints, env.file, env.line), binds, 1}
 
       _other ->
         quoted =

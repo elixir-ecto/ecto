@@ -503,6 +503,11 @@ defmodule Ecto.Query.API do
   def splice(list), do: doc! [list]
 
   @doc """
+
+  """
+  def values(values, types), do: doc! [values, types]
+
+  @doc """
   Allows a field to be dynamically accessed.
 
       def at_least_four(doors_or_tires) do

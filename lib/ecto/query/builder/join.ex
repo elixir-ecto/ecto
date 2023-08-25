@@ -62,6 +62,11 @@ defmodule Ecto.Query.Builder.Join do
     {:_, expr, nil, params}
   end
 
+  def escape({:values, _, [values_list, types]}, _vars, _env) do
+    {expr, params} = Builder.escape_values_list(values_list, types)
+    {:_, expr, nil, params}
+  end
+
   def escape({string, schema} = join, _vars, env) when is_binary(string) do
     case Macro.expand(schema, env) do
       schema when is_atom(schema) ->
@@ -148,7 +153,7 @@ defmodule Ecto.Query.Builder.Join do
 
     {query, binding} = Builder.escape_binding(query, binding, env)
     {join_bind, join_source, join_assoc, join_params} = escape(expr, binding, env)
-    join_params = Builder.escape_params(join_params)
+    join_params = escape_params(join_params)
 
     join_qual = validate_qual(qual)
     validate_bind(join_bind, binding)
@@ -190,6 +195,14 @@ defmodule Ecto.Query.Builder.Join do
     on = ensure_on(on, join_assoc, join_qual, join_source, env)
     query = build_on(on, join, as, query, binding, count_bind, env)
     {query, binding, next_bind}
+  end
+
+  defp escape_params(params) when is_list(params) do
+    Builder.escape_params(params)
+  end
+
+  defp escape_params(params) do
+    quote do: Builder.escape_params(unquote(params))
   end
 
   def build_on({:^, _, [var]}, join, as, query, _binding, count_bind, env) do
