@@ -15,31 +15,31 @@ defmodule Ecto.Query.Builder.Join do
   ## Examples
 
       iex> escape(quote(do: x in "foo"), [], __ENV__)
-      {:x, {"foo", nil}, nil, :ok, []}
+      {:x, {"foo", nil}, nil, nil, []}
 
       iex> escape(quote(do: "foo"), [], __ENV__)
-      {:_, {"foo", nil}, nil, :ok, []}
+      {:_, {"foo", nil}, nil, nil, []}
 
       iex> escape(quote(do: x in Sample), [], __ENV__)
-      {:x, {nil, Sample}, nil, :ok, []}
+      {:x, {nil, Sample}, nil, nil, []}
 
       iex> escape(quote(do: x in __MODULE__), [], __ENV__)
-      {:x, {nil, __MODULE__}, nil, :ok, []}
+      {:x, {nil, __MODULE__}, nil, nil, []}
 
       iex> escape(quote(do: x in {"foo", :sample}), [], __ENV__)
-      {:x, {"foo", :sample}, nil, :ok, []}
+      {:x, {"foo", :sample}, nil, nil, []}
 
       iex> escape(quote(do: x in {"foo", Sample}), [], __ENV__)
-      {:x, {"foo", Sample}, nil, :ok, []}
+      {:x, {"foo", Sample}, nil, nil, []}
 
       iex> escape(quote(do: x in {"foo", __MODULE__}), [], __ENV__)
-      {:x, {"foo", __MODULE__}, nil, :ok, []}
+      {:x, {"foo", __MODULE__}, nil, nil, []}
 
       iex> escape(quote(do: c in assoc(p, :comments)), [p: 0], __ENV__)
-      {:c, nil, {0, :comments}, :ok, []}
+      {:c, nil, {0, :comments}, nil, []}
 
       iex> escape(quote(do: x in fragment("foo")), [], __ENV__)
-      {:x, {:{}, [], [:fragment, [], [raw: "foo"]]}, nil, :ok, []}
+      {:x, {:{}, [], [:fragment, [], [raw: "foo"]]}, nil, nil, []}
 
   """
   @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {atom, Macro.t | nil, Macro.t | nil, list}
@@ -50,16 +50,16 @@ defmodule Ecto.Query.Builder.Join do
   end
 
   def escape({:subquery, _, [expr]}, _vars, _env) do
-    {:_, quote(do: Ecto.Query.subquery(unquote(expr))), nil, :ok, []}
+    {:_, quote(do: Ecto.Query.subquery(unquote(expr))), nil, nil, []}
   end
 
   def escape({:subquery, _, [expr, opts]}, _vars, _env) do
-    {:_, quote(do: Ecto.Query.subquery(unquote(expr), unquote(opts))), nil, :ok, []}
+    {:_, quote(do: Ecto.Query.subquery(unquote(expr), unquote(opts))), nil, nil, []}
   end
 
   def escape({:fragment, _, [_ | _]} = expr, vars, env) do
     {expr, {params, _acc}} = Builder.escape(expr, :any, {[], %{}}, vars, env)
-    {:_, expr, nil, :ok, params}
+    {:_, expr, nil, nil, params}
   end
 
   def escape({:values, _, [values_list, types]}, _vars, _env) do
@@ -73,7 +73,7 @@ defmodule Ecto.Query.Builder.Join do
   def escape({string, schema} = join, _vars, env) when is_binary(string) do
     case Macro.expand(schema, env) do
       schema when is_atom(schema) ->
-        {:_, {string, schema}, nil, :ok, []}
+        {:_, {string, schema}, nil, nil, []}
 
       _ ->
         Builder.error! "malformed join `#{Macro.to_string(join)}` in query expression"
@@ -85,19 +85,19 @@ defmodule Ecto.Query.Builder.Join do
     ensure_field!(field)
     var   = Builder.find_var!(var, vars)
     field = Builder.quoted_atom!(field, "field/2")
-    {:_, nil, {var, field}, :ok, []}
+    {:_, nil, {var, field}, nil, []}
   end
 
   def escape({:^, _, [expr]}, _vars, _env) do
-    {:_, quote(do: Ecto.Query.Builder.Join.join!(unquote(expr))), nil, :ok, []}
+    {:_, quote(do: Ecto.Query.Builder.Join.join!(unquote(expr))), nil, nil, []}
   end
 
   def escape(string, _vars, _env) when is_binary(string) do
-    {:_, {string, nil}, nil, :ok, []}
+    {:_, {string, nil}, nil, nil, []}
   end
 
   def escape(schema, _vars, _env) when is_atom(schema) do
-    {:_, {nil, schema}, nil, :ok, []}
+    {:_, {nil, schema}, nil, nil, []}
   end
 
   def escape(join, vars, env) do
