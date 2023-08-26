@@ -503,6 +503,57 @@ defmodule Ecto.Query.API do
   def splice(list), do: doc! [list]
 
   @doc """
+  Creates a values list/constant table.
+
+  A values list can be used as a source in a query, both in `Ecto.Query.from/2`
+  and `Ecto.Query.join/5`.
+
+  The first argument is a list of maps representing the values of the constant table.
+  Each entry in the list must have exactly the same fields or an error is raised.
+
+  The second argument is a map of types corresponding to the fields in the first argument.
+  Each field must be given a type or an error is raised. Any type that can be specified in
+  a schema may be used.
+
+  ## Select example
+
+      values = [%{id: 1, text: "abc"}, %{id: 2, text: "xyz"}]
+      types = %{id: :integer, text: :string}
+
+      query =
+        from v1 in values(values, types),
+          join: v2 in values(values, types),
+          on: v1.id == v2.id
+
+      Repo.all(query)
+
+  ## Delete example
+      values = [%{id: 1, text: "abc"}, %{id: 2, text: "xyz"}]
+      types = %{id: :integer, text: :string}
+
+      query =
+        from p in Post,
+          join: v in values(values, types),
+          on: p.id == v.id,
+          where: p.counter == ^0
+
+      Repo.delete_all(query)
+
+  ## Update example
+      values = [%{id: 1, text: "abc"}, %{id: 2, text: "xyz"}]
+      types = %{id: :integer, text: :string}
+
+      query =
+        from p in Post,
+          join: v in values(values, types),
+          on: p.id == v.id,
+          update: [set: [text: v.text]]
+
+      Repo.update_all(query, [])
+  """
+  def values(values, types), do: doc! [values, types]
+
+  @doc """
   Allows a field to be dynamically accessed.
 
       def at_least_four(doors_or_tires) do

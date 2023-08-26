@@ -2174,4 +2174,80 @@ defmodule Ecto.Integration.RepoTest do
       assert updated_second.public == false
     end
   end
+
+  describe "values list" do
+    @describetag :values_list
+
+    test "all" do
+      uuid_module = uuid_module(TestRepo.__adapter__())
+      uuid = uuid_module.generate()
+
+      # Without select
+      values = [%{bid: uuid, visits: 1}, %{bid: uuid, visits: 2}]
+      types = %{bid: uuid_module, visits: :integer}
+      query = from v in values(values, types)
+      assert TestRepo.all(query) == values
+
+      # With select
+      query = select(query, [v], {v, v.bid})
+      assert TestRepo.all(query) == Enum.map(values, &{&1, &1.bid})
+    end
+
+    test "all with join" do
+      uuid_module = uuid_module(TestRepo.__adapter__())
+      uuid = uuid_module.generate()
+
+      values1 = [%{bid: uuid, visits: 1}, %{bid: uuid, visits: 2}]
+      values2 = [%{bid: uuid, visits: 1}]
+      types = %{bid: uuid_module, visits: :integer}
+
+      query =
+        from v1 in values(values1, types),
+          join: v2 in values(values2, types),
+          on: v1.visits == v2.visits
+
+      assert TestRepo.all(query) == [%{bid: uuid, visits: 1}]
+    end
+
+    test "delete_all" do
+      uuid_module = uuid_module(TestRepo.__adapter__())
+      uuid = uuid_module.generate()
+
+      _p1 = TestRepo.insert!(%Post{bid: uuid, visits: 1})
+      p2 = TestRepo.insert!(%Post{bid: uuid, visits: 5})
+
+      values = [%{bid: uuid, visits: 1}, %{bid: nil, visits: 1}, %{bid: uuid, visits: 3}]
+      types = %{bid: uuid_module, visits: :integer}
+
+      query =
+        from p in Post,
+          join: v in values(values, types),
+          on: p.visits == v.visits
+
+      assert {1, _} = TestRepo.delete_all(query)
+      assert TestRepo.all(Post) == [p2]
+    end
+
+    test "update_all" do
+      uuid_module = uuid_module(TestRepo.__adapter__())
+      uuid = uuid_module.generate()
+
+      TestRepo.insert!(%Post{bid: uuid, visits: 1})
+
+      values = [%{bid: uuid, visits: 10}, %{bid: nil, visits: 2}]
+      types = %{bid: uuid_module, visits: :integer}
+
+      query =
+        from p in Post,
+          join: v in values(values, types),
+          on: p.bid == v.bid,
+          update: [set: [visits: v.visits]]
+
+      assert {1, _} = TestRepo.update_all(query, [])
+      assert [%{visits: 10}] = TestRepo.all(Post)
+    end
+
+    defp uuid_module(Ecto.Adapters.Tds), do: Tds.Ecto.UUID
+    defp uuid_module(_), do: Ecto.UUID
+  end
 end

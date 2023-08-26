@@ -140,6 +140,11 @@ defimpl Inspect, for: Ecto.Query do
   defp inspect_source(%{source: {nil, schema}}, _names), do: inspect(schema)
   defp inspect_source(%{source: {:fragment, _, _} = source} = part, names), do: "#{expr(source, names, part)}"
 
+  defp inspect_source(%{source: {:values, _, [types, _]}}, _names) do
+    fields = Keyword.keys(types)
+    "values (#{Enum.join(fields, ", ")})"
+  end
+
   defp inspect_source(%{source: {source, schema}}, _names) do
     inspect(if source == schema.__schema__(:source), do: schema, else: {source, schema})
   end
@@ -379,6 +384,7 @@ defimpl Inspect, for: Ecto.Query do
   defp from_sources({source, schema}), do: schema || source
   defp from_sources(nil), do: "query"
   defp from_sources({:fragment, _, _}), do: "fragment"
+  defp from_sources({:values, _, _}), do: "values"
 
   defp join_sources(joins) do
     joins

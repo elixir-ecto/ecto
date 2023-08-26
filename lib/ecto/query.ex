@@ -476,6 +476,59 @@ defmodule Ecto.Query do
     defstruct [:tag, :type, :value]
   end
 
+  defmodule Values do
+    @moduledoc false
+    defstruct [:types, :num_rows, :params]
+
+    def new(values_list, types) do
+      fields = fields(values_list)
+      types = types!(fields, types)
+      params = params!(values_list, types)
+      %__MODULE__{types: types, params: params, num_rows: length(values_list)}
+    end
+
+    defp fields(values_list) do
+      fields =
+        Enum.reduce(values_list, MapSet.new(), fn values, fields ->
+          Enum.reduce(values, fields, fn {field, _}, fields ->
+            MapSet.put(fields, field)
+          end)
+        end)
+
+      MapSet.to_list(fields)
+    end
+
+    defp types!(fields, types) do
+      Enum.map(fields, fn field->
+        case types do
+          %{^field => type} ->
+            {field, type}
+
+          _ ->
+            raise ArgumentError,
+                  "values/2 must declare the type for every field. " <>
+                    "The type was not given for field `#{field}`"
+        end
+      end)
+    end
+
+    defp params!(values_list, types) do
+      Enum.reduce(values_list, [], fn values, params ->
+        Enum.reduce(types, params, fn {field, type}, params ->
+          case values do
+            %{^field => value} ->
+              [{value, type} | params]
+
+            _ ->
+              raise ArgumentError,
+                    "each member of a values list must have the same fields. " <>
+                      "Missing field `#{field}` in #{inspect(values)}"
+          end
+        end)
+      end)
+    end
+  end
+
   @type t :: %__MODULE__{}
   @opaque dynamic_expr :: %DynamicExpr{}
 

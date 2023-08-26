@@ -234,9 +234,9 @@ defmodule Ecto.Query.Planner do
     error!(query, "query must have a from expression")
   end
 
-  defp plan_from(%{from: %{source: {:fragment, _, _}}, preloads: preloads, assocs: assocs} = query, _adapter)
-       when assocs != [] or preloads != [] do
-    error!(query, "cannot preload associations with a fragment source")
+  defp plan_from(%{from: %{source: {kind, _, _}}, preloads: preloads, assocs: assocs} = query, _adapter)
+       when kind in [:fragment, :values] and (assocs != [] or preloads != []) do
+    error!(query, "cannot preload associations with a #{kind} source")
   end
 
   defp plan_from(%{from: from} = query, adapter) do
@@ -259,11 +259,13 @@ defmodule Ecto.Query.Planner do
        when is_binary(source) and is_atom(schema),
        do: {expr, {source, schema, prefix || query.prefix}}
 
-  defp plan_source(_query, %{source: {:fragment, _, _} = source, prefix: nil} = expr, _adapter),
+  defp plan_source(_query, %{source: {kind, _, _} = source, prefix: nil} = expr, _adapter)
+       when kind in [:fragment, :values],
        do: {expr, source}
 
-  defp plan_source(query, %{source: {:fragment, _, _}, prefix: prefix} = expr, _adapter),
-       do: error!(query, expr, "cannot set prefix: #{inspect(prefix)} option for fragment sources")
+  defp plan_source(query, %{source: {kind, _, _}, prefix: prefix} = expr, _adapter)
+       when kind in [:fragment, :values],
+       do: error!(query, expr, "cannot set prefix: #{inspect(prefix)} option for #{kind} sources")
 
   defp plan_subquery(subquery, query, prefix, adapter, source?) do
     %{query: inner_query} = subquery
@@ -836,8 +838,9 @@ defmodule Ecto.Query.Planner do
     do: {{source, prefix}, params}
   defp source_cache(%{source: {bin, schema}, prefix: prefix}, params),
     do: {{bin, schema, schema.__schema__(:hash), prefix}, params}
-  defp source_cache(%{source: {:fragment, _, _} = source, prefix: prefix}, params),
-    do: {{source, prefix}, params}
+  defp source_cache(%{source: {kind, _, _} = source, prefix: prefix}, params)
+       when kind in [:fragment, :values],
+       do: {{source, prefix}, params}
   defp source_cache(%{source: %Ecto.SubQuery{params: inner, cache: key}}, params),
     do: {key, Enum.reverse(inner, params)}
 
@@ -1155,6 +1158,12 @@ defmodule Ecto.Query.Planner do
   defp prewalk_source({:fragment, meta, fragments}, kind, query, expr, acc, adapter) do
     {fragments, acc} = prewalk(fragments, kind, query, expr, acc, adapter)
     {{:fragment, meta, fragments}, acc}
+  end
+  defp prewalk_source({:values, meta, [types, num_rows]}, _kind, _query, _expr, acc, _adapter) do
+    length = num_rows * length(types)
+    # Adapters will use the schema types to cast the values
+    schema_types = Enum.map(types, fn {field, type} -> {field, Ecto.Type.type(type)} end)
+    {{:values, meta, [schema_types, acc, num_rows]}, acc + length}
   end
   defp prewalk_source(%Ecto.SubQuery{query: inner_query} = subquery, kind, query, _expr, counter, adapter) do
     try do
@@ -1696,6 +1705,12 @@ defmodule Ecto.Query.Planner do
       {:error, {:fragment, _, _}} ->
         {{:value, :map}, [{:&, [], [ix]}]}
 
+      {:error, {:values, _, [types, _]}} ->
+        fields = Keyword.keys(types)
+        dumper = types |> Enum.map(fn {field, type} -> {field, {field, type}} end) |> Enum.into(%{})
+        {types, fields} = select_dump(fields, dumper, ix, drop)
+        {{:source, :values, nil, types}, fields}
+
       {:error, {_, nil, _}} ->
         {{:value, :map}, [{:&, [], [ix]}]}
 
@@ -1845,6 +1860,15 @@ defmodule Ecto.Query.Planner do
     case get_source!(kind, query, ix) do
       {:fragment, _, _} ->
         :any
+
+      {:values, _, [types, _]} ->
+        case Keyword.fetch(types, field) do
+          {:ok, type} ->
+            type
+
+          :error ->
+            error! query, expr, "field `#{field}` in `#{kind}` does not exist in values list"
+        end
 
       {_, schema, _} ->
         type!(kind, query, expr, schema, field, allow_virtuals?)

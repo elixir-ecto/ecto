@@ -292,6 +292,10 @@ defmodule Ecto.Repo.Queryable do
     struct_load!(types, row, [], true, struct, adapter)
   end
 
+  defp process(row, {:source, :values, _prefix, types}, _from, adapter) do
+    values_list_load!(types, row, [], true, adapter)
+  end
+
   defp process(row, {:merge, left, right}, from, adapter) do
     {left, row} = process(row, left, from, adapter)
     {right, row} = process(row, right, from, adapter)
@@ -424,6 +428,20 @@ defmodule Ecto.Repo.Queryable do
         raise ArgumentError,
               "cannot load `#{inspect(value)}` as type #{Ecto.Type.format(type)}#{field}#{struct}"
     end
+  end
+
+  defp values_list_load!([{field, type} | types], [value | values], acc, all_nil?, adapter) do
+    all_nil? = all_nil? and value == nil
+    value = load!(type, value, field, nil, adapter)
+    values_list_load!(types, values, [{field, value} | acc], all_nil?, adapter)
+  end
+
+  defp values_list_load!([], values, _acc, true, _adapter) do
+    {nil, values}
+  end
+
+  defp values_list_load!([], values, acc, false, _adapter) do
+    {Map.new(acc), values}
   end
 
   defp to_map(nil, _fields) do
