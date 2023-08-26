@@ -518,7 +518,7 @@ defmodule Ecto.Query.API do
   ## Select example
 
       values = [%{id: 1, text: "abc"}, %{id: 2, text: "xyz"}]
-      types = %{id: :integer}
+      types = %{id: :integer, text: :string}
 
       query =
         from v1 in values(values, types),
@@ -529,7 +529,7 @@ defmodule Ecto.Query.API do
 
   ## Delete example
       values = [%{id: 1, text: "abc"}, %{id: 2, text: "xyz"}]
-      types = %{id: :integer}
+      types = %{id: :integer, text: :string}
 
       query =
         from p in Post,
@@ -541,7 +541,7 @@ defmodule Ecto.Query.API do
 
   ## Update example
       values = [%{id: 1, text: "abc"}, %{id: 2, text: "xyz"}]
-      types = %{id: :integer}
+      types = %{id: :integer, text: :string}
 
       query =
         from p in Post,
