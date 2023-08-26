@@ -792,18 +792,6 @@ defmodule Ecto.Query.Builder do
     do: {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: value, type: expected]}]}
 
   @doc """
-  Escape a values list and extract its parameters
-  """
-  @spec escape_values_list(Macro.t()) :: {Macro.t(), Macro.t()}
-  def escape_values_list(values_struct) do
-    types = quote do: unquote(values_struct).types
-    num_rows = quote do: unquote(values_struct).num_rows
-    params = quote do: unquote(values_struct).params
-
-    {{:{}, [], [:values, [], [types, num_rows]]}, params}
-  end
-
-  @doc """
   Escape the params entries list.
   """
   @spec escape_params(list()) :: list()

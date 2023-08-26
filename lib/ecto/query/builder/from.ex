@@ -51,9 +51,11 @@ defmodule Ecto.Query.Builder.From do
         {fragment, Builder.escape_params(params)}
 
       {:values, _, [values_list, types]} ->
-        values_struct = quote do: Ecto.Query.Values.new(unquote(values_list), unquote(types))
-        {expr, params} = Builder.escape_values_list(values_struct)
-        {expr, quote do: Builder.escape_params(unquote(params))}
+        prelude = quote do: values = Ecto.Query.Values.new(unquote(values_list), unquote(types))
+        types = quote do: values.types
+        num_rows = quote do: values.num_rows
+        params = quote do: Ecto.Query.Builder.escape_params(values.params)
+        {{:{}, [], [:values, [], [types, num_rows]]}, prelude, params}
 
       ^query ->
         case query do
@@ -116,9 +118,17 @@ defmodule Ecto.Query.Builder.From do
         {:ok, prefix} = prefix || {:ok, nil}
         {query(prefix, fragment, params, as, hints, env.file, env.line), binds, 1}
 
-      {{:{}, _, [:values, _, _]} = values, params} ->
+      {{:{}, _, [:values, _, _]} = values, prelude, params} ->
         {:ok, prefix} = prefix || {:ok, nil}
-        {query(prefix, values, params, as, hints, env.file, env.line), binds, 1}
+        query = query(prefix, values, params, as, hints, env.file, env.line)
+
+        quoted =
+          quote do
+            unquote(prelude)
+            unquote(query)
+          end
+
+        {quoted, binds, 1}
 
       _other ->
         quoted =

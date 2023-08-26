@@ -25,7 +25,7 @@ defmodule Ecto.Query.Builder.FromTest do
     query = from v in values(values, types)
 
     types_kw = [num: :integer, text: :string]
-    assert {:values, [], [types_kw, length(values)]} == query.from.source
+    assert query.from.source == {:values,[], [types_kw, length(values)]}
 
     # Missing type
     msg = "values/2 must declare the type for every field. The type was not given for field `text`"
