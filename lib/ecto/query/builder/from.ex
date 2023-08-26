@@ -51,7 +51,8 @@ defmodule Ecto.Query.Builder.From do
         {fragment, Builder.escape_params(params)}
 
       {:values, _, [values_list, types]} ->
-        {expr, params} = Builder.escape_values_list(values_list, types)
+        values_struct = quote do: Ecto.Query.Values.new(unquote(values_list), unquote(types))
+        {expr, params} = Builder.escape_values_list(values_struct)
         {expr, quote do: Builder.escape_params(unquote(params))}
 
       ^query ->
