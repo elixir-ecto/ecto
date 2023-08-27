@@ -140,7 +140,7 @@ defimpl Inspect, for: Ecto.Query do
   defp inspect_source(%{source: {nil, schema}}, _names), do: inspect(schema)
   defp inspect_source(%{source: {:fragment, _, _} = source} = part, names), do: "#{expr(source, names, part)}"
 
-  defp inspect_source(%{source: {:values, _, [types, _]}}, _names) do
+  defp inspect_source(%{source: {:values, _, [types | _]}}, _names) do
     fields = Keyword.keys(types)
     "values (#{Enum.join(fields, ", ")})"
   end
