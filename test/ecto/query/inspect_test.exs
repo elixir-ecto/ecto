@@ -499,6 +499,7 @@ defmodule Ecto.Query.InspectTest do
   test "values lists" do
     query = from v in values([%{a: 1, b: 2, c: 3}], %{a: :integer, b: :integer, c: :integer})
     assert i(query) == "from v0 in values (a, b, c)"
+    assert i(plan(query)) == "from v0 in values (a, b, c)"
   end
 
   def plan(query) do
