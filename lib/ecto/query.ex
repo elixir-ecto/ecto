@@ -2543,7 +2543,15 @@ defmodule Ecto.Query do
       Repo.all from a in Author, preload: [posts: ^{posts_query, [:comments]}]
 
   If you prefer, you can also add additional preloads directly in the
-  `posts_query`.
+  `posts_query`:
+
+      posts_query =
+        from p in Post, where: p.state == :published, preload: :related_posts
+
+  The same can be written as pipe based query:
+
+      posts_query =
+        Post |> where([p], p.state == :published) |> preload(:related_posts)
 
   Note: keep in mind operations like limit and offset in the preload
   query will affect the whole result set and not each association. For
