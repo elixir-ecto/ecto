@@ -499,7 +499,7 @@ defmodule Ecto.Query do
     end
 
     defp types!(fields, types) do
-      Enum.map(fields, fn field->
+      Enum.map(fields, fn field ->
         case types do
           %{^field => type} ->
             {field, type}
@@ -2541,6 +2541,9 @@ defmodule Ecto.Query do
 
       posts_query = from p in Post, where: p.state == :published
       Repo.all from a in Author, preload: [posts: ^{posts_query, [:comments]}]
+
+  If you prefer, you can also add additional preloads directly in the
+  `posts_query`.
 
   Note: keep in mind operations like limit and offset in the preload
   query will affect the whole result set and not each association. For
