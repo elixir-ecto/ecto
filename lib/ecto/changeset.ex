@@ -2340,10 +2340,13 @@ defmodule Ecto.Changeset do
   `:errors` field of the changeset and the `:valid?` flag will be set to
   `false`.
 
+  Optionally, the validator function can take a third argument with the
+  previous value of the field.
+
   ## Examples
 
       iex> changeset = change(%Post{}, %{title: "foo"})
-      iex> changeset = validate_change changeset, :title, fn :title, title  ->
+      iex> changeset = validate_change changeset, :title, fn :title, title ->
       ...>   # Value must not be "foo"!
       ...>   if title == "foo" do
       ...>     [title: "cannot be foo"]
@@ -2355,7 +2358,7 @@ defmodule Ecto.Changeset do
       [title: {"cannot be foo", []}]
 
       iex> changeset = change(%Post{}, %{title: "foo"})
-      iex> changeset = validate_change changeset, :title, fn :title, title  ->
+      iex> changeset = validate_change changeset, :title, fn :title, title ->
       ...>   if title == "foo" do
       ...>     [title: {"cannot be foo", additional: "info"}]
       ...>   else
@@ -2365,18 +2368,42 @@ defmodule Ecto.Changeset do
       iex> changeset.errors
       [title: {"cannot be foo", [additional: "info"]}]
 
+      iex> changeset = change(%Post{title: "bar"}, %{title: "foo"})
+      iex> changeset = validate_change changeset, :title, fn :title, new_title, old_title ->
+      ...>   if old_title == "bar" do
+      ...>     [title: {"cannot be changed from bar", additional: "info"}]
+      ...>   else
+      ...>     []
+      ...>   end
+      ...> end
+      iex> changeset.errors
+      [title: {"cannot be changed from bar", [additional: "info"]}]
+
   """
   @spec validate_change(
           t,
           atom,
           (atom, term -> [{atom, String.t()} | {atom, {String.t(), Keyword.t()}}])
+          | (atom, term, term -> [{atom, String.t()} | {atom, {String.t(), Keyword.t()}}])
         ) :: t
   def validate_change(%Changeset{} = changeset, field, validator) when is_atom(field) do
-    %{changes: changes, types: types, errors: errors} = changeset
+    %{changes: changes, types: types, errors: errors, data: data} = changeset
     ensure_field_exists!(changeset, types, field)
 
-    value = Map.get(changes, field)
-    new = if is_nil(value), do: [], else: validator.(field, value)
+    new_value = Map.get(changes, field)
+
+    new =
+      cond do
+        is_nil(new_value) ->
+          []
+
+        is_function(validator, 2) ->
+          validator.(field, new_value)
+
+        is_function(validator, 3) ->
+          old_value = Map.get(data, field)
+          validator.(field, new_value, old_value)
+      end
 
     new =
       Enum.map(new, fn
@@ -2416,6 +2443,7 @@ defmodule Ecto.Changeset do
           atom,
           term,
           (atom, term -> [{atom, String.t()} | {atom, {String.t(), Keyword.t()}}])
+          | (atom, term, term -> [{atom, String.t()} | {atom, {String.t(), Keyword.t()}}])
         ) :: t
   def validate_change(
         %Changeset{validations: validations} = changeset,

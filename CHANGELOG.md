@@ -4,6 +4,7 @@
 
 ### Enhancements
 
+  * [Ecto.Changeset] Support a three-arity function to receive the previous value on `validate_change/3`.
   * [Ecto.Association] Allow `preload_order` to take MFAs for `many_to_many` associations. This allows ordering by the join table
   * [Ecto.Query] Add `:operation` option to `with_cte/3`. This allows CTEs to perform updates and deletes
   * [Ecto.Query] Support `splice(^...)` in `fragment`

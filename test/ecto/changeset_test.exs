@@ -1075,6 +1075,15 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"title" => "hello"})
       |> validate_change(:bad, fn _, _ -> [] end)
     end
+
+    # When validator has arity 3
+    changeset =
+      changeset(%Post{title: "old"}, %{"title" => "new"})
+      |> validate_change(:title, fn :title, "new", "old" -> [] end)
+
+    assert changeset.valid?
+    assert changeset.errors == []
+
   end
 
   test "validate_change/4" do
