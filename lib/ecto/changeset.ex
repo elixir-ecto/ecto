@@ -2333,15 +2333,17 @@ defmodule Ecto.Changeset do
 
   It invokes the `validator` function to perform the validation
   only if a change for the given `field` exists and the change
-  value is not `nil`. The function must return a list of errors
-  (with an empty list meaning no errors).
+  value is not `nil`. 
+
+  If `validator` has an arity of 2, it is passed `field` as the first
+  argument and the change value as the second argument. If it
+  has an arity of 3, it is passed a third argument corresponding
+  to the current value of `field`. The function must return a list
+  of errors (with an empty list meaning no errors).
 
   In case there's at least one error, the list of errors will be appended to the
   `:errors` field of the changeset and the `:valid?` flag will be set to
   `false`.
-
-  Optionally, the validator function can take a third argument with the
-  previous value of the field.
 
   ## Examples
 
