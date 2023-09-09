@@ -1279,7 +1279,7 @@ defmodule Ecto.Query do
   after the join. In the expression syntax, the options are given as
   the fifth argument.
 
-   > ### Unspecified join condition {: .warning}
+  > ### Unspecified join condition {: .warning}
   >
   > Leaving the `on` option unspecified will trigger
   > a warning when not performing a cross join. This
