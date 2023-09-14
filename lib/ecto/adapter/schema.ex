@@ -87,6 +87,6 @@ defmodule Ecto.Adapter.Schema do
   in case there is no record matching the given filters,
   `{:error, :stale}` is returned.
   """
-  @callback delete(adapter_meta, schema_meta, filters, options) ::
+  @callback delete(adapter_meta, schema_meta, filters, returning, options) ::
               {:ok, fields} | {:invalid, constraints} | {:error, :stale}
 end
