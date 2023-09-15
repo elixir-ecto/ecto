@@ -521,6 +521,18 @@ defmodule Ecto.RepoTest do
       TestRepo.update(changeset, returning: false)
       assert_received {:update, %{source: "my_schema", returning: []}}
     end
+
+    test "on delete" do
+      changeset = Ecto.Changeset.change(%MySchemaWithAssoc{id: 1}, %{n: 2})
+      TestRepo.delete(changeset, returning: [:id])
+      assert_received {:delete, %{source: "my_schema", returning: [:id]}}
+      TestRepo.delete(changeset, returning: [:parent_id])
+      assert_received {:delete, %{source: "my_schema", returning: [:id, :parent_id]}}
+      TestRepo.delete(changeset, returning: true)
+      assert_received {:delete, %{source: "my_schema", returning: [:id, :parent_id, :n]}}
+      TestRepo.delete(changeset, returning: false)
+      assert_received {:delete, %{source: "my_schema", returning: [:id]}}
+    end
   end
 
   describe "insert_all" do

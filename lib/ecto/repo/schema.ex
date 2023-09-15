@@ -558,10 +558,19 @@ defmodule Ecto.Repo.Schema do
           apply(mod, on_delete, [reflection, changeset.data, name, tuplet])
         end
 
-        schema_meta = metadata(struct, schema.__schema__(:autogenerate_id), opts)
+        autogen_id = schema.__schema__(:autogenerate_id)
+        schema_meta = metadata(struct, autogen_id, opts)
+        {_changes, _cast_extra, _dump_extra, return_types, return_sources} =
+          autogenerate_id(autogen_id, changeset.changes, return_types, return_sources, adapter)
+
         filter_values = Enum.map(filters, &elem(&1, 1))
         opts = Keyword.put(opts, :cast_params, filter_values)
-        args = [adapter_meta, schema_meta, dump_filters, return_sources, opts]
+        # Remove backwards compatibility in later release
+        args = if function_exported?(adapter, :delete, 5) do
+                [adapter_meta, schema_meta, dump_filters, return_sources, opts]
+               else
+                [adapter_meta, schema_meta, dump_filters, opts]
+               end
 
         case apply(changeset, adapter, :delete, args) do
           {:ok, values} ->
