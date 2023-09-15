@@ -540,6 +540,12 @@ defmodule Ecto.Repo.Schema do
     dumper = schema.__schema__(:dump)
     changeset = put_repo_and_action(changeset, :delete, repo, tuplet)
 
+    {return_types, return_sources} =
+      schema
+      |> returning(opts)
+      |> add_read_after_writes(schema)
+      |> fields_to_sources(dumper)
+
     wrap_in_transaction(adapter, adapter_meta, opts, assocs != [], prepare, fn ->
       changeset = run_prepare(changeset, prepare)
 
@@ -555,11 +561,16 @@ defmodule Ecto.Repo.Schema do
         schema_meta = metadata(struct, schema.__schema__(:autogenerate_id), opts)
         filter_values = Enum.map(filters, &elem(&1, 1))
         opts = Keyword.put(opts, :cast_params, filter_values)
-        args = [adapter_meta, schema_meta, dump_filters, opts]
+        # Remove backwards compatibility in later release
+        args = if function_exported?(adapter, :delete, 5) do
+                [adapter_meta, schema_meta, dump_filters, return_sources, opts]
+               else
+                [adapter_meta, schema_meta, dump_filters, opts]
+               end
 
         case apply(changeset, adapter, :delete, args) do
           {:ok, values} ->
-            changeset = load_changes(changeset, :deleted, [], values, %{}, [], adapter, schema_meta)
+            changeset = load_changes(changeset, :deleted, return_types, values, %{}, [], adapter, schema_meta)
             {:ok, changeset.data}
 
           {:error, _} = error ->

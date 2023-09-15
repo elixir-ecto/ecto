@@ -117,13 +117,13 @@ defmodule Ecto.TestAdapter do
     context
   end
 
-  def delete(_, %{context: nil} = meta, filters, _opts) do
-    meta = Map.merge(meta, %{filters: filters})
+  def delete(_, %{context: nil} = meta, filters, returning, _opts) do
+    meta = Map.merge(meta, %{filters: filters, returning: returning})
     send(self(), {:delete, meta})
-    {:ok, []}
+    {:ok, Enum.zip(returning, 1..length(returning))}
   end
 
-  def delete(_, %{context: context}, _filters, _opts) do
+  def delete(_, %{context: context}, _filters, _returning, _opts) do
     context
   end
 

@@ -13,6 +13,7 @@
   * [Ecto.Query] Allow hints to inject SQL using `unsafe_fragment`
   * [Ecto.Repo] Add `:on_preload_spawn` option to `preload/3`
   * [Ecto.Schema] Support `:load_in_query` option for embeds
+  * [Ecto.Schema] Support `:returning` option for delete
 
 ### Bug fixes
 

@@ -1888,6 +1888,12 @@ defmodule Ecto.Repo do
 
   ## Options
 
+    * `:returning` - selects which fields to return. It accepts a list
+      of fields to be returned from the database. When `true`, returns
+      all fields. When `false`, no extra fields are returned. It will
+      always include all fields in `read_after_writes`. Not all
+      databases support this option.
+
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL). This overrides the prefix set
       in the query and any `@schema_prefix` set in the schema.
