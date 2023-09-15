@@ -367,6 +367,7 @@ defmodule Ecto.Changeset do
         }
   @type data :: map()
   @type types :: map()
+  @type traverse_result :: %{atom => [term] | traverse_result}
 
   @typedoc """
   A possible value that you can pass to the `:empty_values` option.
@@ -3996,7 +3997,7 @@ defmodule Ecto.Changeset do
   description.
   """
   @spec traverse_errors(t, (error -> String.t()) | (Changeset.t(), atom, error -> String.t())) ::
-          %{atom => [term]}
+          traverse_result
   def traverse_errors(
         %Changeset{errors: errors, changes: changes, types: types} = changeset,
         msg_func
@@ -4093,7 +4094,7 @@ defmodule Ecto.Changeset do
   @spec traverse_validations(
           t,
           (error -> String.t()) | (Changeset.t(), atom, error -> String.t())
-        ) :: %{atom => [term]}
+        ) :: traverse_result
   def traverse_validations(
         %Changeset{validations: validations, changes: changes, types: types} = changeset,
         msg_func
