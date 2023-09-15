@@ -1210,7 +1210,7 @@ defmodule Ecto.RepoTest do
         |> Ecto.Changeset.cast_embed(:embed)
         |> TestRepo.insert!()
 
-      assert %{embed: %{x: "new_x", y: "old_y"}} = inserted
+      assert %{x: "new_x", y: "old_y"} = inserted.embed
 
       # embeds_many
       data_embed1 = %MyEmbed{id: 1, x: "old_x_1", y: "old_y_1"}
@@ -1222,8 +1222,7 @@ defmodule Ecto.RepoTest do
         |> Ecto.Changeset.cast_embed(:embeds)
         |> TestRepo.insert!()
 
-      %{embeds: inserted_embeds} = inserted
-      assert [%{id: 1, x: "new_x_1", y: "old_y_1"}, %{id: new_id, x: nil}] = inserted_embeds
+      assert [%{id: 1, x: "new_x_1", y: "old_y_1"}, %{id: new_id, x: nil}] = inserted.embeds
       assert new_id != data_embed2.id
     end
   end
