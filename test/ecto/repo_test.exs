@@ -527,11 +527,11 @@ defmodule Ecto.RepoTest do
       TestRepo.delete(changeset, returning: [:id])
       assert_received {:delete, %{source: "my_schema", returning: [:id]}}
       TestRepo.delete(changeset, returning: [:parent_id])
-      assert_received {:delete, %{source: "my_schema", returning: [:id, :parent_id]}}
+      assert_received {:delete, %{source: "my_schema", returning: [:parent_id]}}
       TestRepo.delete(changeset, returning: true)
-      assert_received {:delete, %{source: "my_schema", returning: [:id, :parent_id, :n]}}
+      assert_received {:delete, %{source: "my_schema", returning: [:parent_id, :n, :id]}}
       TestRepo.delete(changeset, returning: false)
-      assert_received {:delete, %{source: "my_schema", returning: [:id]}}
+      assert_received {:delete, %{source: "my_schema", returning: []}}
     end
   end
 
