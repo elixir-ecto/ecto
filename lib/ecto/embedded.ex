@@ -168,14 +168,14 @@ defmodule Ecto.Embedded do
   end
 
   defp prepare_each(%{cardinality: :one} = embed, changeset, adapter, repo, repo_action) do
-    action = check_action!(changeset.action, repo_action, embed)
+    action = normalize_action(changeset.action, repo_action, embed)
     changeset = run_prepare(changeset, repo)
     to_struct(changeset, action, embed, adapter)
   end
 
   defp prepare_each(%{cardinality: :many} = embed, changesets, adapter, repo, repo_action) do
     for changeset <- changesets,
-        action = check_action!(changeset.action, repo_action, embed),
+        action = normalize_action(changeset.action, repo_action, embed),
         changeset = run_prepare(changeset, repo),
         prepared = to_struct(changeset, action, embed, adapter),
         do: prepared
@@ -244,15 +244,9 @@ defmodule Ecto.Embedded do
     struct(struct, changes)
   end
 
-  defp check_action!(:replace, action, %{on_replace: :delete} = embed),
-    do: check_action!(:delete, action, embed)
-
-  defp check_action!(:update, :insert, %{related: schema}) do
-    raise ArgumentError,
-          "got action :update in changeset for embedded #{inspect(schema)} while inserting"
-  end
-
-  defp check_action!(action, _, _), do: action
+  defp normalize_action(:replace, _, %{on_replace: :delete}), do: :delete
+  defp normalize_action(:update, :insert, _), do: :insert
+  defp normalize_action(action, _, _), do: action
 
   defp autogenerate_id(changes, _struct, :insert, schema, adapter) do
     case schema.__schema__(:autogenerate_id) do
