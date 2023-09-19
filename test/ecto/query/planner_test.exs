@@ -134,6 +134,19 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  defmodule Derived do
+    use Ecto.Schema
+
+    schema "derived" do
+      field :visits, :integer
+      field :derived, :string, derived_as: {__MODULE__, :derived, []}
+    end
+
+    def derived() do
+      dynamic([p], p.visits)
+    end
+  end
+
   defp plan(query, operation \\ :all) do
     {query, params, key} = Planner.plan(query, operation, Ecto.TestAdapter)
     {cast_params, dump_params} = Enum.unzip(params)
@@ -159,6 +172,70 @@ defmodule Ecto.Query.PlannerTest do
     for field <- fields do
       {{:., [], [{:&, [], [ix]}, field]}, [], []}
     end
+  end
+
+  @tag :derived
+  test "derived" do
+    # all the queries below output some variant of the following
+
+    # %{
+    #   assocs: [],
+    #   from: :none,
+    #   postprocess: {:value, :string},
+    #   preprocess: [],
+    #   take: []
+    # }
+    # [{{:., [type: :integer], [{:&, [], [0]}, :visits]}, [], []}]
+
+    # 1. select the field by itself
+    q = from p in Derived, select: p.derived
+    {q, _, _, select} = normalize_with_params(q)
+    IO.inspect select
+    IO.inspect q.select.fields
+
+    # 2. select the field with take
+    q = from p in Derived, select: [:derived]
+    {q, _, _, select} = normalize_with_params(q)
+    IO.inspect select
+    IO.inspect q.select.fields
+
+    # 3. select the field inside of another data structure
+    q = from p in Derived, select: %{derived: p.derived}
+    {q, _, _, select} = normalize_with_params(q)
+    IO.inspect select
+    IO.inspect q.select.fields
+
+    # 4. select entire struct
+    q = from p in Derived, select: p
+    {q, _, _, select} = normalize_with_params(q)
+    IO.inspect select
+    IO.inspect q.select.fields
+
+    # 5. select from assoc struct
+    q = from p1 in Derived, join: p2 in Derived, select: p2
+    {q, _, _, select} = normalize_with_params(q)
+    IO.inspect select
+    IO.inspect q.select.fields
+
+    # 6. select from assoc field
+    q = from p1 in Derived, join: p2 in Derived, select: p2.derived
+    {q, _, _, select} = normalize_with_params(q)
+    IO.inspect select
+    IO.inspect q.select.fields
+
+    # 7. select from subquery
+    q = from p1 in subquery(from p2 in Derived, select: p2.derived), select: p1
+    {q, _, _, _} = normalize_with_params(q)
+    IO.inspect q.from.source.query.select.fields
+
+    # 8. select from cte
+    q =
+      from(p in Derived)
+      |> with_cte("cte", as: ^from(p2 in Derived, select: p2))
+      |> join(:inner, [p], c in "cte", on: c.id == p.id)
+      |> select([p1, c], c)
+    {q, _, _, _} = normalize_with_params(q)
+    IO.inspect elem(hd(q.with_ctes.queries), 2).select.fields
   end
 
   test "plan: merges all parameters" do
