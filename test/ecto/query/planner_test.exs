@@ -992,43 +992,52 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "normalize: late bindings with as" do
-    query = from(Post, as: :posts, where: as(:posts).code == ^123) |> normalize()
-    assert Macro.to_string(hd(query.wheres).expr) == "&0.code() == ^0"
+    {query, cast_params, _, _} =
+      from(Post, as: :posts, where: as(:posts).visits == ^"123") |> normalize_with_params()
+
+    assert Macro.to_string(hd(query.wheres).expr) == "&0.visits() == ^0"
+    assert cast_params == [123]
 
     assert_raise Ecto.QueryError, ~r/could not find named binding `as\(:posts\)`/, fn ->
-      from(Post, where: as(:posts).code == ^123) |> normalize()
+      from(Post, where: as(:posts).visits == ^"123") |> normalize()
     end
   end
 
   test "normalize: late dynamic bindings with as" do
     as = :posts
 
-    query = from(Post, as: :posts, where: as(^as).code == ^123) |> normalize()
-    assert Macro.to_string(hd(query.wheres).expr) == "&0.code() == ^0"
+    {query, cast_params, _, _} =
+      from(Post, as: :posts, where: as(^as).visits == ^"123") |> normalize_with_params()
 
-    query = from(Post, as: :posts, where: field(as(^as), :code) == ^123) |> normalize()
-    assert Macro.to_string(hd(query.wheres).expr) == "&0.code() == ^0"
+    assert Macro.to_string(hd(query.wheres).expr) == "&0.visits() == ^0"
+    assert cast_params == [123]
+
+    {query, cast_params, _, _} =
+      from(Post, as: :posts, where: field(as(^as), :visits) == ^"123") |> normalize_with_params()
+
+    assert Macro.to_string(hd(query.wheres).expr) == "&0.visits() == ^0"
+    assert cast_params == [123]
 
     assert_raise Ecto.QueryError, ~r/could not find named binding `as\(:posts\)`/, fn ->
-      from(Post, where: as(^as).code == ^123) |> normalize()
+      from(Post, where: as(^as).visits == ^"123") |> normalize()
     end
   end
 
   test "normalize: creating dynamic bindings with as" do
     as = {:posts}
 
-    query = from(Post, as: ^as, where: as(^as).code == ^123) |> normalize()
-    assert Macro.to_string(hd(query.wheres).expr) == "&0.code() == ^0"
+    query = from(Post, as: ^as, where: as(^as).visits == ^"123") |> normalize()
+    assert Macro.to_string(hd(query.wheres).expr) == "&0.visits() == ^0"
 
-    query = from(Post, as: ^as, where: field(as(^as), :code) == ^123) |> normalize()
-    assert Macro.to_string(hd(query.wheres).expr) == "&0.code() == ^0"
+    query = from(Post, as: ^as, where: field(as(^as), :visits) == ^"123") |> normalize()
+    assert Macro.to_string(hd(query.wheres).expr) == "&0.visits() == ^0"
 
     assert_raise Ecto.QueryError, ~r/could not find named binding `as\(\{:posts\}\)`/, fn ->
-      from(Post, where: as(^as).code == ^123) |> normalize()
+      from(Post, where: as(^as).visits == ^"123") |> normalize()
     end
 
-    query = from(Post, as: ^as, where: as(^as).code == ^123) |> normalize()
-    assert Macro.to_string(hd(query.wheres).expr) == "&0.code() == ^0"
+    query = from(Post, as: ^as, where: as(^as).visits == ^"123") |> normalize()
+    assert Macro.to_string(hd(query.wheres).expr) == "&0.visits() == ^0"
   end
 
   test "normalize: late parent bindings with as" do
@@ -1039,6 +1048,14 @@ defmodule Ecto.Query.PlannerTest do
     child = from(c in Comment, select: %{map: parent_as(:posts).posted})
     query = from(Post, as: :posts, join: c in subquery(child), on: true) |> normalize()
     assert Macro.to_string(hd(query.joins).source.query.select.expr) == "%{map: parent_as(:posts).posted()}"
+
+    child = from(c in Comment, where: parent_as(:posts).visits == ^"123")
+
+    {query, cast_params, _, _} =
+      from(Post, as: :posts, join: c in subquery(child), on: true) |> normalize_with_params()
+
+    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) == "parent_as(:posts).visits() == ^0"
+    assert cast_params == [123]
 
     assert_raise Ecto.SubQueryError, ~r/the parent_as in a subquery select used as a join can only access the `from` binding in query/, fn ->
       child = from(c in Comment, select: %{map: parent_as(:itself).posted})
@@ -1064,10 +1081,26 @@ defmodule Ecto.Query.PlannerTest do
     child = from(c in Comment, select: %{map: field(parent_as(^as), :posted)})
     query = from(Post, as: :posts, join: c in subquery(child), on: true) |> normalize()
     assert Macro.to_string(hd(query.joins).source.query.select.expr) == "%{map: parent_as(:posts).posted()}"
+
+    child = from(c in Comment, where: parent_as(^as).visits == ^"123")
+
+    {query, cast_params, _, _} =
+      from(Post, as: :posts, join: c in subquery(child), on: true) |> normalize_with_params()
+
+    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) == "parent_as(:posts).visits() == ^0"
+    assert cast_params == [123]
+
+    child = from(c in Comment, where: field(parent_as(^as), :visits) == ^"123")
+
+    {query, cast_params, _, _} =
+      from(Post, as: :posts, join: c in subquery(child), on: true) |> normalize_with_params()
+
+    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) == "parent_as(:posts).visits() == ^0"
+    assert cast_params == [123]
   end
 
   test "normalize: nested parent_as" do
-    child3 = from(c in Comment, where: parent_as(:posts).deleted == false, select: c.id)
+    child3 = from(c in Comment, where: parent_as(:posts).visits > 0, select: c.id)
     child2 = from(c in Comment, where: c.id in subquery(child3), select: c.id)
     child = from(c in Comment, where: parent_as(:posts).posted == c.posted and c.id in subquery(child2))
 
@@ -1078,7 +1111,7 @@ defmodule Ecto.Query.PlannerTest do
 
   test "normalize: nested dynamic parent_as" do
     as = :posts
-    child3 = from(c in Comment, where: parent_as(^as).deleted == false, select: c.id)
+    child3 = from(c in Comment, where: parent_as(^as).visits > 0, select: c.id)
     child2 = from(c in Comment, where: c.id in subquery(child3), select: c.id)
     child = from(c in Comment, where: field(parent_as(^as), :posted) == c.posted and c.id in subquery(child2))
 

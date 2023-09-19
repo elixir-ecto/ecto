@@ -629,14 +629,7 @@ defmodule Ecto.Query.Builder do
 
   defp escape_field!({kind, _, [value]}, field, _vars)
        when kind in [:as, :parent_as] do
-    value =
-      case value do
-        {:^, _, [value]} ->
-          value
-
-        other ->
-          quoted_atom!(other, "#{kind}/1")
-      end
+    value = late_binding!(kind, value)
     as    = {:{}, [], [kind, [], [value]]}
     field = quoted_atom!(field, "field/2")
     dot   = {:{}, [], [:., [], [as, field]]}
@@ -1003,6 +996,20 @@ defmodule Ecto.Query.Builder do
   def atom!(other, used_ref),
     do: error!("expected atom in #{used_ref}, got: `#{inspect other}`")
 
+  @doc """
+  Checks if the value of a late binding is an interpolation or
+  a quoted atom.
+  """
+  def late_binding!(kind, value) do
+    case value do
+      {:^, _, [value]} ->
+        value
+
+      other ->
+        quoted_atom!(other, "#{kind}/1")
+    end
+  end
+
   defp escape_json_path(path) when is_list(path) do
     Enum.map(path, &quoted_json_path_element!/1)
   end
@@ -1140,9 +1147,21 @@ defmodule Ecto.Query.Builder do
     when is_atom(var) and is_atom(context) and is_atom(field),
     do: {find_var!(var, vars), field}
 
+  def quoted_type({{:., _, [{kind, _, [value]}, field]}, _, []}, _vars)
+      when kind in [:as, :parent_as] do
+    value = late_binding!(kind, value)
+    {{:{}, [], [kind, [], [value]]}, field}
+  end
+
   def quoted_type({:field, _, [{var, _, context}, field]}, vars)
     when is_atom(var) and is_atom(context) and is_atom(field),
     do: {find_var!(var, vars), field}
+
+  def quoted_type({:field, _, [{kind, _, [value]}, field]}, _vars)
+      when kind in [:as, :parent_as] and is_atom(field) do
+    value = late_binding!(kind, value)
+    {{:{}, [], [kind, [], [value]]}, field}
+  end
 
   # Unquoting code here means the second argument of field will
   # always be unquoted twice, one by the type checking and another
@@ -1151,6 +1170,12 @@ defmodule Ecto.Query.Builder do
   def quoted_type({:field, _, [{var, _, context}, {:^, _, [code]}]}, vars)
     when is_atom(var) and is_atom(context),
     do: {find_var!(var, vars), code}
+
+  def quoted_type({:field, _, [{kind, _, [value]}, {:^, _, [code]}]}, _vars)
+      when kind in [:as, :parent_as] do
+    value = late_binding!(kind, value)
+    {{:{}, [], [kind, [], [value]]}, code}
+  end
 
   # Interval
   def quoted_type({:datetime_add, _, [_, _, _]}, _vars), do: :naive_datetime
