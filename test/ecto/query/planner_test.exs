@@ -1026,18 +1026,18 @@ defmodule Ecto.Query.PlannerTest do
   test "normalize: creating dynamic bindings with as" do
     as = {:posts}
 
-    query = from(Post, as: ^as, where: as(^as).code == ^"123") |> normalize()
-    assert Macro.to_string(hd(query.wheres).expr) == "&0.code() == ^0"
+    query = from(Post, as: ^as, where: as(^as).visits == ^"123") |> normalize()
+    assert Macro.to_string(hd(query.wheres).expr) == "&0.visits() == ^0"
 
-    query = from(Post, as: ^as, where: field(as(^as), :code) == ^"123") |> normalize()
-    assert Macro.to_string(hd(query.wheres).expr) == "&0.code() == ^0"
+    query = from(Post, as: ^as, where: field(as(^as), :visits) == ^"123") |> normalize()
+    assert Macro.to_string(hd(query.wheres).expr) == "&0.visits() == ^0"
 
     assert_raise Ecto.QueryError, ~r/could not find named binding `as\(\{:posts\}\)`/, fn ->
-      from(Post, where: as(^as).code == ^"123") |> normalize()
+      from(Post, where: as(^as).visits == ^"123") |> normalize()
     end
 
-    query = from(Post, as: ^as, where: as(^as).code == ^"123") |> normalize()
-    assert Macro.to_string(hd(query.wheres).expr) == "&0.code() == ^0"
+    query = from(Post, as: ^as, where: as(^as).visits == ^"123") |> normalize()
+    assert Macro.to_string(hd(query.wheres).expr) == "&0.visits() == ^0"
   end
 
   test "normalize: late parent bindings with as" do
