@@ -1167,9 +1167,23 @@ defmodule Ecto.Query.Planner do
   end
   defp prewalk_source(%Ecto.SubQuery{query: inner_query} = subquery, kind, query, _expr, counter, adapter) do
     try do
-      inner_query = put_in inner_query.aliases[@parent_as], query
+      combinations =
+        Enum.map(inner_query.combinations, fn {type, combination_query} ->
+          {type, put_in(combination_query.aliases[@parent_as], query)}
+        end)
+
+      inner_query = put_in(inner_query.combinations, combinations)
+      inner_query = put_in(inner_query.aliases[@parent_as], query)
       {inner_query, counter} = normalize_query(inner_query, :all, adapter, counter)
       {inner_query, _} = normalize_select(inner_query, true)
+
+      combinations =
+        Enum.map(inner_query.combinations, fn {type, combination_query} ->
+          {_, combination_query} = pop_in(combination_query.aliases[@parent_as])
+          {type, combination_query}
+        end)
+
+      inner_query = put_in(inner_query.combinations, combinations)
       {_, inner_query} = pop_in(inner_query.aliases[@parent_as])
 
       inner_query =
