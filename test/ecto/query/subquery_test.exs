@@ -534,5 +534,12 @@ defmodule Ecto.Query.SubqueryTest do
         from(c in Comment, where: c.post_id in subquery(p)) |> normalize()
       end
     end
+
+    test "with combinations and parent_as/1" do
+      right_query = from(c in Comment, where: c.id == parent_as(:c).id, select: c.id)
+      left_query = from(c in Comment, where: c.id == parent_as(:c).id, select: c.id)
+      union_query = union(left_query, ^right_query)
+      from(c in Comment, as: :c, where: c.id in subquery(union_query)) |> normalize()
+    end
   end
 end

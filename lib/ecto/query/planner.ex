@@ -1096,13 +1096,16 @@ defmodule Ecto.Query.Planner do
     {Enum.reverse(exprs), counter}
   end
 
-  defp validate_and_increment(:combination, _query, combinations, counter, operation, adapter) do
+  defp validate_and_increment(:combination, query, combinations, counter, operation, adapter) do
     fun = &validate_and_increment(&1, &2, &3, &4, operation, adapter)
+    parent_aliases = query.aliases[@parent_as]
 
     {combinations, counter} =
       Enum.reduce combinations, {[], counter}, fn {type, combination_query}, {combinations, counter} ->
+        combination_query = put_in(combination_query.aliases[@parent_as], parent_aliases)
         {combination_query, counter} = traverse_exprs(combination_query, operation, counter, fun)
         {combination_query, _} = combination_query |> normalize_select(true)
+        {_, combination_query} = pop_in(combination_query.aliases[@parent_as])
         {[{type, combination_query} | combinations], counter}
       end
 
@@ -1167,7 +1170,7 @@ defmodule Ecto.Query.Planner do
   end
   defp prewalk_source(%Ecto.SubQuery{query: inner_query} = subquery, kind, query, _expr, counter, adapter) do
     try do
-      inner_query = put_in inner_query.aliases[@parent_as], query
+      inner_query = put_in(inner_query.aliases[@parent_as], query)
       {inner_query, counter} = normalize_query(inner_query, :all, adapter, counter)
       {inner_query, _} = normalize_select(inner_query, true)
       {_, inner_query} = pop_in(inner_query.aliases[@parent_as])
