@@ -213,7 +213,8 @@ defmodule Ecto.Changeset do
   with the data and its types:
 
       user = %User{}
-      types = %{first_name: :string, last_name: :string, email: :string}
+      types = %{name: :string, email: :string, age: :integer}
+      params = %{name: "Callum", email: "callum@example.com", age: 27}
       changeset =
         {user, types}
         |> Ecto.Changeset.cast(params, Map.keys(types))
@@ -223,14 +224,14 @@ defmodule Ecto.Changeset do
   where the user struct refers to the definition in the following module:
 
       defmodule User do
-        defstruct [:name, :age]
+        defstruct [:name, :email, :age]
       end
 
   Changesets can also be used with data in a plain map, by following the same API:
 
       data  = %{}
-      types = %{name: :string}
-      params = %{name: "Callum"}
+      types = %{name: :string, email: :string, age: :integer}
+      params = %{name: "Callum", email: "callum@example.com", age: 27}
       changeset =
         {data, types}
         |> Ecto.Changeset.cast(params, Map.keys(types))
