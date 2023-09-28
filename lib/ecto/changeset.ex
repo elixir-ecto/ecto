@@ -124,7 +124,7 @@ defmodule Ecto.Changeset do
   You can also pass the `:empty_values` option to `cast/4` in case you want
   to change how a particular `cast/4` work.
 
-  ## Associations, embeds and on replace
+  ## Associations, embeds, and on replace
 
   Using changesets you can work with associations as well as with embedded
   structs. There are two primary APIs:
@@ -144,7 +144,13 @@ defmodule Ecto.Changeset do
   several database operations will happen on several schemas and changesets
   at once.
 
-  See the documentation for those functions for more information.
+  You can learn more about working with associations in our documentation,
+  including cheatsheets and practical examples. Check out:
+
+    * The docs for `cast_assoc/3` and `put_assoc/3`
+    * The [associations cheatsheet](associations.html)
+    * The [Constraints and Upserts guide](constraints-and-upserts.html)
+    * The [Polymorphic associations with many to many guide](polymorphic-associations-with-many-to-many.html)
 
   ### The `:on_replace` option
 
@@ -1135,6 +1141,16 @@ defmodule Ecto.Changeset do
   These parameters can be powerful in certain UIs as it allows you to decouple
   the sorting and replacement of the data from its representation.
 
+  ## More resources
+
+  You can learn more about working with associations in our documentation,
+  including cheatsheets and practical examples. Check out:
+
+    * The docs for `put_assoc/3`
+    * The [associations cheatsheet](associations.html)
+    * The [Constraints and Upserts guide](constraints-and-upserts.html)
+    * The [Polymorphic associations with many to many guide](polymorphic-associations-with-many-to-many.html)
+
   ## Options
 
     * `:required` - if the association is a required field. For associations of cardinality
@@ -2050,6 +2066,16 @@ defmodule Ecto.Changeset do
 
   Although it accepts an `opts` argument, there are no options currently
   supported by `put_assoc/4`.
+
+  ## More resources
+
+  You can learn more about working with associations in our documentation,
+  including cheatsheets and practical examples. Check out:
+
+    * The docs for `cast_assoc/3`
+    * The [associations cheatsheet](associations.html)
+    * The [Constraints and Upserts guide](constraints-and-upserts.html)
+    * The [Polymorphic associations with many to many guide](polymorphic-associations-with-many-to-many.html)
   """
   def put_assoc(%Changeset{} = changeset, name, value, opts \\ []) do
     put_relation(:assoc, changeset, name, value, opts)
