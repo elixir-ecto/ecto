@@ -1741,6 +1741,20 @@ defmodule Ecto.Query.PlannerTest do
                select_fields([:b], 1)
   end
 
+  test "normalize: select_merge with map/2 does not duplicate fields" do
+    {query, _, _, _} =
+      from(s in "schema", select: %{id: s.id})
+      |> select_merge([s], map(s, [:x]))
+      |> select_merge([s], map(s, [:y]))
+      |> normalize_with_params()
+
+    assert [
+             {{:., _, [{:&, [], [0]}, :x]}, [], []},
+             {{:., _, [{:&, [], [0]}, :y]}, [], []},
+             {{:., _, [{:&, [], [0]}, :id]}, [], []}
+           ] = query.select.fields
+  end
+
   test "normalize: select with :%{}" do
     query = Post |> select([p], %{p | title: "foo"}) |> normalize()
     assert query.select.expr == {:%{}, [], [{:|, [], [{:&, [], [0]}, [title: "foo"]]}]}

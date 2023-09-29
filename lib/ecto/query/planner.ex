@@ -1455,6 +1455,10 @@ defmodule Ecto.Query.Planner do
     {{:source, :from}, fields, {{:source, :from}, expr, taken}}
   end
 
+  defp collect_fields({:&, _, [0]}, fields, from, _query, _take, _keep_literals?, _drop) do
+    {{:source, :from}, fields, from}
+  end
+
   defp collect_fields({:&, _, [ix]}, fields, from, query, take, _keep_literals?, drop) do
     {expr, taken} = source_take!(:select, query, take, ix, ix, drop)
     {expr, Enum.reverse(taken, fields), from}
