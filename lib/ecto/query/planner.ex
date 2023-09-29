@@ -1455,8 +1455,7 @@ defmodule Ecto.Query.Planner do
     {{:source, :from}, fields, {{:source, :from}, expr, taken}}
   end
 
-  defp collect_fields({:&, _, [0]}, fields, from, _query, _take, _keep_literals?, _drop)
-       when from != :never do
+  defp collect_fields({:&, _, [0]}, fields, from, _query, _take, _keep_literals?, _drop) do
     {{:source, :from}, fields, from}
   end
 
