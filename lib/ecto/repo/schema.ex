@@ -1026,6 +1026,7 @@ defmodule Ecto.Repo.Schema do
     case Ecto.Type.adapter_dump(adapter, type, value) do
       {:ok, value} ->
         value
+
       :error ->
         raise Ecto.ChangeError,
               "value `#{inspect(value)}` for `#{inspect(schema)}.#{field}` " <>

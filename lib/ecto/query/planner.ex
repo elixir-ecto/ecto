@@ -859,22 +859,22 @@ defmodule Ecto.Query.Planner do
   defp cast_param(kind, query, expr, v, type, adapter) do
     type = field_type!(kind, query, expr, type)
 
-    try do
-      case cast_param(kind, type, v, adapter) do
-        {:ok, v} -> v
-        {:error, error} -> error! query, expr, error
-      end
-    catch
-      :error, %Ecto.QueryError{} = e ->
-        raise Ecto.Query.CastError, value: v, type: type, message: Exception.message(e)
-    end
-  end
-
-  defp cast_param(kind, type, v, adapter) do
     with {:ok, type} <- normalize_param(kind, type, v),
          {:ok, cast_v} <- cast_param(kind, type, v),
-         {:ok, dump_v} <- dump_param(adapter, type, cast_v),
-         do: {:ok, {cast_v, dump_v}}
+         {:ok, dump_v} <- dump_param(adapter, type, cast_v) do
+      {cast_v, dump_v}
+    else
+      {:error, message} ->
+        e =
+          Ecto.QueryError.exception(
+            message: message,
+            query: query,
+            file: expr.file,
+            line: expr.line
+          )
+
+        raise Ecto.Query.CastError, value: v, type: type, message: Exception.message(e)
+    end
   end
 
   @doc """
