@@ -1309,7 +1309,28 @@ defmodule Ecto.Query.Planner do
     if Ecto.Type.base?(type) do
       {tagged, acc}
     else
-      {dump_param(kind, query, expr, v, type, adapter), acc}
+      type = field_type!(kind, query, expr, type)
+
+      with {:ok, type} <- normalize_param(kind, type, v),
+           {:ok, value} <- dump_param(adapter, type, v) do
+        # We cannot encode binary/uuid in queries because they would emit
+        # invalid queries with binary parts in them. In theory, we could
+        # wrap them in Ecto.Query.Tagged, but a tagged UUID would most
+        # likely wrap its string representation, not its binary one.
+        # So it is best to be consistent and not support query-dumping of
+        # non-base types.
+        if is_binary(value) and Ecto.Type.type(type) in [:binary_id, :binary, :uuid] do
+          error = "cannot encode value `#{inspect v}` of type `#{inspect(type)}` within a query, please interpolate (using ^) instead"
+          error! query, expr, error
+        else
+          {value, acc}
+        end
+      else
+        {:error, error} ->
+          error = error <> ". Or the value is incompatible or it must be " <>
+                           "interpolated (using ^) so it may be cast accordingly"
+          error! query, expr, error
+      end
     end
   end
 
@@ -1342,24 +1363,6 @@ defmodule Ecto.Query.Planner do
         raise ArgumentError,
               "invalid alias: `#{inspect(name)}`. Use `selected_as/2` to define aliases in the outer most `select` expression."
     end
-  end
-
-  defp dump_param(kind, query, expr, v, type, adapter) do
-    type = field_type!(kind, query, expr, type)
-
-    case dump_param(kind, type, v, adapter) do
-      {:ok, v} ->
-        v
-      {:error, error} ->
-        error = error <> ". Or the value is incompatible or it must be " <>
-                         "interpolated (using ^) so it may be cast accordingly"
-        error! query, expr, error
-    end
-  end
-
-  defp dump_param(kind, type, v, adapter) do
-    with {:ok, type} <- normalize_param(kind, type, v),
-         do: dump_param(adapter, type, v)
   end
 
   defp validate_in(meta, expr, param, acc, adapter) do
