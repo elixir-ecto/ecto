@@ -902,6 +902,14 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  test "normalize: raises on literal non-base binary/uuids in query" do
+    query = from c in Comment, where: c.uuid == "017f65d1-80bd-152d-f997-afa6dd33a00f"
+
+    assert_raise Ecto.QueryError,
+                 ~r"cannot encode value `\"[\w-]{36}\"` of type `:binary_id`",
+                 fn -> normalize(query) end
+  end
+
   test "normalize: casts atom values" do
     {_query, cast_params, dump_params, _key} = normalize_with_params(Post |> where([p], p.status == :draft))
     assert cast_params == []
