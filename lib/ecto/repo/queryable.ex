@@ -33,7 +33,7 @@ defmodule Ecto.Repo.Queryable do
     {query_meta, prepared, cast_params, dump_params} =
       Planner.query(query, :all, cache, adapter, 0)
 
-    opts = Keyword.put(opts, :cast_params, cast_params)
+    opts = [cast_params: cast_params] ++ opts
 
     case query_meta do
       %{select: nil} ->
@@ -88,7 +88,7 @@ defmodule Ecto.Repo.Queryable do
 
     for struct <- structs do
       struct_pk = Map.fetch!(struct, pk)
-      Enum.find(results, &Map.fetch!(&1, pk) == struct_pk)
+      Enum.find(results, &(Map.fetch!(&1, pk) == struct_pk))
     end
   end
 
@@ -104,7 +104,9 @@ defmodule Ecto.Repo.Queryable do
 
     for struct <- structs do
       struct_pk = Map.fetch!(struct, pk)
-      Enum.find(results, &Map.fetch!(&1, pk) == struct_pk) || raise "could not reload #{inspect(struct)}, maybe it doesn't exist or was deleted"
+
+      Enum.find(results, &(Map.fetch!(&1, pk) == struct_pk)) ||
+        raise "could not reload #{inspect(struct)}, maybe it doesn't exist or was deleted"
     end
   end
 
@@ -140,9 +142,10 @@ defmodule Ecto.Repo.Queryable do
   defp rewrite_combinations(%{combinations: []} = query), do: query
 
   defp rewrite_combinations(%{combinations: combinations} = query) do
-    combinations = Enum.map(combinations, fn {type, query} ->
-      {type, query |> Query.exclude(:select) |> Query.select(1)}
-    end)
+    combinations =
+      Enum.map(combinations, fn {type, query} ->
+        {type, query |> Query.exclude(:select) |> Query.select(1)}
+      end)
 
     %{query | combinations: combinations}
   end
@@ -210,7 +213,7 @@ defmodule Ecto.Repo.Queryable do
     {query_meta, prepared, cast_params, dump_params} =
       Planner.query(query, operation, cache, adapter, 0)
 
-    opts = Keyword.put(opts, :cast_params, cast_params)
+    opts = [cast_params: cast_params] ++ opts
 
     case query_meta do
       %{select: nil} ->
@@ -484,7 +487,7 @@ defmodule Ecto.Repo.Queryable do
     Query.where(queryable, [], ^Enum.to_list(clauses))
   end
 
-  defp query_for_reload([head| _] = structs) do
+  defp query_for_reload([head | _] = structs) do
     assert_structs!(structs)
 
     schema = head.__struct__
@@ -587,7 +590,9 @@ defmodule Ecto.Repo.Queryable do
     |> Map.fetch!(pk)
     |> case do
       nil ->
-        raise ArgumentError, "Ecto.Repo.reload/2 expects existent structs, found a `nil` primary key"
+        raise ArgumentError,
+              "Ecto.Repo.reload/2 expects existent structs, found a `nil` primary key"
+
       key ->
         key
     end
