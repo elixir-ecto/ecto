@@ -3152,7 +3152,7 @@ defmodule Ecto.Changeset do
          _spec_function,
          %Decimal{} = target_value
        ) do
-    result = Decimal.compare(value, target_value) |> normalize_compare()
+    result = Decimal.compare(value, target_value)
 
     case decimal_compare(result, spec_key) do
       true -> nil
@@ -3172,17 +3172,6 @@ defmodule Ecto.Changeset do
     case apply(spec_function, [value, target_value]) do
       true -> nil
       false -> [{field, {message, validation: :number, kind: spec_key, number: target_value}}]
-    end
-  end
-
-  # TODO: Remove me once we support Decimal 2.0 only
-  # Support mismatch between API for Decimal.compare/2 for versions 1.6 and 2.0
-  defp normalize_compare(result) do
-    case result do
-      %Decimal{coef: 1, sign: -1} -> :lt
-      %Decimal{coef: 0} -> :eq
-      %Decimal{coef: 1, sign: 1} -> :gt
-      _ -> result
     end
   end
 
