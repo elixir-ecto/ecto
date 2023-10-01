@@ -24,9 +24,7 @@ defmodule Mix.Ecto do
   defp parse_repo([], []) do
     apps =
       if apps_paths = Mix.Project.apps_paths() do
-        # TODO: Use the proper ordering from Mix.Project.deps_apps
-        # when we depend on Elixir v1.11+.
-        apps_paths |> Map.keys() |> Enum.sort()
+        Enum.filter(Mix.Project.deps_apps(), &is_map_key(apps_paths, &1))
       else
         [Mix.Project.config()[:app]]
       end
@@ -64,14 +62,7 @@ defmodule Mix.Ecto do
   def ensure_repo(repo, args) do
     # Do not pass the --force switch used by some tasks downstream
     args = List.delete(args, "--force")
-
-    # TODO: Use only app.config when we depend on Elixir v1.11+.
-    if Code.ensure_loaded?(Mix.Tasks.App.Config) do
-      Mix.Task.run("app.config", args)
-    else
-      Mix.Task.run("loadpaths", args)
-      "--no-compile" not in args && Mix.Task.run("compile", args)
-    end
+    Mix.Task.run("app.config", args)
 
     case Code.ensure_compiled(repo) do
       {:module, _} ->

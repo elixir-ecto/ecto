@@ -2244,9 +2244,7 @@ defmodule Ecto.Schema do
   def __after_compile__(%{module: module} = env, _) do
     # If we are compiling code, we can validate associations now,
     # as the Elixir compiler will solve dependencies.
-    #
-    # TODO: Use Code.can_await_module_compilation?/0 from Elixir v1.11+.
-    if Process.info(self(), :error_handler) == {:error_handler, Kernel.ErrorHandler} do
+    if Code.can_await_module_compilation?() do
       for name <- module.__schema__(:associations) do
         assoc = module.__schema__(:association, name)
 
