@@ -1332,7 +1332,7 @@ defmodule Ecto.Changeset do
     end
   end
 
-  # We check for the byte size to avoid creating unecessary large integers
+  # We check for the byte size to avoid creating unnecessary large integers
   # which would never map to a database key (u64 is 20 digits only).
   defp key_as_int({key, val}) when is_binary(key) and byte_size(key) < 32 do
     case Integer.parse(key) do

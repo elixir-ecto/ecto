@@ -1724,7 +1724,7 @@ defmodule Ecto.Query do
 
   Dynamics can be part of a `select_merge` as values in a map that must be
   interpolated at the root level. The rules for merging detailed above apply.
-  This allows merging dynamic values into previsouly selected maps and structs.
+  This allows merging dynamic values into previously selected maps and structs.
   """
   defmacro select_merge(query, binding \\ [], expr) do
     Builder.Select.build(:merge, query, binding, expr, __CALLER__)

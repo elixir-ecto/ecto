@@ -833,7 +833,7 @@ defmodule Ecto.Type do
     end
   end
 
-  # We check for the byte size to avoid creating unecessary large integers
+  # We check for the byte size to avoid creating unnecessary large integers
   # which would never map to a database key (u64 is 20 digits only).
   defp cast_integer(term) when is_binary(term) and byte_size(term) < 32 do
     case Integer.parse(term) do
