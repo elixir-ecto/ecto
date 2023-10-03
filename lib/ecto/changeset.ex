@@ -609,7 +609,8 @@ defmodule Ecto.Changeset do
       your additional empty values
 
     * `:force_changes` - a boolean indicating whether to include values that don't alter
-      the current data in `:changes`. Defaults to `false`
+      the current data in `:changes`. See `force_change/3` for more information, Defaults
+      to `false`
 
     * `:message` - a function of arity 2 that is used to create the error message when
       casting fails. It is called for every field that cannot be casted and receives the
@@ -1795,8 +1796,11 @@ defmodule Ecto.Changeset do
   Updates a change.
 
   The given `function` is invoked with the change value only if there
-  is a change for `key`. Note that the value of the change
-  can still be `nil` (unless the field was marked as required on `validate_required/3`).
+  is a change for `key`. Once the function is invoked, it behaves as
+  `put_changed/3`.
+
+  Note that the value of the change can still be `nil` (unless the field
+  was marked as required on `validate_required/3`).
 
   ## Examples
 
@@ -1828,7 +1832,8 @@ defmodule Ecto.Changeset do
 
   If the change is already present, it is overridden with
   the new value. If the change has the same value as in the
-  changeset data, it is not added to the list of changes.
+  changeset data, no changes are added (and any existing
+  changes are removed).
 
   When changing embeds and associations, see `put_assoc/4`
   for a complete reference on the accepted values.
@@ -2120,7 +2125,10 @@ defmodule Ecto.Changeset do
   Forces a change on the given `key` with `value`.
 
   If the change is already present, it is overridden with
-  the new value.
+  the new value. If the value is later modified via
+  `put_change/3` and `update_change/3`, revering back to
+  its original value, the change will be reverted unless
+  `force_change/3` is called once again.
 
   ## Examples
 
