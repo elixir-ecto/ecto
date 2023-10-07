@@ -370,7 +370,7 @@ defmodule Ecto.Integration.JoinsTest do
     query = from(p in Post, left_join: ca in assoc(p, :comments_authors),
                             preload: [comments_authors: ca])
     [p1, p2] = TestRepo.all(query)
-    assert p1.comments_authors == [u1, u2]
+    assert Enum.sort_by(p1.comments_authors, & &1.id) == [u1, u2]
     assert p2.comments_authors == [u2]
 
     # With on
