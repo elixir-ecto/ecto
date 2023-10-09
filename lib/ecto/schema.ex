@@ -1004,7 +1004,7 @@ defmodule Ecto.Schema do
   `Ecto.Changeset.cast_assoc/3` to modify through associations.
   """
   defmacro has_many(name, queryable, opts \\ []) do
-    queryable = expand_alias(queryable, __CALLER__)
+    queryable = expand_literals(queryable, __CALLER__)
 
     quote do
       Ecto.Schema.__has_many__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
@@ -1077,7 +1077,7 @@ defmodule Ecto.Schema do
       post.permalink #=> %Permalink{...}
   """
   defmacro has_one(name, queryable, opts \\ []) do
-    queryable = expand_alias(queryable, __CALLER__)
+    queryable = expand_literals(queryable, __CALLER__)
 
     quote do
       Ecto.Schema.__has_one__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
@@ -1284,7 +1284,7 @@ defmodule Ecto.Schema do
   See `many_to_many/3` for more information on this particular approach.
   """
   defmacro belongs_to(name, queryable, opts \\ []) do
-    queryable = expand_alias(queryable, __CALLER__)
+    queryable = expand_literals(queryable, __CALLER__)
 
     quote do
       Ecto.Schema.__belongs_to__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
@@ -1579,8 +1579,8 @@ defmodule Ecto.Schema do
       end
   """
   defmacro many_to_many(name, queryable, opts \\ []) do
-    queryable = expand_alias(queryable, __CALLER__)
-    opts = expand_alias_in_key(opts, :join_through, __CALLER__)
+    queryable = expand_literals(queryable, __CALLER__)
+    opts = expand_literals(opts, __CALLER__)
 
     quote do
       Ecto.Schema.__many_to_many__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
@@ -1733,7 +1733,7 @@ defmodule Ecto.Schema do
   end
 
   defmacro embeds_one(name, schema, opts) do
-    schema = expand_alias(schema, __CALLER__)
+    schema = expand_literals(schema, __CALLER__)
 
     quote do
       Ecto.Schema.__embeds_one__(__MODULE__, unquote(name), unquote(schema), unquote(opts))
@@ -1914,7 +1914,7 @@ defmodule Ecto.Schema do
   end
 
   defmacro embeds_many(name, schema, opts) do
-    schema = expand_alias(schema, __CALLER__)
+    schema = expand_literals(schema, __CALLER__)
 
     quote do
       Ecto.Schema.__embeds_many__(__MODULE__, unquote(name), unquote(schema), unquote(opts))
@@ -2512,19 +2512,18 @@ defmodule Ecto.Schema do
 
   defp autogenerate_id?(type), do: Ecto.Type.type(type) in [:id, :binary_id]
 
-  defp expand_alias({:__aliases__, _, _} = ast, env),
-    do: Macro.expand(ast, %{env | function: {:__schema__, 2}})
-
-  defp expand_alias(ast, _env),
-    do: ast
-
-  defp expand_alias_in_key(opts, key, env) do
-    if is_list(opts) and Keyword.has_key?(opts, key) do
-      Keyword.update!(opts, key, &expand_alias(&1, env))
+  defp expand_literals(ast, env) do
+    if Macro.quoted_literal?(ast) do
+      Macro.prewalk(ast, &expand_alias(&1, env))
     else
-      opts
+      ast
     end
   end
+
+  defp expand_alias({:__aliases__, _, _} = alias, env),
+    do: Macro.expand(alias, %{env | function: {:__schema__, 2}})
+
+  defp expand_alias(other, _env), do: other
 
   defp expand_nested_module_alias({:__aliases__, _, [Elixir, _ | _] = alias}, _env),
     do: Module.concat(alias)
