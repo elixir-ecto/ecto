@@ -502,6 +502,10 @@ defmodule Ecto.Multi do
   This can be helpful, for example, when setting configuration
   parameters for a single transaction.
 
+  Your adapter must inject its query functions into the Ecto
+  repository in order for this function to be available. All of
+  the built-in adapters will work with this function.
+
   ## Example
 
       Ecto.Multi.new()
