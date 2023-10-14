@@ -496,6 +496,42 @@ defmodule Ecto.Multi do
   end
 
   @doc """
+  Runs a query string and stores the result in the multi.
+
+  Accepts the same arguments and options as `c:Ecto.Repo.query/3`.
+  This can be helpful, for example, when setting configuration
+  parameters for a single transaction.
+
+  ## Example
+
+      Ecto.Multi.new()
+      |> Ecto.Multi.query(:configure, "SET LOCAL lock_timeout TO '10s'", [])
+      |> Ecto.Multi.all(:all, Post)
+      |> MyApp.Repo.transaction()
+
+      Ecto.Multi.new()
+      |> Ecto.Multi.query(:configure, fn _changes -> "SET LOCAL lock_timeout TO '10s'" end, [])
+      |> Ecto.Multi.all(:all, Post)
+      |> MyApp.Repo.transaction()
+  """
+  @spec query(
+          t,
+          name,
+          query_str :: :binary | fun(:binary),
+          params :: list(),
+          opts :: Keyword.t()
+        ) :: t
+  def query(multi, name, query_str, params, opts \\ [])
+
+  def query(multi, name, fun, params, opts) when is_function(fun, 1) do
+    run(multi, name, operation_fun({:query, fun, params}, opts))
+  end
+
+  def query(multi, name, query_str, params, opts) do
+    run(multi, name, operation_fun({:query, fn _ -> query_str end, params}, opts))
+  end
+
+  @doc """
   Checks if there exists an entry matching the given query and stores a boolean in the multi.
 
   Accepts the same arguments and options as `c:Ecto.Repo.exists?/2`.
@@ -959,6 +995,12 @@ defmodule Ecto.Multi do
   defp operation_fun({:all, fun}, opts) do
     fn repo, changes ->
       {:ok, repo.all(fun.(changes), opts)}
+    end
+  end
+
+  defp operation_fun({:query, fun, params}, opts) do
+    fn repo, changes ->
+      {:ok, repo.query(fun.(changes), params, opts)}
     end
   end
 

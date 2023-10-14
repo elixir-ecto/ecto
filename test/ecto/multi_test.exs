@@ -210,6 +210,26 @@ defmodule Ecto.MultiTest do
     assert [{:comment, {:run, _fun}}] = multi.operations
   end
 
+  test "query/4 string" do
+    multi =
+      Multi.new()
+      |> Multi.query(:configure, "SET LOCAL lock_timeout TO '10s'", [])
+
+    assert multi.names == MapSet.new([:configure])
+    assert [{:configure, {:run, _fun}}] = multi.operations
+  end
+
+  test "query/4 fun" do
+    fun = fn _changes -> "SET LOCAL lock_timeout TO '10s'" end
+
+    multi =
+      Multi.new()
+      |> Multi.query(:configure, fun, [])
+
+    assert multi.names == MapSet.new([:configure])
+    assert [{:configure, {:run, _fun}}] = multi.operations
+  end
+
   test "error" do
     multi =
       Multi.new()
