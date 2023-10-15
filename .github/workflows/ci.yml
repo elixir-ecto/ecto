@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  unit-test:
     name: unit test
     runs-on: ubuntu-20.04
     env:
