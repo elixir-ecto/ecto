@@ -9,6 +9,54 @@ permissions:
   contents: read
 
 jobs:
+  unit-test:
+    name: unit test
+    runs-on: ubuntu-20.04
+    env:
+      FORCE_COLOR: 1
+      MIX_ENV: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - elixir: 1.15.6
+            otp: 25.3.2.6
+            lint: lint
+          - elixir: 1.15.6
+            otp: 24.3.4.13
+          - elixir: 1.11.4
+            otp: 21.3.8.24
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Elixir and Erlang
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+      - name: Restore deps and _build cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-${{ matrix.elixir }}-${{ matrix.otp }}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.elixir }}-${{ matrix.otp }}-
+      - name: Install dependencies
+        run: mix deps.get
+      - name: Compile deps
+        run: mix deps.compile
+      - name: Check unused dependencies
+        run: mix deps.unlock --check-unused
+        if: ${{ matrix.lint }}
+      - name: Compile lint
+        run: mix compile --warning-as-errors
+        if: ${{ matrix.lint }}
+      - name: Run tests
+        run: mix test
+
   integration-test:
     name: integration test
     runs-on: ubuntu-latest
@@ -18,43 +66,11 @@ jobs:
       fail-fast: false
       matrix:
         elixirbase:
-          - "1.13.4-erlang-24.3.4.2-alpine-3.16.0"
-          - "1.13.4-erlang-22.3.4.20-alpine-3.14.0"
+          - "1.15.6-erlang-25.3.2.6-alpine-3.16.7"
+          - "1.15.6-erlang-24.3.4.14-alpine-3.16.7"
           - "1.11.4-erlang-21.3.8.24-alpine-3.13.3"
     steps:
       - uses: earthly/actions-setup@v1
       - uses: actions/checkout@v3
       - name: ecto integration-test under ${{matrix.elixirbase}}
         run: earthly -P --ci --build-arg ELIXIR_BASE=${{matrix.elixirbase}} +integration-test
-  unit-test:
-    name: unit test
-    runs-on: ubuntu-latest
-    env:
-      FORCE_COLOR: 1
-    strategy:
-      fail-fast: false
-      matrix:
-        elixirbase:
-          - "1.13.4-erlang-24.3.4.2-alpine-3.16.0"
-          - "1.13.4-erlang-22.3.4.20-alpine-3.14.0"
-          - "1.11.4-erlang-21.3.8.24-alpine-3.13.3"
-    steps:
-      - uses: earthly/actions-setup@v1
-      - uses: actions/checkout@v3
-      - name: ecto test under ${{matrix.elixirbase}}
-        run: earthly -P --ci --build-arg ELIXIR_BASE=${{matrix.elixirbase}} +test
-  lint:
-    name: lint
-    runs-on: ubuntu-latest
-    env:
-      FORCE_COLOR: 1
-    strategy:
-      fail-fast: false
-      matrix:
-        elixirbase:
-          - "1.13.4-erlang-24.3.4.2-alpine-3.16.0"
-    steps:
-      - uses: earthly/actions-setup@v1
-      - uses: actions/checkout@v3
-      - name: ecto lint under ${{matrix.elixirbase}}
-        run: earthly -P --ci --build-arg ELIXIR_BASE=${{matrix.elixirbase}} +lint

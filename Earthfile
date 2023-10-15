@@ -1,58 +1,19 @@
 VERSION 0.5
 
 all:
-    BUILD +all-test
-    BUILD +all-integration-test
-    BUILD +lint
-
-
-all-test:
     BUILD \
-        --build-arg ELIXIR_BASE=1.13.4-erlang-24.3.4.2-alpine-3.16.0 \
-        --build-arg ELIXIR_BASE=1.13.4-erlang-22.3.4.20-alpine-3.14.0 \
-        --build-arg ELIXIR_BASE=1.11.4-erlang-21.3.8.24-alpine-3.13.3 \
-        +test
-
-
-test:
-    FROM +setup-base
-    COPY mix.exs mix.lock .formatter.exs ./
-    RUN mix deps.get
-
-    RUN MIX_ENV=test mix deps.compile
-    COPY --dir lib integration_test examples test ./
-
-    RUN mix deps.get --only test
-    RUN mix deps.compile
-    RUN mix test
-
-
-lint:
-    FROM +test
-    RUN mix deps.get
-    RUN mix deps.unlock --check-unused
-    RUN mix compile --warnings-as-errors
-
-
-all-integration-test:
-    BUILD \
-        --build-arg ELIXIR_BASE=1.13.4-erlang-24.3.4.2-alpine-3.16.0 \
-        --build-arg ELIXIR_BASE=1.13.4-erlang-22.3.4.20-alpine-3.14.0 \
+        --build-arg ELIXIR_BASE=1.15.6-erlang-25.3.2.6-alpine-3.16.7 \
+        --build-arg ELIXIR_BASE=1.15.6-erlang-24.3.4.14-alpine-3.16.7 \
         +integration-test
 
-
-setup-base:
-    ARG ELIXIR_BASE=1.13.4-erlang-24.3.4.2-alpine-3.16.0
+integration-test-base:
+    ARG ELIXIR_BASE=1.15.6-erlang-25.3.2.6-alpine-3.16.7
     FROM hexpm/elixir:$ELIXIR_BASE
     RUN apk add --no-progress --update git build-base
     RUN mix local.rebar --force
     RUN mix local.hex --force
     ENV ELIXIR_ASSERT_TIMEOUT=10000
     WORKDIR /src/ecto
-
-
-integration-test-base:
-    FROM +setup-base
     RUN apk add --no-progress --update docker docker-compose git postgresql-client mysql-client
 
     RUN apk add --no-cache curl gnupg --virtual .build-dependencies -- && \
