@@ -19,13 +19,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - elixir: 1.11.4
-            otp: 21.3.8.24
-          - elixir: 1.15.6
-            otp: 24.3.4.13
           - elixir: 1.15.6
             otp: 25.3.2.6
             lint: lint
+          - elixir: 1.15.6
+            otp: 24.3.4.13
+          - elixir: 1.11.4
+            otp: 21.3.8.24
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
