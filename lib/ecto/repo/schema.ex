@@ -903,8 +903,7 @@ defmodule Ecto.Repo.Schema do
          %{^field => %{^related_key => related_value}} when owner_value != related_value <- data do
       true
     else
-      _ ->
-        false
+      _ -> false
     end
   end
 
