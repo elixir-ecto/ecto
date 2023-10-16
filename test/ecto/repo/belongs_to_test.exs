@@ -484,6 +484,7 @@ defmodule Ecto.Repo.BelongsToTest do
 
   test "reset assoc when foreign key update results in a mismatch" do
     schema = TestRepo.insert!(%MySchema{assoc_id: 1, assoc: %MyAssoc{id: 1}})
+    assert schema.assoc_id == 1
     assert %MyAssoc{id: 1} = schema.assoc
 
     updated_schema =
@@ -491,6 +492,8 @@ defmodule Ecto.Repo.BelongsToTest do
       |> Ecto.Changeset.change(%{assoc_id: 2})
       |> TestRepo.update!()
 
+
+    assert updated_schema.assoc_id == 2;
     assert %Ecto.Association.NotLoaded{} = updated_schema.assoc
   end
 end
