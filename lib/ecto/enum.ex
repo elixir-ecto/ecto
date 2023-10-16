@@ -229,6 +229,7 @@ defmodule Ecto.Enum do
     |> Keyword.values()
   end
 
+  @doc "Returns the mappings between values and dumped values"
   @spec mappings(map, atom) :: Keyword.t()
   def mappings(types, field) when is_map(types) do
     case types do
