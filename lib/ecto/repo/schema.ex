@@ -379,7 +379,7 @@ defmodule Ecto.Repo.Schema do
             values = dump_extra ++ values
 
             changeset
-            |> load_changes(:loaded, return_types, values, embeds, autogen, adapter, schema_meta)
+            |> load_changes(:loaded, return_types, values, [], embeds, autogen, adapter, schema_meta)
             |> process_children(user_changeset, children, adapter, assoc_opts)
 
           {:error, _} = error ->
@@ -467,7 +467,7 @@ defmodule Ecto.Repo.Schema do
           case apply(user_changeset, adapter, action, args) do
             {:ok, values} ->
               changeset
-              |> load_changes(:loaded, return_types, values, embeds, autogen, adapter, schema_meta)
+              |> load_changes(:loaded, return_types, values, assocs, embeds, autogen, adapter, schema_meta)
               |> process_children(user_changeset, children, adapter, assoc_opts)
 
             {:error, _} = error ->
@@ -570,7 +570,7 @@ defmodule Ecto.Repo.Schema do
 
         case apply(changeset, adapter, :delete, args) do
           {:ok, values} ->
-            changeset = load_changes(changeset, :deleted, return_types, values, %{}, [], adapter, schema_meta)
+            changeset = load_changes(changeset, :deleted, return_types, values, [], %{}, [], adapter, schema_meta)
             {:ok, changeset.data}
 
           {:error, _} = error ->
@@ -820,12 +820,13 @@ defmodule Ecto.Repo.Schema do
     %{changeset | errors: constraint_errors ++ errors, valid?: false}
   end
 
-  defp load_changes(changeset, state, types, values, embeds, autogen, adapter, schema_meta) do
-    %{data: data, changes: changes} = changeset
+  defp load_changes(changeset, state, types, values, assocs, embeds, autogen, adapter, schema_meta) do
+    %{data: data, changes: changes, types: schema_types} = changeset
 
     data =
       data
       |> merge_changes(changes)
+      |> reset_belongs_to_assocs(schema_types, assocs)
       |> Map.merge(embeds)
       |> merge_autogen(autogen)
       |> apply_metadata(state, schema_meta)
@@ -841,6 +842,29 @@ defmodule Ecto.Repo.Schema do
       end)
 
     Map.merge(data, changes)
+  end
+
+  # Reset belongs to associations if their foreign key
+  # changes and no longer matches the association.
+  defp reset_belongs_to_assocs(data, types, assocs) do
+    Enum.reduce(assocs, data, fn assoc, data ->
+      case types do
+        %{^assoc => {:assoc, %{relationship: :parent} = refl}} ->
+          %{owner_key: owner_key, related_key: related_key} = refl
+
+          case data do
+            %{^owner_key => owner_value, ^assoc => %{^related_key => related_value}}
+            when owner_value != related_value ->
+              Ecto.reset_fields(data, [assoc])
+
+            _ ->
+              data
+          end
+
+        _ ->
+          data
+      end
+    end)
   end
 
   defp merge_autogen(data, autogen) do
