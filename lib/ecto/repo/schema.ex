@@ -347,8 +347,8 @@ defmodule Ecto.Repo.Schema do
       assoc_opts = assoc_opts(assocs, opts)
       user_changeset = run_prepare(changeset, prepare)
 
-      {changeset, parents, children} = pop_assocs(user_changeset, assocs)
-      changeset = process_parents(changeset, user_changeset, parents, adapter, assoc_opts)
+      {changeset, parents, children, _} = pop_assocs(user_changeset, assocs)
+      changeset = process_parents(changeset, user_changeset, parents, [], adapter, assoc_opts)
 
       if changeset.valid? do
         embeds = Ecto.Embedded.prepare(changeset, embeds, adapter, :insert)
@@ -439,8 +439,8 @@ defmodule Ecto.Repo.Schema do
         assoc_opts = assoc_opts(assocs, opts)
         user_changeset = run_prepare(changeset, prepare)
 
-        {changeset, parents, children} = pop_assocs(user_changeset, assocs)
-        changeset = process_parents(changeset, user_changeset, parents, adapter, assoc_opts)
+        {changeset, parents, children, reset_parents} = pop_assocs(user_changeset, assocs)
+        changeset = process_parents(changeset, user_changeset, parents, reset_parents, adapter, assoc_opts)
 
         if changeset.valid? do
           embeds = Ecto.Embedded.prepare(changeset, embeds, adapter, :update)
@@ -865,29 +865,46 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp pop_assocs(changeset, []) do
-    {changeset, [], []}
+    {changeset, [], [], []}
   end
 
-  defp pop_assocs(%{changes: changes, types: types} = changeset, assocs) do
-    {changes, parent, child} =
-      Enum.reduce assocs, {changes, [], []}, fn assoc, {changes, parent, child} ->
+  defp pop_assocs(%{changes: changes, types: types, data: data} = changeset, assocs) do
+    {changes, parent, child, reset} =
+      Enum.reduce(assocs, {changes, [], [], []}, fn assoc, {changes, parent, child, reset} ->
         case changes do
           %{^assoc => value} ->
             changes = Map.delete(changes, assoc)
 
             case types do
               %{^assoc => {:assoc, %{relationship: :parent} = refl}} ->
-                {changes, [{refl, value} | parent], child}
+                {changes, [{refl, value} | parent], child, reset}
+
               %{^assoc => {:assoc, %{relationship: :child} = refl}} ->
-                {changes, parent, [{refl, value} | child]}
+                {changes, parent, [{refl, value} | child], reset}
             end
 
           %{} ->
-            {changes, parent, child}
+            with %{^assoc => {:assoc, %{relationship: :parent} = refl}} <- types,
+                 true <- reset_parent?(changes, data, refl) do
+              {changes, parent, child, [assoc | reset]}
+            else
+              _ -> {changes, parent, child, reset}
+            end
         end
-      end
+      end)
 
-    {%{changeset | changes: changes}, parent, child}
+    {%{changeset | changes: changes}, parent, child, reset}
+  end
+
+  defp reset_parent?(changes, data, assoc) do
+    %{field: field, owner_key: owner_key, related_key: related_key} = assoc
+
+    with %{^owner_key => owner_value} <- changes,
+         %{^field => %{^related_key => related_value}} when owner_value != related_value <- data do
+      true
+    else
+      _ -> false
+    end
   end
 
   # Don't mind computing options if there are no assocs
@@ -897,7 +914,7 @@ defmodule Ecto.Repo.Schema do
     Keyword.take(opts, [:timeout, :log, :telemetry_event, :prefix])
   end
 
-  defp process_parents(changeset, user_changeset, assocs, adapter, opts) do
+  defp process_parents(changeset, user_changeset, assocs, reset_assocs, adapter, opts) do
     %{changes: changes, valid?: valid?} = changeset
 
     # Even if the changeset is invalid, we want to run parent callbacks
@@ -905,6 +922,7 @@ defmodule Ecto.Repo.Schema do
     case Ecto.Association.on_repo_change(changeset, assocs, adapter, opts) do
       {:ok, struct} when valid? ->
         changes = change_parents(changes, struct, assocs)
+        struct = Ecto.reset_fields(struct, reset_assocs)
         %{changeset | changes: changes, data: struct}
 
       {:ok, _} ->
