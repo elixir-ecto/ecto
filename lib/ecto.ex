@@ -592,6 +592,8 @@ defmodule Ecto do
 
   """
   @spec reset_fields(Ecto.Schema.t(), list()) :: Ecto.Schema.t()
+  def reset_fields(struct, []), do: struct
+
   def reset_fields(%{__struct__: schema} = struct, fields) do
     default_struct = schema.__struct__()
     default_fields = Map.take(default_struct, fields)
