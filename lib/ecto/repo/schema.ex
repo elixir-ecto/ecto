@@ -347,8 +347,8 @@ defmodule Ecto.Repo.Schema do
       assoc_opts = assoc_opts(assocs, opts)
       user_changeset = run_prepare(changeset, prepare)
 
-      {changeset, parents, children, unchanged_parents} = pop_assocs(user_changeset, assocs)
-      changeset = process_parents(changeset, user_changeset, parents, unchanged_parents, adapter, assoc_opts)
+      {changeset, parents, children, _} = pop_assocs(user_changeset, assocs)
+      changeset = process_parents(changeset, user_changeset, parents, [], adapter, assoc_opts)
 
       if changeset.valid? do
         embeds = Ecto.Embedded.prepare(changeset, embeds, adapter, :insert)
@@ -886,7 +886,7 @@ defmodule Ecto.Repo.Schema do
             case types do
               %{^assoc => {:assoc, %{relationship: :parent} = refl}} ->
                 {changes, parent, child, [refl | unchanged_parent]}
-              %{^assoc => {:assoc, %{relationship: :child}}} ->
+              _ ->
                 {changes, parent, child, unchanged_parent}
             end
         end
