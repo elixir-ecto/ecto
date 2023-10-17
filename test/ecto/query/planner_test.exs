@@ -164,6 +164,9 @@ defmodule Ecto.Query.PlannerTest do
   test "plan: merges all parameters" do
     uuid = Ecto.UUID.generate()
     {:ok, dump_uuid} = Ecto.UUID.dump(uuid)
+    values = %{bid: uuid, text: "values"}
+    dump_values = %{bid: dump_uuid, text: "values"}
+    values_types = %{bid: Ecto.UUID, text: :string}
     union = from p in Post, select: {p.title, ^"union"}
     subquery = from Comment, where: [text: ^"subquery"]
 
@@ -174,8 +177,8 @@ defmodule Ecto.Query.PlannerTest do
         on: c.text == ^"join",
         join: p in Post,
         on: f.title == p.title,
-        join: v in values([%{bid: uuid}], %{bid: Ecto.UUID}),
-        on: true,
+        join: v in values([values], values_types),
+        on: v.text == ^"on_values",
         left_join: d in assoc(p, :comments),
         union_all: ^union,
         windows: [foo: [partition_by: fragment("?", ^"windows")]],
@@ -190,13 +193,13 @@ defmodule Ecto.Query.PlannerTest do
 
     assert cast_params ==
              ["select", "fragment_source1", "fragment_source2", "subquery", "join"] ++
-               [uuid, "where", "group_by", "having", "windows"] ++
-               ["union", "order_by", 0, 1]
+               Enum.map(values_types, fn {field, _} -> values[field] end) ++
+               ["on_values", "where", "group_by", "having", "windows", "union", "order_by", 0, 1]
 
     assert dump_params ==
              ["select", "fragment_source1", "fragment_source2", "subquery", "join"] ++
-               [dump_uuid, "where", "group_by", "having", "windows"] ++
-               ["union", "order_by", 0, 1]
+               Enum.map(values_types, fn {field, _} -> dump_values[field] end) ++
+               ["on_values", "where", "group_by", "having", "windows", "union", "order_by", 0, 1]
   end
 
   test "plan: checks from" do
