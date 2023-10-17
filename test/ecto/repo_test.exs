@@ -605,15 +605,14 @@ defmodule Ecto.RepoTest do
              ] = planned_rows
 
       {queries_with_index, _} =
-        Enum.reduce(planned_rows, {[], 0}, fn row, {queries, ix} ->
-          Enum.reduce(header, {queries, ix}, fn field, {queries, ix} ->
+        for row <- planned_rows, field <- header, reduce: {[], 0} do
+          {queries, ix} ->
             case row[field] do
               {%Ecto.Query{} = query, _} -> {[{ix, query} | queries], ix + 1}
               nil -> {queries, ix}
               _ -> {queries, ix + 1}
             end
-          end)
-        end)
+        end
 
       assert length(queries_with_index) == 4
 
