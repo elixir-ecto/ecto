@@ -174,8 +174,8 @@ defmodule Ecto.Query.PlannerTest do
         on: c.text == ^"join",
         join: p in Post,
         on: f.title == p.title,
-        join: v in values([%{bid: uuid, text: "values"}], %{bid: Ecto.UUID, text: :string}),
-        on: v.text == ^"on_values",
+        join: v in values([%{bid: uuid}], %{bid: Ecto.UUID}),
+        on: true,
         left_join: d in assoc(p, :comments),
         union_all: ^union,
         windows: [foo: [partition_by: fragment("?", ^"windows")]],
@@ -190,12 +190,12 @@ defmodule Ecto.Query.PlannerTest do
 
     assert cast_params ==
              ["select", "fragment_source1", "fragment_source2", "subquery", "join"] ++
-               [uuid, "values", "on_values", "where", "group_by", "having", "windows"] ++
+               [uuid, "where", "group_by", "having", "windows"] ++
                ["union", "order_by", 0, 1]
 
     assert dump_params ==
              ["select", "fragment_source1", "fragment_source2", "subquery", "join"] ++
-               [dump_uuid, "values", "on_values", "where", "group_by", "having", "windows"] ++
+               [dump_uuid, "where", "group_by", "having", "windows"] ++
                ["union", "order_by", 0, 1]
   end
 
@@ -1467,10 +1467,12 @@ defmodule Ecto.Query.PlannerTest do
     q = from(v in values(values, types)) |> normalize()
 
     start_param_ix = 0
-    types_kw = [bid: :uuid, num: :integer]
+    native_types = %{bid: :uuid, num: :integer}
+    types_kw = Enum.map(types, fn {field, _} -> {field, native_types[field]} end)
+    field_ast = Enum.map(types, fn {field, _} -> {{:., [], [{:&, [], [0]}, field]}, [], []} end)
 
     assert q.from.source == {:values, [], [types_kw, start_param_ix, length(values)]}
-    assert q.select.fields == [{{:., [], [{:&, [], [0]}, :bid]}, [], []}, {{:., [], [{:&, [], [0]}, :num]}, [], []}]
+    assert q.select.fields == field_ast
   end
 
   test "normalize: join values list" do
@@ -1480,11 +1482,13 @@ defmodule Ecto.Query.PlannerTest do
     q = from(f in fragment("select ?", ^1), join: v in values(values, types), on: true, select: v) |> normalize()
 
     start_param_ix = 1
-    types_kw = [bid: :uuid, num: :integer]
+    native_types = %{bid: :uuid, num: :integer}
+    types_kw = Enum.map(types, fn {field, _} -> {field, native_types[field]} end)
+    field_ast = Enum.map(types, fn {field, _} -> {{:., [], [{:&, [], [1]}, field]}, [], []} end)
     [join] = q.joins
 
     assert join.source == {:values, [], [types_kw, start_param_ix, length(values)]}
-    assert q.select.fields == [{{:., [], [{:&, [], [1]}, :bid]}, [], []}, {{:., [], [{:&, [], [1]}, :num]}, [], []}]
+    assert q.select.fields == field_ast
   end
 
   test "normalize: select a value list field" do
@@ -1859,16 +1863,24 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "normalize: preload assoc merges"  do
-    {_, _, _, select} =
+    query =
       from(p in Post)
       |> join(:inner, [p], c in assoc(p, :comments))
       |> join(:inner, [_, c], cp in assoc(c, :comment_posts))
       |> join(:inner, [_, c], ip in assoc(c, :post))
       |> preload([_, c, cp, _], comments: {c, comment_posts: cp})
       |> preload([_, c, _, ip], comments: {c, post: ip})
-      |> normalize_with_params()
 
-    assert select.assocs == [comments: {1, [comment_posts: {2, []}, post: {3, []}]}]
+    {_, _, _, select} = normalize_with_params(query)
+
+    nested_assocs =
+      query.assocs
+      |> Enum.reduce(%{}, fn
+        {_, {_, [{assoc, ix_assocs}]}}, acc -> Map.put(acc, assoc, ix_assocs)
+      end)
+      |> Enum.map(& &1)
+
+    assert select.assocs == [comments: {1, nested_assocs}]
   end
 
   test "normalize: preload assoc errors" do

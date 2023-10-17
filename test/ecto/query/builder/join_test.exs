@@ -28,7 +28,7 @@ defmodule Ecto.Query.Builder.JoinTest do
     query = from p in "posts", join: v in values(values, types), on: true
 
     [join] = query.joins
-    types_kw = [num: :integer, text: :string]
+    types_kw = Enum.map(types, & &1)
     assert {:values, [], [types_kw, length(values)]} == join.source
 
     # Missing type

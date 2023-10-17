@@ -24,7 +24,7 @@ defmodule Ecto.Query.Builder.FromTest do
     types = %{num: :integer, text: :string}
     query = from v in values(values, types)
 
-    types_kw = [num: :integer, text: :string]
+    types_kw = Enum.map(types, & &1)
     assert query.from.source == {:values,[], [types_kw, length(values)]}
 
     # Missing type
