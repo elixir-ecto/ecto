@@ -595,19 +595,30 @@ defmodule Ecto.RepoTest do
         [y: query, z: query]
       ])
 
-      assert_received {:insert_all, %{source: "my_schema"}, rows}
+      assert_received {:insert_all, %{source: "my_schema", header: header}, planned_rows}
 
       assert [
                [x: "x1", yyy: "y1"],
-               [x: {%Ecto.Query{} = query2, [^value]}, z: "z2"],
-               [x: {%Ecto.Query{} = query3, [^value]}, z: "z3"],
-               [yyy: {%Ecto.Query{} = query4y, [^value]}, z: {%Ecto.Query{} = query4x, [^value]}]
-             ] = rows
+               [x: {%Ecto.Query{}, [^value]}, z: "z2"],
+               [x: {%Ecto.Query{}, [^value]}, z: "z3"],
+               [yyy: {%Ecto.Query{}, [^value]}, z: {%Ecto.Query{}, [^value]}]
+             ] = planned_rows
 
-      assert [%{expr: {:==, _, [_, {:^, [], [2]}]}}] = query2.wheres
-      assert [%{expr: {:==, _, [_, {:^, [], [4]}]}}] = query3.wheres
-      assert [%{expr: {:==, _, [_, {:^, [], [6]}]}}] = query4y.wheres
-      assert [%{expr: {:==, _, [_, {:^, [], [7]}]}}] = query4x.wheres
+      {queries_with_index, _} =
+        for row <- planned_rows, field <- header, reduce: {[], 0} do
+          {queries, ix} ->
+            case row[field] do
+              {%Ecto.Query{} = query, _} -> {[{ix, query} | queries], ix + 1}
+              nil -> {queries, ix}
+              _ -> {queries, ix + 1}
+            end
+        end
+
+      assert length(queries_with_index) == 4
+
+      Enum.each(queries_with_index, fn {ix, query} ->
+        assert [%{expr: {:==, _, [_, {:^, [], [^ix]}]}}] = query.wheres
+      end)
     end
 
     test "takes query as datasource" do

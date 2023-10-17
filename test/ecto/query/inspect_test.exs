@@ -497,9 +497,12 @@ defmodule Ecto.Query.InspectTest do
   end
 
   test "values lists" do
-    query = from v in values([%{a: 1, b: 2, c: 3}], %{a: :integer, b: :integer, c: :integer})
-    assert i(query) == "from v0 in values (a, b, c)"
-    assert i(plan(query)) == "from v0 in values (a, b, c)"
+    values_list = [%{a: 1, b: 2, c: 3}]
+    types = %{a: :integer, b: :integer, c: :integer}
+    fields = types |> Map.keys() |> Enum.map_join(", ", & &1)
+    query = from v in values(values_list, types)
+    assert i(query) == "from v0 in values (#{fields})"
+    assert i(plan(query)) == "from v0 in values (#{fields})"
   end
 
   def plan(query) do

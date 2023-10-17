@@ -2428,8 +2428,15 @@ defmodule Ecto.ChangesetTest do
       assert inspect(%Ecto.Changeset{}) ==
             "#Ecto.Changeset<action: nil, changes: %{}, errors: [], data: nil, valid?: false>"
 
-      assert inspect(changeset(%{"title" => "title", "body" => "hi"})) ==
-            "#Ecto.Changeset<action: nil, changes: %{body: \"hi\", title: \"title\"}, " <>
+      changes = %{"title" => "title", "body" => "hi"}
+
+      normalized_changes =
+        changes
+        |> Enum.map(fn {field, value} -> {String.to_atom(field), value} end)
+        |> Enum.into(%{})
+
+      assert inspect(changeset(changes)) ==
+            "#Ecto.Changeset<action: nil, changes: #{inspect normalized_changes}, " <>
             "errors: [], data: #Ecto.ChangesetTest.Post<>, valid?: true>"
 
       data   = {%NoSchemaPost{title: "hello"}, %{title: :string, upvotes: :integer}}
