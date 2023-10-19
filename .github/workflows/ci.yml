@@ -66,7 +66,7 @@ jobs:
       fail-fast: false
       matrix:
         elixirbase:
-          - "1.15.6-erlang-25.3.2.6-alpine-3.16.7"
+          - "1.15.6-erlang-26.1.2-alpine-3.16.7"
           - "1.15.6-erlang-24.3.4.14-alpine-3.16.7"
           - "1.11.4-erlang-21.3.8.24-alpine-3.13.3"
     steps:
