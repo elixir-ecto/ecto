@@ -2761,7 +2761,7 @@ defmodule Ecto.Query do
         join(query, :left, [p], a in assoc(p, ^binding), as: ^binding)
       end)
 
-  For more information on named bindings see "Named bindings" in this module doc or `has_named_binding/2`.
+  For more information on named bindings see "Named bindings" in this module doc or `has_named_binding?/2`.
   """
   def with_named_binding(%Ecto.Query{} = query, key, fun) do
     if has_named_binding?(query, key) do
