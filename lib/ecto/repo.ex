@@ -2149,10 +2149,10 @@ defmodule Ecto.Repo do
   @doc """
   Rolls back the current transaction.
 
-  The transaction will return the value given as `{:error, value}`.
+  The transaction will return the `value` given as `{:error, value}`.
 
   Note that calling `rollback` causes the code in the transaction to stop executing.
   """
   @doc group: "Transaction API"
-  @callback rollback(value :: any) :: no_return
+  @callback rollback(value) :: {:error, value} when value: any
 end
