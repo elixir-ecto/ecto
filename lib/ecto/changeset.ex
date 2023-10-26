@@ -1119,7 +1119,7 @@ defmodule Ecto.Changeset do
       %{"name" => "john doe", "addresses" => %{...}, "addresses_sort" => [1, 0]}
 
   And that will internally sort the elements so 1 comes before 0. Note that
-  any index not present in "addresses_sort" will come _before_ any of the
+  any index not present in `"addresses_sort"` will come _before_ any of the
   sorted indexes. If an index is not found, an empty entry is added in its
   place.
 
