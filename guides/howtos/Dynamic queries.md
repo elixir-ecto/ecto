@@ -25,7 +25,7 @@ Post
 Both APIs are also composable. For example, imagine you want to abstract the `published_at` filtering and sorting into a function, with the keyword syntax you could write:
 
 ```elixir
-def most_recent_from(query) do
+def most_recent_from(query, minimum_date) do
   from p in query,
     where: p.published_at > ^minimum_date,
     order_by: [desc: p.published_at]
@@ -35,7 +35,7 @@ end
 and with the pipe syntax:
 
 ```elixir
-def most_recent_from(query) do
+def most_recent_from(query, minimum_date) do
   query
   |> where([p], p.published_at > ^minimum_date)
   |> order_by([p], desc: p.published_at)
