@@ -47,20 +47,22 @@ defmodule Ecto.Query.Builder.OrderBy do
        {[], %{}}}
 
   """
-  @spec escape(:order_by | :distinct, Macro.t, {list, term}, Keyword.t, Macro.Env.t) ::
-          {Macro.t, {list, term}}
+  @spec escape(:order_by | :distinct, Macro.t(), {list, term}, Keyword.t(), Macro.Env.t()) ::
+          {Macro.t(), {list, term}}
   def escape(kind, expr, params_acc, vars, env) do
     expr
-    |> List.wrap
+    |> List.wrap()
     |> Enum.map_reduce(params_acc, &do_escape(&1, &2, kind, vars, env))
   end
 
   defp do_escape({dir, {:^, _, [expr]}}, params_acc, kind, _vars, _env) do
-    {{quoted_dir!(kind, dir), quote(do: Ecto.Query.Builder.OrderBy.field!(unquote(kind), unquote(expr)))}, params_acc}
+    {{quoted_dir!(kind, dir),
+      quote(do: Ecto.Query.Builder.OrderBy.field!(unquote(kind), unquote(expr)))}, params_acc}
   end
 
   defp do_escape({:^, _, [expr]}, params_acc, kind, _vars, _env) do
-    {{:asc, quote(do: Ecto.Query.Builder.OrderBy.field!(unquote(kind), unquote(expr)))}, params_acc}
+    {{:asc, quote(do: Ecto.Query.Builder.OrderBy.field!(unquote(kind), unquote(expr)))},
+     params_acc}
   end
 
   defp do_escape({dir, field}, params_acc, kind, _vars, _env) when is_atom(field) do
@@ -87,12 +89,14 @@ defmodule Ecto.Query.Builder.OrderBy do
   """
   def quoted_dir!(kind, {:^, _, [expr]}),
     do: quote(do: Ecto.Query.Builder.OrderBy.dir!(unquote(kind), unquote(expr)))
+
   def quoted_dir!(_kind, dir) when dir in @directions,
     do: dir
+
   def quoted_dir!(kind, other) do
     Builder.error!(
       "expected #{Enum.map_join(@directions, ", ", &inspect/1)} or interpolated value " <>
-        "in `#{kind}`, got: `#{inspect other}`"
+        "in `#{kind}`, got: `#{inspect(other)}`"
     )
   end
 
@@ -104,8 +108,8 @@ defmodule Ecto.Query.Builder.OrderBy do
 
   def dir!(kind, other) do
     raise ArgumentError,
-      "expected one of #{Enum.map_join(@directions, ", ", &inspect/1)} " <>
-        "in `#{kind}`, got: `#{inspect other}`"
+          "expected one of #{Enum.map_join(@directions, ", ", &inspect/1)} " <>
+            "in `#{kind}`, got: `#{inspect(other)}`"
   end
 
   @doc """
@@ -117,13 +121,13 @@ defmodule Ecto.Query.Builder.OrderBy do
 
   def field!(kind, %Ecto.Query.DynamicExpr{} = dynamic_expression) do
     raise ArgumentError,
-      "expected a field as an atom in `#{kind}`, got: `#{inspect dynamic_expression}`. " <>
-      "To use dynamic expressions, you need to interpolate at root level, as in: " <>
-      "`^[asc: dynamic, desc: :id]`"
+          "expected a field as an atom in `#{kind}`, got: `#{inspect(dynamic_expression)}`. " <>
+            "To use dynamic expressions, you need to interpolate at root level, as in: " <>
+            "`^[asc: dynamic, desc: :id]`"
   end
 
   def field!(kind, other) do
-    raise ArgumentError, "expected a field as an atom in `#{kind}`, got: `#{inspect other}`"
+    raise ArgumentError, "expected a field as an atom in `#{kind}`, got: `#{inspect(other)}`"
   end
 
   defp to_field(field), do: {{:., [], [{:&, [], [0]}, field]}, [], []}
@@ -137,6 +141,7 @@ defmodule Ecto.Query.Builder.OrderBy do
         {dir, expr}, params_count when dir in @directions ->
           {expr, params} = dynamic_or_field!(kind, expr, query, params_count)
           {{dir, expr}, params}
+
         expr, params_count ->
           {expr, params} = dynamic_or_field!(kind, expr, query, params_count)
           {{:asc, expr}, params}
@@ -166,7 +171,7 @@ defmodule Ecto.Query.Builder.OrderBy do
   defp dynamic_or_field!(kind, other, _query, _params_count) do
     raise ArgumentError,
           "`#{kind}` interpolated on root expects a field or a keyword list " <>
-            "with the direction as keys and fields or dynamics as values, got: `#{inspect other}`"
+            "with the direction as keys and fields or dynamics as values, got: `#{inspect(other)}`"
   end
 
   @doc """
@@ -176,10 +181,16 @@ defmodule Ecto.Query.Builder.OrderBy do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t, [Macro.t], Macro.t, :append | :prepend, Macro.Env.t) :: Macro.t
+  @spec build(Macro.t(), [Macro.t()], Macro.t(), :append | :prepend, Macro.Env.t()) :: Macro.t()
   def build(query, _binding, {:^, _, [var]}, op, env) do
     quote do
-      Ecto.Query.Builder.OrderBy.order_by!(unquote(query), unquote(var), unquote(op), unquote(env.file), unquote(env.line))
+      Ecto.Query.Builder.OrderBy.order_by!(
+        unquote(query),
+        unquote(var),
+        unquote(op),
+        unquote(env.file),
+        unquote(env.line)
+      )
     end
   end
 
@@ -188,21 +199,25 @@ defmodule Ecto.Query.Builder.OrderBy do
     {expr, {params, _acc}} = escape(:order_by, expr, {[], %{}}, binding, env)
     params = Builder.escape_params(params)
 
-    order_by = quote do: %Ecto.Query.QueryExpr{
-                           expr: unquote(expr),
-                           params: unquote(params),
-                           file: unquote(env.file),
-                           line: unquote(env.line)}
+    order_by =
+      quote do: %Ecto.Query.QueryExpr{
+              expr: unquote(expr),
+              params: unquote(params),
+              file: unquote(env.file),
+              line: unquote(env.line)
+            }
+
     Builder.apply_query(query, __MODULE__, [order_by, op], env)
   end
 
   @doc """
   The callback applied by `build/4` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, term, term) :: Ecto.Query.t
+  @spec apply(Ecto.Queryable.t(), term, term) :: Ecto.Query.t()
   def apply(%Ecto.Query{order_bys: orders} = query, expr, op) do
     %{query | order_bys: update_order_bys(orders, expr, op)}
   end
+
   def apply(query, expr, op) do
     apply(Ecto.Queryable.to_query(query), expr, op)
   end
