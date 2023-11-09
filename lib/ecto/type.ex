@@ -272,6 +272,8 @@ defmodule Ecto.Type do
 
   This callback is used for determining equality of types in
   `Ecto.Changeset`.
+
+  By default the terms are compared with the equal operator `==/2`.
   """
   @callback equal?(term, term) :: boolean
 
