@@ -101,7 +101,7 @@ You need to add both Ecto and the database adapter as a dependency to your `mix.
 [tds]: https://github.com/livehelpnow/tds
 [ecto_sqlite3]: https://github.com/elixir-sqlite/ecto_sqlite3
 [etso]: https://github.com/evadne/etso
-[ch]: https://github.com/plausible/ch
+[ecto_ch]: https://github.com/plausible/ecto_ch
 
 For example, if you want to use PostgreSQL, add to your `mix.exs` file:
 
