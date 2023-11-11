@@ -85,14 +85,14 @@ See the [getting started guide](https://hexdocs.pm/ecto/getting-started.html) an
 
 You need to add both Ecto and the database adapter as a dependency to your `mix.exs` file. The supported databases and their adapters are:
 
-| Database   | Ecto Adapter             | Dependencies                                                              |
-| :--------- | :----------------------- | :------------------------------------------------------------------------ |
-| PostgreSQL | Ecto.Adapters.Postgres   | [ecto_sql][ecto_sql] (requires Ecto v3.0+) + [postgrex][postgrex]         |
-| MySQL      | Ecto.Adapters.MyXQL      | [ecto_sql][ecto_sql] (requires Ecto v3.3+) + [myxql][myxql]               |
-| MSSQL      | Ecto.Adapters.Tds        | [ecto_sql][ecto_sql] (requires Ecto v3.4+) + [tds][tds]                   |
-| SQLite3    | Ecto.Adapters.SQLite3    | [ecto_sql][ecto_sql] (requires Ecto v3.5+) + [ecto_sqlite3][ecto_sqlite3] |
-| ETS        | Etso                     | [ecto][ecto] + [etso][etso]                                               |
-| ClickHouse | Ecto.Adapters.ClickHouse | [ecto_ch][ecto_ch]                                                     |
+| Database   | Ecto Adapter             | Dependencies                                        |
+| :--------- | :----------------------- | :-------------------------------------------------- |
+| PostgreSQL | Ecto.Adapters.Postgres   | [ecto_sql][ecto_sql] + [postgrex][postgrex]         |
+| MySQL      | Ecto.Adapters.MyXQL      | [ecto_sql][ecto_sql] + [myxql][myxql]               |
+| MSSQL      | Ecto.Adapters.Tds        | [ecto_sql][ecto_sql] + [tds][tds]                   |
+| SQLite3    | Ecto.Adapters.SQLite3    | [ecto_sql][ecto_sql] + [ecto_sqlite3][ecto_sqlite3] |
+| ETS        | Etso                     | [ecto][ecto] + [etso][etso]                         |
+| ClickHouse | Ecto.Adapters.ClickHouse | [ecto_ch][ecto_ch]                                  |
 
 [ecto]: https://github.com/elixir-ecto/ecto
 [ecto_sql]: https://github.com/elixir-ecto/ecto_sql
