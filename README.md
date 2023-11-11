@@ -92,7 +92,7 @@ You need to add both Ecto and the database adapter as a dependency to your `mix.
 | MSSQL      | Ecto.Adapters.Tds        | [ecto_sql][ecto_sql] (requires Ecto v3.4+) + [tds][tds]                   |
 | SQLite3    | Ecto.Adapters.SQLite3    | [ecto_sql][ecto_sql] (requires Ecto v3.5+) + [ecto_sqlite3][ecto_sqlite3] |
 | ETS        | Etso                     | [ecto][ecto] + [etso][etso]                                               |
-| ClickHouse | Ecto.Adapters.ClickHouse | [ecto_sql][ecto_sql] (requires Ecto v3.9+) + [ch][ch]                     |
+| ClickHouse | Ecto.Adapters.ClickHouse | [ecto_ch][ecto_ch]                                                     |
 
 [ecto]: https://github.com/elixir-ecto/ecto
 [ecto_sql]: https://github.com/elixir-ecto/ecto_sql
