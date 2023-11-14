@@ -1003,6 +1003,7 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "normalize: late bindings with as" do
+    # Singular comparison
     {query, cast_params, _, _} =
       from(Post, as: :posts, where: as(:posts).visits == ^"123") |> normalize_with_params()
 
@@ -1012,6 +1013,13 @@ defmodule Ecto.Query.PlannerTest do
     assert_raise Ecto.QueryError, ~r/could not find named binding `as\(:posts\)`/, fn ->
       from(Post, where: as(:posts).visits == ^"123") |> normalize()
     end
+
+    # Composite comparison
+    {query, cast_params, _, _} =
+      from(Post, as: :posts, where: as(:posts).id in ^[123]) |> normalize_with_params()
+
+    assert Macro.to_string(hd(query.wheres).expr) == "&0.id() in ^(0, 1)"
+    assert cast_params == [123]
   end
 
   test "normalize: late dynamic bindings with as" do

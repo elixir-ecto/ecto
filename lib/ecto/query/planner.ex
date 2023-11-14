@@ -1854,6 +1854,12 @@ defmodule Ecto.Query.Planner do
     {composite, type!(kind, query, expr, ix, field, allow_virtuals?)}
   end
 
+  defp field_type!(kind, query, expr, {composite, {{bind_kind, _, [_]} = bind_expr, field}}, allow_virtuals?)
+       when bind_kind in [:as, :parent_as] do
+    {ix, _, ix_query} = get_ix!(bind_expr, kind, query)
+    {composite, type!(kind, ix_query, expr, ix, field, allow_virtuals?)}
+  end
+
   defp field_type!(kind, query, expr, {{bind_kind, _, [_]} = bind_expr, field}, allow_virtuals?)
        when bind_kind in [:as, :parent_as] do
     {ix, _, ix_query} = get_ix!(bind_expr, kind, query)
