@@ -445,7 +445,7 @@ defmodule Ecto.Type do
     if primitive?(schema_type) do
       do_match?(schema_type, query_type)
     else
-      do_match?(schema_type.type, query_type)
+      do_match?(schema_type.type(), query_type)
     end
   end
 

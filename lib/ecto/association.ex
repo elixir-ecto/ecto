@@ -478,7 +478,7 @@ defmodule Ecto.Association do
   end
 
   def apply_defaults(struct, {mod, fun, args}, owner) do
-    apply(mod, fun, [struct.__struct__, owner | args])
+    apply(mod, fun, [struct.__struct__(), owner | args])
   end
 
   @doc """
