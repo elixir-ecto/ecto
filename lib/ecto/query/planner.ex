@@ -649,7 +649,16 @@ defmodule Ecto.Query.Planner do
           %{where | subqueries: Enum.map(subqueries, &plan_subquery(&1, query, nil, adapter, false))}
       end)
 
-    %{query | wheres: wheres}
+    havings =
+      Enum.map(query.havings, fn
+        %{subqueries: []} = having ->
+          having
+
+        %{subqueries: subqueries} = having ->
+          %{having | subqueries: Enum.map(subqueries, &plan_subquery(&1, query, nil, adapter, false))}
+      end)
+
+    %{query | wheres: wheres, havings: havings}
   end
 
   @spec plan_select(Ecto.Query.t, module) :: Ecto.Query.t
