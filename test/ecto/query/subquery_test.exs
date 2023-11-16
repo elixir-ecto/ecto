@@ -350,6 +350,19 @@ defmodule Ecto.Query.SubqueryTest do
       c2 = from(c in Comment, where: c.post_id in subquery(p2))
       assert ^cache = c2 |> plan() |> elem(3)
     end
+
+    test "with having" do
+      p = from(p in Post, select: p.id, where: p.id in ^[2, 3])
+      q = from(c in Comment, group_by: c.id, having: exists(p))
+
+      {q, cast_params, dump_params, _} = plan(q)
+
+      assert [%{expr: expr, subqueries: [subquery]}] = q.havings
+      assert {:exists, _, [subquery: 0]} = expr
+      assert %Ecto.SubQuery{} = subquery
+      assert cast_params == [2, 3]
+      assert dump_params == [2, 3]
+    end
   end
 
   describe "normalize: source subqueries" do
