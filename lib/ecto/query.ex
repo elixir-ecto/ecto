@@ -1358,19 +1358,31 @@ defmodule Ecto.Query do
       Comment
       |> join(:inner, [c], p in fragment("SOME COMPLEX QUERY", c.id, ^some_param))
 
-  Although using fragments in joins is discouraged in favor of Ecto
-  Query syntax, they are necessary when writing lateral joins as
-  lateral joins require a subquery that refer to previous bindings:
-
-      Game
-      |> join(:inner_lateral, [g], gs in fragment("SELECT * FROM games_sold AS gs WHERE gs.game_id = ? ORDER BY gs.sold_on LIMIT 2", g.id))
-      |> select([g, gs], {g.name, gs.sold_on})
-
   Note that the `join` does not automatically wrap the fragment in
   parentheses, since some expressions require parens and others
   require no parens. Therefore, in cases such as common table
   expressions, you will have to explicitly wrap the fragment content
   in parens.
+
+  ## Lateral Joins
+
+  Lateral joins require a subquery that refer to previous bindings. This can be achieved using
+  `parent_as` within the `subquery` function:
+
+      Game
+      |> from(as: :game)
+      |> join(
+        :inner_lateral,
+        [],
+        subquery(
+          GamesSold
+          |> where([gs], gs.game_id == parent_as(:game).id)
+          |> order_by([gs], gs.sold_on)
+          |> limit(2)
+        ),
+        on: true
+      )
+      |> select([g, gs], {g.name, gs.sold_on})
 
   ## Hints
 
