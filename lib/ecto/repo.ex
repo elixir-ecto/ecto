@@ -288,6 +288,8 @@ defmodule Ecto.Repo do
           )
         end
 
+        defoverridable transaction: 2
+
         def in_transaction? do
           Ecto.Repo.Transaction.in_transaction?(get_dynamic_repo())
         end
