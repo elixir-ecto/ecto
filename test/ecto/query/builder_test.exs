@@ -358,7 +358,7 @@ defmodule Ecto.Query.BuilderTest do
       escape(quote(do: p.status in @statuses), [p: 0], __ENV__)
 
     # expect the values to be tagged with the field type so they can be cast properly by the planner
-    expected = [
+    expected_right = [
       {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: :draft, type: {0, :status}]}]},
       {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: :published, type: {0, :status}]}]}
     ]
