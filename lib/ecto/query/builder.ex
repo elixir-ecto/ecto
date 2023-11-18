@@ -347,7 +347,6 @@ defmodule Ecto.Query.Builder do
     assert_type!(expr, type, :boolean)
 
     right = Macro.expand_once(right, get_env(env))
-
     {:array, ltype} = quoted_type(right, vars)
     rtype = {:array, quoted_type(left, vars)}
 
