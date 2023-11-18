@@ -341,9 +341,38 @@ defmodule Ecto.Query.Builder do
   end
 
   # in operator
-  def escape({:in, meta, [left, right]}, type, params_acc, vars, env) do
+  def escape({:in, _, [left, right]} = expr, type, params_acc, vars, env)
+       when is_list(right)
+       when is_tuple(right) and elem(right, 0) in ~w(sigil_w sigil_W @)a do
+    assert_type!(expr, type, :boolean)
+
     right = Macro.expand_once(right, get_env(env))
-    escape_in({:in, meta, [left, right]}, type, params_acc, vars, env)
+
+    {:array, ltype} = quoted_type(right, vars)
+    rtype = {:array, quoted_type(left, vars)}
+
+    {left, params_acc} = escape(left, ltype, params_acc, vars, env)
+    {right, params_acc} = escape(right, rtype, params_acc, vars, env)
+    {{:{}, [], [:in, [], [left, right]]}, params_acc}
+  end
+
+  def escape({:in, _, [left, right]} = expr, type, params_acc, vars, env) do
+    assert_type!(expr, type, :boolean)
+
+    ltype = {:out, quoted_type(right, vars)}
+    rtype = {:in, quoted_type(left, vars)}
+
+    {left, params_acc} = escape(left, ltype, params_acc, vars, env)
+    {right, params_acc} = escape(right, rtype, params_acc, vars, env)
+
+    # Remove any type wrapper from the right side
+    right =
+      case right do
+        {:{}, [], [:type, [], [right, _]]} -> right
+        _ -> right
+      end
+
+    {{:{}, [], [:in, [], [left, right]]}, params_acc}
   end
 
   def escape({:count, _, [arg, :distinct]}, type, params_acc, vars, env) do
@@ -482,38 +511,6 @@ defmodule Ecto.Query.Builder do
   # For everything else we raise
   def escape(other, _type, _params_acc, _vars, _env) do
     error! "`#{Macro.to_string(other)}` is not a valid query expression"
-  end
-
-  defp escape_in({:in, _, [left, right]} = expr, type, params_acc, vars, env)
-       when is_list(right)
-       when is_tuple(right) and elem(right, 0) in ~w(sigil_w sigil_W)a do
-    assert_type!(expr, type, :boolean)
-
-    {:array, ltype} = quoted_type(right, vars)
-    rtype = {:array, quoted_type(left, vars)}
-
-    {left, params_acc} = escape(left, ltype, params_acc, vars, env)
-    {right, params_acc} = escape(right, rtype, params_acc, vars, env)
-    {{:{}, [], [:in, [], [left, right]]}, params_acc}
-  end
-
-  defp escape_in({:in, _, [left, right]} = expr, type, params_acc, vars, env) do
-    assert_type!(expr, type, :boolean)
-
-    ltype = {:out, quoted_type(right, vars)}
-    rtype = {:in, quoted_type(left, vars)}
-
-    {left, params_acc} = escape(left, ltype, params_acc, vars, env)
-    {right, params_acc} = escape(right, rtype, params_acc, vars, env)
-
-    # Remove any type wrapper from the right side
-    right =
-      case right do
-        {:{}, [], [:type, [], [right, _]]} -> right
-        _ -> right
-      end
-
-    {{:{}, [], [:in, [], [left, right]]}, params_acc}
   end
 
   defp escape_with_type(expr, {:^, _, [type]}, params_acc, vars, env) do
