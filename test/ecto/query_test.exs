@@ -72,6 +72,18 @@ defmodule Ecto.QueryTest do
     test "allows arbitrary parentheses in where" do
       _ = from(p in "posts", where: (not is_nil(p.title)))
     end
+
+    @statuses [:draft, :published]
+
+    test "allows module attributes with in" do
+      expected_in = [
+        %Ecto.Query.Tagged{value: :draft, type: {0, :status}},
+        %Ecto.Query.Tagged{value: :published, type: {0, :status}}
+      ]
+
+      [%{expr: {:in, [], [_, actual_in]}}] = from(p in "posts", where: p.status in @statuses).wheres
+      assert actual_in == expected_in
+    end
   end
 
   describe "from" do
