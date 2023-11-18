@@ -350,4 +350,19 @@ defmodule Ecto.Query.BuilderTest do
       validate_type!(quote do "string" end, [x: 0], env)
     end
   end
+
+  @statuses [:draft, :published]
+
+  test "escapes in with module attribute" do
+    {{:{}, _, [:in, _, [_, actual_right]]}, []} =
+      escape(quote(do: p.status in @statuses), [p: 0], __ENV__)
+
+    # expect the values to be tagged with the field type so they can be cast properly by the planner
+    expected = [
+      {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: :draft, type: {0, :status}]}]},
+      {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: :published, type: {0, :status}]}]}
+    ]
+
+    assert actual_right == expected_right
+  end
 end
