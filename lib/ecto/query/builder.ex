@@ -343,9 +343,10 @@ defmodule Ecto.Query.Builder do
   # in operator
   def escape({:in, _, [left, right]} = expr, type, params_acc, vars, env)
       when is_list(right)
-      when is_tuple(right) and elem(right, 0) in ~w(sigil_w sigil_W)a do
+      when is_tuple(right) and elem(right, 0) in ~w(sigil_w sigil_W @)a do
     assert_type!(expr, type, :boolean)
 
+    right = Macro.expand_once(right, get_env(env))
     {:array, ltype} = quoted_type(right, vars)
     rtype = {:array, quoted_type(left, vars)}
 
