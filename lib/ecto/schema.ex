@@ -1572,8 +1572,9 @@ defmodule Ecto.Schema do
         end
       end
 
-      # Then to create the association, pass in the ID's of an existing
-      # User and Organization to UserOrganization.changeset
+  To create the association, pass in the IDs of an existing `User` and
+  `Organization` to `UserOrganization.changeset/2`:
+
       changeset = UserOrganization.changeset(%UserOrganization{}, %{user_id: id, organization_id: id})
 
       case Repo.insert(changeset) do
