@@ -1056,8 +1056,11 @@ defmodule Ecto.Schema do
       `Post.update_banner(banner, post)`, or set it to a MFA tuple such as
       `{Mod, fun, [arg3, arg4]}`, which will invoke `Mod.fun(banner, post, arg3, arg4)`
 
-    * `:where` - A filter for the association. See "Filtering associations"
-      in `has_many/3`. It does not apply to `:through` associations.
+    * `:where` - A filter for the association. When loading `has_one` associations,
+      Ecto emits a query with `LIMIT` set to one. If your association may return
+      multiple entries, you can use this option to guarantee it returns a single
+      unique result. See "Filtering associations" in `has_many/3`. It does not
+      apply to `:through` associations.
 
   ## Examples
 
