@@ -187,6 +187,12 @@ defmodule Ecto.Query.Builder.Select do
   def map_key!(key) when is_float(key), do: key
   def map_key!(key) when is_atom(key), do: key
 
+  def map_key!(other) do
+    Builder.error(
+      "interpolated map keys in `:select` can only be atoms, strings or numbers, got: #{inspect(other)}"
+    )
+  end
+
   # atom list sigils
   defp take?({name, _, [_, modifiers]}) when name in ~w(sigil_w sigil_W)a do
     ?a in modifiers
