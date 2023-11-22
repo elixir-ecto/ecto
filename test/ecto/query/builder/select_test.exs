@@ -489,7 +489,11 @@ defmodule Ecto.Query.Builder.SelectTest do
 
     test "supports interpolated map keys" do
       key = :test_key
+
       q = from p in "posts", select: %{^key => 1}
+      assert {:%{}, [], [test_key: 1]} = q.select.expr
+
+      q = from p in "posts", select: %{^:test_key => 1}
       assert {:%{}, [], [test_key: 1]} = q.select.expr
     end
   end
@@ -687,6 +691,13 @@ defmodule Ecto.Query.Builder.SelectTest do
         from p in "posts",
           select: %{^shared_key => :old},
           select_merge: %{^shared_key => :new, ^merge_key => :merge}
+
+      assert {:%{}, [], [shared: :new, merge: :merge]} = q.select.expr
+
+      q =
+        from p in "posts",
+          select: %{^:shared => :old},
+          select_merge: %{^:shared => :new, ^:merge => :merge}
 
       assert {:%{}, [], [shared: :new, merge: :merge]} = q.select.expr
     end
