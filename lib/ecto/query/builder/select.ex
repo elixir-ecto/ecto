@@ -140,13 +140,9 @@ defmodule Ecto.Query.Builder.Select do
     {k, params_acc}
   end
 
-  defp escape_key({:^, _, [{var, _, context} = k]}, params_acc, _vars, _env)
-       when is_atom(var) and is_atom(context) do
-    {k, params_acc}
-  end
-
-  defp escape_key({:^, _, [k]}, params_acc, vars, env) do
-    escape_key(k, params_acc, vars, env)
+  defp escape_key({:^, _, [k]}, params_acc, _vars, _env) do
+    checked = quote do: Ecto.Query.Builder.Select.map_key!(unquote(k))
+    {checked, params_acc}
   end
 
   defp escape_key(k, params_acc, vars, env) do
@@ -182,6 +178,14 @@ defmodule Ecto.Query.Builder.Select do
         "expected a list of fields in `#{tag}/2` inside `select`, got: `#{inspect fields}`"
     end
   end
+
+  @doc """
+  Called at runtime to verify a map key
+  """
+  def map_key!(key) when is_binary(key), do: key
+  def map_key!(key) when is_integer(key), do: key
+  def map_key!(key) when is_float(key), do: key
+  def map_key!(key) when is_atom(key), do: key
 
   # atom list sigils
   defp take?({name, _, [_, modifiers]}) when name in ~w(sigil_w sigil_W)a do
