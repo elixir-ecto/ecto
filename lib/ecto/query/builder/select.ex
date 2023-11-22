@@ -140,6 +140,11 @@ defmodule Ecto.Query.Builder.Select do
     {k, params_acc}
   end
 
+  defp escape_key({:^, _, [{var, _, context} = k]}, params_acc, _vars, _env)
+       when is_atom(var) and is_atom(context) do
+    {k, params_acc}
+  end
+
   defp escape_key(k, params_acc, vars, env) do
     escape(k, params_acc, vars, env)
   end
