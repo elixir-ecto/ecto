@@ -208,6 +208,7 @@ defmodule Ecto.Type do
           | :float
           | :boolean
           | :string
+          | :bitstring
           | :map
           | :binary
           | :decimal
@@ -227,7 +228,7 @@ defmodule Ecto.Type do
   @typep private_composite :: {:maybe, t} | {:in, t} | {:param, :any_datetime}
 
   @base ~w(
-    integer float decimal boolean string map binary id binary_id any
+    integer float decimal boolean string bitstring map binary id binary_id any
     utc_datetime naive_datetime date time
     utc_datetime_usec naive_datetime_usec time_usec
   )a
@@ -550,6 +551,7 @@ defmodule Ecto.Type do
   def dump(:map, value, _dumper), do: same_map(value)
   def dump(:string, value, _dumper), do: same_binary(value)
   def dump(:binary, value, _dumper), do: same_binary(value)
+  def dump(:bitstring, value, _dumper), do: same_bitstring(value)
   def dump(:id, value, _dumper), do: same_integer(value)
   def dump(:binary_id, value, _dumper), do: same_binary(value)
   def dump(:decimal, value, _dumper), do: same_decimal(value)
@@ -644,6 +646,7 @@ defmodule Ecto.Type do
   def load(:map, value, _loader), do: same_map(value)
   def load(:string, value, _loader), do: same_binary(value)
   def load(:binary, value, _loader), do: same_binary(value)
+  def load(:bitstring, value, _loader), do: same_bitstring(value)
   def load(:id, value, _loader), do: same_integer(value)
   def load(:binary_id, value, _loader), do: same_binary(value)
   def load(:decimal, value, _loader), do: same_decimal(value)
@@ -814,6 +817,7 @@ defmodule Ecto.Type do
   defp cast_fun(:map), do: &cast_map/1
   defp cast_fun(:string), do: &cast_binary/1
   defp cast_fun(:binary), do: &cast_binary/1
+  defp cast_fun(:bitstring), do: &cast_bitstring/1
   defp cast_fun(:id), do: &cast_integer/1
   defp cast_fun(:binary_id), do: &cast_binary/1
   defp cast_fun(:any), do: &{:ok, &1}
@@ -897,6 +901,9 @@ defmodule Ecto.Type do
   defp cast_binary(term) when is_binary(term), do: {:ok, term}
   defp cast_binary(_), do: :error
 
+  defp cast_bitstring(term) when is_bitstring(term), do: {:ok, term}
+  defp cast_bitstring(_), do: :error
+
   defp cast_map(term) when is_map(term), do: {:ok, term}
   defp cast_map(_), do: :error
 
@@ -911,6 +918,9 @@ defmodule Ecto.Type do
 
   defp same_binary(term) when is_binary(term), do: {:ok, term}
   defp same_binary(_), do: :error
+
+  defp same_bitstring(term) when is_bitstring(term), do: {:ok, term}
+  defp same_bitstring(_), do: :error
 
   defp same_map(term) when is_map(term), do: {:ok, term}
   defp same_map(_), do: :error
