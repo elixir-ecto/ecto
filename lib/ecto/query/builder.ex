@@ -121,6 +121,11 @@ defmodule Ecto.Query.Builder do
     escape_with_type(op_expr, type, params_acc, vars, env)
   end
 
+  def escape({:type, _, [{bitwise_op, _, [_, _]} = op_expr, type]}, _type, params_acc, vars, env)
+      when bitwise_op in ~w(&&& |||)a do
+    escape_with_type(op_expr, type, params_acc, vars, env)
+  end
+
   def escape({:type, _, [{fun, _, args} = expr, type]}, _type, params_acc, vars, env)
       when is_list(args) and fun in ~w(fragment avg count max min sum over filter)a do
     escape_with_type(expr, type, params_acc, vars, env)
@@ -148,6 +153,7 @@ defmodule Ecto.Query.Builder do
           * fields, such as p.foo or field(p, :foo)
           * fragments, such as fragment("foo(?)", value)
           * an arithmetic expression (+, -, *, /)
+          * a bitwise expression (&&&, |||)
           * an aggregation or window expression (avg, count, min, max, sum, over, filter)
           * a conditional expression (coalesce)
           * access/json paths (p.column[0].field)
@@ -338,6 +344,15 @@ defmodule Ecto.Query.Builder do
     {right, params_acc} = escape(right, type, params_acc, vars, env)
 
     {{:{}, [], [math_op, [], [left, right]]}, params_acc}
+  end
+
+  # bitwise operators
+  def escape({bitwise_op, _, [left, right]}, type, params_acc, vars, env)
+      when bitwise_op in ~w(&&& |||)a do
+    {left,  params_acc} = escape(left, type, params_acc, vars, env)
+    {right, params_acc} = escape(right, type, params_acc, vars, env)
+
+    {{:{}, [], [bitwise_op, [], [left, right]]}, params_acc}
   end
 
   # in operator
