@@ -26,6 +26,9 @@ defmodule Ecto.Query.BuilderTest do
     assert {Macro.escape(quote do &0.y() + &1.z() end), []} ==
            escape(quote do x.y() + y.z() end, [x: 0, y: 1], __ENV__)
 
+    assert {Macro.escape(quote do &0.y() &&& &1.z() end), []} ==
+           escape(quote do x.y() &&& y.z() end, [x: 0, y: 1], __ENV__)
+
     assert {Macro.escape(quote do avg(0) end), []} ==
            escape(quote do avg(0) end, [], __ENV__)
 
@@ -177,6 +180,9 @@ defmodule Ecto.Query.BuilderTest do
     import Kernel, except: [+: 2, +: 1]
     assert {Macro.escape(quote do type(&0.y() + &1.z(), :decimal) end), []} ==
            escape(quote do type(x.y() + y.z(), :decimal) end, [x: 0, y: 1], __ENV__)
+
+    assert {Macro.escape(quote do type(&0.y() &&& &1.z(), :decimal) end), []} ==
+           escape(quote do type(x.y() &&& y.z(), :decimal) end, [x: 0, y: 1], __ENV__)
 
     assert {Macro.escape(quote do type(&0.y(), :decimal) end), []} ==
           escape(quote do type(field(x, :y), :decimal) end, [x: 0], __ENV__)
