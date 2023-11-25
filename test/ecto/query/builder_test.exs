@@ -49,6 +49,9 @@ defmodule Ecto.Query.BuilderTest do
 
     assert {Macro.escape(quote do -&0.y() end), []} ==
            escape(quote do -x.y() end, [x: 0], __ENV__)
+
+    assert {Macro.escape(quote do ~~~&0.y() end), []} ==
+           escape(quote do ~~~x.y() end, [x: 0], __ENV__)
   end
 
   test "escape json_extract_path" do

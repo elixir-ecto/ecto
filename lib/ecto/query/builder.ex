@@ -346,13 +346,20 @@ defmodule Ecto.Query.Builder do
     {{:{}, [], [math_op, [], [left, right]]}, params_acc}
   end
 
-  # bitwise operators
+  # binary bitwise operators
   def escape({bitwise_op, _, [left, right]}, type, params_acc, vars, env)
       when bitwise_op in ~w(&&& ||| <<< >>>)a do
     {left,  params_acc} = escape(left, type, params_acc, vars, env)
     {right, params_acc} = escape(right, type, params_acc, vars, env)
 
     {{:{}, [], [bitwise_op, [], [left, right]]}, params_acc}
+  end
+
+  # unary bitwise operators
+  def escape({:~~~, _, [bitstring]}, type, params_acc, vars, env) do
+    {bitstring,  params_acc} = escape(bitstring, type, params_acc, vars, env)
+
+    {{:{}, [], [:~~~, [], [bitstring]]}, params_acc}
   end
 
   # in operator
