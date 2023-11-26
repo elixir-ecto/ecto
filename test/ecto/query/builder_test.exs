@@ -217,6 +217,9 @@ defmodule Ecto.Query.BuilderTest do
     assert {Macro.escape(quote do type(bnot(&0.y()), :bitstring) end), []} ==
            escape(quote do type(bnot(x.y()), :bitstring) end, [x: 0, y: 1], __ENV__)
 
+    assert {Macro.escape(quote do type(bnot(&0.y()), {:bitstring, 5}) end), []} ==
+           escape(quote do type(bnot(x.y()), bitstring: 5) end, [x: 0, y: 1], __ENV__)
+
     import Kernel, except: [>: 2]
     assert {Macro.escape(quote do type(filter(sum(&0.y()), &0.y() > &0.z()), :decimal) end), []} ==
           escape(quote do type(filter(sum(x.y()), x.y() > x.z()), :decimal) end, [x: 0], {__ENV__, %{}})

@@ -795,6 +795,10 @@ defmodule Ecto.Query.Builder do
   @doc """
   Validates the type with the given vars.
   """
+  def validate_type!([{_, _} = type], vars, env),
+    do: validate_type!(type, vars, env)
+  def validate_type!({type, size}, vars, env) when is_number(size),
+    do: {validate_type!(type, vars, env), size}
   def validate_type!({composite, type}, vars, env),
     do: {composite, validate_type!(type, vars, env)}
   def validate_type!({:^, _, [type]}, _vars, _env),
@@ -816,7 +820,7 @@ defmodule Ecto.Query.Builder do
     do: {find_var!(var, vars), field}
 
   def validate_type!(type, _vars, _env) do
-    error! "type/2 expects an alias, atom, initialized parameterized type or " <>
+    error! "type/2 expects an alias, atom, a pari {atom, number}, initialized parameterized type or " <>
            "source.field as second argument, got: `#{Macro.to_string(type)}`"
   end
 
