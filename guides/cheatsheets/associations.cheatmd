@@ -254,7 +254,7 @@ movie =
   |> Repo.preload(:screenplay)
 
 movie.screenplay
-|> change(%{lead_writter: "Frank Darabont"})
+|> change(%{lead_writer: "Frank Darabont"})
 |> Repo.update()
 ```
 
