@@ -2597,9 +2597,13 @@ defmodule Ecto.Query do
 
       Repo.all from p in Post, preload: [comments: ^comments_query]
 
-  Similarly, if you have a `:through` association, such as posts has many authors
-  through comments (`posts->comments->authors`), the query will only customize the
-  relationship between comments and authors, even if preloaded through posts.
+  Similarly, if you have a `:through` association, such as posts has many
+  `comments_authors` through comments (`posts->comments->comments_authors`),
+  the query will only customize the relationship between comments and
+  comments_authors, even if preloaded through posts. This means `order_by`
+  clauses on `:through` associations affect only the direct relationship
+  between `comments` and `comments_authors`, not between `posts` and
+  `comments_authors`.
 
   ## Preload functions
 
