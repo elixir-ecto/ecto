@@ -67,8 +67,10 @@ defmodule Ecto.Repo do
       config :my_app, Repo,
         url: "ecto://postgres:postgres@localhost/ecto_simple"
 
-  The schema can be of any value. The path represents the database name
-  while options are simply merged in.
+  The schema can be of any value and the path represents the database name.
+  The URL will be used generate the relevant Repo configuration values, such
+  as `:database`, `:username`, `:password`, `:hostname` and `:port`. These
+  values take precedence over those already specified in the Repo's configuration.
 
   URL can include query parameters to override shared and adapter-specific
   options, like `ssl`, `timeout` and `pool_size`. The following example
