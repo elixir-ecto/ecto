@@ -85,6 +85,9 @@ defmodule Ecto.Repo do
         {:ok, Keyword.put(config, :url, System.get_env("DATABASE_URL"))}
       end
 
+  Note that the URL option will take precedence over any other option that conflicts
+  with it, such as `:database`, `:username`, `:password`, `:hostname` and `:port`.
+
   ## Shared options
 
   Almost all of the repository functions outlined in this module accept the following
