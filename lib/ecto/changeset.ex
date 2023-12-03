@@ -12,11 +12,11 @@ defmodule Ecto.Changeset do
 
   The remaining functions in this module, such as validations,
   constraints, association handling, are about manipulating
-  changesets. Let's discuss some of this extra functionality.
+  changesets.
 
   ## External vs internal data
 
-  Changesets allow working with both kinds of data:
+  Changesets allow working with two kinds of data:
 
     * internal to the application - for example programmatically generated,
       or coming from other subsystems. This use case is primarily covered
@@ -25,6 +25,18 @@ defmodule Ecto.Changeset do
     * external to the application - for example data provided by the user in
       a form that needs to be type-converted and properly validated. This
       use case is primarily covered by the `cast/4` function.
+
+  Wbhen working with external data, the data is typically provided
+  as maps with string keys (also known as parameters). On the other hand,
+  when working with internal data, you typically have maps of atom keys
+  or structs. This duality allows you to track the nature of your data:
+  if you have structs or maps with atom keys, it means the data has been
+  parsed/validated.
+
+  If you have external data or you have maps that may have either
+  string or atom keys, consider using `cast/4` to create a changeset.
+  The changeset will parse and validate these parameters and provide APIs
+  to safely manipulate and change the data accordingly.
 
   ## Validations and constraints
 
