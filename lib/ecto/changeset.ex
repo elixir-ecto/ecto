@@ -26,7 +26,7 @@ defmodule Ecto.Changeset do
       a form that needs to be type-converted and properly validated. This
       use case is primarily covered by the `cast/4` function.
 
-  Wbhen working with external data, the data is typically provided
+  When working with external data, the data is typically provided
   as maps with string keys (also known as parameters). On the other hand,
   when working with internal data, you typically have maps of atom keys
   or structs. This duality allows you to track the nature of your data:
