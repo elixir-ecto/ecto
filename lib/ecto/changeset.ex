@@ -2138,7 +2138,7 @@ defmodule Ecto.Changeset do
 
   If the change is already present, it is overridden with
   the new value. If the value is later modified via
-  `put_change/3` and `update_change/3`, revering back to
+  `put_change/3` and `update_change/3`, reverting back to
   its original value, the change will be reverted unless
   `force_change/3` is called once again.
 
