@@ -140,6 +140,11 @@ defmodule Ecto.Query.Builder.Select do
     {k, params_acc}
   end
 
+  defp escape_key({:^, _, [k]}, params_acc, _vars, _env) do
+    checked = quote do: Ecto.Query.Builder.Select.map_key!(unquote(k))
+    {checked, params_acc}
+  end
+
   defp escape_key(k, params_acc, vars, env) do
     escape(k, params_acc, vars, env)
   end
@@ -172,6 +177,20 @@ defmodule Ecto.Query.Builder.Select do
       raise ArgumentError,
         "expected a list of fields in `#{tag}/2` inside `select`, got: `#{inspect fields}`"
     end
+  end
+
+  @doc """
+  Called at runtime to verify a map key
+  """
+  def map_key!(key) when is_binary(key), do: key
+  def map_key!(key) when is_integer(key), do: key
+  def map_key!(key) when is_float(key), do: key
+  def map_key!(key) when is_atom(key), do: key
+
+  def map_key!(other) do
+    Builder.error!(
+      "interpolated map keys in `:select` can only be atoms, strings or numbers, got: #{inspect(other)}"
+    )
   end
 
   # atom list sigils

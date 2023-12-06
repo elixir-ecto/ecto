@@ -486,6 +486,16 @@ defmodule Ecto.Query.Builder.SelectTest do
         %Ecto.Query{} |> select([], 1) |> select([], 2)
       end
     end
+
+    test "supports interpolated map keys" do
+      key = :test_key
+
+      q = from p in "posts", select: %{^key => 1}
+      assert {:%{}, [], [test_key: 1]} = q.select.expr
+
+      q = from p in "posts", select: %{^:test_key => 1}
+      assert {:%{}, [], [test_key: 1]} = q.select.expr
+    end
   end
 
   describe "select_merge" do
@@ -574,7 +584,7 @@ defmodule Ecto.Query.Builder.SelectTest do
         end)
 
       assert Macro.to_string(query.select.expr) ==
-               "merge(merge(%{comments: count(&2.id())}, %{^0 => &0.name()}), %{^1 => &1.author()})"
+               "%{comments: count(&2.id()), name: &0.name(), author: &1.author()}"
     end
 
     test "supports '...' in binding list with no prior select" do
@@ -671,6 +681,25 @@ defmodule Ecto.Query.Builder.SelectTest do
           select: %{t: {p.title, ^0}},
           select_merge: %{t: p.title, b: p.body}
       assert Macro.to_string(query.select.expr) =~ "merge"
+    end
+
+    test "supports interpolated map keys" do
+      shared_key = :shared
+      merge_key = :merge
+
+      q =
+        from p in "posts",
+          select: %{^shared_key => :old},
+          select_merge: %{^shared_key => :new, ^merge_key => :merge}
+
+      assert {:%{}, [], [shared: :new, merge: :merge]} = q.select.expr
+
+      q =
+        from p in "posts",
+          select: %{^:shared => :old},
+          select_merge: %{^:shared => :new, ^:merge => :merge}
+
+      assert {:%{}, [], [shared: :new, merge: :merge]} = q.select.expr
     end
   end
 end
