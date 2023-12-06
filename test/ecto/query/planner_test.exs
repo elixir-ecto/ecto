@@ -1639,6 +1639,22 @@ defmodule Ecto.Query.PlannerTest do
     assert true in union_query.select.fields
   end
 
+  test "normalize: select with combinations and dynamic map keys" do
+    union_map_key = :id
+    outer_map_key = :text
+    union_query = from(c in Comment, select: %{^union_map_key => c.id, :text => c.text})
+
+    {normalized_query, _, _, select} =
+      from(c in Comment, select: %{:id => c.id, ^outer_map_key => c.text}, union: ^union_query)
+      |> normalize_with_params()
+
+    normalized_union_query = normalized_query.combinations |> List.first() |> elem(1)
+
+    assert select.postprocess == {:map, [id: {:value, :id}, text: {:value, :string}]}
+    assert {:%{}, _, [id: _, text: _]} = normalized_query.select.expr
+    assert {:%{}, _, [id: _, text: _]} = normalized_union_query.select.expr
+  end
+
   test "normalize: select on schemaless" do
     assert_raise Ecto.QueryError, ~r"need to explicitly pass a :select clause in query", fn ->
       from("posts", []) |> normalize()

@@ -1959,7 +1959,8 @@ defmodule Ecto.Query do
   >
   > When selecting a literal atom, its value must be the same across
   > all queries. Otherwise, the value from the parent query will be
-  > applied to all other queries.
+  > applied to all other queries. This also holds true for selecting
+  > maps with atom keys.
 
   Union expression returns only unique rows as if each query returned
   distinct results. This may cause a performance penalty. If you need
@@ -2011,7 +2012,8 @@ defmodule Ecto.Query do
   >
   > When selecting a literal atom, its value must be the same across
   > all queries. Otherwise, the value from the parent query will be
-  > applied to all other queries.
+  > applied to all other queries. This also holds true for selecting
+  > maps with atom keys.
 
   Note that the operations `order_by`, `limit` and `offset` of the
   current `query` apply to the result of the union. `order_by` must
@@ -2058,7 +2060,8 @@ defmodule Ecto.Query do
   >
   > When selecting a literal atom, its value must be the same across
   > all queries. Otherwise, the value from the parent query will be
-  > applied to all other queries.
+  > applied to all other queries. This also holds true for selecting
+  > maps with atom keys.
 
   Except expression returns only unique rows as if each query returned
   distinct results. This may cause a performance penalty. If you need
@@ -2110,7 +2113,8 @@ defmodule Ecto.Query do
   >
   > When selecting a literal atom, its value must be the same across
   > all queries. Otherwise, the value from the parent query will be
-  > applied to all other queries.
+  > applied to all other queries. This also holds true for selecting
+  > maps with atom keys.
 
   Note that the operations `order_by`, `limit` and `offset` of the
   current `query` apply to the result of the set difference. `order_by`
@@ -2157,7 +2161,8 @@ defmodule Ecto.Query do
   >
   > When selecting a literal atom, its value must be the same across
   > all queries. Otherwise, the value from the parent query will be
-  > applied to all other queries.
+  > applied to all other queries. This also holds true for selecting
+  > maps with atom keys.
 
   Intersect expression returns only unique rows as if each query returned
   distinct results. This may cause a performance penalty. If you need
@@ -2209,7 +2214,8 @@ defmodule Ecto.Query do
   >
   > When selecting a literal atom, its value must be the same across
   > all queries. Otherwise, the value from the parent query will be
-  > applied to all other queries.
+  > applied to all other queries. This also holds true for selecting
+  > maps with atom keys.
 
   Note that the operations `order_by`, `limit` and `offset` of the
   current `query` apply to the result of the set difference. `order_by`

@@ -188,7 +188,7 @@ defmodule Ecto.Query.Builder.Select do
   def map_key!(key) when is_atom(key), do: key
 
   def map_key!(other) do
-    Builder.error(
+    Builder.error!(
       "interpolated map keys in `:select` can only be atoms, strings or numbers, got: #{inspect(other)}"
     )
   end
