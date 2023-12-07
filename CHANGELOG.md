@@ -1,5 +1,17 @@
 # Changelog for v3.x
 
+## v3.11.1 (2023-12-07)
+
+### Enhancements
+
+  * [Ecto.Query] Allow module attributes to be given to `in` operator
+
+### Bug fixes
+
+  * [Ecto.Query] Fix interpolating strings and atoms as map keys
+  * [Ecto.Query] Plan subqueries in `having`
+  * [Ecto.Query] Fix late binding with composite types
+
 ## v3.11.0 (2023-11-14)
 
 ### Enhancements
