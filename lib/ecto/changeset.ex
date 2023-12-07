@@ -1809,7 +1809,7 @@ defmodule Ecto.Changeset do
 
   The given `function` is invoked with the change value only if there
   is a change for `key`. Once the function is invoked, it behaves as
-  `put_changed/3`.
+  `put_change/3`.
 
   Note that the value of the change can still be `nil` (unless the field
   was marked as required on `validate_required/3`).
