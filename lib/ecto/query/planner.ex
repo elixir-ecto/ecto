@@ -2040,7 +2040,7 @@ defmodule Ecto.Query.Planner do
 
             case dumper do
               %{^k => {_, _, false}} -> :ok
-              %{}-> error! query, "cannot update unwritable field `#{k}`"
+              %{} -> error! query, "cannot update unwritable field `#{k}`"
               nil -> :ok
             end
 
