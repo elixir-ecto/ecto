@@ -427,7 +427,7 @@ defmodule Ecto.Schema do
   * `__schema__(:virtual_fields)` - Returns a list of all virtual field names;
   * `__schema__(:field_source, field)` - Returns the alias of the given field;
 
-  * `__schema__(:type, field)` - Returns the type of the given non-virtual, non-read only field;
+  * `__schema__(:type, field)` - Returns the type of the given non-virtual field;
   * `__schema__(:virtual_type, field)` - Returns the type of the given virtual field;
   * `__schema__(:mode, field)` - Returns the `:mode` of the field. Either `:readwrite` or `:readonly`;
 
