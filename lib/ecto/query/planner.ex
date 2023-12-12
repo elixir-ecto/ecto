@@ -2027,8 +2027,7 @@ defmodule Ecto.Query.Planner do
   defp cte_fields([], [], _aliases), do: []
 
   defp assert_update!(%Ecto.Query{updates: updates} = query, operation) do
-    schema = schema_for_update(query)
-    dumper = schema && schema.__schema__(:dump)
+    dumper = dumper_for_update(query)
 
     changes =
       Enum.reduce(updates, %{}, fn update, acc ->
@@ -2079,10 +2078,13 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp schema_for_update(query) do
+  defp dumper_for_update(query) do
     case get_source!(:updates, query, 0) do
-      {source, schema, _} when is_binary(source) -> schema
-      _ -> nil
+      {source, schema, _} when is_binary(source) and schema != nil ->
+        schema.__schema__(:dump)
+
+      _ ->
+        nil
     end
   end
 
