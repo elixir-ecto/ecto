@@ -768,7 +768,7 @@ defmodule Ecto.Repo.Schema do
   defp writable_field?(nil, _field), do: true
 
   defp writable_field?(schema, field) do
-    not is_nil(schema.__schema__(:writable_type, field))
+    schema.__schema__(:writable_type, field) != nil
   end
 
   defp field_source!(nil, field) do
