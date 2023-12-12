@@ -9,7 +9,6 @@ defmodule Ecto.Query.Planner do
   end
 
   @parent_as __MODULE__
-  @write_only_kinds [:update]
   @aggs ~w(count avg min max sum row_number rank dense_rank percent_rank cume_dist ntile lag lead first_value last_value nth_value)a
 
   @doc """
@@ -1727,7 +1726,7 @@ defmodule Ecto.Query.Planner do
 
       {:error, {:values, _, [types, _]}} ->
         fields = Keyword.keys(types)
-        dumper = types |> Enum.map(fn {field, type} -> {field, {field, type}} end) |> Enum.into(%{})
+        dumper = types |> Enum.map(fn {field, type} -> {field, {field, type, false}} end) |> Enum.into(%{})
         {types, fields} = select_dump(fields, dumper, ix, drop)
         {{:source, :values, nil, types}, fields}
 
@@ -1750,7 +1749,7 @@ defmodule Ecto.Query.Planner do
     |> Enum.reverse
     |> Enum.reduce({[], []}, fn
       field, {types, exprs} when is_atom(field) and not is_map_key(drop, field) ->
-        {source, type} = Map.get(dumper, field, {field, :any})
+        {source, type, _read_only?} = Map.get(dumper, field, {field, :any, false})
         {[{field, type} | types], [select_field(source, ix) | exprs]}
       _field, acc ->
         acc
@@ -1914,13 +1913,8 @@ defmodule Ecto.Query.Planner do
   end
 
   defp type!(kind, query, expr, schema, field, allow_virtuals?) when is_atom(schema) do
-    only_writable? = kind in @write_only_kinds
-
     cond do
-      type = only_writable? && schema.__schema__(:writable_type, field) ->
-        type
-
-      type = !only_writable? && schema.__schema__(:type, field) ->
+      type = schema.__schema__(:type, field) ->
         type
 
       type = allow_virtuals? && schema.__schema__(:virtual_type, field) ->
@@ -1933,9 +1927,6 @@ defmodule Ecto.Query.Planner do
                                 "Did you mean to use `#{owner_key}`?"
           %_{} ->
             error! query, expr, "field `#{field}` in `#{kind}` is an association in schema #{inspect schema}"
-
-          _ when only_writable? ->
-            error! query, expr, "field `#{field}` in `#{kind}` is an unwritable field in schema #{inspect schema}"
 
           _ ->
             error! query, expr, "field `#{field}` in `#{kind}` is a virtual field in schema #{inspect schema}"
@@ -2036,12 +2027,21 @@ defmodule Ecto.Query.Planner do
   defp cte_fields([], [], _aliases), do: []
 
   defp assert_update!(%Ecto.Query{updates: updates} = query, operation) do
+    schema = schema_for_update(query)
+    dumper = schema && schema.__schema__(:dump)
+
     changes =
       Enum.reduce(updates, %{}, fn update, acc ->
         Enum.reduce(update.expr, acc, fn {_op, kw}, acc ->
           Enum.reduce(kw, acc, fn {k, v}, acc ->
             if Map.has_key?(acc, k) do
               error! query, "duplicate field `#{k}` for `#{operation}`"
+            end
+
+            case dumper do
+              %{^k => {_, _, false}} -> :ok
+              %{}-> error! query, "cannot update unwritable field `#{k}`"
+              nil -> :ok
             end
 
             Map.put(acc, k, v)
@@ -2076,6 +2076,13 @@ defmodule Ecto.Query.Planner do
         error! query, "`#{operation}` allows only `with_cte`, `where` and `join` expressions. " <>
                       "You can exclude unwanted expressions from a query by using " <>
                       "Ecto.Query.exclude/2. Error found"
+    end
+  end
+
+  defp schema_for_update(query) do
+    case get_source!(:updates, query, 0) do
+      {source, schema, _} when is_binary(source) -> schema
+      _ -> nil
     end
   end
 

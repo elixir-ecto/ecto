@@ -104,7 +104,7 @@ defmodule Ecto.Repo.Schema do
     {rows, header, row_cast_params, placeholder_cast_params, placeholder_dump_params, fn -> counter end}
   end
 
-  defp extract_header_and_fields(repo, %Ecto.Query{} = query, schema, _dumper, _autogen_id, _placeholder_map, adapter, opts) do
+  defp extract_header_and_fields(repo, %Ecto.Query{} = query, _schema, dumper, _autogen_id, _placeholder_map, adapter, opts) do
     {query, opts} = repo.prepare_query(:insert_all, query, opts)
     query = attach_prefix(query, opts)
 
@@ -118,21 +118,21 @@ defmodule Ecto.Repo.Schema do
     header = case query.select do
       %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}} ->
         Enum.map(args, fn {field, _} ->
-          unless writable_field?(schema, field) do
-            raise ArgumentError, "cannot give unwritable field `#{field}` to insert_all"
+          case dumper do
+            %{^field => {_, _, false}} -> field
+            %{} -> raise ArgumentError, "cannot select unwritable field `#{field}` for insert_all"
+            nil -> field
           end
-
-          field
         end)
 
       %Ecto.Query.SelectExpr{take: %{^ix => {_fun, fields}}} ->
-        Enum.each(fields, fn field ->
-          unless writable_field?(schema, field) do
-            raise ArgumentError, "cannot give unwritable field `#{field}` to insert_all"
+        Enum.map(fields, fn field ->
+          case dumper do
+            %{^field => {_, _, false}} -> field
+            %{} -> raise ArgumentError, "cannot select unwritable field `#{field}` for insert_all"
+            nil -> field
           end
         end)
-
-        fields
 
       _ ->
         raise ArgumentError, """
@@ -171,12 +171,8 @@ defmodule Ecto.Repo.Schema do
 
   defp init_mapper(schema, dumper, adapter, placeholder_map) do
     fn {field, value}, acc ->
-      unless writable_field?(schema, field) do
-        raise ArgumentError, "cannot give unwritable field `#{field}` to insert_all"
-      end
-
       case dumper do
-        %{^field => {source, type}} ->
+        %{^field => {source, type, false}} ->
           extract_value(source, value, type, placeholder_map, acc, fn val ->
             dump_field!(:insert_all, schema, field, type, val, adapter)
           end)
@@ -184,7 +180,8 @@ defmodule Ecto.Repo.Schema do
         %{} ->
           raise ArgumentError,
                 "unknown field `#{inspect(field)}` in schema #{inspect(schema)} given to " <>
-                  "insert_all. Note associations are not supported"
+                  "insert_all. Unwritable fields, such as virtual and read only fields " <>
+                  "are not supported. Associations are also not supported"
       end
     end
   end
@@ -643,7 +640,7 @@ defmodule Ecto.Repo.Schema do
   end
   defp fields_to_sources(fields, dumper) do
     Enum.reduce(fields, {[], []}, fn field, {types, sources} ->
-      {source, type} = Map.fetch!(dumper, field)
+      {source, type, _read_only?} = Map.fetch!(dumper, field)
       {[{field, type} | types], [source | sources]}
     end)
   end
@@ -703,7 +700,7 @@ defmodule Ecto.Repo.Schema do
   defp conflict_target(conflict_target, dumper) do
     for target <- List.wrap(conflict_target) do
       case dumper do
-        %{^target => {alias, _}} ->
+        %{^target => {alias, _, _}} ->
           alias
         %{} when is_atom(target) ->
           raise ArgumentError, "unknown field `#{inspect(target)}` in conflict_target"
@@ -727,16 +724,7 @@ defmodule Ecto.Repo.Schema do
         {{:nothing, [], conflict_target}, []}
 
       {:replace, keys} when is_list(keys) ->
-        fields =
-          Enum.map(keys, fn key ->
-            unless writable_field?(schema, key) do
-              raise ArgumentError, "cannot replace unwritable field `#{key}` in :on_conflict option"
-            end
-
-            field_source!(schema, key)
-          end)
-
-        {{fields, [], conflict_target}, []}
+        {{replace_fields!(schema, keys), [], conflict_target}, []}
 
       :replace_all ->
         {{replace_all_fields!(:replace_all, schema, []), [], conflict_target}, []}
@@ -757,18 +745,29 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
+  defp replace_fields!(nil, fields), do: fields
+
+  defp replace_fields!(schema, fields) do
+    dumper = schema.__schema__(:dump)
+
+    Enum.map(fields, fn field ->
+      case dumper do
+        %{^field => {source, _type, false}} ->
+          source
+
+        _ ->
+          raise ArgumentError,
+                "cannot replace unwritable field `#{inspect(field)}` in :on_conflict option"
+      end
+    end)
+  end
+
   defp replace_all_fields!(kind, nil, _to_remove) do
     raise ArgumentError, "cannot use #{inspect(kind)} on operations without a schema"
   end
 
   defp replace_all_fields!(_kind, schema, to_remove) do
     Enum.map(schema.__schema__(:writable_fields) -- to_remove, &field_source!(schema, &1))
-  end
-
-  defp writable_field?(nil, _field), do: true
-
-  defp writable_field?(schema, field) do
-    schema.__schema__(:writable_type, field) != nil
   end
 
   defp field_source!(nil, field) do
@@ -1084,7 +1083,7 @@ defmodule Ecto.Repo.Schema do
 
   defp dump_fields!(action, schema, kw, dumper, adapter) do
     for {field, value} <- kw do
-      {alias, type} = Map.fetch!(dumper, field)
+      {alias, type, _read_only?} = Map.fetch!(dumper, field)
       {alias, dump_field!(action, schema, field, type, value, adapter)}
     end
   end
