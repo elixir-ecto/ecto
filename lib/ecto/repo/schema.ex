@@ -143,11 +143,11 @@ defmodule Ecto.Repo.Schema do
     end
 
     if schema do
-      modes = schema.__schema__(:mode)
+      read_only_fields = schema.__schema__(:read_only)
 
       Enum.each(header, fn field ->
-        case modes do
-          %{^field => :readonly} ->
+        case read_only_fields do
+          %{^field => _} ->
             raise ArgumentError, "cannot give read only field `#{field}` to insert_all"
 
           _ ->
@@ -172,11 +172,11 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp init_mapper(schema, dumper, adapter, placeholder_map) do
-    modes = schema.__schema__(:mode)
+    read_only_fields = schema.__schema__(:read_only)
 
     fn {field, value}, acc ->
-      case modes do
-        %{^field => :readonly} ->
+      case read_only_fields do
+        %{^field => _} ->
           raise ArgumentError, "cannot give read only field `#{field}` to insert_all"
 
         _ ->
@@ -735,12 +735,12 @@ defmodule Ecto.Repo.Schema do
         {{:nothing, [], conflict_target}, []}
 
       {:replace, keys} when is_list(keys) ->
-        modes = schema && schema.__schema__(:mode) || %{}
+        read_only_fields = schema && schema.__schema__(:read_only) || %{}
 
         fields =
           Enum.map(keys, fn key ->
-            case modes do
-              %{^key => :readonly} ->
+            case read_only_fields do
+              %{^key => _} ->
                 raise ArgumentError, "cannot replace read only field `#{key}` in :on_conflict option"
 
               _ ->

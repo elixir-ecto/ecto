@@ -97,7 +97,7 @@ defmodule Ecto.ChangesetTest do
       field :topics, {:array, :string}
       field :seo_metadata, :map
       field :virtual, :string, virtual: true
-      field :read_only, :string, mode: :readonly
+      field :read_only, :string, read_only: true
       field :published_at, :naive_datetime
       field :source, :map
       field :permalink, :string, source: :url
@@ -2418,7 +2418,7 @@ defmodule Ecto.ChangesetTest do
       field :username, :string
       field :display_name, :string, redact: false
       field :virtual_pass, :string, redact: true, virtual: true
-      field :read_only_pass, :string, redact: true, mode: :readonly
+      field :read_only_pass, :string, redact: true, read_only: true
     end
   end
 

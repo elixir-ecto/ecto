@@ -2027,10 +2027,10 @@ defmodule Ecto.Query.Planner do
   defp cte_fields([], [], _aliases), do: []
 
   defp assert_update!(%Ecto.Query{updates: updates} = query, operation) do
-    modes =
+    read_only_fields =
       case get_source!(:updates, query, 0) do
         {source, schema, _} when is_binary(source) and schema != nil ->
-          schema.__schema__(:mode)
+          schema.__schema__(:read_only)
 
         _ ->
           %{}
@@ -2044,8 +2044,8 @@ defmodule Ecto.Query.Planner do
               error! query, "duplicate field `#{k}` for `#{operation}`"
             end
 
-            case modes do
-              %{^k => :readonly} ->
+            case read_only_fields do
+              %{^k => _} ->
                 error! query, "cannot update read only field `#{k}`"
 
               _ ->

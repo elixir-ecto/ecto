@@ -1370,24 +1370,26 @@ defmodule Ecto.Integration.RepoTest do
 
     @tag :with_conflict_target
     test "insert with read only field and conflict replace_all" do
-      %Post{id: id} = TestRepo.insert!(%Post{id: 1, title: "1"})
-      TestRepo.insert!(%Post{id: 1, title: "2"}, conflict_target: [:id], on_conflict: :replace_all)
-      assert %{id: 1, title: "2", read_only: nil} = TestRepo.get(Post, id)
+      uuid = Ecto.UUID.generate()
+      TestRepo.insert!(%Post{uuid: uuid, title: "1"})
+      %Post{id: id} = TestRepo.insert!(%Post{uuid: uuid, title: "2"}, conflict_target: [:uuid], on_conflict: :replace_all)
+      assert %{title: "2", read_only: nil} = TestRepo.get(Post, id)
     end
 
     @tag :returning
     @tag :with_conflict_target
     test "insert with read only field and conflict replace_all and returning" do
-      TestRepo.insert!(%Post{id: 1, title: "1"})
+      uuid = Ecto.UUID.generate()
+      TestRepo.insert!(%Post{uuid: uuid, title: "1"})
 
       post =
-        TestRepo.insert!(%Post{id: 1, title: "2", read_only: "nope"},
-          conflict_target: [:id],
+        TestRepo.insert!(%Post{uuid: uuid, title: "2", read_only: "nope"},
+          conflict_target: [:uuid],
           on_conflict: :replace_all,
           returning: true
         )
 
-      assert %{id: 1, title: "2", read_only: nil} = post
+      assert %{title: "2", read_only: nil} = post
     end
 
     test "insert_all with read only field" do

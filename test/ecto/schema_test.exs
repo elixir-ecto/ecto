@@ -15,7 +15,7 @@ defmodule Ecto.SchemaTest do
       field :array, {:array, :string}
       field :uuid, Ecto.UUID, autogenerate: true
       field :no_query_load, :string, load_in_query: false
-      field :read_only, :string, mode: :readonly
+      field :read_only, :string, read_only: true
       belongs_to :comment, Comment
       belongs_to :permalink, Permalink, define_field: false
     end
@@ -36,8 +36,8 @@ defmodule Ecto.SchemaTest do
     assert Schema.__schema__(:query_fields) ==
              [:id, :name, :email, :password, :count, :array, :uuid, :read_only, :comment_id]
 
-    assert Schema.__schema__(:mode, :read_only) == :readonly
-    assert Schema.__schema__(:mode, :name) == :readwrite
+    assert Schema.__schema__(:read_only, :read_only) == true
+    assert Schema.__schema__(:read_only, :name) == false
     assert Schema.__schema__(:read_after_writes) == [:email, :count]
     assert Schema.__schema__(:primary_key) == [:id]
     assert Schema.__schema__(:autogenerate_id) == {:id, :id, :id}
@@ -597,7 +597,7 @@ defmodule Ecto.SchemaTest do
                      use Ecto.Schema
 
                      schema "hello" do
-                       field :x, Ecto.UUID, autogenerate: true, mode: :readonly
+                       field :x, Ecto.UUID, autogenerate: true, read_only: true
                      end
                    end
                  end
