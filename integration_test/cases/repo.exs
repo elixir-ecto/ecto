@@ -1369,6 +1369,7 @@ defmodule Ecto.Integration.RepoTest do
     end
 
     @tag :with_conflict_target
+    @tag :upsert
     test "insert with read only field and conflict replace_all" do
       uuid = Ecto.UUID.generate()
       TestRepo.insert!(%Post{uuid: uuid, title: "1"})
@@ -1378,6 +1379,7 @@ defmodule Ecto.Integration.RepoTest do
 
     @tag :returning
     @tag :with_conflict_target
+    @tag :upsert
     test "insert with read only field and conflict replace_all and returning" do
       uuid = Ecto.UUID.generate()
       TestRepo.insert!(%Post{uuid: uuid, title: "1"})
