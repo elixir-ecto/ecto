@@ -427,8 +427,9 @@ defmodule Ecto.Schema do
   * `__schema__(:virtual_fields)` - Returns a list of all virtual field names;
   * `__schema__(:field_source, field)` - Returns the alias of the given field;
 
-  * `__schema__(:type, field)` - Returns the type of the given non-virtual field;
+  * `__schema__(:type, field)` - Returns the type of the given non-virtual, non-read only field;
   * `__schema__(:virtual_type, field)` - Returns the type of the given virtual field;
+  * `__schema__(:mode, field)` - Returns the `:mode` of the field. Either `:readwrite` or `:readonly`;
 
   * `__schema__(:associations)` - Returns a list of all association field names;
   * `__schema__(:association, assoc)` - Returns the association reflection of the given assoc;
@@ -505,6 +506,7 @@ defmodule Ecto.Schema do
       Module.register_attribute(__MODULE__, :ecto_autogenerate, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_autoupdate, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_redact_fields, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_field_modes, accumulate: true)
       Module.put_attribute(__MODULE__, :ecto_derive_inspect_for_redacted_fields, true)
       Module.put_attribute(__MODULE__, :ecto_autogenerate_id, nil)
     end
@@ -525,8 +527,12 @@ defmodule Ecto.Schema do
     :type,
     :where,
     :references,
-    :skip_default_validation
+    :skip_default_validation,
+    :mode
   ]
+
+  @default_mode :readwrite
+  @allowed_modes [:readwrite, :readonly]
 
   @doc """
   Defines an embedded schema with the given field definitions.
@@ -631,6 +637,7 @@ defmodule Ecto.Schema do
         assocs = @ecto_assocs |> Enum.reverse()
         embeds = @ecto_embeds |> Enum.reverse()
         redacted_fields = @ecto_redact_fields
+        field_modes = @ecto_field_modes |> Enum.reverse()
         loaded = Ecto.Schema.__loaded__(__MODULE__, @ecto_struct_fields)
 
         if redacted_fields != [] and not List.keymember?(@derive, Inspect, 0) and
@@ -658,6 +665,9 @@ defmodule Ecto.Schema do
         def __schema__(:redact_fields), do: unquote(redacted_fields)
         def __schema__(:virtual_fields), do: unquote(Enum.map(virtual_fields, &elem(&1, 0)))
 
+        def __schema__(:writable_fields),
+          do: unquote(for {name, mode} when mode != :readonly <- field_modes, do: name)
+
         def __schema__(:autogenerate_fields),
           do: unquote(Enum.flat_map(autogenerate, &elem(&1, 0)))
 
@@ -671,7 +681,7 @@ defmodule Ecto.Schema do
         end
 
         for clauses <-
-              Ecto.Schema.__schema__(fields, field_sources, assocs, embeds, virtual_fields),
+              Ecto.Schema.__schema__(fields, field_sources, assocs, embeds, virtual_fields, field_modes),
             {args, body} <- clauses do
           def __schema__(unquote_splicing(args)), do: unquote(body)
         end
@@ -745,6 +755,10 @@ defmodule Ecto.Schema do
 
     * `:skip_default_validation` - When true, it will skip the type validation
       step at compile time.
+
+    * `:mode` - Either `:readwrite` or `:readonly`. When `:readonly`, the field
+      can be selected from queries or `returning` clauses but can never be written to.
+      Defaults to `:readwrite`.
 
   """
   defmacro field(name, type \\ :string, opts \\ []) do
@@ -2007,6 +2021,7 @@ defmodule Ecto.Schema do
     # Check the field type before we check options because it is
     # better to raise unknown type first than unsupported option.
     type = check_field_type!(mod, name, type, opts)
+    mode = check_field_mode!(opts[:mode])
 
     if type == :any && !opts[:virtual] do
       raise ArgumentError,
@@ -2017,10 +2032,10 @@ defmodule Ecto.Schema do
     check_options!(type, opts, @field_opts, "field/3")
     Module.put_attribute(mod, :ecto_changeset_fields, {name, type})
     validate_default!(type, opts[:default], opts[:skip_default_validation])
-    define_field(mod, name, type, opts)
+    define_field(mod, name, type, mode, opts)
   end
 
-  defp define_field(mod, name, type, opts) do
+  defp define_field(mod, name, type, mode, opts) do
     virtual? = opts[:virtual] || false
     pk? = opts[:primary_key] || false
     put_struct_field(mod, name, Keyword.get(opts, :default))
@@ -2062,6 +2077,10 @@ defmodule Ecto.Schema do
         raise ArgumentError, "cannot mark the same field as autogenerate and read_after_writes"
       end
 
+      if mode == :readonly && gen do
+        raise ArgumentError, "cannot mark the same field as autogenerate and read only"
+      end
+
       if pk? do
         Module.put_attribute(mod, :ecto_primary_keys, name)
       end
@@ -2070,6 +2089,7 @@ defmodule Ecto.Schema do
         Module.put_attribute(mod, :ecto_query_fields, {name, type})
       end
 
+      Module.put_attribute(mod, :ecto_field_modes, {name, mode})
       Module.put_attribute(mod, :ecto_fields, {name, type})
     end
   end
@@ -2165,7 +2185,7 @@ defmodule Ecto.Schema do
 
     if Keyword.get(opts, :define_field, true) do
       Module.put_attribute(mod, :ecto_changeset_fields, {foreign_key_name, foreign_key_type})
-      define_field(mod, foreign_key_name, foreign_key_type, opts)
+      define_field(mod, foreign_key_name, foreign_key_type, @default_mode, opts)
     end
 
     struct =
@@ -2269,7 +2289,7 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __schema__(fields, field_sources, assocs, embeds, virtual_fields) do
+  def __schema__(fields, field_sources, assocs, embeds, virtual_fields, field_modes) do
     load =
       for {name, type} <- fields do
         if alias = field_sources[name] do
@@ -2282,6 +2302,11 @@ defmodule Ecto.Schema do
     dump =
       for {name, type} <- fields do
         {name, {field_sources[name] || name, type}}
+      end
+
+    modes_quoted =
+      for {name, mode} <- field_modes do
+        {[:mode, name], mode}
       end
 
     field_sources_quoted =
@@ -2315,6 +2340,7 @@ defmodule Ecto.Schema do
 
     single_arg = [
       {[:dump], dump |> Map.new() |> Macro.escape()},
+      {[:mode], field_modes |> Map.new() |> Macro.escape()},
       {[:load], load |> Macro.escape()},
       {[:associations], assoc_names},
       {[:embeds], embed_names}
@@ -2322,6 +2348,7 @@ defmodule Ecto.Schema do
 
     catch_all = [
       {[:field_source, quote(do: _)], nil},
+      {[:mode, quote(do: _)], nil},
       {[:type, quote(do: _)], nil},
       {[:virtual_type, quote(do: _)], nil},
       {[:association, quote(do: _)], nil},
@@ -2331,6 +2358,7 @@ defmodule Ecto.Schema do
     [
       single_arg,
       field_sources_quoted,
+      modes_quoted,
       types_quoted,
       virtual_types_quoted,
       assoc_quoted,
@@ -2347,7 +2375,7 @@ defmodule Ecto.Schema do
 
     Module.put_attribute(mod, :ecto_changeset_fields, {name, {:embed, struct}})
     Module.put_attribute(mod, :ecto_embeds, {name, struct})
-    define_field(mod, name, {:parameterized, Ecto.Embedded, struct}, opts)
+    define_field(mod, name, {:parameterized, Ecto.Embedded, struct}, @default_mode, opts)
   end
 
   defp put_struct_field(mod, name, assoc) do
@@ -2433,6 +2461,13 @@ defmodule Ecto.Schema do
       true ->
         raise ArgumentError, "unknown type #{inspect(type)} for field #{inspect(name)}"
     end
+  end
+
+  defp check_field_mode!(nil), do: @default_mode
+  defp check_field_mode!(mode) when mode in @allowed_modes, do: mode
+
+  defp check_field_mode!(other) do
+    raise ArgumentError, "invalid mode #{inspect(other)}. Expected `:readwrite` or `:readonly`"
   end
 
   defp composite?({composite, _} = type, name) do

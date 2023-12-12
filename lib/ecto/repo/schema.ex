@@ -104,7 +104,7 @@ defmodule Ecto.Repo.Schema do
     {rows, header, row_cast_params, placeholder_cast_params, placeholder_dump_params, fn -> counter end}
   end
 
-  defp extract_header_and_fields(repo, %Ecto.Query{} = query, _schema, _dumper, _autogen_id, _placeholder_map, adapter, opts) do
+  defp extract_header_and_fields(repo, %Ecto.Query{} = query, schema, _dumper, _autogen_id, _placeholder_map, adapter, opts) do
     {query, opts} = repo.prepare_query(:insert_all, query, opts)
     query = attach_prefix(query, opts)
 
@@ -142,6 +142,20 @@ defmodule Ecto.Repo.Schema do
         """
     end
 
+    if schema do
+      modes = schema.__schema__(:mode)
+
+      Enum.each(header, fn field ->
+        case modes do
+          %{^field => :readonly} ->
+            raise ArgumentError, "cannot give read only field `#{field}` to insert_all"
+
+          _ ->
+            :ok
+        end
+      end)
+    end
+
     counter = fn -> length(dump_params) end
 
     {{query, dump_params}, header, cast_params, [], [], counter}
@@ -158,7 +172,17 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp init_mapper(schema, dumper, adapter, placeholder_map) do
+    modes = schema.__schema__(:mode)
+
     fn {field, value}, acc ->
+      case modes do
+        %{^field => :readonly} ->
+          raise ArgumentError, "cannot give read only field `#{field}` to insert_all"
+
+        _ ->
+          :ok
+      end
+
       case dumper do
         %{^field => {source, type}} ->
           extract_value(source, value, type, placeholder_map, acc, fn val ->
@@ -324,7 +348,7 @@ defmodule Ecto.Repo.Schema do
     struct = struct_from_changeset!(:insert, changeset)
     schema = struct.__struct__
     dumper = schema.__schema__(:dump)
-    fields = schema.__schema__(:fields)
+    writable_fields = schema.__schema__(:writable_fields)
     assocs = schema.__schema__(:associations)
     embeds = schema.__schema__(:embeds)
 
@@ -341,7 +365,7 @@ defmodule Ecto.Repo.Schema do
     # On insert, we always merge the whole struct into the
     # changeset as changes, except the primary key if it is nil.
     changeset = put_repo_and_action(changeset, :insert, repo, tuplet)
-    changeset = Relation.surface_changes(changeset, struct, fields ++ assocs)
+    changeset = Relation.surface_changes(changeset, struct, writable_fields ++ assocs)
 
     wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
       assoc_opts = assoc_opts(assocs, opts)
@@ -360,7 +384,7 @@ defmodule Ecto.Repo.Schema do
         {changes, cast_extra, dump_extra, return_types, return_sources} =
           autogenerate_id(autogen_id, changes, return_types, return_sources, adapter)
 
-        changes = Map.take(changes, fields)
+        changes = Map.take(changes, writable_fields)
         autogen = autogenerate_changes(schema, :insert, changes)
 
         dump_changes =
@@ -416,7 +440,7 @@ defmodule Ecto.Repo.Schema do
     struct = struct_from_changeset!(:update, changeset)
     schema = struct.__struct__
     dumper = schema.__schema__(:dump)
-    fields = schema.__schema__(:fields)
+    writable_fields = schema.__schema__(:writable_fields)
     assocs = schema.__schema__(:associations)
     embeds = schema.__schema__(:embeds)
 
@@ -445,7 +469,7 @@ defmodule Ecto.Repo.Schema do
         if changeset.valid? do
           embeds = Ecto.Embedded.prepare(changeset, embeds, adapter, :update)
 
-          changes = changeset.changes |> Map.merge(embeds) |> Map.take(fields)
+          changes = changeset.changes |> Map.merge(embeds) |> Map.take(writable_fields)
           autogen = autogenerate_changes(schema, :update, changes)
           dump_changes = dump_changes!(:update, changes, autogen, schema, [], dumper, adapter)
 
@@ -711,7 +735,19 @@ defmodule Ecto.Repo.Schema do
         {{:nothing, [], conflict_target}, []}
 
       {:replace, keys} when is_list(keys) ->
-        fields = Enum.map(keys, &field_source!(schema, &1))
+        modes = schema && schema.__schema__(:mode) || %{}
+
+        fields =
+          Enum.map(keys, fn key ->
+            case modes do
+              %{^key => :readonly} ->
+                raise ArgumentError, "cannot replace read only field `#{key}` in :on_conflict option"
+
+              _ ->
+                field_source!(schema, key)
+            end
+          end)
+
         {{fields, [], conflict_target}, []}
 
       :replace_all ->
@@ -738,7 +774,7 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp replace_all_fields!(_kind, schema, to_remove) do
-    Enum.map(schema.__schema__(:fields) -- to_remove, &field_source!(schema, &1))
+    Enum.map(schema.__schema__(:writable_fields) -- to_remove, &field_source!(schema, &1))
   end
 
   defp field_source!(nil, field) do

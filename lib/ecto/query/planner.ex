@@ -2027,14 +2027,29 @@ defmodule Ecto.Query.Planner do
   defp cte_fields([], [], _aliases), do: []
 
   defp assert_update!(%Ecto.Query{updates: updates} = query, operation) do
+    modes =
+      case get_source!(:updates, query, 0) do
+        {source, schema, _} when is_binary(source) and schema != nil ->
+          schema.__schema__(:mode)
+
+        _ ->
+          %{}
+      end
+
     changes =
       Enum.reduce(updates, %{}, fn update, acc ->
         Enum.reduce(update.expr, acc, fn {_op, kw}, acc ->
           Enum.reduce(kw, acc, fn {k, v}, acc ->
             if Map.has_key?(acc, k) do
               error! query, "duplicate field `#{k}` for `#{operation}`"
-            else
-              Map.put(acc, k, v)
+            end
+
+            case modes do
+              %{^k => :readonly} ->
+                error! query, "cannot update read only field `#{k}`"
+
+              _ ->
+                Map.put(acc, k, v)
             end
           end)
         end)
