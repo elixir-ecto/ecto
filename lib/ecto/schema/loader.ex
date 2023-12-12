@@ -91,7 +91,7 @@ defmodule Ecto.Schema.Loader do
   Dumps the given data.
   """
   def safe_dump(struct, types, dumper) do
-    Enum.reduce(types, %{}, fn {field, {source, type}}, acc ->
+    Enum.reduce(types, %{}, fn {field, {source, type, _read_only?}}, acc ->
       value = Map.get(struct, field)
 
       case dumper.(type, value) do

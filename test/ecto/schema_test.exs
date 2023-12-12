@@ -15,6 +15,7 @@ defmodule Ecto.SchemaTest do
       field :array, {:array, :string}
       field :uuid, Ecto.UUID, autogenerate: true
       field :no_query_load, :string, load_in_query: false
+      field :read_only, :string, read_only: true
       belongs_to :comment, Comment
       belongs_to :permalink, Permalink, define_field: false
     end
@@ -25,12 +26,15 @@ defmodule Ecto.SchemaTest do
     assert Schema.__schema__(:prefix) == nil
 
     assert Schema.__schema__(:fields) ==
+             [:id, :name, :email, :password, :count, :array, :uuid, :no_query_load, :read_only, :comment_id]
+
+    assert Schema.__schema__(:writable_fields) ==
              [:id, :name, :email, :password, :count, :array, :uuid, :no_query_load, :comment_id]
 
     assert Schema.__schema__(:virtual_fields) == [:temp]
 
     assert Schema.__schema__(:query_fields) ==
-             [:id, :name, :email, :password, :count, :array, :uuid, :comment_id]
+             [:id, :name, :email, :password, :count, :array, :uuid, :read_only, :comment_id]
 
     assert Schema.__schema__(:read_after_writes) == [:email, :count]
     assert Schema.__schema__(:primary_key) == [:id]
@@ -68,7 +72,8 @@ defmodule Ecto.SchemaTest do
                temp: :any,
                id: :id,
                uuid: Ecto.UUID,
-               no_query_load: :string
+               no_query_load: :string,
+               read_only: :string
              }
   end
 
@@ -579,6 +584,18 @@ defmodule Ecto.SchemaTest do
 
                      schema "hello" do
                        field :x, Ecto.UUID, autogenerate: true, read_after_writes: true
+                     end
+                   end
+                 end
+
+    assert_raise ArgumentError,
+                 "cannot mark the same field as autogenerate and read only",
+                 fn ->
+                   defmodule AutogenerateFail do
+                     use Ecto.Schema
+
+                     schema "hello" do
+                       field :x, Ecto.UUID, autogenerate: true, read_only: true
                      end
                    end
                  end

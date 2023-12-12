@@ -104,7 +104,7 @@ defmodule Ecto.Repo.Schema do
     {rows, header, row_cast_params, placeholder_cast_params, placeholder_dump_params, fn -> counter end}
   end
 
-  defp extract_header_and_fields(repo, %Ecto.Query{} = query, _schema, _dumper, _autogen_id, _placeholder_map, adapter, opts) do
+  defp extract_header_and_fields(repo, %Ecto.Query{} = query, _schema, dumper, _autogen_id, _placeholder_map, adapter, opts) do
     {query, opts} = repo.prepare_query(:insert_all, query, opts)
     query = attach_prefix(query, opts)
 
@@ -117,10 +117,22 @@ defmodule Ecto.Repo.Schema do
 
     header = case query.select do
       %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}} ->
-        Enum.map(args, &elem(&1, 0))
+        Enum.map(args, fn {field, _} ->
+          case dumper do
+            %{^field => {_, _, false}} -> field
+            %{} -> raise ArgumentError, "cannot select unwritable field `#{field}` for insert_all"
+            nil -> field
+          end
+        end)
 
       %Ecto.Query.SelectExpr{take: %{^ix => {_fun, fields}}} ->
-        fields
+        Enum.map(fields, fn field ->
+          case dumper do
+            %{^field => {_, _, false}} -> field
+            %{} -> raise ArgumentError, "cannot select unwritable field `#{field}` for insert_all"
+            nil -> field
+          end
+        end)
 
       _ ->
         raise ArgumentError, """
@@ -160,7 +172,7 @@ defmodule Ecto.Repo.Schema do
   defp init_mapper(schema, dumper, adapter, placeholder_map) do
     fn {field, value}, acc ->
       case dumper do
-        %{^field => {source, type}} ->
+        %{^field => {source, type, false}} ->
           extract_value(source, value, type, placeholder_map, acc, fn val ->
             dump_field!(:insert_all, schema, field, type, val, adapter)
           end)
@@ -168,7 +180,8 @@ defmodule Ecto.Repo.Schema do
         %{} ->
           raise ArgumentError,
                 "unknown field `#{inspect(field)}` in schema #{inspect(schema)} given to " <>
-                  "insert_all. Note virtual fields and associations are not supported"
+                  "insert_all. Unwritable fields, such as virtual and read only fields " <>
+                  "are not supported. Associations are also not supported"
       end
     end
   end
@@ -324,7 +337,7 @@ defmodule Ecto.Repo.Schema do
     struct = struct_from_changeset!(:insert, changeset)
     schema = struct.__struct__
     dumper = schema.__schema__(:dump)
-    fields = schema.__schema__(:fields)
+    writable_fields = schema.__schema__(:writable_fields)
     assocs = schema.__schema__(:associations)
     embeds = schema.__schema__(:embeds)
 
@@ -341,7 +354,7 @@ defmodule Ecto.Repo.Schema do
     # On insert, we always merge the whole struct into the
     # changeset as changes, except the primary key if it is nil.
     changeset = put_repo_and_action(changeset, :insert, repo, tuplet)
-    changeset = Relation.surface_changes(changeset, struct, fields ++ assocs)
+    changeset = Relation.surface_changes(changeset, struct, writable_fields ++ assocs)
 
     wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
       assoc_opts = assoc_opts(assocs, opts)
@@ -360,7 +373,7 @@ defmodule Ecto.Repo.Schema do
         {changes, cast_extra, dump_extra, return_types, return_sources} =
           autogenerate_id(autogen_id, changes, return_types, return_sources, adapter)
 
-        changes = Map.take(changes, fields)
+        changes = Map.take(changes, writable_fields)
         autogen = autogenerate_changes(schema, :insert, changes)
 
         dump_changes =
@@ -416,7 +429,7 @@ defmodule Ecto.Repo.Schema do
     struct = struct_from_changeset!(:update, changeset)
     schema = struct.__struct__
     dumper = schema.__schema__(:dump)
-    fields = schema.__schema__(:fields)
+    writable_fields = schema.__schema__(:writable_fields)
     assocs = schema.__schema__(:associations)
     embeds = schema.__schema__(:embeds)
 
@@ -445,7 +458,7 @@ defmodule Ecto.Repo.Schema do
         if changeset.valid? do
           embeds = Ecto.Embedded.prepare(changeset, embeds, adapter, :update)
 
-          changes = changeset.changes |> Map.merge(embeds) |> Map.take(fields)
+          changes = changeset.changes |> Map.merge(embeds) |> Map.take(writable_fields)
           autogen = autogenerate_changes(schema, :update, changes)
           dump_changes = dump_changes!(:update, changes, autogen, schema, [], dumper, adapter)
 
@@ -627,7 +640,7 @@ defmodule Ecto.Repo.Schema do
   end
   defp fields_to_sources(fields, dumper) do
     Enum.reduce(fields, {[], []}, fn field, {types, sources} ->
-      {source, type} = Map.fetch!(dumper, field)
+      {source, type, _read_only?} = Map.fetch!(dumper, field)
       {[{field, type} | types], [source | sources]}
     end)
   end
@@ -687,7 +700,7 @@ defmodule Ecto.Repo.Schema do
   defp conflict_target(conflict_target, dumper) do
     for target <- List.wrap(conflict_target) do
       case dumper do
-        %{^target => {alias, _}} ->
+        %{^target => {alias, _, _}} ->
           alias
         %{} when is_atom(target) ->
           raise ArgumentError, "unknown field `#{inspect(target)}` in conflict_target"
@@ -711,8 +724,7 @@ defmodule Ecto.Repo.Schema do
         {{:nothing, [], conflict_target}, []}
 
       {:replace, keys} when is_list(keys) ->
-        fields = Enum.map(keys, &field_source!(schema, &1))
-        {{fields, [], conflict_target}, []}
+        {{replace_fields!(schema, keys), [], conflict_target}, []}
 
       :replace_all ->
         {{replace_all_fields!(:replace_all, schema, []), [], conflict_target}, []}
@@ -733,12 +745,29 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
+  defp replace_fields!(nil, fields), do: fields
+
+  defp replace_fields!(schema, fields) do
+    dumper = schema.__schema__(:dump)
+
+    Enum.map(fields, fn field ->
+      case dumper do
+        %{^field => {source, _type, false}} ->
+          source
+
+        _ ->
+          raise ArgumentError,
+                "cannot replace unwritable field `#{inspect(field)}` in :on_conflict option"
+      end
+    end)
+  end
+
   defp replace_all_fields!(kind, nil, _to_remove) do
     raise ArgumentError, "cannot use #{inspect(kind)} on operations without a schema"
   end
 
   defp replace_all_fields!(_kind, schema, to_remove) do
-    Enum.map(schema.__schema__(:fields) -- to_remove, &field_source!(schema, &1))
+    Enum.map(schema.__schema__(:writable_fields) -- to_remove, &field_source!(schema, &1))
   end
 
   defp field_source!(nil, field) do
@@ -1054,7 +1083,7 @@ defmodule Ecto.Repo.Schema do
 
   defp dump_fields!(action, schema, kw, dumper, adapter) do
     for {field, value} <- kw do
-      {alias, type} = Map.fetch!(dumper, field)
+      {alias, type, _read_only?} = Map.fetch!(dumper, field)
       {alias, dump_field!(action, schema, field, type, value, adapter)}
     end
   end

@@ -1304,6 +1304,112 @@ defmodule Ecto.Integration.RepoTest do
     assert TestRepo.get(Post, id).temp == "temp"
   end
 
+  describe "read only fields" do
+    test "select with read only field" do
+      {1, _} = TestRepo.insert_all("posts", [%{title: "1", read_only: "readonly"}])
+      query = from p in Post, where: p.read_only == ^"readonly", select: p.read_only
+
+      assert "readonly" == TestRepo.one(query)
+      assert %{read_only: "readonly"} = TestRepo.one(Post)
+    end
+
+    test "update with read only field" do
+      %Post{id: id} = post = TestRepo.insert!(%Post{title: "1"})
+      cs = Ecto.Changeset.change(post, %{title: "2", read_only: "nope"})
+      TestRepo.update!(cs)
+      assert is_nil(TestRepo.get(Post, id).read_only)
+    end
+
+    @tag :returning
+    test "update with read only field and returning" do
+      post = TestRepo.insert!(%Post{title: "1"})
+      cs = Ecto.Changeset.change(post, %{title: "2", read_only: "nope"})
+      updated_post = TestRepo.update!(cs, returning: true)
+      assert is_nil(updated_post.read_only)
+    end
+
+    test "update_all with read only field" do
+      TestRepo.insert!(%Post{title: "1"})
+      update_query = from p in Post, where: p.title == "1", update: [set: [read_only: "nope"]]
+
+      assert_raise Ecto.QueryError,  ~r/cannot update unwritable field `read_only` in query/, fn ->
+        TestRepo.update_all(update_query, [])
+      end
+    end
+
+    test "insert with read only field" do
+      %Post{id: id} = TestRepo.insert!(%Post{title: "1", read_only: "nope"})
+      assert is_nil(TestRepo.get(Post, id).read_only)
+    end
+
+    @tag :returning
+    test "insert with read only field and returning" do
+      post = TestRepo.insert!(%Post{title: "1", read_only: "nope"}, returning: true)
+      assert is_nil(post.read_only)
+    end
+
+    test "insert with read only field and conflict query" do
+      on_conflict = from Post, update: [set: [read_only: "nope"]]
+
+      assert_raise Ecto.QueryError,  ~r/cannot update unwritable field `read_only` in query/, fn ->
+        TestRepo.insert!(%Post{title: "1"}, on_conflict: on_conflict)
+      end
+
+      assert_raise Ecto.QueryError,  ~r/cannot update unwritable field `read_only` in query/, fn ->
+        TestRepo.insert!(%Post{title: "1"}, on_conflict: [set: [read_only: "nope"]])
+      end
+    end
+
+    test "insert with read only field and conflict replace" do
+      msg = "cannot replace unwritable field `:read_only` in :on_conflict option"
+
+      assert_raise ArgumentError,  msg, fn ->
+        TestRepo.insert!(%Post{title: "1"}, on_conflict: {:replace, [:read_only]})
+      end
+    end
+
+    @tag :with_conflict_target
+    @tag :upsert
+    test "insert with read only field and conflict replace_all" do
+      uuid = Ecto.UUID.generate()
+      TestRepo.insert!(%Post{uuid: uuid, title: "1"})
+      %Post{id: id} = TestRepo.insert!(%Post{uuid: uuid, title: "2"}, conflict_target: [:uuid], on_conflict: :replace_all)
+      assert %{title: "2", read_only: nil} = TestRepo.get(Post, id)
+    end
+
+    @tag :returning
+    @tag :with_conflict_target
+    @tag :upsert
+    test "insert with read only field and conflict replace_all and returning" do
+      uuid = Ecto.UUID.generate()
+      TestRepo.insert!(%Post{uuid: uuid, title: "1"})
+
+      post =
+        TestRepo.insert!(%Post{uuid: uuid, title: "2", read_only: "nope"},
+          conflict_target: [:uuid],
+          on_conflict: :replace_all,
+          returning: true
+        )
+
+      assert %{title: "2", read_only: nil} = post
+    end
+
+    test "insert_all with read only field" do
+      msg = ~r/Unwritable fields, such as virtual and read only fields are not supported./
+
+      assert_raise ArgumentError, msg, fn ->
+        TestRepo.insert_all(Post, [%{title: "1", read_only: "nope"}])
+      end
+
+      msg = "cannot select unwritable field `read_only` for insert_all"
+
+      assert_raise ArgumentError, msg, fn ->
+        query = from p in Post, select: %{read_only: p.read_only}
+        TestRepo.insert_all(Post, query)
+      end
+    end
+  end
+
   ## Query syntax
 
   defmodule Foo do

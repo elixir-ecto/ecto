@@ -1726,7 +1726,7 @@ defmodule Ecto.Query.Planner do
 
       {:error, {:values, _, [types, _]}} ->
         fields = Keyword.keys(types)
-        dumper = types |> Enum.map(fn {field, type} -> {field, {field, type}} end) |> Enum.into(%{})
+        dumper = types |> Enum.map(fn {field, type} -> {field, {field, type, false}} end) |> Enum.into(%{})
         {types, fields} = select_dump(fields, dumper, ix, drop)
         {{:source, :values, nil, types}, fields}
 
@@ -1749,7 +1749,7 @@ defmodule Ecto.Query.Planner do
     |> Enum.reverse
     |> Enum.reduce({[], []}, fn
       field, {types, exprs} when is_atom(field) and not is_map_key(drop, field) ->
-        {source, type} = Map.get(dumper, field, {field, :any})
+        {source, type, _read_only?} = Map.get(dumper, field, {field, :any, false})
         {[{field, type} | types], [select_field(source, ix) | exprs]}
       _field, acc ->
         acc
@@ -2027,15 +2027,23 @@ defmodule Ecto.Query.Planner do
   defp cte_fields([], [], _aliases), do: []
 
   defp assert_update!(%Ecto.Query{updates: updates} = query, operation) do
+    dumper = dumper_for_update(query)
+
     changes =
       Enum.reduce(updates, %{}, fn update, acc ->
         Enum.reduce(update.expr, acc, fn {_op, kw}, acc ->
           Enum.reduce(kw, acc, fn {k, v}, acc ->
             if Map.has_key?(acc, k) do
               error! query, "duplicate field `#{k}` for `#{operation}`"
-            else
-              Map.put(acc, k, v)
             end
+
+            case dumper do
+              %{^k => {_, _, false}} -> :ok
+              %{} -> error! query, "cannot update unwritable field `#{k}`"
+              nil -> :ok
+            end
+
+            Map.put(acc, k, v)
           end)
         end)
       end)
@@ -2067,6 +2075,16 @@ defmodule Ecto.Query.Planner do
         error! query, "`#{operation}` allows only `with_cte`, `where` and `join` expressions. " <>
                       "You can exclude unwanted expressions from a query by using " <>
                       "Ecto.Query.exclude/2. Error found"
+    end
+  end
+
+  defp dumper_for_update(query) do
+    case get_source!(:updates, query, 0) do
+      {source, schema, _} when is_binary(source) and schema != nil ->
+        schema.__schema__(:dump)
+
+      _ ->
+        nil
     end
   end
 
