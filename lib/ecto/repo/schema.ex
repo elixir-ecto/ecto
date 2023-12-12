@@ -171,7 +171,7 @@ defmodule Ecto.Repo.Schema do
 
   defp init_mapper(schema, dumper, adapter, placeholder_map) do
     fn {field, value}, acc ->
-      unless schema.__schema__(:writable_type, field) do
+      unless writable_field?(schema, field) do
         raise ArgumentError, "cannot give unwritable field `#{field}` to insert_all"
       end
 
