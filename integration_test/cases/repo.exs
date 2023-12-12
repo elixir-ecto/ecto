@@ -1308,7 +1308,9 @@ defmodule Ecto.Integration.RepoTest do
     test "select with read only field" do
       {1, _} = TestRepo.insert_all("posts", [%{title: "1", read_only: "readonly"}])
       query = from p in Post, where: p.read_only == ^"readonly", select: p.read_only
+
       assert "readonly" == TestRepo.one(query)
+      assert %{read_only: "readonly"} = TestRepo.one(Post)
     end
 
     test "update with read only field" do
