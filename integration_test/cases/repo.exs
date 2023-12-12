@@ -1332,7 +1332,7 @@ defmodule Ecto.Integration.RepoTest do
       TestRepo.insert!(%Post{title: "1"})
       update_query = from p in Post, where: p.title == "1", update: [set: [read_only: "nope"]]
 
-      assert_raise Ecto.QueryError,  ~r/cannot update read only field `read_only`/, fn ->
+      assert_raise Ecto.QueryError,  ~r/`read_only` in `update` is an unwritable field/, fn ->
         TestRepo.update_all(update_query, [])
       end
     end
@@ -1351,17 +1351,17 @@ defmodule Ecto.Integration.RepoTest do
     test "insert with read only field and conflict query" do
       on_conflict = from Post, update: [set: [read_only: "nope"]]
 
-      assert_raise Ecto.QueryError,  ~r/cannot update read only field `read_only`/, fn ->
+      assert_raise Ecto.QueryError,  ~r/`read_only` in `update` is an unwritable field/, fn ->
         TestRepo.insert!(%Post{title: "1"}, on_conflict: on_conflict)
       end
 
-      assert_raise Ecto.QueryError,  ~r/cannot update read only field `read_only`/, fn ->
+      assert_raise Ecto.QueryError,  ~r/`read_only` in `update` is an unwritable field/, fn ->
         TestRepo.insert!(%Post{title: "1"}, on_conflict: [set: [read_only: "nope"]])
       end
     end
 
     test "insert with read only field and conflict replace" do
-      msg = "cannot replace read only field `read_only` in :on_conflict option"
+      msg = "cannot replace unwritable field `read_only` in :on_conflict option"
 
       assert_raise ArgumentError,  msg, fn ->
         TestRepo.insert!(%Post{title: "1"}, on_conflict: {:replace, [:read_only]})
@@ -1395,7 +1395,7 @@ defmodule Ecto.Integration.RepoTest do
     end
 
     test "insert_all with read only field" do
-      msg = "cannot give read only field `read_only` to insert_all"
+      msg = "cannot give unwritable field `read_only` to insert_all"
 
       assert_raise ArgumentError, msg, fn ->
         TestRepo.insert_all(Post, [%{title: "1", read_only: "nope"}])

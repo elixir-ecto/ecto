@@ -1658,7 +1658,9 @@ defmodule Ecto.RepoTest do
     end
 
     test "raises on non-existent fields on replace" do
-      assert_raise ArgumentError, "unknown field for :on_conflict, got: :unknown", fn ->
+      msg = "cannot replace unwritable field `unknown` in :on_conflict option"
+
+      assert_raise ArgumentError, msg, fn ->
         TestRepo.insert(
           %MySchema{id: 1},
           on_conflict: {:replace, [:unknown]}

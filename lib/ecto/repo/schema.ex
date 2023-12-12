@@ -117,9 +117,21 @@ defmodule Ecto.Repo.Schema do
 
     header = case query.select do
       %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}} ->
-        Enum.map(args, &elem(&1, 0))
+        Enum.map(args, fn {field, _} ->
+          unless writable_field?(schema, field) do
+            raise ArgumentError, "cannot give unwritable field `#{field}` to insert_all"
+          end
+
+          field
+        end)
 
       %Ecto.Query.SelectExpr{take: %{^ix => {_fun, fields}}} ->
+        Enum.each(fields, fn field ->
+          unless writable_field?(schema, field) do
+            raise ArgumentError, "cannot give unwritable field `#{field}` to insert_all"
+          end
+        end)
+
         fields
 
       _ ->
@@ -142,20 +154,6 @@ defmodule Ecto.Repo.Schema do
         """
     end
 
-    if schema do
-      read_only_fields = schema.__schema__(:read_only)
-
-      Enum.each(header, fn field ->
-        case read_only_fields do
-          %{^field => _} ->
-            raise ArgumentError, "cannot give read only field `#{field}` to insert_all"
-
-          _ ->
-            :ok
-        end
-      end)
-    end
-
     counter = fn -> length(dump_params) end
 
     {{query, dump_params}, header, cast_params, [], [], counter}
@@ -172,15 +170,9 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp init_mapper(schema, dumper, adapter, placeholder_map) do
-    read_only_fields = schema.__schema__(:read_only)
-
     fn {field, value}, acc ->
-      case read_only_fields do
-        %{^field => _} ->
-          raise ArgumentError, "cannot give read only field `#{field}` to insert_all"
-
-        _ ->
-          :ok
+      unless schema.__schema__(:writable_type, field) do
+        raise ArgumentError, "cannot give unwritable field `#{field}` to insert_all"
       end
 
       case dumper do
@@ -192,7 +184,7 @@ defmodule Ecto.Repo.Schema do
         %{} ->
           raise ArgumentError,
                 "unknown field `#{inspect(field)}` in schema #{inspect(schema)} given to " <>
-                  "insert_all. Note virtual fields and associations are not supported"
+                  "insert_all. Note associations are not supported"
       end
     end
   end
@@ -735,17 +727,13 @@ defmodule Ecto.Repo.Schema do
         {{:nothing, [], conflict_target}, []}
 
       {:replace, keys} when is_list(keys) ->
-        read_only_fields = schema && schema.__schema__(:read_only) || %{}
-
         fields =
           Enum.map(keys, fn key ->
-            case read_only_fields do
-              %{^key => _} ->
-                raise ArgumentError, "cannot replace read only field `#{key}` in :on_conflict option"
-
-              _ ->
-                field_source!(schema, key)
+            unless writable_field?(schema, key) do
+              raise ArgumentError, "cannot replace unwritable field `#{key}` in :on_conflict option"
             end
+
+            field_source!(schema, key)
           end)
 
         {{fields, [], conflict_target}, []}
@@ -775,6 +763,12 @@ defmodule Ecto.Repo.Schema do
 
   defp replace_all_fields!(_kind, schema, to_remove) do
     Enum.map(schema.__schema__(:writable_fields) -- to_remove, &field_source!(schema, &1))
+  end
+
+  defp writable_field?(nil, _field), do: true
+
+  defp writable_field?(schema, field) do
+    not is_nil(schema.__schema__(:writable_type, field))
   end
 
   defp field_source!(nil, field) do

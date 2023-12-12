@@ -9,6 +9,7 @@ defmodule Ecto.Query.Planner do
   end
 
   @parent_as __MODULE__
+  @write_only_kinds [:update]
   @aggs ~w(count avg min max sum row_number rank dense_rank percent_rank cume_dist ntile lag lead first_value last_value nth_value)a
 
   @doc """
@@ -1913,8 +1914,13 @@ defmodule Ecto.Query.Planner do
   end
 
   defp type!(kind, query, expr, schema, field, allow_virtuals?) when is_atom(schema) do
+    only_writable? = kind in @write_only_kinds
+
     cond do
-      type = schema.__schema__(:type, field) ->
+      type = only_writable? && schema.__schema__(:writable_type, field) ->
+        type
+
+      type = !only_writable? && schema.__schema__(:type, field) ->
         type
 
       type = allow_virtuals? && schema.__schema__(:virtual_type, field) ->
@@ -1927,6 +1933,9 @@ defmodule Ecto.Query.Planner do
                                 "Did you mean to use `#{owner_key}`?"
           %_{} ->
             error! query, expr, "field `#{field}` in `#{kind}` is an association in schema #{inspect schema}"
+
+          _ when only_writable? ->
+            error! query, expr, "field `#{field}` in `#{kind}` is an unwritable field in schema #{inspect schema}"
 
           _ ->
             error! query, expr, "field `#{field}` in `#{kind}` is a virtual field in schema #{inspect schema}"
@@ -2027,15 +2036,6 @@ defmodule Ecto.Query.Planner do
   defp cte_fields([], [], _aliases), do: []
 
   defp assert_update!(%Ecto.Query{updates: updates} = query, operation) do
-    read_only_fields =
-      case get_source!(:updates, query, 0) do
-        {source, schema, _} when is_binary(source) and schema != nil ->
-          schema.__schema__(:read_only)
-
-        _ ->
-          %{}
-      end
-
     changes =
       Enum.reduce(updates, %{}, fn update, acc ->
         Enum.reduce(update.expr, acc, fn {_op, kw}, acc ->
@@ -2044,13 +2044,7 @@ defmodule Ecto.Query.Planner do
               error! query, "duplicate field `#{k}` for `#{operation}`"
             end
 
-            case read_only_fields do
-              %{^k => _} ->
-                error! query, "cannot update read only field `#{k}`"
-
-              _ ->
-                Map.put(acc, k, v)
-            end
+            Map.put(acc, k, v)
           end)
         end)
       end)

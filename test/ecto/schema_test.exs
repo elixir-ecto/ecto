@@ -36,8 +36,8 @@ defmodule Ecto.SchemaTest do
     assert Schema.__schema__(:query_fields) ==
              [:id, :name, :email, :password, :count, :array, :uuid, :read_only, :comment_id]
 
-    assert Schema.__schema__(:read_only, :read_only) == true
-    assert Schema.__schema__(:read_only, :name) == false
+    assert Schema.__schema__(:writable_type, :read_only) == nil
+    assert Schema.__schema__(:writable_type, :name) == :string
     assert Schema.__schema__(:read_after_writes) == [:email, :count]
     assert Schema.__schema__(:primary_key) == [:id]
     assert Schema.__schema__(:autogenerate_id) == {:id, :id, :id}

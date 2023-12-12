@@ -429,7 +429,6 @@ defmodule Ecto.Schema do
 
   * `__schema__(:type, field)` - Returns the type of the given non-virtual field;
   * `__schema__(:virtual_type, field)` - Returns the type of the given virtual field;
-  * `__schema__(:read_only, field)` - Returns `true` if the field is read only, otherwise `false`;
 
   * `__schema__(:associations)` - Returns a list of all association field names;
   * `__schema__(:association, assoc)` - Returns the association reflection of the given assoc;
@@ -506,7 +505,7 @@ defmodule Ecto.Schema do
       Module.register_attribute(__MODULE__, :ecto_autogenerate, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_autoupdate, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_redact_fields, accumulate: true)
-      Module.register_attribute(__MODULE__, :ecto_read_only, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_writable_fields, accumulate: true)
       Module.put_attribute(__MODULE__, :ecto_derive_inspect_for_redacted_fields, true)
       Module.put_attribute(__MODULE__, :ecto_autogenerate_id, nil)
     end
@@ -634,7 +633,7 @@ defmodule Ecto.Schema do
         assocs = @ecto_assocs |> Enum.reverse()
         embeds = @ecto_embeds |> Enum.reverse()
         redacted_fields = @ecto_redact_fields
-        read_only = @ecto_read_only |> Enum.reverse()
+        writable_fields = @ecto_writable_fields |> Enum.reverse()
         loaded = Ecto.Schema.__loaded__(__MODULE__, @ecto_struct_fields)
 
         if redacted_fields != [] and not List.keymember?(@derive, Inspect, 0) and
@@ -661,7 +660,7 @@ defmodule Ecto.Schema do
         def __schema__(:loaded), do: unquote(Macro.escape(loaded))
         def __schema__(:redact_fields), do: unquote(redacted_fields)
         def __schema__(:virtual_fields), do: unquote(Enum.map(virtual_fields, &elem(&1, 0)))
-        def __schema__(:writable_fields), do: unquote(for {name, false} <- read_only, do: name)
+        def __schema__(:writable_fields), do: unquote(Enum.map(writable_fields, &elem(&1, 0)))
 
         def __schema__(:autogenerate_fields),
           do: unquote(Enum.flat_map(autogenerate, &elem(&1, 0)))
@@ -676,7 +675,7 @@ defmodule Ecto.Schema do
         end
 
         for clauses <-
-              Ecto.Schema.__schema__(fields, field_sources, assocs, embeds, virtual_fields, read_only),
+              Ecto.Schema.__schema__(fields, field_sources, assocs, embeds, virtual_fields, writable_fields),
             {args, body} <- clauses do
           def __schema__(unquote_splicing(args)), do: unquote(body)
         end
@@ -2082,7 +2081,10 @@ defmodule Ecto.Schema do
         Module.put_attribute(mod, :ecto_query_fields, {name, type})
       end
 
-      Module.put_attribute(mod, :ecto_read_only, {name, read_only?})
+      unless read_only? do
+        Module.put_attribute(mod, :ecto_writable_fields, {name, type})
+      end
+
       Module.put_attribute(mod, :ecto_fields, {name, type})
     end
   end
@@ -2282,7 +2284,7 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __schema__(fields, field_sources, assocs, embeds, virtual_fields, read_only) do
+  def __schema__(fields, field_sources, assocs, embeds, virtual_fields, writable_fields) do
     load =
       for {name, type} <- fields do
         if alias = field_sources[name] do
@@ -2295,11 +2297,6 @@ defmodule Ecto.Schema do
     dump =
       for {name, type} <- fields do
         {name, {field_sources[name] || name, type}}
-      end
-
-    read_only_quoted =
-      for {name, read_only?} <- read_only do
-        {[:read_only, name], read_only?}
       end
 
     field_sources_quoted =
@@ -2315,6 +2312,11 @@ defmodule Ecto.Schema do
     virtual_types_quoted =
       for {name, type} <- virtual_fields do
         {[:virtual_type, name], Macro.escape(type)}
+      end
+
+    writable_types_quoted =
+      for {name, type} <- writable_fields do
+        {[:writable_type, name], Macro.escape(type)}
       end
 
     assoc_quoted =
@@ -2333,7 +2335,6 @@ defmodule Ecto.Schema do
 
     single_arg = [
       {[:dump], dump |> Map.new() |> Macro.escape()},
-      {[:read_only], (for {name, true} <- read_only, into: %{}, do: {name, []}) |> Macro.escape()},
       {[:load], load |> Macro.escape()},
       {[:associations], assoc_names},
       {[:embeds], embed_names}
@@ -2341,9 +2342,9 @@ defmodule Ecto.Schema do
 
     catch_all = [
       {[:field_source, quote(do: _)], nil},
-      {[:read_only, quote(do: _)], nil},
       {[:type, quote(do: _)], nil},
       {[:virtual_type, quote(do: _)], nil},
+      {[:writable_type, quote(do: _)], nil},
       {[:association, quote(do: _)], nil},
       {[:embed, quote(do: _)], nil}
     ]
@@ -2351,9 +2352,9 @@ defmodule Ecto.Schema do
     [
       single_arg,
       field_sources_quoted,
-      read_only_quoted,
       types_quoted,
       virtual_types_quoted,
+      writable_types_quoted,
       assoc_quoted,
       embed_quoted,
       catch_all
