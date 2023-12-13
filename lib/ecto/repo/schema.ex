@@ -52,7 +52,7 @@ defmodule Ecto.Repo.Schema do
     on_conflict = Keyword.get(opts, :on_conflict, :raise)
     conflict_target = Keyword.get(opts, :conflict_target, [])
     conflict_target = conflict_target(conflict_target, dumper)
-    {on_conflict, conflict_cast_params} = on_conflict(on_conflict, conflict_target, schema_meta, counter, adapter)
+    {on_conflict, conflict_cast_params} = on_conflict(on_conflict, conflict_target, schema_meta, counter, dumper, adapter)
     opts = Keyword.put(opts, :cast_params, placeholder_cast_params ++ row_cast_params ++ conflict_cast_params)
 
     {count, rows_or_query} =
@@ -380,7 +380,7 @@ defmodule Ecto.Repo.Schema do
           dump_changes!(:insert, changes, autogen, schema, dump_extra, dumper, adapter)
 
         {on_conflict, conflict_cast_params} =
-          on_conflict(on_conflict, conflict_target, schema_meta, fn -> length(dump_changes) end, adapter)
+          on_conflict(on_conflict, conflict_target, schema_meta, fn -> length(dump_changes) end, dumper, adapter)
 
         change_values = Enum.map(changes, &elem(&1, 1))
         autogen_values = Enum.map(autogen, &elem(&1, 1))
@@ -710,7 +710,7 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp on_conflict(on_conflict, conflict_target, schema_meta, counter_fun, adapter) do
+  defp on_conflict(on_conflict, conflict_target, schema_meta, counter_fun, dumper, adapter) do
     %{source: source, schema: schema, prefix: prefix} = schema_meta
 
     case on_conflict do
@@ -724,7 +724,7 @@ defmodule Ecto.Repo.Schema do
         {{:nothing, [], conflict_target}, []}
 
       {:replace, keys} when is_list(keys) ->
-        {{replace_fields!(schema, keys), [], conflict_target}, []}
+        {{replace_fields!(dumper, keys), [], conflict_target}, []}
 
       :replace_all ->
         {{replace_all_fields!(:replace_all, schema, []), [], conflict_target}, []}
@@ -747,9 +747,7 @@ defmodule Ecto.Repo.Schema do
 
   defp replace_fields!(nil, fields), do: fields
 
-  defp replace_fields!(schema, fields) do
-    dumper = schema.__schema__(:dump)
-
+  defp replace_fields!(dumper, fields) do
     Enum.map(fields, fn field ->
       case dumper do
         %{^field => {source, _type, false}} ->
