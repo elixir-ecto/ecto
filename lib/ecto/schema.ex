@@ -836,7 +836,7 @@ defmodule Ecto.Schema do
       It is used when the association is preloaded.
       For example, if you set `Post.has_many :comments, preload_order: [asc: :content]`,
       whenever the `:comments` associations is preloaded,
-      the comments will be order by the `:content` field.
+      the comments will be ordered by the `:content` field.
       See `Ecto.Query.order_by/3` for more examples.
 
   ## Examples
