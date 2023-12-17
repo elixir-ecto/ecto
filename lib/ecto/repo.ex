@@ -2079,8 +2079,8 @@ defmodule Ecto.Repo do
       end)
 
   If the changeset is valid, but the insert operation fails due to a database constraint,
-  the subsequent `repo.insert(%Failure{})` operation will raise an exception because the
-  database has already aborted the transaction and thus making the operation invalid.
+  the subsequent `repo.insert(%Status{value: "failure"})` operation will raise an exception
+  because the database has already aborted the transaction and thus making the operation invalid.
   In Postgres, the exception would look like this:
 
       ** (Postgrex.Error) ERROR 25P02 (in_failed_sql_transaction) current transaction is aborted, commands ignored until end of transaction block
@@ -2098,7 +2098,7 @@ defmodule Ecto.Repo do
 
   Another alternative is to handle this operation outside of the transaction.
   For example, you can choose to perform an explicit `repo.rollback` call in the
-  `{:error, changeset}` clause and then perform the `repo.insert(%Failure{})` outside
+  `{:error, changeset}` clause and then perform the `repo.insert(%Status{value: "failure"})` outside
   of the transaction. You might also consider using `Ecto.Multi`, as they automatically
   rollback whenever an operation fails.
 
