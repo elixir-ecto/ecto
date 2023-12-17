@@ -639,8 +639,8 @@ defmodule Ecto.Repo do
   @callback config() :: Keyword.t()
 
   @doc """
-  Starts any connection pooling or supervision and return `{:ok, pid}`
-  or just `:ok` if nothing needs to be done.
+  Starts any connection pooling or supervision tree required by
+  the Repo.
 
   Returns `{:error, {:already_started, pid}}` if the repo is already
   started or `{:error, term}` in case anything else goes wrong.
