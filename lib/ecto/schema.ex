@@ -35,6 +35,8 @@ defmodule Ecto.Schema do
         end
       end
 
+
+
   By default, a schema will automatically generate a primary key which is named
   `id` and of type `:integer`. The `field` macro defines a field in the schema
   with given name and type. `has_many` associates many posts with the user
@@ -47,9 +49,11 @@ defmodule Ecto.Schema do
   However, most commonly, structs are cast, validated and manipulated with the
   `Ecto.Changeset` module.
 
-  Note that the name of the database table does not need to correlate to your
-  module name.  For example, if you are working with a legacy database, you can
-  reference the table name when you define your schema:
+  Note that what we call "schema name" is actually the module name (e.g. `User`).
+  The first argument of `schema/2` is the name of database's table, which does
+  not need to correlate to your module name (schema name).  For example, if you
+  are working with a legacy database, you can reference the table name when
+  you define your schema:
 
       defmodule User do
         use Ecto.Schema
@@ -58,6 +62,8 @@ defmodule Ecto.Schema do
           # ... fields ...
         end
       end
+
+
 
   Source-based schemas are queryable by default, which means we can pass them
   to `Ecto.Repo` modules and also build queries:
