@@ -1136,9 +1136,10 @@ defmodule Ecto.Repo do
       comment1 = TestRepo.preload(comment1, [author: [:permalink]])
       TestRepo.preload([comment1, comment2], :author)
 
-  The first comment will lose its nested `:permalink` association because
-  the second comment does not have it preloaded. To avoid this, you must
-  preload the nested associations as well.
+  If both comments are associated to the same author, the first comment
+  will lose its nested `:permalink` association because the second comment
+  does not have it preloaded. To avoid this, you must preload the nested
+  associations as well.
 
   If you want to reset the loaded fields, see `Ecto.reset_fields/2`.
 
