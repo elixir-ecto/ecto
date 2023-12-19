@@ -1129,7 +1129,15 @@ defmodule Ecto.Repo do
   database.
 
   In case the association was already loaded, preload won't attempt
-  to reload it.
+  to reload it. Preload assumes each loaded association has the same
+  nested associations already loaded. If this is not the case, it
+  is possible to lose information. For example:
+
+      comment1 = TestRepo.preload(comment1, [author: [:permalink]])
+      TestRepo.preload([comment1, comment2], :author)
+
+  The first comment will lose its nested `:permalink` association because
+  the second comment does not have it preloaded.
 
   If you want to reset the loaded fields, see `Ecto.reset_fields/2`.
 
