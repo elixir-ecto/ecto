@@ -65,15 +65,16 @@ defmodule Ecto.Repo.Preloader do
     if sample = Enum.find(structs, & &1) do
       module = sample.__struct__
       prefix = preload_prefix(tuplet, sample)
-      {assocs, throughs, embeds} = expand(module, preloads, {%{}, %{}, []})
+      {assocs, throughs, embeds} = expand(module, preloads, {%{}, [], []})
       structs = preload_embeds(structs, embeds, repo_name, tuplet)
+      structs = preload_throughs(structs, throughs, repo_name, tuplet)
 
       {fetched_assocs, to_fetch_queries} =
         prepare_queries(structs, module, assocs, prefix, repo_name, tuplet)
 
       fetched_queries = maybe_pmap(to_fetch_queries, repo_name, tuplet)
       assocs = preload_assocs(fetched_assocs, fetched_queries, repo_name, tuplet)
-      throughs = Map.values(throughs)
+      throughs = Enum.map(throughs, &elem(&1, 0))
 
       for struct <- structs do
         struct = Enum.reduce assocs, struct, &load_assoc/2
@@ -164,7 +165,6 @@ defmodule Ecto.Repo.Preloader do
   defp preload_embeds(structs, [], _repo_name, _tuplet), do: structs
 
   defp preload_embeds(structs, [embed | embeds], repo_name, tuplet) do
-
     {%{field: field, cardinality: card}, sub_preloads} = embed
 
     {embed_structs, counts} =
@@ -177,22 +177,46 @@ defmodule Ecto.Repo.Preloader do
       end)
 
     embed_structs = preload_each(embed_structs, repo_name, sub_preloads, tuplet)
-    structs = load_embeds(card, field, structs, embed_structs, Enum.reverse(counts), [])
+    structs = put_through_or_embed(card, field, structs, embed_structs, Enum.reverse(counts), [])
     preload_embeds(structs, embeds, repo_name, tuplet)
   end
 
-  defp load_embeds(_card, _field, [], [], [], acc), do: Enum.reverse(acc)
+  defp preload_throughs(structs, [], _repo_name, _tuplet), do: structs
 
-  defp load_embeds(card, field, [struct | structs], embed_structs, [0 | counts], acc),
-    do: load_embeds(card, field, structs, embed_structs, counts, [struct | acc])
+  defp preload_throughs(structs, [through | throughs], repo_name, tuplet) do
+    {{_, %{field: field, cardinality: card}, _}, sub_preloads} = through
 
-  defp load_embeds(:one, field, [struct | structs], [embed_struct | embed_structs], [1 | counts], acc),
-    do: load_embeds(:one, field, structs, embed_structs, counts, [Map.put(struct, field, embed_struct) | acc])
+    {through_structs, counts} =
+      Enum.flat_map_reduce(structs, [], fn
+        %{^field => throughs}, counts when is_list(throughs) -> {throughs, [length(throughs) | counts]}
+        %{^field => nil}, counts -> {[], [0 | counts]}
+        %{^field => through}, counts ->
+          if Ecto.assoc_loaded?(through) do
+            {[through], [1 | counts]}
+          else
+            {[], [0 | counts]}
+          end
+        nil, counts -> {[], [0 | counts]}
+        struct, _counts -> raise ArgumentError, "expected #{inspect(struct)} to contain through association `#{field}`"
+      end)
 
-  defp load_embeds(:many, field, [struct | structs], embed_structs, [count | counts], acc) do
-    {current_embeds, rest_embeds} = split_n(embed_structs, count, [])
-    acc = [Map.put(struct, field, Enum.reverse(current_embeds)) | acc]
-    load_embeds(:many, field, structs, rest_embeds, counts, acc)
+    through_structs = preload_each(through_structs, repo_name, sub_preloads, tuplet)
+    structs = put_through_or_embed(card, field, structs, through_structs, Enum.reverse(counts), [])
+    preload_throughs(structs, throughs, repo_name, tuplet)
+  end
+
+  defp put_through_or_embed(_card, _field, [], [], [], acc), do: Enum.reverse(acc)
+
+  defp put_through_or_embed(card, field, [struct | structs], loaded_structs, [0 | counts], acc),
+    do: put_through_or_embed(card, field, structs, loaded_structs, counts, [struct | acc])
+
+  defp put_through_or_embed(:one, field, [struct | structs], [loaded | loaded_structs], [1 | counts], acc),
+    do: put_through_or_embed(:one, field, structs, loaded_structs, counts, [Map.put(struct, field, loaded) | acc])
+
+  defp put_through_or_embed(:many, field, [struct | structs], loaded_structs, [count | counts], acc) do
+    {current_loaded, rest_loaded} = split_n(loaded_structs, count, [])
+    acc = [Map.put(struct, field, Enum.reverse(current_loaded)) | acc]
+    put_through_or_embed(:many, field, structs, rest_loaded, counts, acc)
   end
 
   defp maybe_unpack_query(false, queries), do: {[], [], queries}
@@ -446,8 +470,14 @@ defmodule Ecto.Repo.Preloader do
 
   defp load_through({:through, assoc, throughs}, struct) do
     %{cardinality: cardinality, field: field, owner: owner} = assoc
-    {loaded, _} = Enum.reduce(throughs, {[struct], owner}, &recur_through/2)
-    Map.put(struct, field, maybe_first(loaded, cardinality))
+    %{^field => value} = struct
+
+    if Ecto.assoc_loaded?(value) do
+      struct
+    else
+      {loaded, _} = Enum.reduce(throughs, {[struct], owner}, &recur_through/2)
+      Map.put(struct, field, maybe_first(loaded, cardinality))
+    end
   end
 
   defp maybe_first(list, :one), do: List.first(list)
@@ -596,7 +626,7 @@ defmodule Ecto.Repo.Preloader do
             |> Enum.reduce({fields, query, sub_preloads}, &{nil, nil, [{&1, &2}]})
             |> elem(2)
 
-          expand(schema, through, {assocs, Map.put(throughs, preload, info), embeds})
+          expand(schema, through, {assocs, [{info, sub_preloads} | throughs], embeds})
 
         :embed ->
           if sub_preloads == [] do
