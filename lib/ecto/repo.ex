@@ -1137,14 +1137,7 @@ defmodule Ecto.Repo do
 
     * `:force` - By default, Ecto won't preload associations that
       are already loaded. By setting this option to true, any existing
-      association will be discarded and reloaded. This behaviour only
-      applies to non-through associations. For through associations,
-      see the `:force_through` option.
-    * `:force_through` - By default, Ecto will preload through associations
-      even if they have already been loaded. By setting this option to false,
-      any existing through association will be kept instead of reloaded. The
-      chain of associations comprising the through association will still be
-      preloaded according to the `:force` option.
+      association will be discarded and reloaded.
     * `:in_parallel` - If the preloads must be done in parallel. It can
       only be performed when we have more than one preload and the
       repository is not in a transaction. Defaults to `true`.

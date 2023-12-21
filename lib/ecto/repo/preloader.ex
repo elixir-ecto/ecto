@@ -17,15 +17,9 @@ defmodule Ecto.Repo.Preloader do
   def query(rows, _repo_name, [], _take, fun, _tuplet), do: Enum.map(rows, fun)
 
   def query(rows, repo_name, preloads, take, fun, tuplet) do
-    # Don't reload through associations when they have already
-    # been loaded from a query. Otherwise nested associations
-    # from the query may be lost.
-    {adapter_meta, opts} = tuplet
-    opts = Keyword.put(opts, :force_through, false)
-
     rows
     |> extract()
-    |> normalize_and_preload_each(repo_name, preloads, take, {adapter_meta, opts})
+    |> normalize_and_preload_each(repo_name, preloads, take, tuplet)
     |> unextract(rows, fun)
   end
 
@@ -69,18 +63,11 @@ defmodule Ecto.Repo.Preloader do
   defp preload_each([], _repo_name, _preloads, _tuplet), do: []
   defp preload_each(structs, repo_name, preloads, tuplet) do
     if sample = Enum.find(structs, & &1) do
-      {_, opts} = tuplet
       module = sample.__struct__
       prefix = preload_prefix(tuplet, sample)
-      force_through? = opts[:force_through] || true
       {assocs, throughs, embeds} = expand(module, preloads, {%{}, [], []})
       structs = preload_embeds(structs, embeds, repo_name, tuplet)
-
-      # If forcing through associations, let the association chain overwrite it
-      structs =
-        if force_through?,
-          do: structs,
-          else: preload_loaded_throughs(structs, throughs, repo_name, tuplet)
+      structs = preload_throughs(structs, throughs, repo_name, tuplet)
 
       {fetched_assocs, to_fetch_queries} =
         prepare_queries(structs, module, assocs, prefix, repo_name, tuplet)
@@ -91,7 +78,7 @@ defmodule Ecto.Repo.Preloader do
 
       for struct <- structs do
         struct = Enum.reduce assocs, struct, &load_assoc/2
-        struct = Enum.reduce throughs, struct, &load_through(&1, &2, force_through?)
+        struct = Enum.reduce throughs, struct, &load_through/2
         struct
       end
     else
@@ -194,33 +181,28 @@ defmodule Ecto.Repo.Preloader do
     preload_embeds(structs, embeds, repo_name, tuplet)
   end
 
-  defp preload_loaded_throughs(structs, [], _repo_name, _tuplet), do: structs
+  defp preload_throughs(structs, [], _repo_name, _tuplet), do: structs
 
-  defp preload_loaded_throughs(structs, [through | throughs], repo_name, tuplet) do
+  defp preload_throughs(structs, [through | throughs], repo_name, tuplet) do
     {{_, %{field: field, cardinality: card}, _}, sub_preloads} = through
 
     {through_structs, counts} =
       Enum.flat_map_reduce(structs, [], fn
-        %{^field => throughs}, counts when is_list(throughs) ->
-          {throughs, [length(throughs) | counts]}
-
+        %{^field => throughs}, counts when is_list(throughs) -> {throughs, [length(throughs) | counts]}
+        %{^field => nil}, counts -> {[], [0 | counts]}
         %{^field => through}, counts ->
-          if through != nil and Ecto.assoc_loaded?(through) do
+          if Ecto.assoc_loaded?(through) do
             {[through], [1 | counts]}
           else
             {[], [0 | counts]}
           end
-
-        nil, counts ->
-          {[], [0 | counts]}
-
-        struct, _counts ->
-          raise ArgumentError, "expected #{inspect(struct)} to contain through association `#{field}`"
+        nil, counts -> {[], [0 | counts]}
+        struct, _counts -> raise ArgumentError, "expected #{inspect(struct)} to contain through association `#{field}`"
       end)
 
     through_structs = preload_each(through_structs, repo_name, sub_preloads, tuplet)
     structs = put_through_or_embed(card, field, structs, through_structs, Enum.reverse(counts), [])
-    preload_loaded_throughs(structs, throughs, repo_name, tuplet)
+    preload_throughs(structs, throughs, repo_name, tuplet)
   end
 
   defp put_through_or_embed(_card, _field, [], [], [], acc), do: Enum.reverse(acc)
@@ -482,16 +464,15 @@ defmodule Ecto.Repo.Preloader do
     Map.put(struct, field, loaded)
   end
 
-  defp load_through({:through, _assoc, _throughs}, nil, _force?) do
+  defp load_through({:through, _assoc, _throughs}, nil) do
     nil
   end
 
-  defp load_through({:through, assoc, throughs}, struct, force?) do
+  defp load_through({:through, assoc, throughs}, struct) do
     %{cardinality: cardinality, field: field, owner: owner} = assoc
     %{^field => value} = struct
-    loaded? = Ecto.assoc_loaded?(value) and not force?
 
-    if loaded? do
+    if Ecto.assoc_loaded?(value) do
       struct
     else
       {loaded, _} = Enum.reduce(throughs, {[struct], owner}, &recur_through/2)
