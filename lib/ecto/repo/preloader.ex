@@ -644,11 +644,10 @@ defmodule Ecto.Repo.Preloader do
           if Keyword.has_key?(query_assocs, preload) do
             {assocs, [{info, sub_preloads, true} | throughs], embeds}
           else
-            through =
+            {_, _, through} =
               through
               |> Enum.reverse()
               |> Enum.reduce({fields, query, sub_preloads}, &{nil, nil, [{&1, &2}]})
-              |> elem(2)
 
             expand(schema, through, query_assocs, {assocs, [{info, sub_preloads, false} | throughs], embeds})
           end
