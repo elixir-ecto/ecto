@@ -17,6 +17,8 @@ defmodule Ecto.Repo.Preloader do
   def query(rows, _repo_name, [], _take, _assocs, fun, _tuplet), do: Enum.map(rows, fun)
 
   def query(rows, repo_name, preloads, take, assocs, fun, tuplet) do
+    assocs = normalize_query_assocs(assocs)
+
     rows
     |> extract()
     |> normalize_and_preload_each(repo_name, preloads, take, assocs, tuplet)
@@ -41,16 +43,15 @@ defmodule Ecto.Repo.Preloader do
   end
 
   def preload(structs, repo_name, preloads, {_adapter_meta, opts} = tuplet) when is_list(structs) do
-    normalize_and_preload_each(structs, repo_name, preloads, opts[:take], [], tuplet)
+    normalize_and_preload_each(structs, repo_name, preloads, opts[:take], %{}, tuplet)
   end
 
   def preload(struct, repo_name, preloads, {_adapter_meta, opts} = tuplet) when is_map(struct) do
-    normalize_and_preload_each([struct], repo_name, preloads, opts[:take], [], tuplet) |> hd()
+    normalize_and_preload_each([struct], repo_name, preloads, opts[:take], %{}, tuplet) |> hd()
   end
 
   defp normalize_and_preload_each(structs, repo_name, preloads, take, query_assocs, tuplet) do
     preloads = normalize(preloads, take, preloads)
-    query_assocs = normalize_query_assocs(query_assocs)
     preload_each(structs, repo_name, preloads, query_assocs, tuplet)
   rescue
     e ->
@@ -156,7 +157,7 @@ defmodule Ecto.Repo.Preloader do
          tuplet
        ) do
     {fetch_ids, fetch_structs, queries} = maybe_unpack_query(query?, queries)
-    sub_query_assocs = Keyword.get(query_assocs, assoc.field, [])
+    sub_query_assocs = Map.get(query_assocs, assoc.field, %{})
     all = preload_each(Enum.reverse(loaded_structs, fetch_structs), repo_name, sub_preloads, sub_query_assocs, tuplet)
     entry = {:assoc, assoc, assoc_map(assoc.cardinality, Enum.reverse(loaded_ids, fetch_ids), all)}
     [entry | preload_assocs(assocs, queries, repo_name, query_assocs, tuplet)]
@@ -178,9 +179,9 @@ defmodule Ecto.Repo.Preloader do
         struct, _counts -> raise ArgumentError, "expected #{inspect(struct)} to contain embed `#{field}`"
       end)
 
-    # It is not possible for an embed to preload through a join
+    # It is not possible for an embed to be preloaded through Ecto.Query.preload
     # Therefore, we don't consider associations coming from queries
-    embed_structs = preload_each(embed_structs, repo_name, sub_preloads, [], tuplet)
+    embed_structs = preload_each(embed_structs, repo_name, sub_preloads, %{}, tuplet)
     structs = put_through_or_embed(card, field, structs, embed_structs, Enum.reverse(counts), [])
     preload_embeds(structs, embeds, repo_name, tuplet)
   end
@@ -194,14 +195,16 @@ defmodule Ecto.Repo.Preloader do
          query_assocs,
          tuplet
        ) do
-    # We only preload through associations directly if they were previously loaded by a query.
-    # Otherwise, we preload the association chain.
+    # Through associations will not be preloaded directly unless they were
+    # loaded through a join using Ecto.Query.preload. When using Ecto.Repo.preload
+    # or Ecto.Query.preload where the through association is not part of a join,
+    # the chain of associations making up the through association are preloaded instead.
     preload_throughs(structs, throughs, repo_name, query_assocs, tuplet)
   end
 
   defp preload_throughs(structs, [through | throughs], repo_name, query_assocs, tuplet) do
     {{_, %{field: field, cardinality: card}, _}, sub_preloads, true} = through
-    sub_query_assocs = Keyword.get(query_assocs, field, [])
+    sub_query_assocs = Map.get(query_assocs, field, %{})
 
     {through_structs, counts} =
       Enum.flat_map_reduce(structs, [], fn
@@ -615,14 +618,14 @@ defmodule Ecto.Repo.Preloader do
                          "preload expects an atom, a (nested) keyword or a (nested) list of atoms"
   end
 
-  defp normalize_query_assocs([]), do: []
+  defp normalize_query_assocs([]), do: %{}
 
   defp normalize_query_assocs(assocs) when is_list(assocs) do
-    Enum.reduce(assocs, [], &normalize_each_query_assoc(&1, &2))
+    Enum.reduce(assocs, %{}, &normalize_each_query_assoc(&1, &2))
   end
 
   defp normalize_each_query_assoc({field, {_idx, sub_assocs}}, acc) do
-    [{field, normalize_query_assocs(sub_assocs)} | acc]
+    Map.put(acc, field, normalize_query_assocs(sub_assocs))
   end
 
   ## Expand
@@ -641,15 +644,17 @@ defmodule Ecto.Repo.Preloader do
           {assocs, throughs, embeds}
 
         {:through, _, through} ->
-          if Keyword.has_key?(query_assocs, preload) do
-            {assocs, [{info, sub_preloads, true} | throughs], embeds}
-          else
-            {_, _, through} =
-              through
-              |> Enum.reverse()
-              |> Enum.reduce({fields, query, sub_preloads}, &{nil, nil, [{&1, &2}]})
+          case query_assocs do
+            %{^preload => _} ->
+              {assocs, [{info, sub_preloads, true} | throughs], embeds}
 
-            expand(schema, through, query_assocs, {assocs, [{info, sub_preloads, false} | throughs], embeds})
+            _ ->
+              {_, _, through} =
+                through
+                |> Enum.reverse()
+                |> Enum.reduce({fields, query, sub_preloads}, &{nil, nil, [{&1, &2}]})
+
+              expand(schema, through, query_assocs, {assocs, [{info, sub_preloads, false} | throughs], embeds})
           end
 
         :embed ->
