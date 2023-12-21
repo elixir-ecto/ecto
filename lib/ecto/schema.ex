@@ -35,8 +35,6 @@ defmodule Ecto.Schema do
         end
       end
 
-
-
   By default, a schema will automatically generate a primary key which is named
   `id` and of type `:integer`. The `field` macro defines a field in the schema
   with given name and type. `has_many` associates many posts with the user
@@ -62,8 +60,6 @@ defmodule Ecto.Schema do
           # ... fields ...
         end
       end
-
-
 
   Source-based schemas are queryable by default, which means we can pass them
   to `Ecto.Repo` modules and also build queries:
