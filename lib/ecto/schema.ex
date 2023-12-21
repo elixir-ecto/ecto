@@ -1783,10 +1783,10 @@ defmodule Ecto.Schema do
   maps are represented as JSON which allows Ecto to choose what works best).
 
   The embedded may or may not have a primary key. Ecto uses the primary keys
-  to detect if an embed is being updated or not. If a primary is not present
-  and you still want the list of embeds to be updated, `:on_replace` must be
-  set to `:delete`, forcing all current embeds to be deleted and replaced by
-  new ones whenever a new list of embeds is set.
+  to detect if an embed is being updated or not. If a primary key is not
+  present and you still want the list of embeds to be updated, `:on_replace`
+  must be set to `:delete`, forcing all current embeds to be deleted and
+  replaced by new ones whenever a new list of embeds is set.
 
   For encoding and decoding of embeds, please read the docs for
   `embeds_one/3`.
