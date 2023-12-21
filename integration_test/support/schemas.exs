@@ -98,6 +98,7 @@ defmodule Ecto.Integration.Comment do
     belongs_to :post, Ecto.Integration.Post
     belongs_to :author, Ecto.Integration.User
     has_one :post_permalink, through: [:post, :permalink]
+    has_one :author_permalink, through: [:author, :permalink]
   end
 
   def changeset(schema, params) do
@@ -124,6 +125,7 @@ defmodule Ecto.Integration.Permalink do
     belongs_to :update_post, Ecto.Integration.Post, on_replace: :update, foreign_key: :post_id, define_field: false
     belongs_to :user, Ecto.Integration.User
     has_many :post_comments_authors, through: [:post, :comments_authors]
+    has_many :user_posts, through: [:user, :posts]
   end
 
   def changeset(schema, params) do

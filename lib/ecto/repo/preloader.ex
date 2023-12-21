@@ -12,14 +12,14 @@ defmodule Ecto.Repo.Preloader do
   Transforms a result set based on query preloads, loading
   the associations onto their parent schema.
   """
-  @spec query([list], Ecto.Repo.t, list, Access.t, fun, {adapter_meta :: map, opts :: Keyword.t}) :: [list]
-  def query([], _repo_name, _preloads, _take, _fun, _tuplet), do: []
-  def query(rows, _repo_name, [], _take, fun, _tuplet), do: Enum.map(rows, fun)
+  @spec query([list], Ecto.Repo.t, list, Access.t, list, fun, {adapter_meta :: map, opts :: Keyword.t}) :: [list]
+  def query([], _repo_name, _preloads, _take, _assocs, _fun, _tuplet), do: []
+  def query(rows, _repo_name, [], _take, _assocs, fun, _tuplet), do: Enum.map(rows, fun)
 
-  def query(rows, repo_name, preloads, take, fun, tuplet) do
+  def query(rows, repo_name, preloads, take, assocs, fun, tuplet) do
     rows
     |> extract()
-    |> normalize_and_preload_each(repo_name, preloads, take, tuplet)
+    |> normalize_and_preload_each(repo_name, preloads, take, assocs, tuplet)
     |> unextract(rows, fun)
   end
 
@@ -41,16 +41,17 @@ defmodule Ecto.Repo.Preloader do
   end
 
   def preload(structs, repo_name, preloads, {_adapter_meta, opts} = tuplet) when is_list(structs) do
-    normalize_and_preload_each(structs, repo_name, preloads, opts[:take], tuplet)
+    normalize_and_preload_each(structs, repo_name, preloads, opts[:take], [], tuplet)
   end
 
   def preload(struct, repo_name, preloads, {_adapter_meta, opts} = tuplet) when is_map(struct) do
-    normalize_and_preload_each([struct], repo_name, preloads, opts[:take], tuplet) |> hd()
+    normalize_and_preload_each([struct], repo_name, preloads, opts[:take], [], tuplet) |> hd()
   end
 
-  defp normalize_and_preload_each(structs, repo_name, preloads, take, tuplet) do
+  defp normalize_and_preload_each(structs, repo_name, preloads, take, query_assocs, tuplet) do
     preloads = normalize(preloads, take, preloads)
-    preload_each(structs, repo_name, preloads, tuplet)
+    query_assocs = normalize_query_assocs(query_assocs)
+    preload_each(structs, repo_name, preloads, query_assocs, tuplet)
   rescue
     e ->
       # Reraise errors so we ignore the preload inner stacktrace
@@ -59,22 +60,21 @@ defmodule Ecto.Repo.Preloader do
 
   ## Preloading
 
-  defp preload_each(structs, _repo_name, [], _tuplet),   do: structs
-  defp preload_each([], _repo_name, _preloads, _tuplet), do: []
-  defp preload_each(structs, repo_name, preloads, tuplet) do
+  defp preload_each(structs, _repo_name, [], _query_assocs, _tuplet),   do: structs
+  defp preload_each([], _repo_name, _preloads, _query_assocs, _tuplet), do: []
+  defp preload_each(structs, repo_name, preloads, query_assocs, tuplet) do
     if sample = Enum.find(structs, & &1) do
       module = sample.__struct__
       prefix = preload_prefix(tuplet, sample)
-      {assocs, throughs, embeds} = expand(module, preloads, {%{}, [], []})
+      {assocs, throughs, embeds} = expand(module, preloads, query_assocs, {%{}, [], []})
       structs = preload_embeds(structs, embeds, repo_name, tuplet)
-      structs = preload_throughs(structs, throughs, repo_name, tuplet)
+      structs = preload_throughs(structs, throughs, repo_name, query_assocs, tuplet)
 
       {fetched_assocs, to_fetch_queries} =
         prepare_queries(structs, module, assocs, prefix, repo_name, tuplet)
 
       fetched_queries = maybe_pmap(to_fetch_queries, repo_name, tuplet)
-      assocs = preload_assocs(fetched_assocs, fetched_queries, repo_name, tuplet)
-      throughs = Enum.map(throughs, &elem(&1, 0))
+      assocs = preload_assocs(fetched_assocs, fetched_queries, repo_name, query_assocs, tuplet)
 
       for struct <- structs do
         struct = Enum.reduce assocs, struct, &load_assoc/2
@@ -149,20 +149,22 @@ defmodule Ecto.Repo.Preloader do
 
   # Then we unpack the query results, merge them, and preload recursively
   defp preload_assocs(
-         [{assoc, query?, loaded_ids, loaded_structs, preloads} | assocs],
+         [{assoc, query?, loaded_ids, loaded_structs, sub_preloads} | assocs],
          queries,
          repo_name,
+         query_assocs,
          tuplet
        ) do
     {fetch_ids, fetch_structs, queries} = maybe_unpack_query(query?, queries)
-    all = preload_each(Enum.reverse(loaded_structs, fetch_structs), repo_name, preloads, tuplet)
+    sub_query_assocs = Keyword.get(query_assocs, assoc.field, [])
+    all = preload_each(Enum.reverse(loaded_structs, fetch_structs), repo_name, sub_preloads, sub_query_assocs, tuplet)
     entry = {:assoc, assoc, assoc_map(assoc.cardinality, Enum.reverse(loaded_ids, fetch_ids), all)}
-    [entry | preload_assocs(assocs, queries, repo_name, tuplet)]
+    [entry | preload_assocs(assocs, queries, repo_name, query_assocs, tuplet)]
   end
 
-  defp preload_assocs([], [], _repo_name, _tuplet), do: []
+  defp preload_assocs([] = _assocs, [] = _queries, _, _, _), do: []
 
-  defp preload_embeds(structs, [], _repo_name, _tuplet), do: structs
+  defp preload_embeds(structs, [] = _embeds, _, _), do: structs
 
   defp preload_embeds(structs, [embed | embeds], repo_name, tuplet) do
     {%{field: field, cardinality: card}, sub_preloads} = embed
@@ -176,33 +178,43 @@ defmodule Ecto.Repo.Preloader do
         struct, _counts -> raise ArgumentError, "expected #{inspect(struct)} to contain embed `#{field}`"
       end)
 
-    embed_structs = preload_each(embed_structs, repo_name, sub_preloads, tuplet)
+    # It is not possible for an embed to preload through a join
+    # Therefore, we don't consider associations coming from queries
+    embed_structs = preload_each(embed_structs, repo_name, sub_preloads, [], tuplet)
     structs = put_through_or_embed(card, field, structs, embed_structs, Enum.reverse(counts), [])
     preload_embeds(structs, embeds, repo_name, tuplet)
   end
 
-  defp preload_throughs(structs, [], _repo_name, _tuplet), do: structs
+  defp preload_throughs(structs, [] = _throughs, _, _, _), do: structs
 
-  defp preload_throughs(structs, [through | throughs], repo_name, tuplet) do
-    {{_, %{field: field, cardinality: card}, _}, sub_preloads} = through
+  defp preload_throughs(
+         structs,
+         [{_, _, false = _from_query?} | throughs],
+         repo_name,
+         query_assocs,
+         tuplet
+       ) do
+    # We only preload through associations directly if they were previously loaded by a query.
+    # Otherwise, we preload the association chain.
+    preload_throughs(structs, throughs, repo_name, query_assocs, tuplet)
+  end
+
+  defp preload_throughs(structs, [through | throughs], repo_name, query_assocs, tuplet) do
+    {{_, %{field: field, cardinality: card}, _}, sub_preloads, true} = through
+    sub_query_assocs = Keyword.get(query_assocs, field, [])
 
     {through_structs, counts} =
       Enum.flat_map_reduce(structs, [], fn
         %{^field => throughs}, counts when is_list(throughs) -> {throughs, [length(throughs) | counts]}
         %{^field => nil}, counts -> {[], [0 | counts]}
-        %{^field => through}, counts ->
-          if Ecto.assoc_loaded?(through) do
-            {[through], [1 | counts]}
-          else
-            {[], [0 | counts]}
-          end
+        %{^field => through}, counts -> {[through], [1 | counts]}
         nil, counts -> {[], [0 | counts]}
         struct, _counts -> raise ArgumentError, "expected #{inspect(struct)} to contain through association `#{field}`"
       end)
 
-    through_structs = preload_each(through_structs, repo_name, sub_preloads, tuplet)
+    through_structs = preload_each(through_structs, repo_name, sub_preloads, sub_query_assocs, tuplet)
     structs = put_through_or_embed(card, field, structs, through_structs, Enum.reverse(counts), [])
-    preload_throughs(structs, throughs, repo_name, tuplet)
+    preload_throughs(structs, throughs, repo_name, query_assocs, tuplet)
   end
 
   defp put_through_or_embed(_card, _field, [], [], [], acc), do: Enum.reverse(acc)
@@ -464,15 +476,14 @@ defmodule Ecto.Repo.Preloader do
     Map.put(struct, field, loaded)
   end
 
-  defp load_through({:through, _assoc, _throughs}, nil) do
+  defp load_through({_, _, _}, nil) do
     nil
   end
 
-  defp load_through({:through, assoc, throughs}, struct) do
+  defp load_through({{:through, assoc, throughs}, _, from_query?}, struct) do
     %{cardinality: cardinality, field: field, owner: owner} = assoc
-    %{^field => value} = struct
 
-    if Ecto.assoc_loaded?(value) do
+    if from_query? do
       struct
     else
       {loaded, _} = Enum.reduce(throughs, {[struct], owner}, &recur_through/2)
@@ -604,9 +615,19 @@ defmodule Ecto.Repo.Preloader do
                          "preload expects an atom, a (nested) keyword or a (nested) list of atoms"
   end
 
+  defp normalize_query_assocs([]), do: []
+
+  defp normalize_query_assocs(assocs) when is_list(assocs) do
+    Enum.reduce(assocs, [], &normalize_each_query_assoc(&1, &2))
+  end
+
+  defp normalize_each_query_assoc({field, {_idx, sub_assocs}}, acc) do
+    [{field, normalize_query_assocs(sub_assocs)} | acc]
+  end
+
   ## Expand
 
-  def expand(schema, preloads, acc) do
+  def expand(schema, preloads, query_assocs, acc) do
     Enum.reduce(preloads, acc, fn {preload, {fields, query, sub_preloads}},
                                   {assocs, throughs, embeds} ->
       assoc_or_embed = association_or_embed!(schema, preload)
@@ -620,13 +641,17 @@ defmodule Ecto.Repo.Preloader do
           {assocs, throughs, embeds}
 
         {:through, _, through} ->
-          through =
-            through
-            |> Enum.reverse()
-            |> Enum.reduce({fields, query, sub_preloads}, &{nil, nil, [{&1, &2}]})
-            |> elem(2)
+          if Keyword.has_key?(query_assocs, preload) do
+            {assocs, [{info, sub_preloads, true} | throughs], embeds}
+          else
+            through =
+              through
+              |> Enum.reverse()
+              |> Enum.reduce({fields, query, sub_preloads}, &{nil, nil, [{&1, &2}]})
+              |> elem(2)
 
-          expand(schema, through, {assocs, [{info, sub_preloads} | throughs], embeds})
+            expand(schema, through, query_assocs, {assocs, [{info, sub_preloads, false} | throughs], embeds})
+          end
 
         :embed ->
           if sub_preloads == [] do
