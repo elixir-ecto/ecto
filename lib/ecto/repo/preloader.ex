@@ -479,19 +479,13 @@ defmodule Ecto.Repo.Preloader do
     Map.put(struct, field, loaded)
   end
 
-  defp load_through({_, _, _}, nil) do
-    nil
-  end
+  defp load_through({_, _, _}, nil), do: nil
+  defp load_through({_, _, true = _from_query?}, struct), do: struct
 
-  defp load_through({{:through, assoc, throughs}, _, from_query?}, struct) do
+  defp load_through({{:through, assoc, throughs}, _, false = _from_query?}, struct) do
     %{cardinality: cardinality, field: field, owner: owner} = assoc
-
-    if from_query? do
-      struct
-    else
-      {loaded, _} = Enum.reduce(throughs, {[struct], owner}, &recur_through/2)
-      Map.put(struct, field, maybe_first(loaded, cardinality))
-    end
+    {loaded, _} = Enum.reduce(throughs, {[struct], owner}, &recur_through/2)
+    Map.put(struct, field, maybe_first(loaded, cardinality))
   end
 
   defp maybe_first(list, :one), do: List.first(list)
