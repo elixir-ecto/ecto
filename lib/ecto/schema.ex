@@ -47,9 +47,10 @@ defmodule Ecto.Schema do
   However, most commonly, structs are cast, validated and manipulated with the
   `Ecto.Changeset` module.
 
-  Note that the name of the database table does not need to correlate to your
-  module name.  For example, if you are working with a legacy database, you can
-  reference the table name when you define your schema:
+  The first argument of `schema/2` is the name of database's table, which does
+  not need to correlate to your module name (commonly referred to as the schema/schema name).
+  For example, if you are working with a legacy database, you can reference the table name
+  (`legacy_users`) when you define your schema (`User`):
 
       defmodule User do
         use Ecto.Schema
