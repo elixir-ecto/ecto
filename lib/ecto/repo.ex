@@ -79,14 +79,6 @@ defmodule Ecto.Repo do
       config :my_app, Repo,
         url: "ecto://postgres:postgres@localhost/ecto_simple?ssl=true&pool_size=10"
 
-  In case the URL needs to be dynamically configured, for example by
-  reading a system environment variable, such can be done via the
-  `c:init/2` repository callback:
-
-      def init(_type, config) do
-        {:ok, Keyword.put(config, :url, System.get_env("DATABASE_URL"))}
-      end
-
   ## Shared options
 
   Almost all of the repository functions outlined in this module accept the following
@@ -607,6 +599,9 @@ defmodule Ecto.Repo do
 
   @doc """
   A callback executed when the repo starts or when configuration is read.
+
+  This callback is available for backwards compatibility purposes. Most
+  runtime configuration in Elixir today can be done via config/runtime.exs.
 
   The first argument is the context the callback is being invoked. If it
   is called because the Repo supervisor is starting, it will be `:supervisor`.
