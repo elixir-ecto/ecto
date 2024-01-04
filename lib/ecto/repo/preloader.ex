@@ -142,7 +142,10 @@ defmodule Ecto.Repo.Preloader do
         on_preloader_spawn.()
         preloader.({adapter_meta, opts})
       end, timeout: :infinity)
-      |> Enum.map(fn {:ok, assoc} -> assoc end)
+      |> Enum.map(fn
+        {:ok, assoc} -> assoc
+        {:exit, reason} -> exit(reason)
+      end)
     else
       Enum.map(preloaders, &(&1.({adapter_meta, opts})))
     end
