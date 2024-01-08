@@ -76,7 +76,7 @@ defmodule Mix.Tasks.Ecto.Drop do
   end
 
   defp skip_safety_warnings? do
-    not Mix.Project.config()[:start_permanent]
+    Mix.Project.config()[:start_permanent] != true
   end
 
   defp drop_database(repo, opts) do
