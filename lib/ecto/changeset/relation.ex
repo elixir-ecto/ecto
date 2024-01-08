@@ -469,7 +469,7 @@ defmodule Ecto.Changeset.Relation do
       Enum.map_reduce(current, {%{}, 0}, fn struct, {acc, counter} ->
         pks = get_pks.(struct)
         key = if pks == [], do: map_size(acc), else: pks
-        {pks, {Map.put(acc, key, struct), counter+ 1}}
+        {pks, {Map.put(acc, key, struct), counter + 1}}
       end)
 
     if map_size(map) != counter do

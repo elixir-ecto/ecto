@@ -26,8 +26,8 @@ defmodule Ecto.TypeTest do
     def init(_options), do: :init
     def type(_), do: :custom
     def load(_, _, _), do: {:ok, :load}
-    def dump( _, _, _),  do: {:ok, :dump}
-    def cast( _, _),  do: {:ok, :cast}
+    def dump(_, _, _),  do: {:ok, :dump}
+    def cast(_, _),  do: {:ok, :cast}
     def equal?(true, _, _), do: true
     def equal?(_, _, _), do: false
     def embed_as(_, %{embed: embed}), do: embed
@@ -40,8 +40,8 @@ defmodule Ecto.TypeTest do
     def init(_options), do: :init
     def type(_), do: :custom
     def load(_, _, _), do: {:ok, :load}
-    def dump( _, _, _),  do: {:ok, :dump}
-    def cast( _, _),  do: {:ok, :cast}
+    def dump(_, _, _),  do: {:ok, :dump}
+    def cast(_, _),  do: {:ok, :cast}
     def equal?(true, _, _), do: true
     def equal?(_, _, _), do: false
     def embed_as(_, %{embed: embed}), do: embed

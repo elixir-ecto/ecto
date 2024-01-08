@@ -127,7 +127,7 @@ defmodule Ecto.Repo.Preloader do
 
   # Then we execute queries in parallel
   defp maybe_pmap(preloaders, _repo_name, {adapter_meta, opts}) do
-    if match?([_,_|_], preloaders) and not adapter_meta.adapter.checked_out?(adapter_meta) and
+    if match?([_, _ | _] , preloaders) and not adapter_meta.adapter.checked_out?(adapter_meta) and
          Keyword.get(opts, :in_parallel, true) do
       # We pass caller: self() so the ownership pool knows where
       # to fetch the connection from and set the proper timeouts.

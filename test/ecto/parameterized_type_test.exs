@@ -8,8 +8,8 @@ defmodule Ecto.ParameterizedTypeTest do
     def init([some_opt: :some_opt_value, field: :my_type, schema: _]), do: :init
     def type(_), do: :custom
     def load(_, _, _), do: {:ok, :load}
-    def dump( _, _, _),  do: {:ok, :dump}
-    def cast( _, _),  do: {:ok, :cast}
+    def dump(_, _, _),  do: {:ok, :dump}
+    def cast(_, _),  do: {:ok, :cast}
     def equal?(true, _, _), do: true
     def equal?(_, _, _), do: false
     def embed_as(_, %{embed: embed}), do: embed
@@ -31,8 +31,8 @@ defmodule Ecto.ParameterizedTypeTest do
     def init(_), do: %{}
     def type(_), do: :custom
     def load(_, _, _), do: :error
-    def dump( _, _, _),  do: :error
-    def cast( _, _),  do: :error
+    def dump(_, _, _),  do: :error
+    def cast(_, _),  do: :error
     def equal?(true, _, _), do: true
     def equal?(_, _, _), do: false
     def embed_as(_, _), do: :self
