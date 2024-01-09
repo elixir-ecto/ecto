@@ -493,7 +493,7 @@ defmodule Ecto.Repo.BelongsToTest do
       |> TestRepo.update!()
 
 
-    assert updated_schema.assoc_id == 2;
+    assert updated_schema.assoc_id == 2
     assert %Ecto.Association.NotLoaded{} = updated_schema.assoc
   end
 end

@@ -489,7 +489,7 @@ defmodule Ecto.EnumTest do
 
   describe "dump_values/2" do
     test "returns correct values" do
-      assert Ecto.Enum.dump_values(EnumSchema, :my_enum) == ["foo","bar", "baz"]
+      assert Ecto.Enum.dump_values(EnumSchema, :my_enum) == ["foo", "bar", "baz"]
       assert Ecto.Enum.dump_values(EnumSchema, :my_enums) == ["foo", "bar", "baz"]
       assert Ecto.Enum.dump_values(EnumSchema, :my_string_enum) == ["fooo", "baar", "baaz"]
       assert Ecto.Enum.dump_values(EnumSchema, :my_string_enums) == ["fooo", "baar", "baaz"]
@@ -497,10 +497,10 @@ defmodule Ecto.EnumTest do
       assert Ecto.Enum.dump_values(EnumSchema, :my_integer_enums) == [1, 2, 5]
       assert Ecto.Enum.dump_values(EnumSchema, :virtual_enum) == ["foo", "bar", "baz"]
 
-      assert Ecto.Enum.dump_values(@schemaless_types, :my_enum) == ["foo","bar", "baz"]
-      assert Ecto.Enum.dump_values(@schemaless_types, :my_enums) == ["foo","bar", "baz"]
-      assert Ecto.Enum.dump_values(@schemaless_types, :my_string_enum) == ["fooo","baar", "baaz"]
-      assert Ecto.Enum.dump_values(@schemaless_types, :my_string_enums) == ["fooo","baar", "baaz"]
+      assert Ecto.Enum.dump_values(@schemaless_types, :my_enum) == ["foo", "bar", "baz"]
+      assert Ecto.Enum.dump_values(@schemaless_types, :my_enums) == ["foo", "bar", "baz"]
+      assert Ecto.Enum.dump_values(@schemaless_types, :my_string_enum) == ["fooo", "baar", "baaz"]
+      assert Ecto.Enum.dump_values(@schemaless_types, :my_string_enums) == ["fooo", "baar", "baaz"]
       assert Ecto.Enum.dump_values(@schemaless_types, :my_integer_enum) == [1, 2, 5]
       assert Ecto.Enum.dump_values(@schemaless_types, :my_integer_enums) == [1, 2, 5]
     end
