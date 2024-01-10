@@ -1103,7 +1103,7 @@ defmodule Ecto.Query do
 
   @from_join_opts [:as, :prefix, :hints]
   @no_binds [:union, :union_all, :except, :except_all, :intersect, :intersect_all]
-  @binds [:lock, :where, :or_where, :select, :distinct, :order_by, :group_by, :windows] ++
+  @binds [:lock, :where, :or_where, :select, :distinct, :order_by, :prepend_order_by, :group_by, :windows] ++
            [:having, :or_having, :limit, :offset, :preload, :update, :select_merge, :with_ctes]
 
   defp from([{type, expr} | t], env, count_bind, quoted, binds) when type in @binds do
