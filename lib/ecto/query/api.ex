@@ -265,7 +265,8 @@ defmodule Ecto.Query.API do
   def count(value, :distinct), do: doc! [value, :distinct]
 
   @doc """
-  Takes whichever value is not null, or null if they both are.
+  If the first value is not null, it takes that. Otherwise it
+  takes the second value or null if they both are. 
 
   In SQL, COALESCE takes any number of arguments, but in ecto
   it only takes two, so it must be chained to achieve the same
