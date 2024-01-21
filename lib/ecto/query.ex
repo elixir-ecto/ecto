@@ -1946,7 +1946,7 @@ defmodule Ecto.Query do
   An order by query expression that is prepended to existing ones.
 
   Accepts the same input as `order_by/3` except the expression will
-  come before any previously defined `order_by` expression. This only
+  come before any previously defined order by expression. This only
   works with the macro-based query syntax and not the keyword-based
   query syntax.
 
