@@ -1474,8 +1474,8 @@ defmodule Ecto.Repo do
       It may also be `{:unsafe_fragment, binary_fragment}` to pass any
       expression to the database without any sanitization, this is useful
       for partial index or index with expressions, such as
-      `{:unsafe_fragment, "(coalesce(firstname, ""), coalesce(lastname, "")) WHERE middlename IS NULL"}` for
-      `ON CONFLICT (coalesce(firstname, ""), coalesce(lastname, "")) WHERE middlename IS NULL` SQL query.
+      `{:unsafe_fragment, "(coalesce(firstname, ''), coalesce(lastname, '')) WHERE middlename IS NULL"}` for
+      `ON CONFLICT (coalesce(firstname, ''), coalesce(lastname, '')) WHERE middlename IS NULL` SQL query.
 
     * `:placeholders` - A map with placeholders. This feature is not supported
       by all databases. See the "Placeholders" section for more information.
