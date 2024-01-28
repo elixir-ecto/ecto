@@ -529,15 +529,6 @@ defmodule Ecto.Query do
     end
   end
 
-  @doc """
-  Returns `true` if `query` has named binding `name`; otherwise returns `false`.
-
-  For more information on named bindings see "Named bindings" in this module doc.
-  """
-  @doc guard: true
-  defguard is_named_binding(query, name)
-           when is_struct(query, Ecto.Query) and is_map_key(query.aliases, name)
-
   @type t :: %__MODULE__{}
   @type dynamic_expr :: %DynamicExpr{}
 
@@ -2846,6 +2837,13 @@ defmodule Ecto.Query do
     raise RuntimeError,
           "callback function for with_named_binding/3 should return an Ecto.Query struct, got: #{inspect(other)}"
   end
+
+  @doc """
+  The same as `has_named_binding?/2` but allowed in guards.
+  """
+  @doc guard: true
+  defguard is_named_binding(query, name)
+           when is_struct(query, Ecto.Query) and is_map_key(query.aliases, name)
 
   @doc """
   Reverses the ordering of the query.
