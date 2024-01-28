@@ -1811,8 +1811,8 @@ defmodule Ecto.Query.Planner do
   """
   def attach_prefix(%{prefix: nil} = query, opts) when is_list(opts) do
     case Keyword.fetch(opts, :prefix) do
-      {:ok, prefix} when is_binary(prefix) -> %{query | prefix: prefix}
-      {:ok, prefix} -> raise ArgumentError, ":prefix must be a binary, got: #{inspect(prefix)}"
+      {:ok, prefix} when is_binary(prefix) or is_nil(prefix) -> %{query | prefix: prefix}
+      {:ok, prefix} -> raise ArgumentError, ":prefix must be a binary or `nil`, got: #{inspect(prefix)}"
       :error -> query
     end
   end
