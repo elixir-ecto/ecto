@@ -2839,6 +2839,13 @@ defmodule Ecto.Query do
   end
 
   @doc """
+  The same as `has_named_binding?/2` but allowed in guards.
+  """
+  @doc guard: true
+  defguard is_named_binding(query, name)
+           when is_struct(query, Ecto.Query) and is_map_key(query.aliases, name)
+
+  @doc """
   Reverses the ordering of the query.
 
   ASC columns become DESC columns (and vice-versa). If the query
