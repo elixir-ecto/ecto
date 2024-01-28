@@ -1076,6 +1076,15 @@ defmodule Ecto.QueryTest do
                    ~r"protocol Ecto.Queryable not implemented for \[\]",
                    fn -> has_named_binding?([], :posts) end
     end
+
+    test "is_named_binding/2 guard" do
+      named_binding_query = from p in "posts", as: :posts
+      no_binding_query = from p in "posts"
+
+      assert is_named_binding(named_binding_query, :posts)
+      refute is_named_binding(no_binding_query, :posts)
+      refute is_named_binding("posts", :posts)
+    end
   end
 
   describe "with_named_binding/3" do

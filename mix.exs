@@ -59,6 +59,9 @@ defmodule Ecto.MixProject do
       source_url: @source_url,
       skip_undefined_reference_warnings_on: ["CHANGELOG.md"],
       extras: extras(),
+      groups_for_docs: [
+        Guards: & &1[:guard] == true
+      ],
       groups_for_extras: groups_for_extras(),
       groups_for_functions: [
         group_for_function("Query API"),
