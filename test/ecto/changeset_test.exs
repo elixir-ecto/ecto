@@ -97,6 +97,7 @@ defmodule Ecto.ChangesetTest do
       field :topics, {:array, :string}
       field :seo_metadata, :map
       field :virtual, :string, virtual: true
+      field :read_only, :string, read_only: true
       field :published_at, :naive_datetime
       field :source, :map
       field :permalink, :string, source: :url
@@ -120,7 +121,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   defp changeset(schema \\ %Post{}, params) do
-    cast(schema, params, ~w(id token title author_email body upvotes decimal color topics seo_metadata virtual)a)
+    cast(schema, params, ~w(id token title author_email body upvotes decimal color topics seo_metadata virtual read_only)a)
   end
 
   defmodule CustomError do
@@ -1066,6 +1067,14 @@ defmodule Ecto.ChangesetTest do
     changeset =
       changeset(%{"virtual" => "hello"})
       |> validate_change(:virtual, fn :virtual, "hello" -> [] end)
+
+    assert changeset.valid?
+    assert changeset.errors == []
+
+    # When read only
+    changeset =
+      changeset(%{"read_only" => "hello"})
+      |> validate_change(:read_only, fn :read_only, "hello" -> [] end)
 
     assert changeset.valid?
     assert changeset.errors == []
@@ -2409,6 +2418,7 @@ defmodule Ecto.ChangesetTest do
       field :username, :string
       field :display_name, :string, redact: false
       field :virtual_pass, :string, redact: true, virtual: true
+      field :read_only_pass, :string, redact: true, read_only: true
     end
   end
 
@@ -2459,6 +2469,12 @@ defmodule Ecto.ChangesetTest do
 
     test "redacts virtual fields marked redact: true" do
       changeset = Ecto.Changeset.cast(%RedactedSchema{}, %{virtual_pass: "hunter2"}, [:virtual_pass])
+      refute inspect(changeset) =~ "hunter2"
+      assert inspect(changeset) =~ "**redacted**"
+    end
+
+    test "redacts read only fields marked redact: true" do
+      changeset = Ecto.Changeset.cast(%RedactedSchema{}, %{read_only_pass: "hunter2"}, [:read_only_pass])
       refute inspect(changeset) =~ "hunter2"
       assert inspect(changeset) =~ "**redacted**"
     end

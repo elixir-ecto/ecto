@@ -47,9 +47,10 @@ defmodule Ecto.Schema do
   However, most commonly, structs are cast, validated and manipulated with the
   `Ecto.Changeset` module.
 
-  Note that the name of the database table does not need to correlate to your
-  module name.  For example, if you are working with a legacy database, you can
-  reference the table name when you define your schema:
+  The first argument of `schema/2` is the name of database's table, which does
+  not need to correlate to your module name (commonly referred to as the schema/schema name).
+  For example, if you are working with a legacy database, you can reference the table name
+  (`legacy_users`) when you define your schema (`User`):
 
       defmodule User do
         use Ecto.Schema
@@ -505,6 +506,7 @@ defmodule Ecto.Schema do
       Module.register_attribute(__MODULE__, :ecto_autogenerate, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_autoupdate, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_redact_fields, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_read_only, accumulate: true)
       Module.put_attribute(__MODULE__, :ecto_derive_inspect_for_redacted_fields, true)
       Module.put_attribute(__MODULE__, :ecto_autogenerate_id, nil)
     end
@@ -525,7 +527,8 @@ defmodule Ecto.Schema do
     :type,
     :where,
     :references,
-    :skip_default_validation
+    :skip_default_validation,
+    :read_only
   ]
 
   @doc """
@@ -631,6 +634,7 @@ defmodule Ecto.Schema do
         assocs = @ecto_assocs |> Enum.reverse()
         embeds = @ecto_embeds |> Enum.reverse()
         redacted_fields = @ecto_redact_fields
+        read_only = @ecto_read_only |> Enum.reverse()
         loaded = Ecto.Schema.__loaded__(__MODULE__, @ecto_struct_fields)
 
         if redacted_fields != [] and not List.keymember?(@derive, Inspect, 0) and
@@ -657,6 +661,7 @@ defmodule Ecto.Schema do
         def __schema__(:loaded), do: unquote(Macro.escape(loaded))
         def __schema__(:redact_fields), do: unquote(redacted_fields)
         def __schema__(:virtual_fields), do: unquote(Enum.map(virtual_fields, &elem(&1, 0)))
+        def __schema__(:writable_fields), do: unquote(for {name, false} <- read_only, do: name)
 
         def __schema__(:autogenerate_fields),
           do: unquote(Enum.flat_map(autogenerate, &elem(&1, 0)))
@@ -671,7 +676,7 @@ defmodule Ecto.Schema do
         end
 
         for clauses <-
-              Ecto.Schema.__schema__(fields, field_sources, assocs, embeds, virtual_fields),
+              Ecto.Schema.__schema__(fields, field_sources, assocs, embeds, virtual_fields, read_only),
             {args, body} <- clauses do
           def __schema__(unquote_splicing(args)), do: unquote(body)
         end
@@ -745,6 +750,8 @@ defmodule Ecto.Schema do
 
     * `:skip_default_validation` - When true, it will skip the type validation
       step at compile time.
+
+    * `:read_only` - If `true`, the schema field cannot be written to. Defaults to `false`.
 
   """
   defmacro field(name, type \\ :string, opts \\ []) do
@@ -830,7 +837,7 @@ defmodule Ecto.Schema do
       It is used when the association is preloaded.
       For example, if you set `Post.has_many :comments, preload_order: [asc: :content]`,
       whenever the `:comments` associations is preloaded,
-      the comments will be order by the `:content` field.
+      the comments will be ordered by the `:content` field.
       See `Ecto.Query.order_by/3` for more examples.
 
   ## Examples
@@ -1777,10 +1784,10 @@ defmodule Ecto.Schema do
   maps are represented as JSON which allows Ecto to choose what works best).
 
   The embedded may or may not have a primary key. Ecto uses the primary keys
-  to detect if an embed is being updated or not. If a primary is not present
-  and you still want the list of embeds to be updated, `:on_replace` must be
-  set to `:delete`, forcing all current embeds to be deleted and replaced by
-  new ones whenever a new list of embeds is set.
+  to detect if an embed is being updated or not. If a primary key is not
+  present and you still want the list of embeds to be updated, `:on_replace`
+  must be set to `:delete`, forcing all current embeds to be deleted and
+  replaced by new ones whenever a new list of embeds is set.
 
   For encoding and decoding of embeds, please read the docs for
   `embeds_one/3`.
@@ -2023,6 +2030,7 @@ defmodule Ecto.Schema do
   defp define_field(mod, name, type, opts) do
     virtual? = opts[:virtual] || false
     pk? = opts[:primary_key] || false
+    read_only? = opts[:read_only] || false
     put_struct_field(mod, name, Keyword.get(opts, :default))
 
     if Keyword.get(opts, :redact, false) do
@@ -2062,6 +2070,10 @@ defmodule Ecto.Schema do
         raise ArgumentError, "cannot mark the same field as autogenerate and read_after_writes"
       end
 
+      if read_only? && gen do
+        raise ArgumentError, "cannot mark the same field as autogenerate and read only"
+      end
+
       if pk? do
         Module.put_attribute(mod, :ecto_primary_keys, name)
       end
@@ -2070,6 +2082,7 @@ defmodule Ecto.Schema do
         Module.put_attribute(mod, :ecto_query_fields, {name, type})
       end
 
+      Module.put_attribute(mod, :ecto_read_only, {name, read_only?})
       Module.put_attribute(mod, :ecto_fields, {name, type})
     end
   end
@@ -2269,7 +2282,7 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __schema__(fields, field_sources, assocs, embeds, virtual_fields) do
+  def __schema__(fields, field_sources, assocs, embeds, virtual_fields, read_only) do
     load =
       for {name, type} <- fields do
         if alias = field_sources[name] do
@@ -2281,7 +2294,7 @@ defmodule Ecto.Schema do
 
     dump =
       for {name, type} <- fields do
-        {name, {field_sources[name] || name, type}}
+        {name, {field_sources[name] || name, type, read_only[name]}}
       end
 
     field_sources_quoted =

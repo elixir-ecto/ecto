@@ -272,7 +272,7 @@ IO.inspect(movie.characters)
 #=>  %{name: "Red", age: 60}]
 
 characters =
-  Enum.map(characters, fn character ->
+  Enum.map(movie.characters, fn character ->
     update_in(character.age, &(&1 + 1)))
   end)
 

@@ -589,4 +589,63 @@ defmodule Ecto.Integration.JoinsTest do
     assert [post] = TestRepo.all(query)
     assert post.post_user_composite_pk
   end
+
+  test "joining a through association with a nested preloads" do
+    post = TestRepo.insert!(%Post{title: "1"})
+    user = TestRepo.insert!(%User{name: "1"})
+    TestRepo.insert!(%Comment{text: "1", post_id: post.id})
+    TestRepo.insert!(%Permalink{post_id: post.id, user_id: user.id})
+
+    query =
+      from c in Comment,
+        join: pp in assoc(c, :post_permalink),
+        join: u in assoc(pp, :user),
+        preload: [post_permalink: {pp, [:post, user: u]}]
+
+    [comment] = TestRepo.all(query)
+
+    assert not Ecto.assoc_loaded?(comment.post)
+    assert %Permalink{user: %User{}, post: %Post{}} = comment.post_permalink
+  end
+
+  test "joining multiple through associations with a nested preloads" do
+    post = TestRepo.insert!(%Post{title: "1"})
+    user = TestRepo.insert!(%User{name: "1"})
+    TestRepo.insert!(%Comment{text: "1", post_id: post.id, author_id: user.id})
+    TestRepo.insert!(%Permalink{post_id: post.id, user_id: user.id})
+
+    query =
+      from c in Comment,
+        join: pp in assoc(c, :post_permalink),
+        join: ap in assoc(c, :author_permalink),
+        join: u1 in assoc(pp, :user),
+        join: u2 in assoc(ap, :user),
+        preload: [post_permalink: {pp, [:post, user: u1]}, author_permalink: {ap, [:post, user: u2]}]
+
+    [comment] = TestRepo.all(query)
+
+    assert not Ecto.assoc_loaded?(comment.post)
+    assert not Ecto.assoc_loaded?(comment.author)
+    assert %Permalink{user: %User{}, post: %Post{}} = comment.post_permalink
+    assert %Permalink{user: %User{}, post: %Post{}} = comment.author_permalink
+  end
+
+  test "joining nested through associations with a nested preloads" do
+    user = TestRepo.insert!(%User{name: "1"})
+    post = TestRepo.insert!(%Post{title: "1", author_id: user.id})
+    TestRepo.insert!(%Comment{text: "1", post_id: post.id})
+    TestRepo.insert!(%Permalink{post_id: post.id, user_id: user.id})
+
+    query =
+      from c in Comment,
+        join: pp in assoc(c, :post_permalink),
+        join: up in assoc(pp, :user_posts),
+        preload: [post_permalink: {pp, [:post, user_posts: {up, :comments}]}]
+
+    [comment] = TestRepo.all(query)
+
+    assert not Ecto.assoc_loaded?(comment.post)
+    assert %Permalink{post: %Post{}, user_posts: [%Post{}]} = comment.post_permalink
+    assert not Ecto.assoc_loaded?(comment.post_permalink.user)
+  end
 end

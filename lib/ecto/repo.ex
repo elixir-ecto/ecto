@@ -79,14 +79,6 @@ defmodule Ecto.Repo do
       config :my_app, Repo,
         url: "ecto://postgres:postgres@localhost/ecto_simple?ssl=true&pool_size=10"
 
-  In case the URL needs to be dynamically configured, for example by
-  reading a system environment variable, such can be done via the
-  `c:init/2` repository callback:
-
-      def init(_type, config) do
-        {:ok, Keyword.put(config, :url, System.get_env("DATABASE_URL"))}
-      end
-
   ## Shared options
 
   Almost all of the repository functions outlined in this module accept the following
@@ -608,6 +600,9 @@ defmodule Ecto.Repo do
   @doc """
   A callback executed when the repo starts or when configuration is read.
 
+  This callback is available for backwards compatibility purposes. Most
+  runtime configuration in Elixir today can be done via config/runtime.exs.
+
   The first argument is the context the callback is being invoked. If it
   is called because the Repo supervisor is starting, it will be `:supervisor`.
   It will be `:runtime` if it is called for reading configuration without
@@ -639,8 +634,7 @@ defmodule Ecto.Repo do
   @callback config() :: Keyword.t()
 
   @doc """
-  Starts any connection pooling or supervision and return `{:ok, pid}`
-  or just `:ok` if nothing needs to be done.
+  Starts the Repo supervision tree.
 
   Returns `{:error, {:already_started, pid}}` if the repo is already
   started or `{:error, term}` in case anything else goes wrong.
@@ -1130,7 +1124,17 @@ defmodule Ecto.Repo do
   database.
 
   In case the association was already loaded, preload won't attempt
-  to reload it.
+  to reload it. Preload assumes each association has the same nested
+  associations already loaded. If this is not the case, it is
+  possible to lose information. For example:
+
+      comment1 = TestRepo.preload(comment1, [author: [:permalink]])
+      TestRepo.preload([comment1, comment2], :author)
+
+  If both comments are associated to the same author, the first comment
+  will lose its nested `:permalink` association because the second comment
+  does not have it preloaded. To avoid this, you must preload the nested
+  associations as well.
 
   If you want to reset the loaded fields, see `Ecto.reset_fields/2`.
 
@@ -1470,8 +1474,8 @@ defmodule Ecto.Repo do
       It may also be `{:unsafe_fragment, binary_fragment}` to pass any
       expression to the database without any sanitization, this is useful
       for partial index or index with expressions, such as
-      `{:unsafe_fragment, "(coalesce(firstname, ""), coalesce(lastname, "")) WHERE middlename IS NULL"}` for
-      `ON CONFLICT (coalesce(firstname, ""), coalesce(lastname, "")) WHERE middlename IS NULL` SQL query.
+      `{:unsafe_fragment, "(coalesce(firstname, ''), coalesce(lastname, '')) WHERE middlename IS NULL"}` for
+      `ON CONFLICT (coalesce(firstname, ''), coalesce(lastname, '')) WHERE middlename IS NULL` SQL query.
 
     * `:placeholders` - A map with placeholders. This feature is not supported
       by all databases. See the "Placeholders" section for more information.
@@ -2079,8 +2083,8 @@ defmodule Ecto.Repo do
       end)
 
   If the changeset is valid, but the insert operation fails due to a database constraint,
-  the subsequent `repo.insert(%Failure{})` operation will raise an exception because the
-  database has already aborted the transaction and thus making the operation invalid.
+  the subsequent `repo.insert(%Status{value: "failure"})` operation will raise an exception
+  because the database has already aborted the transaction and thus making the operation invalid.
   In Postgres, the exception would look like this:
 
       ** (Postgrex.Error) ERROR 25P02 (in_failed_sql_transaction) current transaction is aborted, commands ignored until end of transaction block
@@ -2098,7 +2102,7 @@ defmodule Ecto.Repo do
 
   Another alternative is to handle this operation outside of the transaction.
   For example, you can choose to perform an explicit `repo.rollback` call in the
-  `{:error, changeset}` clause and then perform the `repo.insert(%Failure{})` outside
+  `{:error, changeset}` clause and then perform the `repo.insert(%Status{value: "failure"})` outside
   of the transaction. You might also consider using `Ecto.Multi`, as they automatically
   rollback whenever an operation fails.
 

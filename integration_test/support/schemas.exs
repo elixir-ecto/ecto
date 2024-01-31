@@ -46,6 +46,7 @@ defmodule Ecto.Integration.Post do
     field :links, {:map, :string}
     field :intensities, {:map, :float}
     field :posted, :date
+    field :read_only, :string, read_only: true
     has_many :comments, Ecto.Integration.Comment, on_delete: :delete_all, on_replace: :delete
     has_many :force_comments, Ecto.Integration.Comment, on_replace: :delete_if_exists
     has_many :ordered_comments, Ecto.Integration.Comment, preload_order: [:text]
@@ -97,6 +98,7 @@ defmodule Ecto.Integration.Comment do
     belongs_to :post, Ecto.Integration.Post
     belongs_to :author, Ecto.Integration.User
     has_one :post_permalink, through: [:post, :permalink]
+    has_one :author_permalink, through: [:author, :permalink]
   end
 
   def changeset(schema, params) do
@@ -123,6 +125,7 @@ defmodule Ecto.Integration.Permalink do
     belongs_to :update_post, Ecto.Integration.Post, on_replace: :update, foreign_key: :post_id, define_field: false
     belongs_to :user, Ecto.Integration.User
     has_many :post_comments_authors, through: [:post, :comments_authors]
+    has_many :user_posts, through: [:user, :posts]
   end
 
   def changeset(schema, params) do

@@ -630,8 +630,8 @@ defmodule Ecto.RepoTest do
         from s in MySchema,
           where: s.x > ^threshold,
           select: %{
-            foo: s.x,
-            bar: fragment("concat(?, ?, ?)", ^"one", ^"two", s.z)
+            x: s.x,
+            y: fragment("concat(?, ?, ?)", ^"one", ^"two", s.z)
           }
 
       TestRepo.insert_all(MySchema, query)
@@ -648,9 +648,9 @@ defmodule Ecto.RepoTest do
         from s in MySchema,
           where: s.x > ^threshold,
           select: %{
-            foo: s.x,
-            bar: "bar",
-            baz: nil
+            x: s.x,
+            y: "bar",
+            z: nil
           }
 
       TestRepo.insert_all(MySchema, query)
@@ -663,7 +663,7 @@ defmodule Ecto.RepoTest do
     test "takes query selecting on struct" do
       query =
         from s in MySchema,
-          select: struct(s, [:foo, :bar])
+          select: struct(s, [:x, :y])
 
       TestRepo.insert_all(MySchema, query)
 
@@ -673,7 +673,7 @@ defmodule Ecto.RepoTest do
     test "takes query selecting on map" do
       query =
         from s in MySchema,
-          select: map(s, [:foo, :bar])
+          select: map(s, [:x, :y])
 
       TestRepo.insert_all(MySchema, query)
 
@@ -1658,7 +1658,9 @@ defmodule Ecto.RepoTest do
     end
 
     test "raises on non-existent fields on replace" do
-      assert_raise ArgumentError, "unknown field for :on_conflict, got: :unknown", fn ->
+      msg = "cannot replace unwritable field `:unknown` in :on_conflict option"
+
+      assert_raise ArgumentError, msg, fn ->
         TestRepo.insert(
           %MySchema{id: 1},
           on_conflict: {:replace, [:unknown]}

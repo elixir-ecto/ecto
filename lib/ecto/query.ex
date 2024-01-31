@@ -1943,7 +1943,22 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  Same as `order_by/3` except new expressions will be prepended to existing ones.
+  An order by query expression that is prepended to existing ones.
+
+  Accepts the same input as `order_by/3` except the expression will
+  come before any previously defined order by expression. This only
+  works with the macro-based query syntax and not the keyword-based
+  query syntax.
+
+  For example, the following will generate a query that orders by `human_popluation`
+  and then `name`:
+
+      City |> order_by([c], c.name) |> prepend_order_by([c], c.human_population)
+
+  The corresponding keyword-based syntax will raise an error:
+
+      from c in City, order_by: c.name, prepend_order_by: c.human_population
+
   """
   defmacro prepend_order_by(query, binding \\ [], expr) do
     Builder.OrderBy.build(query, binding, expr, :prepend, __CALLER__)
@@ -2822,6 +2837,13 @@ defmodule Ecto.Query do
     raise RuntimeError,
           "callback function for with_named_binding/3 should return an Ecto.Query struct, got: #{inspect(other)}"
   end
+
+  @doc """
+  The same as `has_named_binding?/2` but allowed in guards.
+  """
+  @doc guard: true
+  defguard is_named_binding(query, name)
+           when is_struct(query, Ecto.Query) and is_map_key(query.aliases, name)
 
   @doc """
   Reverses the ordering of the query.
