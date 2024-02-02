@@ -2027,7 +2027,7 @@ defmodule Ecto.Changeset do
   beginning, which is that there is only one new comment.
 
   In cases like above, when you want to work only on a single entry, it is
-  much easier to simply work on the associated directly. For example, we
+  much easier to simply work on the association directly. For example, we
   could instead set the `post` association in the comment:
 
       %Comment{body: "better example"}
