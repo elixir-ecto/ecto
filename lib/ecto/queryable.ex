@@ -33,7 +33,7 @@ defimpl Ecto.Queryable, for: Atom do
       UndefinedFunctionError ->
         message =
           if :code.is_loaded(module) do
-            "the given module either does not provide a schema"
+            "the given module does not provide a schema"
           else
             "the given module does not exist"
           end
