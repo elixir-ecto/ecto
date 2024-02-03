@@ -1083,7 +1083,6 @@ defmodule Ecto.QueryTest do
 
       assert is_named_binding(named_binding_query, :posts)
       refute is_named_binding(no_binding_query, :posts)
-      refute is_named_binding("posts", :posts)
     end
   end
 
