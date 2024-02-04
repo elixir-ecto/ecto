@@ -666,13 +666,15 @@ defmodule Ecto.Schema do
         def __schema__(:autogenerate_fields),
           do: unquote(Enum.flat_map(autogenerate, &elem(&1, 0)))
 
-        def __schema__(:query) do
-          %Ecto.Query{
-            from: %Ecto.Query.FromExpr{
-              source: {unquote(source), __MODULE__},
-              prefix: unquote(prefix)
+        if meta? do
+          def __schema__(:query) do
+            %Ecto.Query{
+              from: %Ecto.Query.FromExpr{
+                source: {unquote(source), __MODULE__},
+                prefix: unquote(prefix)
+              }
             }
-          }
+          end
         end
 
         for clauses <-

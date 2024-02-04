@@ -86,4 +86,10 @@ defmodule Ecto.EmbeddedTest do
     assert not Map.has_key?(author1, :__struct__)
     assert not Map.has_key?(author1, :__meta__)
   end
+
+  test "embedded schemas are not queryable" do
+    assert_raise Protocol.UndefinedError,
+                   ~r"the given module is an embedded schema",
+                   fn -> Ecto.Queryable.to_query(Post) end
+  end
 end

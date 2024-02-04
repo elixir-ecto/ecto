@@ -39,6 +39,9 @@ defimpl Ecto.Queryable, for: Atom do
           end
 
         raise Protocol.UndefinedError, protocol: @protocol, value: module, description: message
+
+      FunctionClauseError ->
+        raise Protocol.UndefinedError, protocol: @protocol, value: module, description: "the given module is an embedded schema"
     end
   end
 end
