@@ -1982,8 +1982,8 @@ defmodule Ecto.Query do
 
   ### Order by, limit and offset
 
-  The `order_by`, `limit` and `offset` operations of the current query
-  apply to the result of the combination. `order_by` must be specified in one
+  The `order_by`, `limit` and `offset` expressions of the parent query apply
+  to the result of the entire combination. `order_by` must be specified in one
   of the following ways, since the combination of two or more queries is not
   automatically aliased:
 
@@ -2051,8 +2051,8 @@ defmodule Ecto.Query do
 
   ### Order by, limit and offset
 
-  The `order_by`, `limit` and `offset` operations of the current query
-  apply to the result of the combination. `order_by` must be specified in one
+  The `order_by`, `limit` and `offset` expressions of the parent query apply
+  to the result of the entire combination. `order_by` must be specified in one
   of the following ways, since the combination of two or more queries is not
   automatically aliased:
 
@@ -2125,8 +2125,8 @@ defmodule Ecto.Query do
 
   ### Order by, limit and offset
 
-  The `order_by`, `limit` and `offset` operations of the current query
-  apply to the result of the combination. `order_by` must be specified in one
+  The `order_by`, `limit` and `offset` expressions of the parent query apply
+  to the result of the entire combination. `order_by` must be specified in one
   of the following ways, since the combination of two or more queries is not
   automatically aliased:
 
@@ -2194,8 +2194,8 @@ defmodule Ecto.Query do
 
   ### Order by, limit and offset
 
-  The `order_by`, `limit` and `offset` operations of the current query
-  apply to the result of the combination. `order_by` must be specified in one
+  The `order_by`, `limit` and `offset` expressions of the parent query apply
+  to the result of the entire combination. `order_by` must be specified in one
   of the following ways, since the combination of two or more queries is not
   automatically aliased:
 
@@ -2268,8 +2268,8 @@ defmodule Ecto.Query do
 
   ### Order by, limit and offset
 
-  The `order_by`, `limit` and `offset` operations of the current query
-  apply to the result of the combination. `order_by` must be specified in one
+  The `order_by`, `limit` and `offset` expressions of the parent query apply
+  to the result of the entire combination. `order_by` must be specified in one
   of the following ways, since the combination of two or more queries is not
   automatically aliased:
 
@@ -2337,8 +2337,8 @@ defmodule Ecto.Query do
 
   ### Order by, limit and offset
 
-  The `order_by`, `limit` and `offset` operations of the current query
-  apply to the result of the combination. `order_by` must be specified in one
+  The `order_by`, `limit` and `offset` expressions of the parent query apply
+  to the result of the entire combination. `order_by` must be specified in one
   of the following ways, since the combination of two or more queries is not
   automatically aliased:
 
