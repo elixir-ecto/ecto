@@ -1995,7 +1995,7 @@ defmodule Ecto.Query do
 
   The columns of each of the queries in the combination must be specified in
   the exact same order. Otherwise, you may see the values of one column appearing
-  in another. This holds for all types of select statements, including maps.
+  in another. This holds for all types of select expressions, including maps.
 
   For example, the following query will interchange the values of the supplier's
   name and city because that is the order the fields are specified in the customer
@@ -2064,7 +2064,7 @@ defmodule Ecto.Query do
 
   The columns of each of the queries in the combination must be specified in
   the exact same order. Otherwise, you may see the values of one column appearing
-  in another. This holds for all types of select statements, including maps.
+  in another. This holds for all types of select expressions, including maps.
 
   For example, the following query will interchange the values of the supplier's
   name and city because that is the order the fields are specified in the customer
@@ -2072,7 +2072,7 @@ defmodule Ecto.Query do
 
       supplier_query = from s in Supplier, select: %{city: s.city, name: s.name}
       customer_query = from c in Customer, select: %{name: c.name, city: c.city}
-      union(supplier_query, ^customer_query)
+      union_all(supplier_query, ^customer_query)
 
   ### Selecting literal atoms
 
@@ -2138,7 +2138,7 @@ defmodule Ecto.Query do
 
   The columns of each of the queries in the combination must be specified in
   the exact same order. Otherwise, you may see the values of one column appearing
-  in another. This holds for all types of select statements, including maps.
+  in another. This holds for all types of select expressions, including maps.
 
   For example, the following query will interchange the values of the supplier's
   name and city because that is the order the fields are specified in the customer
@@ -2146,7 +2146,7 @@ defmodule Ecto.Query do
 
       supplier_query = from s in Supplier, select: %{city: s.city, name: s.name}
       customer_query = from c in Customer, select: %{name: c.name, city: c.city}
-      union(supplier_query, ^customer_query)
+      except(supplier_query, ^customer_query)
 
   ### Selecting literal atoms
 
@@ -2207,7 +2207,7 @@ defmodule Ecto.Query do
 
   The columns of each of the queries in the combination must be specified in
   the exact same order. Otherwise, you may see the values of one column appearing
-  in another. This holds for all types of select statements, including maps.
+  in another. This holds for all types of select expressions, including maps.
 
   For example, the following query will interchange the values of the supplier's
   name and city because that is the order the fields are specified in the customer
@@ -2215,7 +2215,7 @@ defmodule Ecto.Query do
 
       supplier_query = from s in Supplier, select: %{city: s.city, name: s.name}
       customer_query = from c in Customer, select: %{name: c.name, city: c.city}
-      union(supplier_query, ^customer_query)
+      except_all(supplier_query, ^customer_query)
 
   ### Selecting literal atoms
 
@@ -2281,7 +2281,7 @@ defmodule Ecto.Query do
 
   The columns of each of the queries in the combination must be specified in
   the exact same order. Otherwise, you may see the values of one column appearing
-  in another. This holds for all types of select statements, including maps.
+  in another. This holds for all types of select expressions, including maps.
 
   For example, the following query will interchange the values of the supplier's
   name and city because that is the order the fields are specified in the customer
@@ -2289,7 +2289,7 @@ defmodule Ecto.Query do
 
       supplier_query = from s in Supplier, select: %{city: s.city, name: s.name}
       customer_query = from c in Customer, select: %{name: c.name, city: c.city}
-      union(supplier_query, ^customer_query)
+      intersect(supplier_query, ^customer_query)
 
   ### Selecting literal atoms
 
@@ -2350,7 +2350,7 @@ defmodule Ecto.Query do
 
   The columns of each of the queries in the combination must be specified in
   the exact same order. Otherwise, you may see the values of one column appearing
-  in another. This holds for all types of select statements, including maps.
+  in another. This holds for all types of select expressions, including maps.
 
   For example, the following query will interchange the values of the supplier's
   name and city because that is the order the fields are specified in the customer
@@ -2358,7 +2358,7 @@ defmodule Ecto.Query do
 
       supplier_query = from s in Supplier, select: %{city: s.city, name: s.name}
       customer_query = from c in Customer, select: %{name: c.name, city: c.city}
-      union(supplier_query, ^customer_query)
+      intersect_all(supplier_query, ^customer_query)
 
   ### Selecting literal atoms
 
