@@ -1970,25 +1970,46 @@ defmodule Ecto.Query do
   Combines result sets of multiple queries. The `select` of each query
   must be exactly the same, with the same types in the same order.
 
-  > ### Selecting literal atoms {: .warning}
-  >
-  > When selecting a literal atom, its value must be the same across
-  > all queries. Otherwise, the value from the parent query will be
-  > applied to all other queries. This also holds true for selecting
-  > maps with atom keys.
-
   Union expression returns only unique rows as if each query returned
   distinct results. This may cause a performance penalty. If you need
   to combine multiple result sets without removing duplicate rows
   consider using `union_all/2`.
 
-  Note that the operations `order_by`, `limit` and `offset` of the
-  current `query` apply to the result of the union. `order_by` must
-  be specified in one of the following ways, since the union of two
-  or more queries is not automatically aliased:
+  ## Combination behaviour
 
-    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the union fields.
-    - Wrap the union in a subquery and refer to the binding of the subquery.
+  There are several behaviours of combination queries that must be taken
+  into account, otherwise you may unexpectedly return the wrong query result.
+
+  ### Order by, limit and offset
+
+  The `order_by`, `limit` and `offset` expressions of the parent query apply
+  to the result of the entire combination. `order_by` must be specified in one
+  of the following ways, since the combination of two or more queries is not
+  automatically aliased:
+
+    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement
+    that directly access the combination fields.
+    - Wrap the combination in a subquery and refer to the binding of the subquery.
+
+  ### Column selection ordering
+
+  The columns of each of the queries in the combination must be specified in
+  the exact same order. Otherwise, you may see the values of one column appearing
+  in another. This holds for all types of select expressions, including maps.
+
+  For example, the following query will interchange the values of the supplier's
+  name and city because that is the order the fields are specified in the customer
+  query.
+
+      supplier_query = from s in Supplier, select: %{city: s.city, name: s.name}
+      customer_query = from c in Customer, select: %{name: c.name, city: c.city}
+      union(supplier_query, ^customer_query)
+
+  ### Selecting literal atoms
+
+  When selecting a literal atom, its value must be the same across all queries.
+  Otherwise, the value from the parent query will be applied to all other queries.
+  This also holds true for selecting maps with atom keys.
 
   ## Keywords examples
 
@@ -2023,20 +2044,41 @@ defmodule Ecto.Query do
   Combines result sets of multiple queries. The `select` of each query
   must be exactly the same, with the same types in the same order.
 
-  > ### Selecting literal atoms {: .warning}
-  >
-  > When selecting a literal atom, its value must be the same across
-  > all queries. Otherwise, the value from the parent query will be
-  > applied to all other queries. This also holds true for selecting
-  > maps with atom keys.
+  ## Combination behaviour
 
-  Note that the operations `order_by`, `limit` and `offset` of the
-  current `query` apply to the result of the union. `order_by` must
-  be specified in one of the following ways, since the union of two
-  or more queries is not automatically aliased:
+  There are several behaviours of combination queries that must be taken
+  into account, otherwise you may unexpectedly return the wrong query result.
 
-    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the union fields.
-    - Wrap the union in a subquery and refer to the binding of the subquery.
+  ### Order by, limit and offset
+
+  The `order_by`, `limit` and `offset` expressions of the parent query apply
+  to the result of the entire combination. `order_by` must be specified in one
+  of the following ways, since the combination of two or more queries is not
+  automatically aliased:
+
+    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement
+    that directly access the combination fields.
+    - Wrap the combination in a subquery and refer to the binding of the subquery.
+
+  ### Column selection ordering
+
+  The columns of each of the queries in the combination must be specified in
+  the exact same order. Otherwise, you may see the values of one column appearing
+  in another. This holds for all types of select expressions, including maps.
+
+  For example, the following query will interchange the values of the supplier's
+  name and city because that is the order the fields are specified in the customer
+  query.
+
+      supplier_query = from s in Supplier, select: %{city: s.city, name: s.name}
+      customer_query = from c in Customer, select: %{name: c.name, city: c.city}
+      union_all(supplier_query, ^customer_query)
+
+  ### Selecting literal atoms
+
+  When selecting a literal atom, its value must be the same across all queries.
+  Otherwise, the value from the parent query will be applied to all other queries.
+  This also holds true for selecting maps with atom keys.
 
   ## Keywords examples
 
@@ -2071,25 +2113,46 @@ defmodule Ecto.Query do
   `select` of each query must be exactly the same, with the same
   types in the same order.
 
-  > ### Selecting literal atoms {: .warning}
-  >
-  > When selecting a literal atom, its value must be the same across
-  > all queries. Otherwise, the value from the parent query will be
-  > applied to all other queries. This also holds true for selecting
-  > maps with atom keys.
-
   Except expression returns only unique rows as if each query returned
   distinct results. This may cause a performance penalty. If you need
   to take the difference of multiple result sets without
   removing duplicate rows consider using `except_all/2`.
 
-  Note that the operations `order_by`, `limit` and `offset` of the
-  current `query` apply to the result of the set difference. `order_by`
-  must be specified in one of the following ways, since the set difference
-  of two or more queries is not automatically aliased:
+  ## Combination behaviour
 
-    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the set difference fields.
-    - Wrap the set difference in a subquery and refer to the binding of the subquery.
+  There are several behaviours of combination queries that must be taken
+  into account, otherwise you may unexpectedly return the wrong query result.
+
+  ### Order by, limit and offset
+
+  The `order_by`, `limit` and `offset` expressions of the parent query apply
+  to the result of the entire combination. `order_by` must be specified in one
+  of the following ways, since the combination of two or more queries is not
+  automatically aliased:
+
+    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement
+    that directly access the combination fields.
+    - Wrap the combination in a subquery and refer to the binding of the subquery.
+
+  ### Column selection ordering
+
+  The columns of each of the queries in the combination must be specified in
+  the exact same order. Otherwise, you may see the values of one column appearing
+  in another. This holds for all types of select expressions, including maps.
+
+  For example, the following query will interchange the values of the supplier's
+  name and city because that is the order the fields are specified in the customer
+  query.
+
+      supplier_query = from s in Supplier, select: %{city: s.city, name: s.name}
+      customer_query = from c in Customer, select: %{name: c.name, city: c.city}
+      except(supplier_query, ^customer_query)
+
+  ### Selecting literal atoms
+
+  When selecting a literal atom, its value must be the same across all queries.
+  Otherwise, the value from the parent query will be applied to all other queries.
+  This also holds true for selecting maps with atom keys.
 
   ## Keywords examples
 
@@ -2124,20 +2187,41 @@ defmodule Ecto.Query do
   `select` of each query must be exactly the same, with the same
   types in the same order.
 
-  > ### Selecting literal atoms {: .warning}
-  >
-  > When selecting a literal atom, its value must be the same across
-  > all queries. Otherwise, the value from the parent query will be
-  > applied to all other queries. This also holds true for selecting
-  > maps with atom keys.
+  ## Combination behaviour
 
-  Note that the operations `order_by`, `limit` and `offset` of the
-  current `query` apply to the result of the set difference. `order_by`
-  must be specified in one of the following ways, since the set difference
-  of two or more queries is not automatically aliased:
+  There are several behaviours of combination queries that must be taken
+  into account, otherwise you may unexpectedly return the wrong query result.
 
-    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the set difference fields.
-    - Wrap the set difference in a subquery and refer to the binding of the subquery.
+  ### Order by, limit and offset
+
+  The `order_by`, `limit` and `offset` expressions of the parent query apply
+  to the result of the entire combination. `order_by` must be specified in one
+  of the following ways, since the combination of two or more queries is not
+  automatically aliased:
+
+    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement
+    that directly access the combination fields.
+    - Wrap the combination in a subquery and refer to the binding of the subquery.
+
+  ### Column selection ordering
+
+  The columns of each of the queries in the combination must be specified in
+  the exact same order. Otherwise, you may see the values of one column appearing
+  in another. This holds for all types of select expressions, including maps.
+
+  For example, the following query will interchange the values of the supplier's
+  name and city because that is the order the fields are specified in the customer
+  query.
+
+      supplier_query = from s in Supplier, select: %{city: s.city, name: s.name}
+      customer_query = from c in Customer, select: %{name: c.name, city: c.city}
+      except_all(supplier_query, ^customer_query)
+
+  ### Selecting literal atoms
+
+  When selecting a literal atom, its value must be the same across all queries.
+  Otherwise, the value from the parent query will be applied to all other queries.
+  This also holds true for selecting maps with atom keys.
 
   ## Keywords examples
 
@@ -2172,25 +2256,46 @@ defmodule Ecto.Query do
   `select` of each query must be exactly the same, with the same
   types in the same order.
 
-  > ### Selecting literal atoms {: .warning}
-  >
-  > When selecting a literal atom, its value must be the same across
-  > all queries. Otherwise, the value from the parent query will be
-  > applied to all other queries. This also holds true for selecting
-  > maps with atom keys.
-
   Intersect expression returns only unique rows as if each query returned
   distinct results. This may cause a performance penalty. If you need
   to take the intersection of multiple result sets without
   removing duplicate rows consider using `intersect_all/2`.
 
-  Note that the operations `order_by`, `limit` and `offset` of the
-  current `query` apply to the result of the set difference. `order_by`
-  must be specified in one of the following ways, since the intersection
-  of two or more queries is not automatically aliased:
+  ## Combination behaviour
 
-    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the intersection fields.
-    - Wrap the intersection in a subquery and refer to the binding of the subquery.
+  There are several behaviours of combination queries that must be taken
+  into account, otherwise you may unexpectedly return the wrong query result.
+
+  ### Order by, limit and offset
+
+  The `order_by`, `limit` and `offset` expressions of the parent query apply
+  to the result of the entire combination. `order_by` must be specified in one
+  of the following ways, since the combination of two or more queries is not
+  automatically aliased:
+
+    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement
+    that directly access the combination fields.
+    - Wrap the combination in a subquery and refer to the binding of the subquery.
+
+  ### Column selection ordering
+
+  The columns of each of the queries in the combination must be specified in
+  the exact same order. Otherwise, you may see the values of one column appearing
+  in another. This holds for all types of select expressions, including maps.
+
+  For example, the following query will interchange the values of the supplier's
+  name and city because that is the order the fields are specified in the customer
+  query.
+
+      supplier_query = from s in Supplier, select: %{city: s.city, name: s.name}
+      customer_query = from c in Customer, select: %{name: c.name, city: c.city}
+      intersect(supplier_query, ^customer_query)
+
+  ### Selecting literal atoms
+
+  When selecting a literal atom, its value must be the same across all queries.
+  Otherwise, the value from the parent query will be applied to all other queries.
+  This also holds true for selecting maps with atom keys.
 
   ## Keywords examples
 
@@ -2225,20 +2330,41 @@ defmodule Ecto.Query do
   `select` of each query must be exactly the same, with the same
   types in the same order.
 
-  > ### Selecting literal atoms {: .warning}
-  >
-  > When selecting a literal atom, its value must be the same across
-  > all queries. Otherwise, the value from the parent query will be
-  > applied to all other queries. This also holds true for selecting
-  > maps with atom keys.
+  ## Combination behaviour
 
-  Note that the operations `order_by`, `limit` and `offset` of the
-  current `query` apply to the result of the set difference. `order_by`
-  must be specified in one of the following ways, since the intersection
-  of two or more queries is not automatically aliased:
+  There are several behaviours of combination queries that must be taken
+  into account, otherwise you may unexpectedly return the wrong query result.
 
-    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the intersection fields.
-    - Wrap the intersection in a subquery and refer to the binding of the subquery.
+  ### Order by, limit and offset
+
+  The `order_by`, `limit` and `offset` expressions of the parent query apply
+  to the result of the entire combination. `order_by` must be specified in one
+  of the following ways, since the combination of two or more queries is not
+  automatically aliased:
+
+    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement
+    that directly access the combination fields.
+    - Wrap the combination in a subquery and refer to the binding of the subquery.
+
+  ### Column selection ordering
+
+  The columns of each of the queries in the combination must be specified in
+  the exact same order. Otherwise, you may see the values of one column appearing
+  in another. This holds for all types of select expressions, including maps.
+
+  For example, the following query will interchange the values of the supplier's
+  name and city because that is the order the fields are specified in the customer
+  query.
+
+      supplier_query = from s in Supplier, select: %{city: s.city, name: s.name}
+      customer_query = from c in Customer, select: %{name: c.name, city: c.city}
+      intersect_all(supplier_query, ^customer_query)
+
+  ### Selecting literal atoms
+
+  When selecting a literal atom, its value must be the same across all queries.
+  Otherwise, the value from the parent query will be applied to all other queries.
+  This also holds true for selecting maps with atom keys.
 
   ## Keywords examples
 
