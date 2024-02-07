@@ -77,7 +77,7 @@ Ecto is commonly used to interact with databases, such as PostgreSQL and MySQL v
 
 See the [getting started guide](https://hexdocs.pm/ecto/getting-started.html) and the [online documentation](https://hexdocs.pm/ecto) for more information. Other resources available are:
 
-  * [Programming Ecto](https://pragprog.com/book/wmecto/programming-ecto), by Darin Wilson and Eric Meadows-Jönsson, which guides you from fundamentals up to advanced concepts
+  * [Programming Ecto](https://pragprog.com/titles/wmecto/programming-ecto/), by Darin Wilson and Eric Meadows-Jönsson, which guides you from fundamentals up to advanced concepts
 
   * [The Little Ecto Cookbook](https://dashbit.co/ebooks/the-little-ecto-cookbook), a free ebook by Dashbit, which is a curation of the existing Ecto guides with some extra contents
 
