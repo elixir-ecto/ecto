@@ -49,6 +49,14 @@ defmodule Ecto.Changeset.BelongsToTest do
     end
   end
 
+  defmodule Embed do
+    use Ecto.Schema
+
+    embedded_schema do
+      belongs_to :profile, Profile
+    end
+  end
+
   defp cast(schema, params, assoc, opts \\ []) do
     schema
     |> Changeset.cast(params, ~w())
@@ -320,6 +328,14 @@ defmodule Ecto.Changeset.BelongsToTest do
     assert changeset.valid?
   end
 
+  test "cast belongs_to from embedded schema" do
+    msg = ~r"cast_assoc/3 cannot be used to cast associations into embedded schemas"
+
+    assert_raise ArgumentError, msg, fn ->
+      cast(%Embed{}, %{"profile" => %{"name" => "michal"}}, :profile)
+    end
+  end
+
   ## Change
 
   test "change belongs_to" do
@@ -485,6 +501,15 @@ defmodule Ecto.Changeset.BelongsToTest do
 
     changeset = Changeset.put_assoc(base_changeset, :profile, empty_update_changeset)
     refute Map.has_key?(changeset.changes, :profile)
+  end
+
+  test "put_assoc/4 from embedded schema" do
+    msg = ~r"put_assoc/4 cannot be used to put associations into embedded schema"
+    base_changeset = Changeset.change(%Embed{})
+
+    assert_raise ArgumentError, msg, fn ->
+      Changeset.put_assoc(base_changeset, :profile, %{name: "michal"})
+    end
   end
 
   test "put_assoc/4 with empty" do

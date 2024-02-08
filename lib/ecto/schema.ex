@@ -542,6 +542,16 @@ defmodule Ecto.Schema do
   Embedded schemas by default set the primary key type
   to `:binary_id` but such can be configured with the
   `@primary_key` attribute.
+
+  `belongs_to/3` associations may be defined inside of
+  embedded schemas. However, they are essentially read-only.
+  This means you may preload the associations but you may
+  not modify them by using `Ecto.Changeset.cast_assoc/3`
+  or `Ecto.Changeset.put_assoc/4`. If you would like to
+  modify the associations of an embedded schema, you must
+  change them independently. Associations nested inside of
+  embedded schemas will also not be persisted to the database
+  when calling `c:Ecto.Repo.insert/2` or `c:Ecto.Repo.update/2`.
   """
   defmacro embedded_schema(do: block) do
     schema(__CALLER__, nil, false, :binary_id, block)
