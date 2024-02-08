@@ -1198,7 +1198,7 @@ defmodule Ecto.Changeset do
   def cast_assoc(%Changeset{data: %{} = data}, _name, _opts) when not is_map_key(data, :__meta__) do
     raise ArgumentError,
           "cast_assoc/3 cannot be used to cast associations into embedded schemas or schemaless changesets. " <>
-            "Please modify the association and embedded schema independently."
+            "Please modify the association independently."
   end
 
   def cast_assoc(changeset, name, opts) when is_atom(name) do
