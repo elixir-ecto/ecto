@@ -2107,7 +2107,7 @@ defmodule Ecto.Changeset do
   def put_assoc(%Changeset{data: %{} = data}, _name, _value, _opts) when not is_map_key(data, :__meta__) do
     raise ArgumentError,
           "put_assoc/4 cannot be used to put associations into embedded schemas or schemaless changesets. " <>
-            "Please modify the association and embedded schema independently."
+            "Please modify the association independently."
   end
 
   def put_assoc(%Changeset{} = changeset, name, value, opts) do
