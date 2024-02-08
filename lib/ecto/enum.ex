@@ -4,7 +4,7 @@ defmodule Ecto.Enum do
 
   `Ecto.Enum` must be used whenever you want to keep atom values in a field.
   Since atoms cannot be persisted to the database, `Ecto.Enum` converts them
-  to a string or an integer when writing to the database and converts them back
+  to strings or integers when writing to the database and converts them back
   to atoms when loading data. It can be used in your schemas as follows:
 
       # Stored as strings
@@ -15,7 +15,7 @@ defmodule Ecto.Enum do
       # Stored as integers
       field :status, Ecto.Enum, values: [foo: 1, bar: 2, baz: 5]
 
-  Therefore, the type to be used in your migrations for enum fields depend
+  Therefore, the type to be used in your migrations for enum fields depends
   on the choice above. For the cases above, one would do, respectively:
 
       add :status, :string
@@ -38,24 +38,11 @@ defmodule Ecto.Enum do
   by an atom in the list will be invalid.
 
   The helper function `mappings/2` returns the mappings for a given schema and
-  field, which can be used in places like form drop-downs. For example, given
-  the following schema:
+  field, which can be used in places like form drop-downs. See `mappings/2` for
+  examples.
 
-      defmodule EnumSchema do
-        use Ecto.Schema
-
-        schema "my_schema" do
-          field :my_enum, Ecto.Enum, values: [:foo, :bar, :baz]
-        end
-      end
-
-  You can call `mappings/2` like this:
-
-      Ecto.Enum.mappings(EnumSchema, :my_enum)
-      #=> [foo: "foo", bar: "bar", baz: "baz"]
-
-  If you want the values only, you can use `Ecto.Enum.values/2`, and if you want
-  the dump values only, you can use `Ecto.Enum.dump_values/2`.
+  If you want the values only, you can use `values/2`, and if you want
+  the "dump-able" values only, you can use `dump_values/2`.
 
   ## Embeds
 
@@ -213,24 +200,118 @@ defmodule Ecto.Enum do
     "#Ecto.Enum<values: #{inspect(Keyword.keys(mappings))}>"
   end
 
-  @doc "Returns the possible values for a given schema or types map and field"
-  @spec values(map | module, atom) :: [atom()]
+  @doc """
+  Returns the possible values for a given schema or types map and field.
+
+  These values are the atoms that represent the different possible values
+  of the field.
+
+  ## Examples
+
+  Assuming this schema:
+
+      defmodule MySchema do
+        use Ecto.Schema
+
+        schema "my_schema" do
+          field :my_string_enum, Ecto.Enum, values: [:foo, :bar, :baz]
+          field :my_integer_enum, Ecto.Enum, values: [foo: 1, bar: 2, baz: 5]
+        end
+      end
+
+  Then:
+
+      Ecto.Enum.values(MySchema, :my_string_enum)
+      #=> [:foo, :bar, :baz]
+
+      Ecto.Enum.values(MySchema, :my_integer_enum)
+      #=> [:foo, :bar, :baz]
+
+  """
+  @spec values(map | Ecto.Schema.t(), atom) :: [atom()]
   def values(schema_or_types, field) do
     schema_or_types
     |> mappings(field)
     |> Keyword.keys()
   end
 
-  @doc "Returns the possible dump values for a given schema or types map and field"
-  @spec dump_values(map | module, atom) :: [String.t()] | [integer()]
+  @doc """
+  Returns the possible dump values for a given schema or types map and field
+
+  "Dump values" are the values that can be dumped in the database. For enums stored
+  as strings, these are the strings that will be dumped in the database. For enums
+  stored as integers, these are the integers that will be dumped in the database.
+
+  ## Examples
+
+  Assuming this schema:
+
+      defmodule MySchema do
+        use Ecto.Schema
+
+        schema "my_schema" do
+          field :my_string_enum, Ecto.Enum, values: [:foo, :bar, :baz]
+          field :my_integer_enum, Ecto.Enum, values: [foo: 1, bar: 2, baz: 5]
+        end
+      end
+
+  Then:
+
+      Ecto.Enum.dump_values(MySchema, :my_string_enum)
+      #=> ["foo", "bar", "baz"]
+
+      Ecto.Enum.dump_values(MySchema, :my_integer_enum)
+      #=> [1, 2, 5]
+
+  `schema_or_types` can also be a types map. See `mappings/2` for more information.
+  """
+  @spec dump_values(map | Ecto.Schema.t(), atom) :: [String.t()] | [integer()]
   def dump_values(schema_or_types, field) do
     schema_or_types
     |> mappings(field)
     |> Keyword.values()
   end
 
-  @doc "Returns the mappings between values and dumped values"
-  @spec mappings(map, atom) :: Keyword.t()
+  @doc """
+  Returns the mappings between values and dumped values.
+
+  ## Examples
+
+  Assuming this schema:
+
+      defmodule MySchema do
+        use Ecto.Schema
+
+        schema "my_schema" do
+          field :my_string_enum, Ecto.Enum, values: [:foo, :bar, :baz]
+          field :my_integer_enum, Ecto.Enum, values: [foo: 1, bar: 2, baz: 5]
+        end
+      end
+
+  Here are some examples of using `mappings/2` with it:
+
+      Ecto.Enum.mappings(MySchema, :my_string_enum)
+      #=> [foo: "foo", bar: "bar", baz: "baz"]
+
+      Ecto.Enum.mappings(MySchema, :my_integer_enum)
+      #=> [foo: 1, bar: 2, baz: 5]
+
+  Examples of calling `mappings/2` with a types map:
+
+      schemaless_types = %{
+        my_enum: Ecto.ParameterizedType.init(Ecto.Enum, values: [:foo, :bar, :baz]),
+        my_integer_enum: Ecto.ParameterizedType.init(Ecto.Enum, values: [foo: 1, bar: 2, baz: 5])
+      }
+
+      Ecto.Enum.mappings(schemaless_types, :my_enum)
+      #=> [foo: "foo", bar: "bar", baz: "baz"]
+      Ecto.Enum.mappings(schemaless_types, :my_integer_enum)
+      #=> [foo: 1, bar: 2, baz: 5]
+
+  """
+  @spec mappings(map | Ecto.Schema.t(), atom) :: keyword(String.t() | integer())
+  def mappings(schema_or_types, field)
+
   def mappings(types, field) when is_map(types) do
     case types do
       %{^field => {:parameterized, Ecto.Enum, %{mappings: mappings}}} -> mappings
@@ -240,8 +321,7 @@ defmodule Ecto.Enum do
     end
   end
 
-  @spec mappings(module, atom) :: Keyword.t()
-  def mappings(schema, field) do
+  def mappings(schema, field) when is_atom(schema) do
     try do
       schema.__changeset__()
     rescue
