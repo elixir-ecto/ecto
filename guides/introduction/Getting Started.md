@@ -85,7 +85,7 @@ end
 
 This module is what we'll be using to query our database shortly. It uses the `Ecto.Repo` module, and the `otp_app` tells Ecto which Elixir application it can look for database configuration in. In this case, we've specified that it is the `:friends` application where Ecto can find that configuration and so Ecto will use the configuration that was set up in `config/config.exs`. Finally, we configure the database `:adapter` to Postgres.
 
-The final piece of configuration is to setup the `Friends.Repo` as a supervisor within the application's supervision tree, which we can do in `lib/friends/application.ex`, inside the `start/2` function:
+Finally, the `Friends.Repo` must be started within the application's supervision tree, which we can do in `lib/friends/application.ex`, inside the `start/2` function:
 
 ```elixir
 def start(_type, _args) do
