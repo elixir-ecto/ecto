@@ -388,6 +388,7 @@ defmodule Ecto.Changeset do
   @type types :: map()
   @type traverse_result :: %{atom => [term] | traverse_result}
   @type validation :: {atom, term}
+
   @typedoc """
   A possible value that you can pass to the `:empty_values` option.
 
