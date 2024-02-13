@@ -367,7 +367,7 @@ defmodule Ecto.Changeset do
           prepare: [(t -> t)],
           errors: [{atom, error}],
           constraints: [constraint],
-          validations: [{atom, term}],
+          validations: [validation],
           filters: %{optional(atom) => term},
           action: action,
           types: nil | %{atom => Ecto.Type.t() | {:assoc, term()} | {:embed, term()}}
@@ -387,6 +387,7 @@ defmodule Ecto.Changeset do
   @type data :: map()
   @type types :: map()
   @type traverse_result :: %{atom => [term] | traverse_result}
+  @type validation :: {atom, term}
 
   @typedoc """
   A possible value that you can pass to the `:empty_values` option.
@@ -1193,9 +1194,11 @@ defmodule Ecto.Changeset do
       `cast_assoc/3` for more information
 
   """
+  @spec cast_assoc(t, atom, Keyword.t()) :: t
   def cast_assoc(changeset, name, opts \\ [])
 
-  def cast_assoc(%Changeset{data: %{} = data}, _name, _opts) when not is_map_key(data, :__meta__) do
+  def cast_assoc(%Changeset{data: %{} = data}, _name, _opts)
+      when not is_map_key(data, :__meta__) do
     raise ArgumentError,
           "cast_assoc/3 cannot be used to cast associations into embedded schemas or schemaless changesets. " <>
             "Please modify the association independently."
@@ -1248,6 +1251,7 @@ defmodule Ecto.Changeset do
       `cast_assoc/3` for more information
 
   """
+  @spec cast_embed(t, atom, Keyword.t()) :: t
   def cast_embed(changeset, name, opts \\ []) when is_atom(name) do
     cast_relation(:embed, changeset, name, opts)
   end
@@ -1683,6 +1687,7 @@ defmodule Ecto.Changeset do
       [%Post{id: 1, title: "world"}]
 
   """
+  @spec get_assoc(t, atom, :changeset | :struct) :: [t | Ecto.Schema.t()]
   def get_assoc(changeset, name, as \\ :changeset)
 
   def get_assoc(%Changeset{} = changeset, name, :struct) do
@@ -2101,10 +2106,13 @@ defmodule Ecto.Changeset do
     * The [associations cheatsheet](associations.html)
     * The [Constraints and Upserts guide](constraints-and-upserts.html)
     * The [Polymorphic associations with many to many guide](polymorphic-associations-with-many-to-many.html)
+
   """
+  @spec put_assoc(t, atom, term, Keyword.t()) :: t
   def put_assoc(changeset, name, value, opts \\ [])
 
-  def put_assoc(%Changeset{data: %{} = data}, _name, _value, _opts) when not is_map_key(data, :__meta__) do
+  def put_assoc(%Changeset{data: %{} = data}, _name, _value, _opts)
+      when not is_map_key(data, :__meta__) do
     raise ArgumentError,
           "put_assoc/4 cannot be used to put associations into embedded schemas or schemaless changesets. " <>
             "Please modify the association independently."
@@ -2131,6 +2139,7 @@ defmodule Ecto.Changeset do
   Although this function accepts an `opts` argument, there are no options
   currently supported by `put_embed/4`.
   """
+  @spec put_embed(t, atom, term, Keyword.t()) :: t
   def put_embed(%Changeset{} = changeset, name, value, opts \\ []) do
     put_relation(:embed, changeset, name, value, opts)
   end
@@ -2258,7 +2267,7 @@ defmodule Ecto.Changeset do
       iex> {:error, changeset} = apply_action(changeset, :update)
       %Ecto.Changeset{action: :update}
   """
-  @spec apply_action(t, atom) :: {:ok, Ecto.Schema.t() | data} | {:error, t}
+  @spec apply_action(t, action) :: {:ok, Ecto.Schema.t() | data} | {:error, t}
   def apply_action(%Changeset{} = changeset, action) when is_atom(action) do
     if changeset.valid? do
       {:ok, apply_changes(changeset)}
@@ -2286,7 +2295,7 @@ defmodule Ecto.Changeset do
 
   See `apply_action/2` for more information.
   """
-  @spec apply_action!(t, atom) :: Ecto.Schema.t() | data
+  @spec apply_action!(t, action) :: Ecto.Schema.t() | data
   def apply_action!(%Changeset{} = changeset, action) do
     case apply_action(changeset, action) do
       {:ok, data} ->
@@ -2433,7 +2442,7 @@ defmodule Ecto.Changeset do
   @spec validate_change(
           t,
           atom,
-          (atom, term -> [{atom, String.t()} | {atom, {String.t(), Keyword.t()}}])
+          (atom, term -> [{atom, String.t()} | {atom, error}])
         ) :: t
   def validate_change(%Changeset{} = changeset, field, validator) when is_atom(field) do
     %{changes: changes, types: types, errors: errors} = changeset
@@ -2479,7 +2488,7 @@ defmodule Ecto.Changeset do
           t,
           atom,
           term,
-          (atom, term -> [{atom, String.t()} | {atom, {String.t(), Keyword.t()}}])
+          (atom, term -> [{atom, String.t()} | {atom, error}])
         ) :: t
   def validate_change(
         %Changeset{validations: validations} = changeset,
@@ -3568,6 +3577,7 @@ defmodule Ecto.Changeset do
       `starts_with?` `:name` to this changeset constraint.
 
   """
+  @spec check_constraint(t, atom, Keyword.t()) :: t
   def check_constraint(changeset, field, opts \\ []) do
     name = opts[:name] || raise ArgumentError, "must supply the name of the constraint"
     message = message(opts, "is invalid")
@@ -4145,7 +4155,7 @@ defmodule Ecto.Changeset do
   """
   @spec traverse_validations(
           t,
-          (error -> String.t()) | (Changeset.t(), atom, error -> String.t())
+          (validation -> String.t()) | (Changeset.t(), atom, validation -> String.t())
         ) :: traverse_result
   def traverse_validations(
         %Changeset{validations: validations, changes: changes, types: types} = changeset,
