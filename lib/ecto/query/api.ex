@@ -503,7 +503,7 @@ defmodule Ecto.Query.API do
   You may only splice runtime values. For example, this would not work because
   query bindings are compile-time constructs:
 
-      from p in Post, where: fragment("concat(?)", p.id, splice(^[p.count, " ", "count"]))
+      from p in Post, where: fragment("concat(?)", splice(^[p.count, " ", "count"])
   """
   def splice(list), do: doc! [list]
 
