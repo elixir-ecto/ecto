@@ -499,6 +499,11 @@ defmodule Ecto.Query.API do
   The example above will be transformed at runtime into the following:
 
       from p in Post, where: fragment("? in (?,?,?)", p.id, ^1, ^2, ^3)
+
+  You may only splice runtime values. For example, this would not work because
+  query bindings are compile-time constructs:
+
+      from p in Post, where: fragment("concat(?)", splice(^[p.count, " ", "count"])
   """
   def splice(list), do: doc! [list]
 
