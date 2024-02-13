@@ -167,7 +167,7 @@ query =
   from m in Movie,
   join: c in Character,
   on: m.id == c.movie_id,
-  preload: :characters
+  preload: [characters: c]
 Repo.all(query)
 ```
 
@@ -177,7 +177,7 @@ Repo.all(query)
 query =
   from m in Movie,
   join: c in assoc(m, :characters),
-  preload: :characters
+  preload: [characters: c]
 Repo.all(query)
 ```
 
