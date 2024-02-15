@@ -905,9 +905,9 @@ defmodule Ecto.Query.PlannerTest do
         ]
       } = with_expr
 
-      assert query.sources == {{"comments", nil, nil}, {"comments", nil, nil}, {"comments", nil, "global"}, {"comments", Comment, "global"}}
+      assert query.sources == {{"comments", nil, nil}, {"comments", nil, nil}, {"comments", nil, "global"}, {"comments", Comment, nil}}
       assert pre_comments_cte_query.sources == {{"comments", nil, "global"}}
-      assert comments_cte_query.sources == {{"comments", Comment, "global"}}
+      assert comments_cte_query.sources == {{"comments", Comment, nil}}
       assert after_comments_cte_query.sources == {{"comments", nil, nil}}
       [%{subqueries: [%{query: where_subquery}]}] = query.wheres
       assert where_subquery.sources == {{"comments", nil, nil}}

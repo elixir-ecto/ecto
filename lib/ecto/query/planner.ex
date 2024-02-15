@@ -249,27 +249,30 @@ defmodule Ecto.Query.Planner do
     {%{expr | source: subquery}, subquery}
   end
 
-  defp plan_source(query, %{source: {nil, schema}} = expr, _adapter, _cte_names)
+  defp plan_source(query, %{source: {nil, schema}} = expr, _adapter, cte_names)
        when is_atom(schema) and schema != nil do
     source = schema.__schema__(:source)
-    prefix = plan_source_schema_prefix(expr, schema) || query.prefix
+    source_prefix = plan_source_schema_prefix(expr, schema)
+
+    prefix =
+      case cte_names do
+        %{^source => _} -> source_prefix
+        _ -> source_prefix|| query.prefix
+      end
+
     {%{expr | source: {source, schema}}, {source, schema, prefix}}
   end
 
-  defp plan_source(query, %{source: {source, nil}, prefix: prefix} = expr, _adapter, cte_names)
-       when is_binary(source) do
+  defp plan_source(query, %{source: {source, schema}, prefix: prefix} = expr, _adapter, cte_names)
+       when is_binary(source) and is_atom(schema) do
     prefix =
       case cte_names do
         %{^source => _} -> prefix
         _ -> prefix || query.prefix
       end
 
-    {expr, {source, nil, prefix}}
+    {expr, {source, schema, prefix}}
   end
-
-  defp plan_source(query, %{source: {source, schema}, prefix: prefix} = expr, _adapter, _cte_names)
-       when is_binary(source) and is_atom(schema),
-       do: {expr, {source, schema, prefix || query.prefix}}
 
   defp plan_source(_query, %{source: {kind, _, _} = source, prefix: nil} = expr, _adapter, _cte_names)
        when kind in [:fragment, :values],
