@@ -257,7 +257,7 @@ defmodule Ecto.Query.Planner do
     prefix =
       case cte_names do
         %{^source => _} -> source_prefix
-        _ -> source_prefix|| query.prefix
+        _ -> source_prefix || query.prefix
       end
 
     {%{expr | source: {source, schema}}, {source, schema, prefix}}
