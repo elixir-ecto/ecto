@@ -885,26 +885,35 @@ defmodule Ecto.Query.PlannerTest do
 
       {%{with_ctes: with_expr} = query, _, _, _} =
         Comment
+        |> with_cte("pre-comment", as: ^from(c in "comment", select: c.title))
         |> with_cte("comment", as: ^from(c in Comment))
-        |> with_cte("comment2", as: ^from(c in "comment", select: c.title))
+        |> with_cte("after-comment", as: ^from(c in "comment", select: c.title))
         |> join(:inner, [c], c1 in "comment", on: true)
         |> join(:inner, [c, c1], c2 in "comment", prefix: "global", on: true)
         |> where([c, c1, c2], c.title == subquery(from c in "comment", select: c.title))
         |> select([c, c1, c2], subquery(from c in "comment", select: c.title))
-        |> union(^from(c in "comment2", select: c.title))
+        |> union(^from(c in "after-comment", select: c.title))
         |> Map.put(:prefix, "global")
         |> plan()
 
-      %{queries: [{"comment", %{}, cte_query}, {"comment2", %{}, cte_query2}]} = with_expr
+      %{
+        queries: [
+          {"pre-comment", %{}, pre_comment_cte_query},
+          {"comment", %{}, cte_query},
+          {"after-comment", %{}, after_comment_cte_query}
+        ]
+      } = with_expr
+
       assert query.sources == {{"comments", Comment, "global"}, {"comment", nil, nil}, {"comment", nil, "global"}}
       assert cte_query.sources == {{"comments", Comment, "global"}}
-      assert cte_query2.sources == {{"comment", nil, nil}}
+      assert pre_comment_cte_query.sources == {{"comment", nil, "global"}}
+      assert after_comment_cte_query.sources == {{"comment", nil, nil}}
       [%{subqueries: [%{query: where_subquery}]}] = query.wheres
       assert where_subquery.sources == {{"comment", nil, nil}}
       %{subqueries: [%{query: select_subquery}]} = query.select
       assert select_subquery.sources == {{"comment", nil, nil}}
       [{:union, union_query}] = query.combinations
-      assert union_query.sources == {{"comment2", nil, nil}}
+      assert union_query.sources == {{"after-comment", nil, nil}}
 
       {%{with_ctes: with_expr} = query, _, _, _} = Comment |> with_cte("cte", as: ^(from(c in Comment) |> Map.put(:prefix, "cte"))) |> Map.put(:prefix, "global") |> plan()
       %{queries: [{"cte", %{}, cte_query}]} = with_expr
