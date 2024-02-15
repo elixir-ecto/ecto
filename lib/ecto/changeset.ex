@@ -1264,10 +1264,18 @@ defmodule Ecto.Changeset do
   end
 
   defp cast_relation(type, %Changeset{} = changeset, key, opts) do
-    {key, param_key} = cast_key(key)
-    %{data: data, types: types, params: params, changes: changes} = changeset
-    %{related: related} = relation = relation!(:cast, type, key, Map.get(types, key))
-    params = params || %{}
+    {changeset, common_meta} = common_meta(changeset, key, opts)
+    {changeset, relation_meta} = relation_meta(type, changeset, key, opts)
+    changeset = do_cast_relation(type, changeset, key, common_meta, relation_meta, opts)
+
+    update_in(changeset.types[key], fn {type, relation} ->
+      {type, %{relation | on_cast: relation_meta.on_cast}}
+    end)
+  end
+
+  defp common_meta(changeset, key, opts) do
+    {_, param_key} = cast_key(key)
+    params = changeset.params || %{}
 
     {changeset, required?} =
       if opts[:required] do
@@ -1276,40 +1284,51 @@ defmodule Ecto.Changeset do
         {changeset, false}
       end
 
-    on_cast = Keyword.get_lazy(opts, :with, fn -> on_cast_default(type, related) end)
     sort = opts_key_from_params(:sort_param, opts, params)
     drop = opts_key_from_params(:drop_param, opts, params)
 
-    changeset =
-      if is_map_key(params, param_key) or is_list(sort) or is_list(drop) do
-        value = Map.get(params, param_key)
-        original = Map.get(data, key)
-        current = Relation.load!(data, original)
-        value = cast_params(relation, value, sort, drop)
+    {changeset,
+     %{required?: required?, params: params, param_key: param_key, sort: sort, drop: drop}}
+  end
 
-        case Relation.cast(relation, data, value, current, on_cast) do
-          {:ok, change, relation_valid?} when change != original ->
-            valid? = changeset.valid? and relation_valid?
-            changes = Map.put(changes, key, change)
-            changeset = %{force_update(changeset, opts) | changes: changes, valid?: valid?}
-            missing_relation(changeset, key, current, required?, relation, opts)
+  defp relation_meta(type, changeset, key, opts) do
+    %{related: related} = relation = relation!(:cast, type, key, Map.get(changeset.types, key))
+    on_cast = Keyword.get_lazy(opts, :with, fn -> on_cast_default(type, related) end)
+    {changeset, %{relation: relation, on_cast: on_cast}}
+  end
 
-          {:error, {message, meta}} ->
-            meta = [validation: type] ++ meta
-            error = {key, {message(opts, :invalid_message, message), meta}}
-            %{changeset | errors: [error | changeset.errors], valid?: false}
+  defp do_cast_relation(
+         type,
+         %{data: data, changes: changes, valid?: valid?} = changeset,
+         key,
+         %{params: params, param_key: param_key, sort: sort, drop: drop, required?: required?},
+         %{relation: relation, on_cast: on_cast},
+         opts
+       ) do
+    with true <- is_map_key(params, param_key) or is_list(sort) or is_list(drop),
+         value <- Map.get(params, param_key),
+         original <- Map.get(data, key),
+         current <- Relation.load!(data, original),
+         value <- cast_params(relation, value, sort, drop) do
+      case Relation.cast(relation, data, value, current, on_cast) do
+        {:ok, change, relation_valid?} when change != original ->
+          valid? = valid? and relation_valid?
+          changes = Map.put(changes, key, change)
+          changeset = %{force_update(changeset, opts) | changes: changes, valid?: valid?}
+          missing_relation(changeset, key, current, required?, relation, opts)
 
-          # ignore or ok with change == original
-          _ ->
-            missing_relation(changeset, key, current, required?, relation, opts)
-        end
-      else
-        missing_relation(changeset, key, Map.get(data, key), required?, relation, opts)
+        {:error, {message, meta}} ->
+          meta = [validation: type] ++ meta
+          error = {key, {message(opts, :invalid_message, message), meta}}
+          %{changeset | errors: [error | changeset.errors], valid?: false}
+
+        # ignore or ok with change == original
+        _ ->
+          missing_relation(changeset, key, current, required?, relation, opts)
       end
-
-    update_in(changeset.types[key], fn {type, relation} ->
-      {type, %{relation | on_cast: on_cast}}
-    end)
+    else
+      _ -> missing_relation(changeset, key, Map.get(data, key), required?, relation, opts)
+    end
   end
 
   defp cast_params(%{cardinality: :many} = relation, nil, sort, drop)
