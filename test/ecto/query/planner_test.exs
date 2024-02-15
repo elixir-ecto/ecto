@@ -883,10 +883,23 @@ defmodule Ecto.Query.PlannerTest do
       assert query.sources == {{"comments", Comment, nil}}
       assert cte_query.sources == {{"comments", Comment, nil}}
 
-      {%{with_ctes: with_expr} = query, _, _, _} = Comment |> with_cte("cte", as: ^from(c in Comment)) |> Map.put(:prefix, "global") |> plan()
-      %{queries: [{"cte", %{}, cte_query}]} = with_expr
-      assert query.sources == {{"comments", Comment, "global"}}
+      {%{with_ctes: with_expr} = query, _, _, _} =
+        Comment
+        |> with_cte("comment", as: ^from(c in Comment))
+        |> join(:inner, [c], c1 in "comment", on: true)
+        |> join(:inner, [c, c1], c2 in "comment", prefix: "global", on: true)
+        |> where([c, c1, c2], c.title == subquery(from c in "comment", select: c.title))
+        |> select([c, c1, c2], subquery(from c in "comment", select: c.title))
+        |> Map.put(:prefix, "global")
+        |> plan()
+
+      %{queries: [{"comment", %{}, cte_query}]} = with_expr
+      assert query.sources == {{"comments", Comment, "global"}, {"comment", nil, nil}, {"comment", nil, "global"}}
       assert cte_query.sources == {{"comments", Comment, "global"}}
+      [%{subqueries: [%{query: where_subquery}]}] = query.wheres
+      assert where_subquery.sources == {{"comment", nil, nil}}
+      %{subqueries: [%{query: where_subquery}]} = query.select
+      assert where_subquery.sources == {{"comment", nil, nil}}
 
       {%{with_ctes: with_expr} = query, _, _, _} = Comment |> with_cte("cte", as: ^(from(c in Comment) |> Map.put(:prefix, "cte"))) |> Map.put(:prefix, "global") |> plan()
       %{queries: [{"cte", %{}, cte_query}]} = with_expr
