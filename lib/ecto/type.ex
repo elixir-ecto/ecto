@@ -15,6 +15,27 @@ defmodule Ecto.Type do
   basic custom types and rely on parameterized types if you need
   the extra functionality.
 
+  ## External vs internal vs database representation
+
+  The core functionality of a custom type is the mapping between
+  external, internal and database representations of a value belonging
+  to the type.
+
+  For a definition of external and internal data take a look at the
+  [related section](`Ecto.Changeset#module-external-vs-internal-data`)
+  in the changeset documentation.
+
+  ```mermaid
+  stateDiagram-v2
+    external: External Data
+    internal: Internal Data
+    database: Database Date
+    external --> internal: cast/1
+    external --> database: dump/1
+    internal --> database: dump/1
+    database --> internal: load/1
+  ```
+
   ## Example
 
   Imagine you want to store a URI struct as part of a schema in a
