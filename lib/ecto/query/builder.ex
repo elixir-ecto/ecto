@@ -121,26 +121,8 @@ defmodule Ecto.Query.Builder do
     escape_with_type(op_expr, type, params_acc, vars, env)
   end
 
-  def escape({:type, _, [{bitwise_op, _, [_, _]} = op_expr, type]}, _type, params_acc, vars, env)
-      when bitwise_op in ~w(&&& ||| <<< >>>)a do
-    escape_with_type(op_expr, type, params_acc, vars, env)
-  end
-
-  def escape({:type, _, [{:~~~, _, [_]} = op_expr, type]}, _type, params_acc, vars, env) do
-    escape_with_type(op_expr, type, params_acc, vars, env)
-  end
-
   def escape({:type, _, [{fun, _, args} = expr, type]}, _type, params_acc, vars, env)
       when is_list(args) and fun in ~w(fragment avg count max min sum over filter)a do
-    escape_with_type(expr, type, params_acc, vars, env)
-  end
-
-  def escape({:type, _, [{fun, _, [_, _]} = expr, type]}, _type, params_acc, vars, env)
-      when fun in ~w(band bor bxor bsr bsl)a do
-    escape_with_type(expr, type, params_acc, vars, env)
-  end
-
-  def escape({:type, _, [{:bnot, _, [_]} = expr, type]}, _type, params_acc, vars, env) do
     escape_with_type(expr, type, params_acc, vars, env)
   end
 
@@ -166,7 +148,6 @@ defmodule Ecto.Query.Builder do
           * fields, such as p.foo or field(p, :foo)
           * fragments, such as fragment("foo(?)", value)
           * an arithmetic expression (+, -, *, /)
-          * a bitwise expression (&&&, |||, <<<, >>>, ~~~) or function (band, bor, bxor, bsr, bsl, bnot)
           * an aggregation or window expression (avg, count, min, max, sum, over, filter)
           * a conditional expression (coalesce)
           * access/json paths (p.column[0].field)
@@ -357,36 +338,6 @@ defmodule Ecto.Query.Builder do
     {right, params_acc} = escape(right, type, params_acc, vars, env)
 
     {{:{}, [], [math_op, [], [left, right]]}, params_acc}
-  end
-
-  # bitwise operators
-  def escape({bitwise_op, _, [left, right]}, type, params_acc, vars, env)
-      when bitwise_op in ~w(&&& ||| <<< >>>)a do
-    {left,  params_acc} = escape(left, type, params_acc, vars, env)
-    {right, params_acc} = escape(right, type, params_acc, vars, env)
-
-    {{:{}, [], [bitwise_op, [], [left, right]]}, params_acc}
-  end
-
-  def escape({:~~~, _, [bitstring]}, type, params_acc, vars, env) do
-    {bitstring,  params_acc} = escape(bitstring, type, params_acc, vars, env)
-
-    {{:{}, [], [:~~~, [], [bitstring]]}, params_acc}
-  end
-
-  # bitwise functions
-  def escape({bitwise_fn, _, [left, right]}, type, params_acc, vars, env)
-      when bitwise_fn in ~w(band bor bxor bsr bsl)a do
-    {left,  params_acc} = escape(left, type, params_acc, vars, env)
-    {right, params_acc} = escape(right, type, params_acc, vars, env)
-
-    {{:{}, [], [bitwise_fn, [], [left, right]]}, params_acc}
-  end
-
-  def escape({:bnot, _, [bitstring]}, type, params_acc, vars, env) do
-    {bitstring,  params_acc} = escape(bitstring, type, params_acc, vars, env)
-
-    {{:{}, [], [:bnot, [], [bitstring]]}, params_acc}
   end
 
   # in operator

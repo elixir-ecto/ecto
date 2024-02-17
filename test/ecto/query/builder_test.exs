@@ -26,15 +26,6 @@ defmodule Ecto.Query.BuilderTest do
     assert {Macro.escape(quote do &0.y() + &1.z() end), []} ==
            escape(quote do x.y() + y.z() end, [x: 0, y: 1], __ENV__)
 
-    assert {Macro.escape(quote do &0.y() &&& &1.z() end), []} ==
-           escape(quote do x.y() &&& y.z() end, [x: 0, y: 1], __ENV__)
-
-    assert {Macro.escape(quote do band(&0.y(), &1.z()) end), []} ==
-           escape(quote do band(x.y(), y.z()) end, [x: 0, y: 1], __ENV__)
-
-    assert {Macro.escape(quote do bnot(&0.y()) end), []} ==
-           escape(quote do bnot(x.y()) end, [x: 0], __ENV__)
-
     assert {Macro.escape(quote do avg(0) end), []} ==
            escape(quote do avg(0) end, [], __ENV__)
 
@@ -55,9 +46,6 @@ defmodule Ecto.Query.BuilderTest do
 
     assert {Macro.escape(quote do -&0.y() end), []} ==
            escape(quote do -x.y() end, [x: 0], __ENV__)
-
-    assert {Macro.escape(quote do ~~~&0.y() end), []} ==
-           escape(quote do ~~~x.y() end, [x: 0], __ENV__)
   end
 
   test "escape json_extract_path" do
@@ -190,12 +178,6 @@ defmodule Ecto.Query.BuilderTest do
     assert {Macro.escape(quote do type(&0.y() + &1.z(), :decimal) end), []} ==
            escape(quote do type(x.y() + y.z(), :decimal) end, [x: 0, y: 1], __ENV__)
 
-    assert {Macro.escape(quote do type(&0.y() &&& &1.z(), :decimal) end), []} ==
-           escape(quote do type(x.y() &&& y.z(), :decimal) end, [x: 0, y: 1], __ENV__)
-
-    assert {Macro.escape(quote do type(~~~&0.y(), :decimal) end), []} ==
-           escape(quote do type(~~~x.y(), :decimal) end, [x: 0, y: 1], __ENV__)
-
     assert {Macro.escape(quote do type(&0.y(), :decimal) end), []} ==
           escape(quote do type(field(x, :y), :decimal) end, [x: 0], __ENV__)
 
@@ -210,12 +192,6 @@ defmodule Ecto.Query.BuilderTest do
 
     assert {Macro.escape(quote do type(count(), :decimal) end), []} ==
           escape(quote do type(count(), :decimal) end, [x: 0], {__ENV__, %{}})
-
-    assert {Macro.escape(quote do type(band(&0.y(), &1.z()), :bitstring) end), []} ==
-           escape(quote do type(band(x.y(), y.z()), :bitstring) end, [x: 0, y: 1], __ENV__)
-
-    assert {Macro.escape(quote do type(bnot(&0.y()), :bitstring) end), []} ==
-           escape(quote do type(bnot(x.y()), :bitstring) end, [x: 0, y: 1], __ENV__)
 
     import Kernel, except: [>: 2]
     assert {Macro.escape(quote do type(filter(sum(&0.y()), &0.y() > &0.z()), :decimal) end), []} ==
