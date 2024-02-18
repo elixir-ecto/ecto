@@ -47,6 +47,7 @@ defmodule Ecto.Integration.Post do
     field :intensities, {:map, :float}
     field :posted, :date
     field :read_only, :string, read_only: true
+    field :token, :bitstring
     has_many :comments, Ecto.Integration.Comment, on_delete: :delete_all, on_replace: :delete
     has_many :force_comments, Ecto.Integration.Comment, on_replace: :delete_if_exists
     has_many :ordered_comments, Ecto.Integration.Comment, preload_order: [:text]

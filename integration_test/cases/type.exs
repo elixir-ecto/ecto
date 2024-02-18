@@ -11,11 +11,12 @@ defmodule Ecto.Integration.TypeTest do
     integer  = 1
     float    = 0.1
     blob     = <<0, 1>>
+    bitstring = <<2::3>>
     uuid     = "00010203-0405-4607-8809-0a0b0c0d0e0f"
     datetime = ~N[2014-01-16 20:26:51]
 
     TestRepo.insert!(%Post{blob: blob, public: true, visits: integer, uuid: uuid,
-                           counter: integer, inserted_at: datetime, intensity: float})
+                           counter: integer, inserted_at: datetime, intensity: float, token: bitstring})
 
     # nil
     assert [nil] = TestRepo.all(from Post, select: nil)
@@ -41,6 +42,9 @@ defmodule Ecto.Integration.TypeTest do
     # Binaries
     assert [^blob] = TestRepo.all(from p in Post, where: p.blob == <<0, 1>>, select: p.blob)
     assert [^blob] = TestRepo.all(from p in Post, where: p.blob == ^blob, select: p.blob)
+
+    # Bitstrings
+    assert [^bitstring] = TestRepo.all(from p in Post, where: p.token == ^bitstring, select: p.token)
 
     # UUID
     assert [^uuid] = TestRepo.all(from p in Post, where: p.uuid == ^uuid, select: p.uuid)
