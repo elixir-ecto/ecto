@@ -29,7 +29,7 @@ defmodule Ecto.Type do
   stateDiagram-v2
     external: External Data
     internal: Internal Data
-    database: Database Date
+    database: Database Data
     external --> internal: cast/1
     external --> database: dump/1
     internal --> database: dump/1
