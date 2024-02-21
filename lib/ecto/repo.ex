@@ -1242,16 +1242,17 @@ defmodule Ecto.Repo do
   @callback default_options(operation) :: Keyword.t()
             when operation:
                    :all
-                   | :insert_all
-                   | :update_all
+                   | :delete
                    | :delete_all
+                   | :insert
+                   | :insert_all
+                   | :insert_or_update
+                   | :preload
+                   | :reload
                    | :stream
                    | :transaction
-                   | :insert
                    | :update
-                   | :delete
-                   | :insert_or_update
-
+                   | :update_all
   @doc """
   Fetches all entries from the data store matching the given query.
 
