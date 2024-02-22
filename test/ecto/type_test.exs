@@ -20,6 +20,15 @@ defmodule Ecto.TypeTest do
     def cast(_),   do: {:ok, :cast}
   end
 
+  defmodule CustomWithCastError do
+    use Ecto.Type
+
+    def type,      do: :any
+    def load(_),   do: {:ok, :load}
+    def dump(_),   do: {:ok, :dump}
+    def cast(_),   do: {:error, foo: :bar}
+  end
+
   defmodule CustomParameterizedTypeWithFormat do
     use Ecto.ParameterizedType
 
@@ -88,10 +97,12 @@ defmodule Ecto.TypeTest do
     assert load(Custom, "foo") == {:ok, :load}
     assert dump(Custom, "foo") == {:ok, :dump}
     assert cast(Custom, "foo") == {:ok, :cast}
+    assert cast(CustomWithCastError, "foo") == {:error, foo: :bar}
 
     assert load(Custom, nil) == {:ok, nil}
     assert dump(Custom, nil) == {:ok, nil}
     assert cast(Custom, nil) == {:ok, nil}
+    assert cast(CustomWithCastError, nil) == {:ok, nil}
 
     assert match?(Custom, :any)
     assert match?(:any, Custom)
@@ -144,18 +155,22 @@ defmodule Ecto.TypeTest do
     assert load({:array, Custom}, ["foo"]) == {:ok, [:load]}
     assert dump({:array, Custom}, ["foo"]) == {:ok, [:dump]}
     assert cast({:array, Custom}, ["foo"]) == {:ok, [:cast]}
+    assert cast({:array, CustomWithCastError}, ["foo"]) == {:error, [index: 0, foo: :bar]}
 
     assert load({:array, Custom}, [nil]) == {:ok, [nil]}
     assert dump({:array, Custom}, [nil]) == {:ok, [nil]}
     assert cast({:array, Custom}, [nil]) == {:ok, [nil]}
+    assert cast({:array, CustomWithCastError}, [nil]) == {:ok, [nil]}
 
     assert load({:array, Custom}, nil) == {:ok, nil}
     assert dump({:array, Custom}, nil) == {:ok, nil}
     assert cast({:array, Custom}, nil) == {:ok, nil}
+    assert cast({:array, CustomWithCastError}, nil) == {:ok, nil}
 
     assert load({:array, Custom}, 1) == :error
     assert dump({:array, Custom}, 1) == :error
     assert cast({:array, Custom}, 1) == :error
+    assert cast({:array, CustomWithCastError}, 1) == :error
 
     assert load({:array, Custom}, [:unused], fn Custom, _ -> {:ok, :used} end) == {:ok, [:used]}
     assert dump({:array, Custom}, [:unused], fn Custom, _ -> {:ok, :used} end) == {:ok, [:used]}
@@ -165,18 +180,22 @@ defmodule Ecto.TypeTest do
     assert load({:map, Custom}, %{"x" => "foo"}) == {:ok, %{"x" => :load}}
     assert dump({:map, Custom}, %{"x" => "foo"}) == {:ok, %{"x" => :dump}}
     assert cast({:map, Custom}, %{"x" => "foo"}) == {:ok, %{"x" => :cast}}
+    assert cast({:map, CustomWithCastError}, %{"x" => "foo"}) == {:error, [key: "x", foo: :bar]}
 
     assert load({:map, Custom}, %{"x" => nil}) == {:ok, %{"x" => nil}}
     assert dump({:map, Custom}, %{"x" => nil}) == {:ok, %{"x" => nil}}
     assert cast({:map, Custom}, %{"x" => nil}) == {:ok, %{"x" => nil}}
+    assert cast({:map, CustomWithCastError}, %{"x" => nil}) == {:ok, %{"x" => nil}}
 
     assert load({:map, Custom}, nil) == {:ok, nil}
     assert dump({:map, Custom}, nil) == {:ok, nil}
     assert cast({:map, Custom}, nil) == {:ok, nil}
+    assert cast({:map, CustomWithCastError}, nil) == {:ok, nil}
 
     assert load({:map, Custom}, 1) == :error
     assert dump({:map, Custom}, 1) == :error
     assert cast({:map, Custom}, 1) == :error
+    assert cast({:map, CustomWithCastError}, 1) == :error
 
     assert load({:map, Custom}, %{"a" => :unused}, fn Custom, _ -> {:ok, :used} end) == {:ok, %{"a" => :used}}
     assert dump({:map, Custom}, %{"a" => :unused}, fn Custom, _ -> {:ok, :used} end) == {:ok, %{"a" => :used}}
