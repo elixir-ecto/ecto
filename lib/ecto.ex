@@ -697,7 +697,9 @@ defmodule Ecto do
 
   The third argument `format` is the format the data has been dumped as. For
   example, databases may dump embedded to `:json`, this function allows such
-  dumped data to be put back into the schemas.
+  dumped data to be put back into the schemas. If custom types are used,
+  Ecto will invoke the `c:Ecto.Type.embed_as/1` callback to decide if the data
+  should be loaded using `cast` or `load`.
 
   Fields that are not present in the schema (or `types` map) are ignored.
   If any of the values has invalid type, an error is raised.
