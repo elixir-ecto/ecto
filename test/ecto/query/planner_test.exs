@@ -1157,6 +1157,14 @@ defmodule Ecto.Query.PlannerTest do
 
     assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) == "parent_as(:posts).visits() == ^0"
     assert cast_params == [123]
+
+    child = from(c in Comment, where: field(parent_as(^as), "visits") == ^"123")
+
+    {query, cast_params, _, _} =
+      from(Post, as: :posts, join: c in subquery(child), on: true) |> normalize_with_params()
+
+    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) == "parent_as(:posts).visits() == ^0"
+    assert cast_params == [123]
   end
 
   test "normalize: nested parent_as" do
