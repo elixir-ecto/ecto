@@ -400,7 +400,7 @@ defmodule Ecto.Integration.Bitstring do
 
   schema "bitstrings" do
     field :bs,  :bitstring
-    field :bs_with_default, :bitstring, default: <<42::6>>
+    field :bs_with_default, :bitstring
     field :bs_with_size, :bitstring
   end
 end
