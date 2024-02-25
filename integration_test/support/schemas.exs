@@ -47,7 +47,6 @@ defmodule Ecto.Integration.Post do
     field :intensities, {:map, :float}
     field :posted, :date
     field :read_only, :string, read_only: true
-    field :token, :bitstring
     has_many :comments, Ecto.Integration.Comment, on_delete: :delete_all, on_replace: :delete
     has_many :force_comments, Ecto.Integration.Comment, on_replace: :delete_if_exists
     has_many :ordered_comments, Ecto.Integration.Comment, preload_order: [:text]
@@ -387,5 +386,21 @@ defmodule Ecto.Integration.ArrayLogging do
   schema "array_loggings" do
     field :uuids, {:array, Ecto.Integration.TestRepo.uuid()}
     timestamps()
+  end
+end
+
+defmodule Ecto.Integration.Bitstring do
+  @moduledoc """
+  This module is used to test:
+
+    * Bitstring type
+
+  """
+  use Ecto.Integration.Schema
+
+  schema "bitstrings" do
+    field :bs,  :bitstring
+    field :bs_with_default, :bitstring, default: <<42::6>>
+    field :bs_with_size, :bitstring, size: 10
   end
 end
