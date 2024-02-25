@@ -75,6 +75,7 @@ defmodule Ecto.Integration.TypeTest do
 
     # Bitstrings
     assert [^bitstring] = TestRepo.all(from p in Bitstring, where: p.bs == ^bitstring, select: p.bs)
+    assert [^bitstring] = TestRepo.all(from p in Bitstring, where: p.bs == <<2::3>>, select: p.bs)
 
     assert [<<42::6>>] = TestRepo.all(from p in Bitstring, limit: 1, select: p.bs_with_default)
   end
