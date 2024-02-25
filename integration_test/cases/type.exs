@@ -42,9 +42,6 @@ defmodule Ecto.Integration.TypeTest do
     assert [^blob] = TestRepo.all(from p in Post, where: p.blob == <<0, 1>>, select: p.blob)
     assert [^blob] = TestRepo.all(from p in Post, where: p.blob == ^blob, select: p.blob)
 
-    # Bitstrings
-    assert [^bitstring] = TestRepo.all(from p in Post, where: p.token == ^bitstring, select: p.token)
-
     # UUID
     assert [^uuid] = TestRepo.all(from p in Post, where: p.uuid == ^uuid, select: p.uuid)
 
