@@ -1369,7 +1369,7 @@ defmodule Ecto.Type do
         :error
 
       {:error, custom_errors} ->
-        {:error, [{:index, index} | custom_errors]}
+        {:error, Keyword.update(custom_errors, :source, [index], &[index | &1])}
     end
   end
 
@@ -1402,7 +1402,7 @@ defmodule Ecto.Type do
         :error
 
       {:error, custom_errors} ->
-        {:error, [{:key, key} | custom_errors]}
+        {:error, Keyword.update(custom_errors, :source, [key], &[key | &1])}
     end
   end
 

@@ -26,7 +26,9 @@ defmodule Ecto.TypeTest do
     def type,      do: :any
     def load(_),   do: {:ok, :load}
     def dump(_),   do: {:ok, :dump}
-    def cast(_),   do: {:error, foo: :bar}
+    def cast("a"), do: {:ok, "a"}
+    def cast("b"), do: {:error, foo: :bar, value: "b"}
+    def cast("c"), do: {:error, foo: :bar, source: [:email], value: "c"}
   end
 
   defmodule CustomParameterizedTypeWithFormat do
@@ -97,7 +99,9 @@ defmodule Ecto.TypeTest do
     assert load(Custom, "foo") == {:ok, :load}
     assert dump(Custom, "foo") == {:ok, :dump}
     assert cast(Custom, "foo") == {:ok, :cast}
-    assert cast(CustomWithCastError, "foo") == {:error, foo: :bar}
+    assert cast(CustomWithCastError, "a") == {:ok, "a"}
+    assert cast(CustomWithCastError, "b") == {:error, foo: :bar, value: "b"}
+    assert cast(CustomWithCastError, "c") == {:error, foo: :bar, source: [:email], value: "c"}
 
     assert load(Custom, nil) == {:ok, nil}
     assert dump(Custom, nil) == {:ok, nil}
@@ -155,7 +159,18 @@ defmodule Ecto.TypeTest do
     assert load({:array, Custom}, ["foo"]) == {:ok, [:load]}
     assert dump({:array, Custom}, ["foo"]) == {:ok, [:dump]}
     assert cast({:array, Custom}, ["foo"]) == {:ok, [:cast]}
-    assert cast({:array, CustomWithCastError}, ["foo"]) == {:error, [index: 0, foo: :bar]}
+
+    assert cast({:array, CustomWithCastError}, ["b"]) ==
+             {:error, foo: :bar, value: "b", source: [0]}
+
+    assert cast({:array, CustomWithCastError}, ["a", "a", "a", "b"]) ==
+             {:error, foo: :bar, value: "b", source: [3]}
+
+    assert cast({:array, CustomWithCastError}, ["c"]) ==
+             {:error, foo: :bar, source: [0, :email], value: "c"}
+
+    assert cast({:array, CustomWithCastError}, ["a", "a", "c", "a"]) ==
+             {:error, foo: :bar, source: [2, :email], value: "c"}
 
     assert load({:array, Custom}, [nil]) == {:ok, [nil]}
     assert dump({:array, Custom}, [nil]) == {:ok, [nil]}
@@ -180,7 +195,18 @@ defmodule Ecto.TypeTest do
     assert load({:map, Custom}, %{"x" => "foo"}) == {:ok, %{"x" => :load}}
     assert dump({:map, Custom}, %{"x" => "foo"}) == {:ok, %{"x" => :dump}}
     assert cast({:map, Custom}, %{"x" => "foo"}) == {:ok, %{"x" => :cast}}
-    assert cast({:map, CustomWithCastError}, %{"x" => "foo"}) == {:error, [key: "x", foo: :bar]}
+
+    assert cast({:map, CustomWithCastError}, %{"x" => "b"}) ==
+             {:error, foo: :bar, value: "b", source: ["x"]}
+
+    assert cast({:map, CustomWithCastError}, %{"x" => "a", "y" => "a", "z" => "a", "u" => "b"}) ==
+             {:error, foo: :bar, value: "b", source: ["u"]}
+
+    assert cast({:map, CustomWithCastError}, %{"x" => "c"}) ==
+             {:error, foo: :bar, source: ["x", :email], value: "c"}
+
+    assert cast({:map, CustomWithCastError}, %{"x" => "a", "y" => "a", "z" => "c", "u" => "a"}) ==
+             {:error, foo: :bar, source: ["z", :email], value: "c"}
 
     assert load({:map, Custom}, %{"x" => nil}) == {:ok, %{"x" => nil}}
     assert dump({:map, Custom}, %{"x" => nil}) == {:ok, %{"x" => nil}}
