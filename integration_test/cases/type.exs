@@ -1,7 +1,7 @@
 defmodule Ecto.Integration.TypeTest do
   use Ecto.Integration.Case, async: Application.compile_env(:ecto, :async_integration_tests, true)
 
-  alias Ecto.Integration.{Comment, Custom, Item, ItemColor, Order, Post, User, Tag, Usec}
+  alias Ecto.Integration.{Bitstring, Comment, Custom, Item, ItemColor, Order, Post, User, Tag, Usec}
   alias Ecto.Integration.TestRepo
   import Ecto.Query
 
@@ -65,6 +65,19 @@ defmodule Ecto.Integration.TypeTest do
     TestRepo.insert!(%Usec{naive_datetime_usec: naive_datetime, utc_datetime_usec: datetime})
     assert [^naive_datetime] = TestRepo.all(from u in Usec, where: u.naive_datetime_usec == ^naive_datetime, select: u.naive_datetime_usec)
     assert [^datetime] = TestRepo.all(from u in Usec, where: u.utc_datetime_usec == ^datetime, select: u.utc_datetime_usec)
+  end
+
+  @tag :bitstring_type
+  test "bitstring type" do
+    bitstring = <<2::3>>
+
+    TestRepo.insert!(%Bitstring{bs: bitstring, bs_with_size: <<5::10>>})
+
+    # Bitstrings
+    assert [^bitstring] = TestRepo.all(from p in Bitstring, where: p.bs == ^bitstring, select: p.bs)
+    assert [^bitstring] = TestRepo.all(from p in Bitstring, where: p.bs == <<2::3>>, select: p.bs)
+
+    assert [<<42::6>>] = TestRepo.all(from p in Bitstring, limit: 1, select: p.bs_with_default)
   end
 
   @tag :select_not

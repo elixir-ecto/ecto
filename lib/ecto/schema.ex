@@ -256,6 +256,7 @@ defmodule Ecto.Schema do
   `:boolean`              | `boolean`               | true, false
   `:string`               | UTF-8 encoded `string`  | "hello"
   `:binary`               | `binary`                | `<<int, int, int, ...>>`
+  `:bitstring`            | `bitstring`             | `<<_::size>>
   `{:array, inner_type}`  | `list`                  | `[value, value, value, ...]`
   `:map`                  | `map` |
   `{:map, inner_type}`    | `map` |

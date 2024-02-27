@@ -388,3 +388,19 @@ defmodule Ecto.Integration.ArrayLogging do
     timestamps()
   end
 end
+
+defmodule Ecto.Integration.Bitstring do
+  @moduledoc """
+  This module is used to test:
+
+    * Bitstring type
+
+  """
+  use Ecto.Integration.Schema
+
+  schema "bitstrings" do
+    field :bs,  :bitstring
+    field :bs_with_default, :bitstring
+    field :bs_with_size, :bitstring
+  end
+end

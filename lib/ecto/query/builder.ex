@@ -777,7 +777,7 @@ defmodule Ecto.Query.Builder do
     do: do_literal(value, expected, quoted_type(value, vars))
 
   defp do_literal(value, _, current) when current in @always_tagged,
-    do: {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: value, type: current]}]}
+    do: {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: value, type: normalize_type(value, current)]}]}
   defp do_literal(value, :any, _current),
     do: value
   defp do_literal(value, expected, expected),
@@ -1227,6 +1227,9 @@ defmodule Ecto.Query.Builder do
 
   defp get_env({env, _}), do: env
   defp get_env(env), do: env
+
+  defp normalize_type(value, :binary),
+    do: quote(do: is_binary(unquote(value)) && :binary || :bitstring)
 
   @doc """
   Raises a query building error.

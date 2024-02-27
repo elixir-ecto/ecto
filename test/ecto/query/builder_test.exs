@@ -32,7 +32,7 @@ defmodule Ecto.Query.BuilderTest do
     assert {quote(do: ~s"123"), []} ==
            escape(quote do ~s"123" end, [], __ENV__)
 
-    assert {{:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: {:<<>>, [], [0, 1, 2]}, type: :binary]}]}, []} ==
+    assert {{:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: {:<<>>, [], [0, 1, 2]}, type: {:||, _, [{:&&, _, [{:is_binary, _, [{:<<>>, [], [0, 1, 2]}]}, :binary]}, :bitstring]}]}]}, []} =
            escape(quote do <<0, 1, 2>> end, [], __ENV__)
 
     assert {:some_atom, []} ==
