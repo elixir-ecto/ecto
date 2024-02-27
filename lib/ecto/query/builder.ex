@@ -1228,9 +1228,8 @@ defmodule Ecto.Query.Builder do
   defp get_env({env, _}), do: env
   defp get_env(env), do: env
 
-  defp normalize_type(value, :binary) do
-    {:||, [], [{:&&, [], [{:is_binary, [], [value]}, :binary]}, :bitstring]}
-  end
+  defp normalize_type(value, :binary),
+    do: quote(do: is_binary(unquote(value)) && :binary || :bitstring)
 
   @doc """
   Raises a query building error.
