@@ -540,8 +540,10 @@ defmodule Ecto.Type do
     end
   end
 
-  def dump({:array, {_, _, _} = type}, value, dumper), do: array(value, type, dumper, false, [])
-  def dump({:array, type}, value, dumper), do: array(value, type, dumper, true, [])
+  def dump({:array, {_, _, _} = type}, value, dumper),
+    do: array_with_type(value, type, dumper, false, [])
+
+  def dump({:array, type}, value, dumper), do: array_with_type(value, type, dumper, true, [])
   def dump({:map, type}, value, dumper), do: map(value, type, dumper, false, %{})
 
   def dump(:any, value, _dumper), do: {:ok, value}
@@ -635,8 +637,10 @@ defmodule Ecto.Type do
     end
   end
 
-  def load({:array, {_, _, _} = type}, value, loader), do: array(value, type, loader, false, [])
-  def load({:array, type}, value, loader), do: array(value, type, loader, true, [])
+  def load({:array, {_, _, _} = type}, value, loader),
+    do: array_with_type(value, type, loader, false, [])
+
+  def load({:array, type}, value, loader), do: array_with_type(value, type, loader, true, [])
   def load({:map, type}, value, loader), do: map(value, type, loader, false, %{})
 
   def load(:any, value, _loader), do: {:ok, value}
@@ -835,12 +839,12 @@ defmodule Ecto.Type do
 
   defp cast_fun({:array, {:parameterized, _, _} = type}) do
     fun = cast_fun(type)
-    &array(&1, fun, false, [])
+    &array_with_index(&1, fun, false, 0, [])
   end
 
   defp cast_fun({:array, type}) do
     fun = cast_fun(type)
-    &array(&1, fun, true, [])
+    &array_with_index(&1, fun, true, 0, [])
   end
 
   defp cast_fun({:map, {:parameterized, _, _} = type}) do
@@ -1362,23 +1366,28 @@ defmodule Ecto.Type do
   defp of_base_type?(:date, value), do: Kernel.match?(%Date{}, value)
   defp of_base_type?(_, _), do: false
 
-  defp array([nil | t], fun, true, acc) do
-    array(t, fun, true, [nil | acc])
+  defp array_with_index([nil | t], fun, true, index, acc) do
+    array_with_index(t, fun, true, index + 1, [nil | acc])
   end
 
-  defp array([h | t], fun, skip_nil?, acc) do
+  defp array_with_index([h | t], fun, skip_nil?, index, acc) do
     case fun.(h) do
-      {:ok, h} -> array(t, fun, skip_nil?, [h | acc])
-      :error -> :error
-      {:error, _custom_errors} -> :error
+      {:ok, h} ->
+        array_with_index(t, fun, skip_nil?, index + 1, [h | acc])
+
+      :error ->
+        :error
+
+      {:error, custom_errors} ->
+        {:error, Keyword.update(custom_errors, :source, [index], &[index | &1])}
     end
   end
 
-  defp array([], _fun, _skip_nil?, acc) do
+  defp array_with_index([], _fun, _skip_nil?, _index, acc) do
     {:ok, Enum.reverse(acc)}
   end
 
-  defp array(_, _, _, _) do
+  defp array_with_index(_, _, _, _, _) do
     :error
   end
 
@@ -1396,9 +1405,14 @@ defmodule Ecto.Type do
 
   defp map_each([{key, value} | t], fun, skip_nil?, acc) do
     case fun.(value) do
-      {:ok, value} -> map_each(t, fun, skip_nil?, Map.put(acc, key, value))
-      :error -> :error
-      {:error, _custom_errors} -> :error
+      {:ok, value} ->
+        map_each(t, fun, skip_nil?, Map.put(acc, key, value))
+
+      :error ->
+        :error
+
+      {:error, custom_errors} ->
+        {:error, Keyword.update(custom_errors, :source, [key], &[key | &1])}
     end
   end
 
@@ -1406,22 +1420,22 @@ defmodule Ecto.Type do
     {:ok, acc}
   end
 
-  defp array([nil | t], type, fun, true, acc) do
-    array(t, type, fun, true, [nil | acc])
+  defp array_with_type([nil | t], type, fun, true, acc) do
+    array_with_type(t, type, fun, true, [nil | acc])
   end
 
-  defp array([h | t], type, fun, skip_nil?, acc) do
+  defp array_with_type([h | t], type, fun, skip_nil?, acc) do
     case fun.(type, h) do
-      {:ok, h} -> array(t, type, fun, skip_nil?, [h | acc])
+      {:ok, h} -> array_with_type(t, type, fun, skip_nil?, [h | acc])
       :error -> :error
     end
   end
 
-  defp array([], _type, _fun, _skip_nil?, acc) do
+  defp array_with_type([], _type, _fun, _skip_nil?, acc) do
     {:ok, Enum.reverse(acc)}
   end
 
-  defp array(_, _, _, _, _) do
+  defp array_with_type(_, _, _, _, _) do
     :error
   end
 

@@ -432,7 +432,18 @@ defmodule Ecto.ChangesetTest do
     struct = %CustomErrorTest{}
 
     changeset = cast(struct, params, ~w(array_custom_error)a)
-    assert changeset.errors == [array_custom_error: {"is invalid", [type: {:array, Ecto.ChangesetTest.CustomError}, validation: :cast]}]
+
+    assert changeset.errors == [
+             array_custom_error:
+               {"custom error message",
+                [
+                  type: {:array, Ecto.ChangesetTest.CustomError},
+                  validation: :cast,
+                  reason: :foobar,
+                  source: [0]
+                ]}
+           ]
+
     refute changeset.valid?
   end
 
@@ -441,7 +452,18 @@ defmodule Ecto.ChangesetTest do
     struct = %CustomErrorTest{}
 
     changeset = cast(struct, params, ~w(map_custom_error)a)
-    assert changeset.errors == [map_custom_error: {"is invalid", [type: {:map, Ecto.ChangesetTest.CustomError}, validation: :cast]}]
+
+    assert changeset.errors == [
+      map_custom_error:
+        {"custom error message",
+         [
+           type: {:map, Ecto.ChangesetTest.CustomError},
+           validation: :cast,
+           reason: :foobar,
+           source: [:foo]
+         ]}
+    ]
+
     refute changeset.valid?
   end
 
