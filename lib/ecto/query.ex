@@ -2544,9 +2544,9 @@ defmodule Ecto.Query do
       |> update([u], set: [name: fragment("upper(?)", ^new_name)])
       |> update([u], set: [age: 42])
 
-  This can be useful if the expressions are complex as Ecto's compiler is kept
-  simple and only understands a subset of Elixir's syntax.
-
+  This can be useful to compose updates from different functions
+  or when mixing interpolation, such as `set: ^updates`, with regular
+  query expressions, such as `set: [age: u.age + 1]`.
   """
   defmacro update(query, binding \\ [], expr) do
     Builder.Update.build(query, binding, expr, __CALLER__)
