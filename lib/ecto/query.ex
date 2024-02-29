@@ -2534,6 +2534,19 @@ defmodule Ecto.Query do
 
           from(u in User, update: [pull: [tags: "not cool"]])
 
+  ## Composable
+
+  Remember that all query expressions are composable, so you can use `update`
+  multiple times in the same query to merge the update expressions:
+
+      new_name = "new name"
+      User
+      |> update([u], set: [name: fragment("upper(?)", ^new_name)])
+      |> update([u], set: [age: 42])
+
+  This can be useful to compose updates from different functions
+  or when mixing interpolation, such as `set: ^updates`, with regular
+  query expressions, such as `set: [age: u.age + 1]`.
   """
   defmacro update(query, binding \\ [], expr) do
     Builder.Update.build(query, binding, expr, __CALLER__)
