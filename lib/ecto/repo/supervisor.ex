@@ -17,7 +17,7 @@ defmodule Ecto.Repo.Supervisor do
   @doc """
   Retrieves the runtime configuration.
   """
-  def runtime_config(type, repo, otp_app, opts) do
+  def init_config(type, repo, otp_app, opts) do
     config = Application.get_env(otp_app, repo, [])
     config = [otp_app: otp_app] ++ (@defaults |> Keyword.merge(config) |> Keyword.merge(opts))
     config = Keyword.put_new_lazy(config, :telemetry_prefix, fn -> telemetry_prefix(repo) end)
@@ -35,7 +35,7 @@ defmodule Ecto.Repo.Supervisor do
   defp telemetry_prefix(repo) do
     repo
     |> Module.split()
-    |> Enum.map(& &1 |> Macro.underscore() |> String.to_atom())
+    |> Enum.map(&(&1 |> Macro.underscore() |> String.to_atom()))
   end
 
   defp repo_init(type, repo, config) do
@@ -58,8 +58,9 @@ defmodule Ecto.Repo.Supervisor do
     end
 
     if Code.ensure_compiled(adapter) != {:module, adapter} do
-      raise ArgumentError, "adapter #{inspect adapter} was not compiled, " <>
-                           "ensure it is correct and it is included as a project dependency"
+      raise ArgumentError,
+            "adapter #{inspect(adapter)} was not compiled, " <>
+              "ensure it is correct and it is included as a project dependency"
     end
 
     behaviours =
@@ -125,6 +126,7 @@ defmodule Ecto.Repo.Supervisor do
 
   defp parse_uri_query(%URI{query: nil}),
     do: []
+
   defp parse_uri_query(%URI{query: query} = url) do
     query
     |> URI.query_decoder()
@@ -150,8 +152,8 @@ defmodule Ecto.Repo.Supervisor do
 
       _ ->
         raise Ecto.InvalidURLError,
-              url: url,
-              message: "can not parse value `#{value}` for parameter `#{key}` as an integer"
+          url: url,
+          message: "can not parse value `#{value}` for parameter `#{key}` as an integer"
     end
   end
 
@@ -174,7 +176,7 @@ defmodule Ecto.Repo.Supervisor do
     # Normalize name to atom, ignore via/global names
     name = if is_atom(name), do: name, else: nil
 
-    case runtime_config(:supervisor, repo, otp_app, opts) do
+    case init_config(:supervisor, repo, otp_app, opts) do
       {:ok, opts} ->
         :telemetry.execute(
           [:ecto, :repo, :init],

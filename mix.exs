@@ -64,7 +64,8 @@ defmodule Ecto.MixProject do
         group_for_function("Query API"),
         group_for_function("Schema API"),
         group_for_function("Transaction API"),
-        group_for_function("Runtime API"),
+        group_for_function("Process API"),
+        group_for_function("Config API"),
         group_for_function("User callbacks")
       ],
       groups_for_modules: [

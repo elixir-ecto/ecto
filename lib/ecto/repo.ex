@@ -209,7 +209,7 @@ defmodule Ecto.Repo do
       @aggregates [:count, :avg, :max, :min, :sum]
 
       def config do
-        {:ok, config} = Ecto.Repo.Supervisor.runtime_config(:runtime, __MODULE__, @otp_app, [])
+        {:ok, config} = Ecto.Repo.Supervisor.init_config(:runtime, __MODULE__, @otp_app, [])
         config
       end
 
@@ -621,7 +621,7 @@ defmodule Ecto.Repo do
   @doc """
   Returns the adapter tied to the repository.
   """
-  @doc group: "Runtime API"
+  @doc group: "Config API"
   @callback __adapter__ :: Ecto.Adapter.t()
 
   @doc """
@@ -629,8 +629,9 @@ defmodule Ecto.Repo do
 
   If the `c:init/2` callback is implemented in the repository,
   it will be invoked with the first argument set to `:runtime`.
+  It does not consider the options given on `c:start_link/1`.
   """
-  @doc group: "Runtime API"
+  @doc group: "Config API"
   @callback config() :: Keyword.t()
 
   @doc """
@@ -644,7 +645,7 @@ defmodule Ecto.Repo do
   See the configuration in the moduledoc for options shared between adapters,
   for adapter-specific configuration see the adapter's documentation.
   """
-  @doc group: "Runtime API"
+  @doc group: "Process API"
   @callback start_link(opts :: Keyword.t()) ::
               {:ok, pid}
               | {:error, {:already_started, pid}}
@@ -653,7 +654,7 @@ defmodule Ecto.Repo do
   @doc """
   Shuts down the repository.
   """
-  @doc group: "Runtime API"
+  @doc group: "Process API"
   @callback stop(timeout) :: :ok
 
   @doc """
@@ -753,7 +754,7 @@ defmodule Ecto.Repo do
 
   See `c:put_dynamic_repo/1` for more information.
   """
-  @doc group: "Runtime API"
+  @doc group: "Process API"
   @callback get_dynamic_repo() :: atom() | pid()
 
   @doc """
@@ -786,7 +787,7 @@ defmodule Ecto.Repo do
   From this moment on, all future queries done by the current process will
   run on `:tenant_foo`.
   """
-  @doc group: "Runtime API"
+  @doc group: "Process API"
   @callback put_dynamic_repo(name_or_pid :: atom() | pid()) :: atom() | pid()
 
   ## Ecto.Adapter.Queryable
