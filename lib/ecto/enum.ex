@@ -236,6 +236,47 @@ defmodule Ecto.Enum do
   end
 
   @doc """
+  Returns the possible cast values for a given schema or types map and field.
+
+  These values are all the values that the `cast/2` function takes in.
+
+  ## Examples
+
+  Assuming this schema:
+
+      defmodule MySchema do
+        use Ecto.Schema
+
+        schema "my_schema" do
+          field :my_string_enum, Ecto.Enum, values: [:foo, :bar, :baz]
+          field :my_integer_enum, Ecto.Enum, values: [foo: 1, bar: 2, baz: 5]
+        end
+      end
+
+  Then:
+
+      Ecto.Enum.cast_values(MySchema, :my_string_enum)
+      #=> [:foo, "foo", :bar, "bar", :baz, "baz"]
+
+      Ecto.Enum.cast_values(MySchema, :my_integer_enum)
+      #=> [:foo, "foo", 1, :bar, "bar", 2, :baz, "baz", 5]
+
+  """
+  def cast_values(schema_or_types, field) do
+    schema_or_types
+    |> mappings(field)
+    |> cast_values_from_mappings()
+  end
+
+  defp cast_values_from_mappings(mappings) do
+    mappings
+    |> Stream.flat_map(fn {key, value} ->
+      [key, to_string(key), value]
+    end)
+    |> Enum.uniq()
+  end
+
+  @doc """
   Returns the possible dump values for a given schema or types map and field
 
   "Dump values" are the values that can be dumped in the database. For enums stored
