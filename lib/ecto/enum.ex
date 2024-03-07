@@ -162,10 +162,19 @@ defmodule Ecto.Enum do
 
   def cast(data, params) do
     case params do
-      %{on_load: %{^data => as_atom}} -> {:ok, as_atom}
-      %{on_dump: %{^data => _}} -> {:ok, data}
-      %{on_cast: %{^data => as_atom}} -> {:ok, as_atom}
-      _ -> :error
+      %{on_load: %{^data => as_atom}} ->
+        {:ok, as_atom}
+
+      %{on_dump: %{^data => _}} ->
+        {:ok, data}
+
+      %{on_cast: %{^data => as_atom}} ->
+        {:ok, as_atom}
+
+      %{mappings: mappings} ->
+        enum = cast_values_from_mappings(mappings)
+
+        {:error, validation: :inclusion, enum: enum}
     end
   end
 
