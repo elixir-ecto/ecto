@@ -1,5 +1,27 @@
 # Changelog for v3.x
 
+## v3.12.0-dev
+
+### Enhancements
+
+  * [Ecto.Query] Introduce `is_named_binding` guard
+  * [Ecto.Schema] Allow schema fields to be read-only
+  * [Ecto.Type] Bubble up custom cast errors of the inner type for `{:map, type}` and `{:array, type}`
+
+### Bug fixes
+
+  * [Ecto.Query] Ignore query prefix in CTE sources
+  * [Ecto.Query] Fix a bug of `preload` when a through association is used in a join and has a nested separate query preload. Now the association chain is no longer preloaded and we simply preload directly onto the loaded through association.
+  * [Ecto.Query] Validate `:prefix` is a string/binary, warn otherwise
+  * [Ecto.Repo] Validate `:prefix` is a string/binary, warn otherwise
+
+## v3.11.2 (2024-03-07)
+
+### Bug fixes
+
+  * [Ecto.Query] Fix compatibility with upcoming Elixir v1.17
+  * [Ecto.Repo] Do not hide failures when preloading if the parent process is trapping exits
+
 ## v3.11.1 (2023-12-07)
 
 ### Enhancements
