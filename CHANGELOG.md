@@ -1,5 +1,12 @@
 # Changelog for v3.x
 
+## v3.11.2 (2024-03-07)
+
+### Bug fixes
+
+  * [Ecto.Query] Fix compatibility with upcoming Elixir v1.17
+  * [Ecto.Repo] Do not hide failures when preloading if the parent process is trapping exits
+
 ## v3.11.1 (2023-12-07)
 
 ### Enhancements
