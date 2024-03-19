@@ -727,14 +727,10 @@ defmodule Ecto.Repo.Schema do
         {{replace_fields!(dumper, keys), [], conflict_target}, []}
 
       :replace_all ->
-        to_remove =
-          case conflict_target do
-            target when is_atom(target) or is_list(target) ->
-              List.wrap(target)
-
-            _ ->
-              []
-          end
+        # Remove the conflict targets from the replacing fields
+        # since the values don't change and this allows postgres to 
+        # possibly perform a HOT optimization: https://www.postgresql.org/docs/current/storage-hot.html
+        to_remove = List.wrap(conflict_target)
         {{replace_all_fields!(:replace_all, schema, to_remove), [], conflict_target}, []}
 
       {:replace_all_except, fields} ->
