@@ -727,7 +727,15 @@ defmodule Ecto.Repo.Schema do
         {{replace_fields!(dumper, keys), [], conflict_target}, []}
 
       :replace_all ->
-        {{replace_all_fields!(:replace_all, schema, []), [], conflict_target}, []}
+        to_remove =
+          case conflict_target do
+            target when is_atom(target) or is_list(target) ->
+              List.wrap(target)
+
+            _ ->
+              []
+          end
+        {{replace_all_fields!(:replace_all, schema, to_remove), [], conflict_target}, []}
 
       {:replace_all_except, fields} ->
         {{replace_all_fields!(:replace_all_except, schema, fields), [], conflict_target}, []}
