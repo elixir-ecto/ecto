@@ -279,63 +279,70 @@ defmodule Ecto.EnumTest do
 
     test "rejects bad strings" do
       type = EnumSchema.__schema__(:type, :my_enum)
+      cast_values = Ecto.Enum.cast_values(EnumSchema, :my_enum)
 
       assert %Changeset{
                valid?: false,
                changes: %{},
-               errors: [my_enum: {"is invalid", [type: ^type, validation: :cast]}]
+               errors: [my_enum: {"is invalid", [type: ^type, validation: :inclusion, enum: ^cast_values]}]
              } = Changeset.cast(%EnumSchema{}, %{my_enum: "bar2"}, [:my_enum])
 
       type = EnumSchema.__schema__(:type, :my_enums)
+      cast_values = Ecto.Enum.cast_values(EnumSchema, :my_enums)
 
       assert %Changeset{
                valid?: false,
                changes: %{},
-               errors: [my_enums: {"is invalid", [type: ^type, validation: :cast]}]
+               errors: [my_enums: {"is invalid", [type: ^type, validation: :inclusion, enum: ^cast_values, source: [0]]}]
              } = Changeset.cast(%EnumSchema{}, %{my_enums: ["bar2"]}, [:my_enums])
 
       type = EnumSchema.__schema__(:type, :my_string_enum)
+      cast_values = Ecto.Enum.cast_values(EnumSchema, :my_string_enum)
 
       assert %Changeset{
                valid?: false,
                changes: %{},
-               errors: [my_string_enum: {"is invalid", [type: ^type, validation: :cast]}]
+               errors: [my_string_enum: {"is invalid", [type: ^type, validation: :inclusion, enum: ^cast_values]}]
              } = Changeset.cast(%EnumSchema{}, %{my_string_enum: "baar2"}, [:my_string_enum])
 
       type = EnumSchema.__schema__(:type, :my_string_enums)
+      cast_values = Ecto.Enum.cast_values(EnumSchema, :my_string_enum)
 
       assert %Changeset{
                valid?: false,
                changes: %{},
-               errors: [my_string_enums: {"is invalid", [type: ^type, validation: :cast]}]
+               errors: [my_string_enums: {"is invalid", [type: ^type, validation: :inclusion, enum: ^cast_values, source: [0]]}]
              } = Changeset.cast(%EnumSchema{}, %{my_string_enums: ["baar2"]}, [:my_string_enums])
     end
 
     test "rejects bad integers" do
       type = EnumSchema.__schema__(:type, :my_integer_enum)
+      cast_values = Ecto.Enum.cast_values(EnumSchema, :my_integer_enum)
 
       assert %Changeset{
                valid?: false,
                changes: %{},
-               errors: [my_integer_enum: {"is invalid", [type: ^type, validation: :cast]}]
+               errors: [my_integer_enum: {"is invalid", [type: ^type, validation: :inclusion, enum: ^cast_values]}]
              } = Changeset.cast(%EnumSchema{}, %{my_integer_enum: 7}, [:my_integer_enum])
 
       type = EnumSchema.__schema__(:type, :my_integer_enums)
+      cast_values = Ecto.Enum.cast_values(EnumSchema, :my_integer_enums)
 
       assert %Changeset{
                valid?: false,
                changes: %{},
-               errors: [my_integer_enums: {"is invalid", [type: ^type, validation: :cast]}]
+               errors: [my_integer_enums: {"is invalid", [type: ^type, validation: :inclusion, enum: ^cast_values, source: [0]]}]
              } = Changeset.cast(%EnumSchema{}, %{my_integer_enums: [7]}, [:my_integer_enums])
     end
 
     test "rejects bad atoms" do
       type = EnumSchema.__schema__(:type, :my_enum)
+      cast_values = Ecto.Enum.cast_values(EnumSchema, :my_enum)
 
       assert %Changeset{
                valid?: false,
                changes: %{},
-               errors: [my_enum: {"is invalid", [type: ^type, validation: :cast]}]
+               errors: [my_enum: {"is invalid", [type: ^type, validation: :inclusion, enum: ^cast_values]}]
              } = Changeset.cast(%EnumSchema{}, %{my_enum: :bar2}, [:my_enum])
 
       type = EnumSchema.__schema__(:type, :my_enums)
@@ -484,6 +491,25 @@ defmodule Ecto.EnumTest do
       assert Ecto.Enum.values(@schemaless_types, :my_integer_enums) == [:foo, :bar, :baz]
       assert Ecto.Enum.values(@schemaless_types, :my_string_enum) == [:foo, :bar, :baz]
       assert Ecto.Enum.values(@schemaless_types, :my_string_enums) == [:foo, :bar, :baz]
+    end
+  end
+
+  describe "cast_values/2" do
+    test "returns correct values" do
+      assert Ecto.Enum.cast_values(EnumSchema, :my_enum) == [:foo, "foo", :bar, "bar", :baz, "baz"]
+      assert Ecto.Enum.cast_values(EnumSchema, :my_enums) == [:foo, "foo", :bar, "bar", :baz, "baz"]
+      assert Ecto.Enum.cast_values(EnumSchema, :my_string_enum) == [:foo, "foo", "fooo", :bar, "bar", "baar", :baz, "baz", "baaz"]
+      assert Ecto.Enum.cast_values(EnumSchema, :my_string_enums) == [:foo, "foo", "fooo", :bar, "bar", "baar", :baz, "baz", "baaz"]
+      assert Ecto.Enum.cast_values(EnumSchema, :my_integer_enum) == [:foo, "foo", 1, :bar, "bar", 2, :baz, "baz", 5]
+      assert Ecto.Enum.cast_values(EnumSchema, :my_integer_enums) == [:foo, "foo", 1, :bar, "bar", 2, :baz, "baz", 5]
+      assert Ecto.Enum.cast_values(EnumSchema, :virtual_enum) == [:foo, "foo", :bar, "bar", :baz, "baz"]
+
+      assert Ecto.Enum.cast_values(@schemaless_types, :my_enum) == [:foo, "foo", :bar, "bar", :baz, "baz"]
+      assert Ecto.Enum.cast_values(@schemaless_types, :my_enums) == [:foo, "foo", :bar, "bar", :baz, "baz"]
+      assert Ecto.Enum.cast_values(@schemaless_types, :my_string_enum) == [:foo, "foo", "fooo", :bar, "bar", "baar", :baz, "baz", "baaz"]
+      assert Ecto.Enum.cast_values(@schemaless_types, :my_string_enums) == [:foo, "foo", "fooo", :bar, "bar", "baar", :baz, "baz", "baaz"]
+      assert Ecto.Enum.cast_values(@schemaless_types, :my_integer_enum) == [:foo, "foo", 1, :bar, "bar", 2, :baz, "baz", 5]
+      assert Ecto.Enum.cast_values(@schemaless_types, :my_integer_enums) == [:foo, "foo", 1, :bar, "bar", 2, :baz, "baz", 5]
     end
   end
 
