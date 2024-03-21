@@ -1077,7 +1077,7 @@ defmodule Ecto.Changeset do
   of `cast_assoc/3`. This opens up the possibility to work on a subset of the data,
   instead of all associations in the database.
 
-  Taking the initial example of users having addresses imagine those addresses
+  Taking the initial example of users having addresses, imagine those addresses
   are set up to belong to a country. If you want to allow users to bulk edit all
   addresses that belong to a single country, you can do so by changing the preload
   query:
