@@ -727,7 +727,11 @@ defmodule Ecto.Repo.Schema do
         {{replace_fields!(dumper, keys), [], conflict_target}, []}
 
       :replace_all ->
-        {{replace_all_fields!(:replace_all, schema, []), [], conflict_target}, []}
+        # Remove the conflict targets from the replacing fields
+        # since the values don't change and this allows postgres to 
+        # possibly perform a HOT optimization: https://www.postgresql.org/docs/current/storage-hot.html
+        to_remove = List.wrap(conflict_target)
+        {{replace_all_fields!(:replace_all, schema, to_remove), [], conflict_target}, []}
 
       {:replace_all_except, fields} ->
         {{replace_all_fields!(:replace_all_except, schema, fields), [], conflict_target}, []}
