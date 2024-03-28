@@ -690,8 +690,14 @@ defmodule Ecto.Schema do
 
         for clauses <-
               Ecto.Schema.__schema__(fields, field_sources, assocs, embeds, virtual_fields, read_only),
-            {args, body} <- clauses do
-          def __schema__(unquote_splicing(args)), do: unquote(body)
+            clause <- clauses do
+          case clause do
+            {args, body} ->
+              def __schema__(unquote_splicing(args)), do: unquote(body)
+
+            {args, when_expr, body} ->
+              def __schema__(unquote_splicing(args)) when(unquote(when_expr)), do: unquote(body)
+          end
         end
       end
 
@@ -2312,12 +2318,18 @@ defmodule Ecto.Schema do
 
     field_sources_quoted =
       for {name, _type} <- fields do
-        {[:field_source, name], field_sources[name] || name}
+        field_arg = {:field, [], Elixir}
+        string_name = Atom.to_string(name)
+        when_expr = {:in, [], [field_arg, [name, string_name]]}
+        {[:field_source, field_arg], when_expr, field_sources[name] || name}
       end
 
     types_quoted =
       for {name, type} <- fields do
-        {[:type, name], Macro.escape(type)}
+        field_arg = {:field, [], Elixir}
+        string_name = Atom.to_string(name)
+        when_expr = {:in, [], [field_arg, [name, string_name]]}
+        {[:type, field_arg], when_expr, Macro.escape(type)}
       end
 
     virtual_types_quoted =

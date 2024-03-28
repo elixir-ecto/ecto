@@ -1065,6 +1065,12 @@ defmodule Ecto.Query.PlannerTest do
     assert Macro.to_string(hd(query.wheres).expr) == "&0.visits() == ^0"
     assert cast_params == [123]
 
+    {query, cast_params, _, _} =
+      from(Post, as: :posts, where: field(as(^as), "visits") == ^"123") |> normalize_with_params()
+
+    assert Macro.to_string(hd(query.wheres).expr) == "&0.visits() == ^0"
+    assert cast_params == [123]
+
     assert_raise Ecto.QueryError, ~r/could not find named binding `as\(:posts\)`/, fn ->
       from(Post, where: as(^as).visits == ^"123") |> normalize()
     end
@@ -1077,6 +1083,9 @@ defmodule Ecto.Query.PlannerTest do
     assert Macro.to_string(hd(query.wheres).expr) == "&0.visits() == ^0"
 
     query = from(Post, as: ^as, where: field(as(^as), :visits) == ^"123") |> normalize()
+    assert Macro.to_string(hd(query.wheres).expr) == "&0.visits() == ^0"
+
+    query = from(Post, as: ^as, where: field(as(^as), "visits") == ^"123") |> normalize()
     assert Macro.to_string(hd(query.wheres).expr) == "&0.visits() == ^0"
 
     assert_raise Ecto.QueryError, ~r/could not find named binding `as\(\{:posts\}\)`/, fn ->
@@ -1129,6 +1138,10 @@ defmodule Ecto.Query.PlannerTest do
     query = from(Post, as: :posts, join: c in subquery(child), on: true) |> normalize()
     assert Macro.to_string(hd(query.joins).source.query.select.expr) == "%{map: parent_as(:posts).posted()}"
 
+    child = from(c in Comment, select: %{map: field(parent_as(^as), "posted")})
+    query = from(Post, as: :posts, join: c in subquery(child), on: true) |> normalize()
+    assert Macro.to_string(hd(query.joins).source.query.select.expr) == "%{map: parent_as(:posts).posted()}"
+
     child = from(c in Comment, where: parent_as(^as).visits == ^"123")
 
     {query, cast_params, _, _} =
@@ -1138,6 +1151,14 @@ defmodule Ecto.Query.PlannerTest do
     assert cast_params == [123]
 
     child = from(c in Comment, where: field(parent_as(^as), :visits) == ^"123")
+
+    {query, cast_params, _, _} =
+      from(Post, as: :posts, join: c in subquery(child), on: true) |> normalize_with_params()
+
+    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) == "parent_as(:posts).visits() == ^0"
+    assert cast_params == [123]
+
+    child = from(c in Comment, where: field(parent_as(^as), "visits") == ^"123")
 
     {query, cast_params, _, _} =
       from(Post, as: :posts, join: c in subquery(child), on: true) |> normalize_with_params()
