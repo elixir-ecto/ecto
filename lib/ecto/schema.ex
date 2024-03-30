@@ -689,10 +689,19 @@ defmodule Ecto.Schema do
         end
 
         for clauses <-
-              Ecto.Schema.__schema__(fields, field_sources, assocs, embeds, virtual_fields, read_only),
+              Ecto.Schema.__schema__(
+                fields,
+                field_sources,
+                assocs,
+                embeds,
+                virtual_fields,
+                read_only
+              ),
             {args, body} <- clauses do
           def __schema__(unquote_splicing(args)), do: unquote(body)
         end
+
+        :ok
       end
 
     quote do
