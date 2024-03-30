@@ -4174,7 +4174,7 @@ defimpl Inspect, for: Ecto.Changeset do
 
   def inspect(%Ecto.Changeset{data: data} = changeset, opts) do
     list =
-      for attr <- [:action, :changes, :errors, :data, :valid?] do
+      for attr <- Map.keys(changeset) do
         {attr, Map.get(changeset, attr)}
       end
 
@@ -4206,6 +4206,9 @@ defimpl Inspect, for: Ecto.Changeset do
 
       {:valid?, valid?}, opts ->
         concat("valid?: ", to_doc(valid?, opts))
+
+      {key, _}, _ ->
+        concat(Atom.to_string(key) <> ": ", "**redacted**")
     end)
   end
 
