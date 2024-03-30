@@ -4174,9 +4174,9 @@ defimpl Inspect, for: Ecto.Changeset do
 
   def inspect(%Ecto.Changeset{data: data} = changeset, opts) do
     list =
-      for attr <- [:action, :changes, :errors, :data, :valid?] do
-        {attr, Map.get(changeset, attr)}
-      end
+      [:action, :changes, :errors, :data, :valid?]
+      |> Enum.map(fn attr -> {attr, Map.get(changeset, attr)} end)
+      |> List.insert_at(-1, {:redacted, "**Further fields such as params, repo, etc. have been redacted.**"})
 
     redacted_fields =
       case data do
@@ -4206,6 +4206,9 @@ defimpl Inspect, for: Ecto.Changeset do
 
       {:valid?, valid?}, opts ->
         concat("valid?: ", to_doc(valid?, opts))
+
+      {:redacted, message}, _opts ->
+        concat("INFO: ", to_doc(message, opts))
     end)
   end
 
