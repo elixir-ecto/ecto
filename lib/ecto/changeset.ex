@@ -4173,8 +4173,9 @@ defimpl Inspect, for: Ecto.Changeset do
   import Inspect.Algebra
 
   def inspect(%Ecto.Changeset{data: data} = changeset, opts) do
+    # The trailing element is skipped later on
     list =
-      for attr <- [:action, :changes, :errors, :data, :valid?] do
+      for attr <- [:action, :changes, :errors, :data, :valid?, :action] do
         {attr, Map.get(changeset, attr)}
       end
 
@@ -4191,20 +4192,20 @@ defimpl Inspect, for: Ecto.Changeset do
           []
       end
 
-    container_doc("#Ecto.Changeset<", list, ">", opts, fn
-      {:action, action}, opts ->
+    container_doc("#Ecto.Changeset<", list, ">", %{limit: 5}, fn
+      {:action, action}, _opts ->
         concat("action: ", to_doc(action, opts))
 
-      {:changes, changes}, opts ->
+      {:changes, changes}, _opts ->
         concat("changes: ", changes |> filter(redacted_fields) |> to_doc(opts))
 
       {:data, data}, _opts ->
         concat("data: ", to_struct(data, opts))
 
-      {:errors, errors}, opts ->
+      {:errors, errors}, _opts ->
         concat("errors: ", to_doc(errors, opts))
 
-      {:valid?, valid?}, opts ->
+      {:valid?, valid?}, _opts ->
         concat("valid?: ", to_doc(valid?, opts))
     end)
   end
