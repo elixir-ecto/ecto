@@ -2297,7 +2297,7 @@ defmodule Ecto.Schema do
   @doc false
   def __schema__(fields, field_sources, assocs, embeds, virtual_fields, read_only) do
     load =
-      for {name, type} <- fields do
+      for {name, type} <- fields ++ virtual_fields do
         if alias = field_sources[name] do
           {name, {:source, alias, type}}
         else

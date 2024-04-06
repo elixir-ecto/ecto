@@ -217,6 +217,9 @@ defmodule Ecto.RepoTest do
     assert %MySchema{} =
              TestRepo.load(MySchema, %{bad: "bad"})
 
+    # virtual fields
+    assert %MySchema{w: "abc"} = TestRepo.load(MySchema, %{w: "abc"})
+
     # invalid value
     assert_raise ArgumentError,
                  "cannot load `0` as type :string for field `x` in schema Ecto.RepoTest.MySchema",
