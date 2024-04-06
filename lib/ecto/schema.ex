@@ -672,6 +672,7 @@ defmodule Ecto.Schema do
         def __schema__(:loaded), do: unquote(Macro.escape(loaded))
         def __schema__(:redact_fields), do: unquote(redacted_fields)
         def __schema__(:virtual_fields), do: unquote(Enum.map(virtual_fields, &elem(&1, 0)))
+        def __schema__(:virtual_field_types), do: unquote(Macro.escape(virtual_fields))
         def __schema__(:writable_fields), do: unquote(for {name, false} <- read_only, do: name)
 
         def __schema__(:autogenerate_fields),
@@ -2297,7 +2298,7 @@ defmodule Ecto.Schema do
   @doc false
   def __schema__(fields, field_sources, assocs, embeds, virtual_fields, read_only) do
     load =
-      for {name, type} <- fields ++ virtual_fields do
+      for {name, type} <- fields do
         if alias = field_sources[name] do
           {name, {:source, alias, type}}
         else

@@ -28,7 +28,9 @@ defmodule Ecto.Schema.Loader do
   and that it may also require source-based renaming.
   """
   def unsafe_load(schema, data, loader) do
+    virtual_field_types = schema.__schema__(:virtual_field_types)
     types = schema.__schema__(:load)
+    types = Keyword.merge(virtual_field_types, types)
     struct = schema.__schema__(:loaded)
     unsafe_load(struct, types, data, loader)
   end
@@ -99,8 +101,8 @@ defmodule Ecto.Schema.Loader do
           Map.put(acc, source, value)
         :error ->
           raise ArgumentError, "cannot dump `#{inspect value}` as type #{Ecto.Type.format(type)} " <>
-                               "for field `#{field}` in schema #{inspect struct.__struct__}"
-      end
+                                "for field `#{field}` in schema #{inspect struct.__struct__}"
+        end
     end)
   end
 end
