@@ -101,8 +101,8 @@ defmodule Ecto.Schema.Loader do
           Map.put(acc, source, value)
         :error ->
           raise ArgumentError, "cannot dump `#{inspect value}` as type #{Ecto.Type.format(type)} " <>
-                                "for field `#{field}` in schema #{inspect struct.__struct__}"
-        end
+                               "for field `#{field}` in schema #{inspect struct.__struct__}"
+      end
     end)
   end
 end
