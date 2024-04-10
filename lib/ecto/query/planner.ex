@@ -224,7 +224,7 @@ defmodule Ecto.Query.Planner do
     # to the parent in subqueries in joins
     query = %{query | sources: {source}}
 
-    {joins, sources, tail_sources} = plan_joins(query, [source], length(query.joins), adapter, cte_names)
+    {query, joins, sources, tail_sources} = plan_joins(query, [source], length(query.joins), adapter, cte_names)
 
     %{query | from: from,
               joins: joins |> Enum.reverse,
@@ -506,7 +506,16 @@ defmodule Ecto.Query.Planner do
     #
     # All values in the middle should be shifted by offset,
     # all values after join are already correct.
-    child = refl.__struct__.joins_query(refl)
+
+    # put alias for this specific assoc parent into query aliases
+    # joins_query can get this alias by adding a second argument
+    join_parent = make_ref()
+    query = update_in query.aliases, &Map.put(&1, join_parent, ix)
+
+    child = cond do
+      function_exported?(refl.__struct__, :joins_query, 2) -> refl.__struct__.joins_query(refl, join_parent)
+      function_exported?(refl.__struct__, :joins_query, 1) -> refl.__struct__.joins_query(refl)
+    end
 
     # Rewrite prefixes:
     # 1. the child query has the parent query prefix
@@ -522,7 +531,7 @@ defmodule Ecto.Query.Planner do
 
     {_, child_from_source} = plan_source(child, child.from, adapter, cte_names)
 
-    {child_joins, child_sources, child_tail} =
+    {_child, child_joins, child_sources, child_tail} =
       plan_joins(child, [child_from_source], offset + last_ix - 1, adapter, cte_names)
 
     # Rewrite joins indexes as mentioned above
@@ -565,8 +574,8 @@ defmodule Ecto.Query.Planner do
     plan_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset, adapter, cte_names)
   end
 
-  defp plan_joins([], _query, joins, sources, tail_sources, _counter, _offset, _adapter, _cte_names) do
-    {joins, sources, tail_sources}
+  defp plan_joins([], query, joins, sources, tail_sources, _counter, _offset, _adapter, _cte_names) do
+    {query, joins, sources, tail_sources}
   end
 
   defp attach_on([%{on: on} = h | t], %{expr: expr, params: params}) do
@@ -588,6 +597,12 @@ defmodule Ecto.Query.Planner do
       end
 
     params = Enum.map(on.params, &rewrite_param_ix(&1, ix, last_ix, source_ix, inc_ix))
+
+    qual = case {join.qual, qual} do
+      {:inner_lateral, :inner} -> :inner_lateral
+      {:inner_lateral, :left} -> :left_lateral
+      {_, qual} -> qual
+    end
 
     %{join | on: %{on | expr: expr, params: params}, qual: qual,
              ix: rewrite_ix(join_ix, ix, last_ix, source_ix, inc_ix)}
