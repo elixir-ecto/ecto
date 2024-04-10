@@ -723,12 +723,15 @@ defmodule Ecto.Repo.Schema do
       :nothing ->
         {{:nothing, [], conflict_target}, []}
 
+      {:replace, []} ->
+        raise ArgumentError, ":on_conflict option with `{:replace, fields}` requires a non-empty list of fields"
+
       {:replace, keys} when is_list(keys) ->
         {{replace_fields!(dumper, keys), [], conflict_target}, []}
 
       :replace_all ->
         # Remove the conflict targets from the replacing fields
-        # since the values don't change and this allows postgres to 
+        # since the values don't change and this allows postgres to
         # possibly perform a HOT optimization: https://www.postgresql.org/docs/current/storage-hot.html
         to_remove = List.wrap(conflict_target)
         {{replace_all_fields!(:replace_all, schema, to_remove), [], conflict_target}, []}
