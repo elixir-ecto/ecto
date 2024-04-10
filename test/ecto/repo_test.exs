@@ -1687,6 +1687,14 @@ defmodule Ecto.RepoTest do
       assert_received {:insert, %{source: "my_parent", on_conflict: {:raise, _, _}}}
     end
 
+    test "raises on empty list of replace fields" do
+      msg = ":on_conflict option with `{:replace, fields}` requires a non-empty list of fields"
+
+      assert_raise ArgumentError, msg, fn ->
+        TestRepo.insert(%MySchema{id: 1}, on_conflict: {:replace, []})
+      end
+    end
+
     test "raises on unknown on_conflict value" do
       assert_raise ArgumentError, "unknown value for :on_conflict, got: :who_knows", fn ->
         TestRepo.insert(%MySchema{id: 1}, on_conflict: :who_knows)
