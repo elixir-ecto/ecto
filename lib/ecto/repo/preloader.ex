@@ -135,8 +135,14 @@ defmodule Ecto.Repo.Preloader do
     end
   end
 
-  # TODO: once we require Elixir >= v1.15.0, we can remove the alternative 
-  # function implementations
+  # TODO: once we require Elixir >= v1.15.0, we can remove the
+  # alternative function implementations.
+  #
+  # Elixir v1.15.0 included the `Logger.get_process_level/2` and
+  # `Logger.put_process_level` functions, which are used here
+  # to guarantee that the preloader processes inherit the parent's
+  # logger level.
+  #
   if Version.match?(System.version(), ">= 1.15.0") do
     defp pmap(preloaders, {adapter_meta, opts}) do
       # We pass caller: self() so the ownership pool knows where
@@ -178,7 +184,6 @@ defmodule Ecto.Repo.Preloader do
         {:exit, reason} -> exit(reason)
       end)
     end
-
   end
 
   # Then we unpack the query results, merge them, and preload recursively
