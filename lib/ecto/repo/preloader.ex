@@ -136,9 +136,11 @@ defmodule Ecto.Repo.Preloader do
       # still necessary.
       opts = Keyword.put_new(opts, :caller, self())
       on_preloader_spawn = Keyword.get(opts, :on_preloader_spawn, fn -> :ok end)
+      parent_logger_level = Logger.get_process_level(self())
 
       preloaders
       |> Task.async_stream(fn preloader ->
+        Logger.put_process_level(self(), parent_logger_level)
         on_preloader_spawn.()
         preloader.({adapter_meta, opts})
       end, timeout: :infinity)
