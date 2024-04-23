@@ -129,14 +129,28 @@ defmodule Ecto.Repo.Preloader do
   defp maybe_pmap(preloaders, _repo_name, {adapter_meta, opts}) do
     if match?([_, _ | _] , preloaders) and not adapter_meta.adapter.checked_out?(adapter_meta) and
          Keyword.get(opts, :in_parallel, true) do
+      pmap(preloaders, {adapter_meta, opts})
+    else
+      Enum.map(preloaders, &(&1.({adapter_meta, opts})))
+    end
+  end
+
+  # TODO: once we require Elixir >= v1.15.0, we can remove the alternative 
+  # function implementations
+  if Version.match?(System.version(), ">= 1.15.0") do
+    defp pmap(preloaders, {adapter_meta, opts}) do
       # We pass caller: self() so the ownership pool knows where
       # to fetch the connection from and set the proper timeouts.
       # Note while the ownership pool uses '$callers' from pdict,
       # it does not do so in automatic mode, hence this line is
       # still necessary.
       opts = Keyword.put_new(opts, :caller, self())
-      on_preloader_spawn = Keyword.get(opts, :on_preloader_spawn, fn -> :ok end)
+
+      # Additionally, we propagate the caller's logger level to
+      # the spawned tasks
       parent_logger_level = Logger.get_process_level(self())
+
+      on_preloader_spawn = Keyword.get(opts, :on_preloader_spawn, fn -> :ok end)
 
       preloaders
       |> Task.async_stream(fn preloader ->
@@ -148,9 +162,23 @@ defmodule Ecto.Repo.Preloader do
         {:ok, assoc} -> assoc
         {:exit, reason} -> exit(reason)
       end)
-    else
-      Enum.map(preloaders, &(&1.({adapter_meta, opts})))
     end
+  else
+    defp pmap(preloaders, {adapter_meta, opts}) do
+      opts = Keyword.put_new(opts, :caller, self())
+      on_preloader_spawn = Keyword.get(opts, :on_preloader_spawn, fn -> :ok end)
+
+      preloaders
+      |> Task.async_stream(fn preloader ->
+        on_preloader_spawn.()
+        preloader.({adapter_meta, opts})
+      end, timeout: :infinity)
+      |> Enum.map(fn
+        {:ok, assoc} -> assoc
+        {:exit, reason} -> exit(reason)
+      end)
+    end
+
   end
 
   # Then we unpack the query results, merge them, and preload recursively
