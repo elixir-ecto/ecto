@@ -125,7 +125,16 @@ defmodule Ecto.Changeset do
 
   When applying changes using `cast/4`, an empty value will be automatically
   converted to the field's default value. If the field is an array type, any
-  empty value inside the array will be removed.
+  empty value inside the array will be removed. When a plain map is used in
+  the data portion of a schemaless changeset, every field's default value is
+  considered to be `nil`. For example:
+
+      iex> data = %{name: "Bob"}
+      iex> types = %{name: :string}
+      iex> params = %{name: ""}
+      iex> changeset = Ecto.Changeset.cast({data, types}, params, Map.keys(types))
+      iex> changeset.changes
+      %{name: nil}
 
   Empty values are stored as a list in the changeset's `:empty_values` field.
   The list contains elements of type `t:empty_value/0`. Those are either values,
