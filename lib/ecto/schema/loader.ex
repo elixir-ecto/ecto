@@ -44,21 +44,11 @@ defmodule Ecto.Schema.Loader do
       {field, source, type} = field_source_and_type(pair)
 
       case fetch_string_or_atom_field(map, source) do
-        {:ok, value} ->
-          Map.put(acc, field, load!(struct, field, type, value, loader))
-
-        :error ->
-          if load_with_nil?(type) do
-            Map.put(acc, field, load!(struct, field, type, nil, loader))
-          else
-            acc
-          end
+        {:ok, value} -> Map.put(acc, field, load!(struct, field, type, value, loader))
+        :error -> acc
       end
     end)
   end
-
-  defp load_with_nil?({:parameterized, Ecto.Embedded, %{null: false}}), do: true
-  defp load_with_nil?(_), do: false
 
   @compile {:inline, field_source_and_type: 1, fetch_string_or_atom_field: 2}
   defp field_source_and_type({field, {:source, source, type}}) do
