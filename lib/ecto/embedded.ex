@@ -28,6 +28,7 @@ defmodule Ecto.Embedded do
     :owner,
     :related,
     :on_cast,
+    :default,
     on_replace: :raise,
     unique: true,
     ordered: true
@@ -59,13 +60,11 @@ defmodule Ecto.Embedded do
   end
 
   @impl Ecto.ParameterizedType
-  def load(nil, _fun, %{cardinality: :one}), do: {:ok, nil}
+  def load(nil, _fun, %{default: default}), do: {:ok, default}
 
   def load(value, fun, %{cardinality: :one, related: schema, field: field}) when is_map(value) do
     {:ok, load_field(field, schema, value, fun)}
   end
-
-  def load(nil, _fun, %{cardinality: :many}), do: {:ok, []}
 
   def load(value, fun, %{cardinality: :many, related: schema, field: field})
       when is_list(value) do
