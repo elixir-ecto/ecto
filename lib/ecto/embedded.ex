@@ -30,7 +30,8 @@ defmodule Ecto.Embedded do
     :on_cast,
     on_replace: :raise,
     unique: true,
-    ordered: true
+    ordered: true,
+    null: true
   ]
 
   ## Parameterized API
@@ -59,6 +60,10 @@ defmodule Ecto.Embedded do
   end
 
   @impl Ecto.ParameterizedType
+  def load(nil, fun, %{cardinality: :one, null: false} = embedded) do
+    load(%{}, fun, embedded)
+  end
+
   def load(nil, _fun, %{cardinality: :one}), do: {:ok, nil}
 
   def load(value, fun, %{cardinality: :one, related: schema, field: field}) when is_map(value) do

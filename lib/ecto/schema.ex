@@ -2223,7 +2223,7 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :ecto_changeset_fields, {name, {:assoc, struct}})
   end
 
-  @valid_embeds_one_options [:on_replace, :source, :load_in_query]
+  @valid_embeds_one_options [:on_replace, :source, :load_in_query, :null]
 
   @doc false
   def __embeds_one__(mod, name, schema, opts) when is_atom(schema) do
