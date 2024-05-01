@@ -769,8 +769,6 @@ defmodule Ecto.QueryTest do
       full_query          = from p in "posts", full_join: b in "blogs", on: true
       inner_lateral_query = from p in "posts", inner_lateral_join: b in "blogs", on: true
       left_lateral_query  = from p in "posts", left_lateral_join: b in "blogs", on: true
-      array_query         = from p in "posts", array_join: b in "blogs"
-      left_array_query    = from p in "posts", left_array_join: b in "blogs"
 
       refute inner_query.joins == base.joins
       refute cross_query.joins == base.joins
@@ -780,8 +778,6 @@ defmodule Ecto.QueryTest do
       refute full_query.joins == base.joins
       refute inner_lateral_query.joins == base.joins
       refute left_lateral_query.joins == base.joins
-      refute array_query.joins == base.joins
-      refute left_array_query.joins == base.joins
 
       excluded_inner_query = exclude(inner_query, :inner_join)
       assert excluded_inner_query.joins == base.joins
@@ -806,12 +802,6 @@ defmodule Ecto.QueryTest do
 
       excluded_left_lateral_query = exclude(left_lateral_query, :left_lateral_join)
       assert excluded_left_lateral_query.joins == base.joins
-
-      excluded_array_query = exclude(array_query, :array_join)
-      assert excluded_array_query.joins == base.joins
-
-      excluded_left_array_query = exclude(left_array_query, :left_array_join)
-      assert excluded_left_array_query.joins == base.joins
     end
 
     test "removes join qualifiers with named bindings" do
@@ -838,11 +828,7 @@ defmodule Ecto.QueryTest do
           as: :blogs_il,
           left_lateral_join: bll in "blogs",
           on: true,
-          as: :blogs_ll,
-          array_join: ba in "blogs",
-          as: :blogs_a,
-          left_array_join: bla in "blogs",
-          as: :blogs_la
+          as: :blogs_ll
 
       original_joins_number = length(query.joins)
       original_aliases_number = map_size(query.aliases)
@@ -894,18 +880,6 @@ defmodule Ecto.QueryTest do
       assert map_size(excluded_left_lateral_join_query.aliases) == original_aliases_number - 1
       refute Map.has_key?(excluded_left_lateral_join_query.aliases, :blogs_ll)
       assert Map.has_key?(excluded_left_lateral_join_query.aliases, :base)
-
-      excluded_array_join_query = exclude(query, :array_join)
-      assert length(excluded_array_join_query.joins) == original_joins_number - 1
-      assert map_size(excluded_array_join_query.aliases) == original_aliases_number - 1
-      refute Map.has_key?(excluded_array_join_query.aliases, :blogs_a)
-      assert Map.has_key?(excluded_array_join_query.aliases, :base)
-
-      excluded_left_array_join_query = exclude(query, :left_array_join)
-      assert length(excluded_left_array_join_query.joins) == original_joins_number - 1
-      assert map_size(excluded_left_array_join_query.aliases) == original_aliases_number - 1
-      refute Map.has_key?(excluded_left_array_join_query.aliases, :blogs_la)
-      assert Map.has_key?(excluded_left_array_join_query.aliases, :base)
 
       excluded_all_joins_query = exclude(query, :join)
       assert excluded_all_joins_query.joins == []

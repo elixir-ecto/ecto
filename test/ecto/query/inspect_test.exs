@@ -138,12 +138,6 @@ defmodule Ecto.Query.InspectTest do
     assert i(from(x in Post, cross_lateral_join: y in Comment, on: x.id == y.id)) ==
            ~s{from p0 in Inspect.Post, cross_lateral_join: c1 in Inspect.Comment, on: p0.id == c1.id}
 
-    assert i(from(x in Post, array_join: y in "arr")) ==
-           ~s{from p0 in Inspect.Post, array_join: a1 in "arr", on: true}
-
-    assert i(from(x in Post, left_array_join: y in "arr")) ==
-           ~s{from p0 in Inspect.Post, left_array_join: a1 in "arr", on: true}
-
     binding = :comments
     assert i(from(x in Post, left_join: y in assoc(x, ^binding), as: ^binding)) ==
            ~s{from p0 in Inspect.Post, left_join: c1 in assoc(p0, :comments), as: :comments}
