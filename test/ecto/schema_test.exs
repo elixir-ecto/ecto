@@ -1169,4 +1169,21 @@ defmodule Ecto.SchemaTest do
                    end
                  end
   end
+
+  test "raises when :default is neither true nor a schema struct" do
+    error_message = "invalid `:default` option for :schema. The only valid " <>
+      "options are: `true` or a struct value like `%Ecto.SchemaTest.Schema{}`"
+
+    for default <- [false, %{}, ~D[2020-01-01], 1] do
+      assert_raise ArgumentError, error_message, fn ->
+        defmodule User do
+          use Ecto.Schema
+
+          schema "users" do
+            embeds_one :schema, Schema, default: default
+          end
+        end
+      end
+    end
+  end
 end
