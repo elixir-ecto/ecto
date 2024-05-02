@@ -1772,6 +1772,36 @@ defmodule Ecto.Schema do
   defmacro embeds_one(name, schema, opts, do: block) do
     schema = expand_nested_module_alias(schema, __CALLER__)
 
+    opts =
+      case Keyword.fetch(opts, :default) do
+        {:ok, default_ast} ->
+          last_schema_name = schema |> Module.split() |> List.last()
+
+          base_error_message =
+            "invalid `:default` option for #{inspect(name)}. " <>
+              "The only valid option is a struct value like `%#{last_schema_name}{}`"
+
+          case validate_inline_embeds_default(default_ast, last_schema_name) do
+            :ok ->
+              Keyword.put(opts, :default, :__generate_embeds_one_default__)
+
+            {:error, :not_default_struct} ->
+              raise ArgumentError,
+                    base_error_message <>
+                      "\n" <>
+                      "  With inline embeds you also cannot override any defaults, so " <>
+                      "#{Macro.to_string(default_ast)} is also invalid.\n" <>
+                      "  If you want to set defaults set it at the field definition or change " <>
+                      "a non-inline embed."
+
+            {:error, _} ->
+              raise ArgumentError, base_error_message
+          end
+
+        _ ->
+          opts
+      end
+
     quote do
       {schema, opts} =
         Ecto.Schema.__embeds_module__(
@@ -2231,14 +2261,17 @@ defmodule Ecto.Schema do
 
     opts =
       case Keyword.fetch(opts, :default) do
-        {:ok, true} ->
-          Keyword.put(opts, :default, schema.__schema__(:loaded))
         {:ok, %^schema{}} ->
           opts
+
+        {:ok, :__generate_embeds_one_default__} ->
+          Keyword.put(opts, :default, schema.__schema__(:loaded))
+
         {:ok, _} ->
           raise ArgumentError,
                 "invalid `:default` option for #{inspect(name)}. " <>
-                  "The only valid options are: `true` or a struct value like `%#{inspect(schema)}{}`"
+                  "The only valid option is a struct value like `%#{inspect(schema)}{}`"
+
         _ ->
           opts
       end
@@ -2401,6 +2434,19 @@ defmodule Ecto.Schema do
 
     Module.put_attribute(mod, :ecto_struct_fields, {name, assoc})
   end
+
+  defp validate_inline_embeds_default(
+         {:%, _, [{:__aliases__, _, [schema_name]}, {:%{}, _, args}]},
+         last_schema_name
+       ) do
+    cond do
+      to_string(schema_name) != last_schema_name -> {:error, :invalid_value}
+      args != [] -> {:error, :not_default_struct}
+      true -> :ok
+    end
+  end
+
+  defp validate_inline_embeds_default(_, _), do: {:error, :invalid_value}
 
   defp validate_default!(_type, _value, true), do: :ok
 

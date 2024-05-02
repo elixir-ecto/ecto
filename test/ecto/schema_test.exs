@@ -1170,9 +1170,9 @@ defmodule Ecto.SchemaTest do
                  end
   end
 
-  test "raises when :default is neither true nor a schema struct" do
+  test "raises when :default is not a schema struct" do
     error_message = "invalid `:default` option for :schema. The only valid " <>
-      "options are: `true` or a struct value like `%Ecto.SchemaTest.Schema{}`"
+      "option is a struct value like `%Ecto.SchemaTest.Schema{}`"
 
     for default <- [false, %{}, ~D[2020-01-01], 1] do
       assert_raise ArgumentError, error_message, fn ->
@@ -1181,6 +1181,48 @@ defmodule Ecto.SchemaTest do
 
           schema "users" do
             embeds_one :schema, Schema, default: default
+          end
+        end
+      end
+    end
+  end
+
+  test "raises when :default is not a schema struct for inline embeds" do
+    error_message =
+      "invalid `:default` option for :inline_schema. The only valid " <>
+        "option is a struct value like `%InlineSchema{}`"
+
+    for default <- [false, %{}, ~D[2020-01-01], 1] do
+      assert_raise ArgumentError, error_message, fn ->
+        defmodule User do
+          use Ecto.Schema
+
+          schema "users" do
+            embeds_one :inline_schema, InlineSchema, default: default do
+              field :this, :string
+            end
+          end
+        end
+      end
+    end
+  end
+
+  test "raises when :default is not an empty schem struct for inline embeds" do
+    error_message =
+      "invalid `:default` option for :inline_schema. The only valid " <>
+        "option is a struct value like `%InlineSchema{}`\n" <>
+                    "  With inline embeds you also cannot override any defaults, so " <>
+                    "%InlineSchema{this: \"that\"} is also invalid.\n" <>
+                    "  If you want to set defaults set it at the field definition or change " <>
+                    "a non-inline embed."
+
+    assert_raise ArgumentError, error_message, fn ->
+      defmodule User do
+        use Ecto.Schema
+
+        schema "users" do
+          embeds_one :inline_schema, InlineSchema, default: %InlineSchema{this: "that"} do
+            field :this, :string
           end
         end
       end
