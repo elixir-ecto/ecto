@@ -41,7 +41,7 @@ defmodule Ecto.EmbeddedTest do
       field :dark_mode, :boolean, default: false
       embeds_one :default_post, Post, default: %Post{title: "Default Title"}
 
-      embeds_one :notifications, Notifications, default: %Notifications{} do
+      embeds_one :notifications, Notifications, default: true do
         field :email, :boolean, default: true
       end
     end
