@@ -2223,24 +2223,17 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :ecto_changeset_fields, {name, {:assoc, struct}})
   end
 
-  @valid_embeds_one_options [:on_replace, :source, :load_in_query, :default]
+  @valid_embeds_one_options [:on_replace, :source, :load_in_query, :with_default]
 
   @doc false
   def __embeds_one__(mod, name, schema, opts) when is_atom(schema) do
     check_options!(opts, @valid_embeds_one_options, "embeds_one/3")
 
     opts =
-      case Keyword.fetch(opts, :default) do
-        {:ok, true} ->
-          Keyword.put(opts, :default, schema.__schema__(:loaded))
-        {:ok, %^schema{}} ->
-          opts
-        {:ok, _} ->
-          raise ArgumentError,
-                "invalid `:default` option for #{inspect(name)}. " <>
-                  "The only valid options are: `true` or a struct value like `%#{inspect(schema)}{}`"
-        _ ->
-          opts
+      if Keyword.get(opts, :with_default) do
+        Keyword.put(opts, :default, schema.__schema__(:loaded))
+      else
+        opts
       end
 
     embed(mod, :one, name, schema, opts)

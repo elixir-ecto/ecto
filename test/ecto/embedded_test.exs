@@ -39,11 +39,7 @@ defmodule Ecto.EmbeddedTest do
 
     embedded_schema do
       field :dark_mode, :boolean, default: false
-      embeds_one :default_post, Post, default: %Post{title: "Default Title"}
-
-      embeds_one :notifications, Notifications, default: true do
-        field :email, :boolean, default: true
-      end
+      embeds_one :default_post, Post, with_default: true
     end
   end
 
@@ -83,11 +79,8 @@ defmodule Ecto.EmbeddedTest do
     assert %UUIDSchema{uuid: ^uuid, authors: [%Author{}]} =
              Ecto.embedded_load(UUIDSchema, %{"uuid" => uuid, "authors" => [%{}]}, :json)
 
-    assert %Settings{
-             dark_mode: false,
-             default_post: %Post{title: "Default Title"},
-             notifications: %{email: true}
-           } = Ecto.embedded_load(Settings, %{}, :json)
+    assert %Settings{dark_mode: false, default_post: %Post{}} =
+             Ecto.embedded_load(Settings, %{}, :json)
 
     assert %Settings{dark_mode: false, default_post: %Post{}} =
              Ecto.embedded_load(Settings, %{"default_post" => nil}, :json)
