@@ -51,14 +51,7 @@ defmodule Ecto.EmbeddedTest do
       %Embedded{field: :profile, cardinality: :one, owner: Author, on_replace: :delete, related: Profile}
 
     assert Author.__schema__(:embed, :posts) ==
-             %Embedded{
-               field: :posts,
-               cardinality: :many,
-               owner: Author,
-               on_replace: :delete,
-               related: Post,
-               default: []
-             }
+      %Embedded{field: :posts, cardinality: :many, owner: Author, on_replace: :delete, related: Post}
   end
 
   test "embedded_load/3" do
@@ -82,7 +75,7 @@ defmodule Ecto.EmbeddedTest do
     assert %Settings{dark_mode: false, default_post: %Post{}} =
              Ecto.embedded_load(Settings, %{}, :json)
 
-    assert %Settings{dark_mode: false, default_post: %Post{}} =
+    assert %Settings{dark_mode: false, default_post: nil} =
              Ecto.embedded_load(Settings, %{"default_post" => nil}, :json)
 
     assert_raise ArgumentError,

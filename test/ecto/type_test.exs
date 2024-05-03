@@ -329,8 +329,7 @@ defmodule Ecto.TypeTest do
 
     test "many" do
       embed = %Ecto.Embedded{field: :embed, cardinality: :many,
-                             owner: __MODULE__, related: Schema,
-                             default: []}
+                             owner: __MODULE__, related: Schema}
       type  = {:parameterized, Ecto.Embedded, embed}
 
       assert {:ok, [%Schema{id: @uuid_string, a: 1, c: 0}]} =
