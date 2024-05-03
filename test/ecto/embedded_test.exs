@@ -39,7 +39,7 @@ defmodule Ecto.EmbeddedTest do
 
     embedded_schema do
       field :dark_mode, :boolean, default: false
-      embeds_one :default_post, Post, with_default: true
+      embeds_one :default_post, Post, defaults_to_struct: true
     end
   end
 
