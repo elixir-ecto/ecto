@@ -1648,6 +1648,12 @@ defmodule Ecto.Schema do
       selecting the whole struct in a query, such as `from p in Post, select: p`.
       Defaults to `true`.
 
+    * `:defaults_to_struct` - When true, the field will default to the initialized
+      struct instead of nil, the same you would get from something like `%Order.Item{}`.
+      One important thing is that if the underlying data is explicitly nil when loading
+      the schema, it will still be loaded as nil, similar to how `:default` works in fields.
+      Defaults to `false`.
+
   ## Examples
 
       defmodule Order do
