@@ -1648,6 +1648,12 @@ defmodule Ecto.Schema do
       selecting the whole struct in a query, such as `from p in Post, select: p`.
       Defaults to `true`.
 
+    * `:defaults_to_struct` - When true, the field will default to the initialized
+      struct instead of nil, the same you would get from something like `%Order.Item{}`.
+      One important thing is that if the underlying data is explicitly nil when loading
+      the schema, it will still be loaded as nil, similar to how `:default` works in fields.
+      Defaults to `false`.
+
   ## Examples
 
       defmodule Order do
@@ -2223,11 +2229,19 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :ecto_changeset_fields, {name, {:assoc, struct}})
   end
 
-  @valid_embeds_one_options [:on_replace, :source, :load_in_query]
+  @valid_embeds_one_options [:on_replace, :source, :load_in_query, :defaults_to_struct]
 
   @doc false
   def __embeds_one__(mod, name, schema, opts) when is_atom(schema) do
     check_options!(opts, @valid_embeds_one_options, "embeds_one/3")
+
+    opts =
+      if Keyword.get(opts, :defaults_to_struct) do
+        Keyword.put(opts, :default, schema.__schema__(:loaded))
+      else
+        opts
+      end
+
     embed(mod, :one, name, schema, opts)
   end
 
