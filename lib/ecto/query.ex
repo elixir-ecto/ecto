@@ -353,7 +353,7 @@ defmodule Ecto.Query do
   or `join` is used. The query prefix is used only if none of the above
   are declared.
 
-  Let's see some examples. To see the query prefix globally, the simplest
+  Let's see some examples. To set the query prefix globally, the simplest
   mechanism is to pass an option to the repository operation:
 
       results = Repo.all(query, prefix: "accounts")
