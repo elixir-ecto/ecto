@@ -1590,7 +1590,7 @@ defmodule Ecto.Repo do
   @doc group: "Schema API"
   @callback insert_all(
               schema_or_source :: binary() | {binary(), module()} | module(),
-              entries_or_query :: [%{atom() | String.t() => value} | Keyword.t(value)] | Ecto.Query.t(),
+              entries_or_query :: [%{(atom() | String.t()) => value} | Keyword.t(value)] | Ecto.Query.t(),
               opts :: Keyword.t()
             ) :: {non_neg_integer(), nil | [term()]}
             when value: term() | Ecto.Query.t()
