@@ -3,6 +3,7 @@ defmodule Ecto.Repo.Supervisor do
   use Supervisor
 
   @defaults [timeout: 15000, pool_size: 10]
+  @atom_url_query_params ["ssl"]
   @integer_url_query_params ["timeout", "pool_size", "idle_interval"]
 
   @doc """
@@ -130,18 +131,15 @@ defmodule Ecto.Repo.Supervisor do
   defp parse_uri_query(%URI{query: query} = url) do
     query
     |> URI.query_decoder()
-    |> Enum.reduce([], fn
-      {"ssl", "true"}, acc ->
-        [{:ssl, true}] ++ acc
+    |> Enum.map(fn
+      {key, value} when key in @atom_url_query_params ->
+        {String.to_atom(key), String.to_atom(value)}
 
-      {"ssl", "false"}, acc ->
-        [{:ssl, false}] ++ acc
+      {key, value} when key in @integer_url_query_params ->
+        {String.to_atom(key), parse_integer!(key, value, url)}
 
-      {key, value}, acc when key in @integer_url_query_params ->
-        [{String.to_atom(key), parse_integer!(key, value, url)}] ++ acc
-
-      {key, value}, acc ->
-        [{String.to_atom(key), value}] ++ acc
+      {key, value} ->
+        {String.to_atom(key), value}
     end)
   end
 
