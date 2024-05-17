@@ -25,7 +25,8 @@ defmodule Ecto.Repo.Supervisor do
     case repo_init(type, repo, config) do
       {:ok, config} ->
         {url, config} = Keyword.pop(config, :url)
-        {:ok, Keyword.merge(config, parse_url(url || ""))}
+        ssl_opts = Keyword.get(config, :ssl_opts, [])
+        {:ok, Keyword.merge(config, parse_url(url || "", ssl_opts))}
 
       :ignore ->
         :ignore
@@ -84,9 +85,10 @@ defmodule Ecto.Repo.Supervisor do
       "ecto://username:password@hostname:port/database?ssl=true&timeout=1000"
 
   """
-  def parse_url(""), do: []
+  def parse_url(url, ssl_opts \\ [])
+  def parse_url("", _ssl_opts), do: []
 
-  def parse_url(url) when is_binary(url) do
+  def parse_url(url, ssl_opts) when is_binary(url) do
     info = URI.parse(url)
 
     if is_nil(info.host) do
@@ -109,7 +111,7 @@ defmodule Ecto.Repo.Supervisor do
     ]
 
     url_opts = put_hostname_if_present(url_opts, info.host)
-    query_opts = parse_uri_query(info)
+    query_opts = parse_uri_query(info, ssl_opts)
 
     for {k, v} <- url_opts ++ query_opts,
         not is_nil(v),
@@ -124,10 +126,10 @@ defmodule Ecto.Repo.Supervisor do
     Keyword.put(keyword, :hostname, hostname)
   end
 
-  defp parse_uri_query(%URI{query: nil}),
+  defp parse_uri_query(%URI{query: nil}, _ssl_opts),
     do: []
 
-  defp parse_uri_query(%URI{query: query} = url) do
+  defp parse_uri_query(%URI{query: query} = url, ssl_opts) do
     query
     |> URI.query_decoder()
     |> Enum.reduce([], fn
@@ -136,6 +138,17 @@ defmodule Ecto.Repo.Supervisor do
 
       {"ssl", "false"}, acc ->
         [{:ssl, false}] ++ acc
+
+      {"sslmode", "verify-full"}, acc ->
+        if Keyword.take(ssl_opts, [:server_name_indication, :customize_hostname_check]) == [] do
+          new_ssl_opts = [
+            server_name_indication: url.host,
+            customize_hostname_check: [match_fun: :public_key.pkix_verify_hostname_match_fun(:https)]
+          ]
+          [ssl: true, ssl_opts: Keyword.merge(ssl_opts, new_ssl_opts)] ++ acc
+        else
+          [ssl: true] ++ acc
+        end
 
       {key, value}, acc when key in @integer_url_query_params ->
         [{String.to_atom(key), parse_integer!(key, value, url)}] ++ acc

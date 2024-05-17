@@ -25,7 +25,7 @@ defmodule Ecto.MixProject do
 
   def application do
     [
-      extra_applications: [:logger, :crypto, :eex],
+      extra_applications: [:logger, :crypto, :eex, :public_key],
       mod: {Ecto.Application, []}
     ]
   end

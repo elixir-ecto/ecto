@@ -168,6 +168,26 @@ defmodule Ecto.Repo.SupervisorTest do
       assert {:ssl, false} in parse_url(encoded_url)
     end
 
+    test "supports sslmode=verify-full query string option" do
+      url = "ecto://eric:it+й@host:12345/mydb"
+
+      encoded_url = URI.encode("#{url}?sslmode=verify-full")
+      config = parse_url(encoded_url)
+
+      assert {:ssl, true} in config
+      assert {:ssl_opts,
+              server_name_indication: "host",
+              customize_hostname_check: [
+                match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+              ]} in config
+
+      # does not override if ssl_opts user defined keys exist
+      encoded_url = URI.encode("#{url}?sslmode=verify-full")
+      config = parse_url(encoded_url, [server_name_indication: "custom-host"])
+      assert {:ssl, true} in config
+      refute Keyword.has_key?(config, :ssl_opts)
+    end
+
     test "supports camelCase query string options" do
       encoded_url = URI.encode("ecto://eric:it+й@host:12345/mydb?currentSchema=my_schema")
       assert {:currentSchema, "my_schema"} in parse_url(encoded_url)
