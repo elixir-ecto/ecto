@@ -312,7 +312,7 @@ defmodule Ecto.Repo.Preloader do
           query = add_preload_order(assoc.preload_order, query)
 
           update_in query.order_bys, fn order_bys ->
-            [%Ecto.Query.QueryExpr{expr: [asc: related_field_ast], params: [],
+            [%Ecto.Query.ByExpr{expr: [asc: related_field_ast], params: [],
                                    file: __ENV__.file, line: __ENV__.line}|order_bys]
           end
 

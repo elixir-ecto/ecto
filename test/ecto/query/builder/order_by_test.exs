@@ -124,6 +124,20 @@ defmodule Ecto.Query.Builder.OrderByTest do
              [{1, {0, :foo}}, {"bar", {0, :bar}}, {2, {0, :baz}}, {"bat", {0, :bat}}]
     end
 
+    test "supports subqueries" do
+      order_by = [
+        asc: dynamic([p], exists(from other_post in "posts", where: other_post.id == parent_as(:p).id))
+      ]
+
+      %{order_bys: [order_by]} = from p in "posts", as: :p, order_by: ^order_by
+      assert order_by.expr ==  [asc: {:exists, [], [subquery: 0]}]
+      assert [_] = order_by.subqueries
+
+      %{order_bys: [order_by]} = from p in "posts", as: :p, order_by: [asc: exists(from other_post in "posts", where: other_post.id == parent_as(:p).id)]
+      assert order_by.expr ==  [asc: {:exists, [], [subquery: 0]}]
+      assert [_] = order_by.subqueries
+    end
+
     test "supports interpolated atomnames in selected_as/1" do
       query = from p in "posts", select: selected_as(p.id, :ident), order_by: selected_as(^:ident)
       assert [asc: {:selected_as, [], [:ident]}] = hd(query.order_bys).expr
