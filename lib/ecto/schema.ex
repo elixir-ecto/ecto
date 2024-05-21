@@ -730,7 +730,7 @@ defmodule Ecto.Schema do
 
       The default value is validated against the field's type at compilation time
       and it will raise an ArgumentError if there is a type mismatch. If you cannot
-      infer  the field's type at compilation time, you can use the
+      infer the field's type at compilation time, you can use the
       `:skip_default_validation` option on the field to skip validations.
 
       Once a default value is set, if you send changes to the changeset that
@@ -1404,7 +1404,7 @@ defmodule Ecto.Schema do
     * `:preload_order` - Sets the default `order_by` when preloading the association.
       It may be a keyword list/list of fields or an MFA tuple, such as `{Mod, fun, []}`.
       Both cases must resolve to a valid `order_by` expression. See `Ecto.Query.order_by/3`
-      to learn more about about ordering expressions.
+      to learn more about ordering expressions.
       See the [preload order](#many_to_many/3-preload-order) section below to learn how
       this option can be utilized
 
@@ -1641,8 +1641,8 @@ defmodule Ecto.Schema do
 
     * `:primary_key` - The `:primary_key` option can be used with the same arguments
       as `@primary_key` (see the [Schema attributes](https://hexdocs.pm/ecto/Ecto.Schema.html#module-schema-attributes)
-      section for more info). Primary keys are automatically set up for  embedded  schemas as well,
-      defaulting  to  `{:id,  :binary_id, autogenerate:   true}`.
+      section for more info). Primary keys are automatically set up for embedded schemas as well,
+      defaulting to  `{:id,  :binary_id, autogenerate:   true}`.
 
     * `:on_replace` - The action taken on associations when the embed is
       replaced when casting or manipulating parent changeset. May be
@@ -1920,8 +1920,8 @@ defmodule Ecto.Schema do
         end
       end
 
-  Primary keys are automatically set up for  embedded  schemas as well,
-  defaulting  to  `{:id,  :binary_id, autogenerate:   true}`. You can
+  Primary keys are automatically set up for embedded schemas as well,
+  defaulting to  `{:id,  :binary_id, autogenerate:   true}`. You can
   customize it by passing a `:primary_key` option with the same arguments
   as `@primary_key` (see the [Schema attributes](https://hexdocs.pm/ecto/Ecto.Schema.html#module-schema-attributes)
   section for more info).

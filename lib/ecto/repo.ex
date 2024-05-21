@@ -704,7 +704,7 @@ defmodule Ecto.Repo do
   @doc """
   Loads `data` into a schema or a map.
 
-  The first argument can be a a schema module or a map (of types).
+  The first argument can be a schema module or a map (of types).
   The first argument determines the return value: a struct or a map,
   respectively.
 
