@@ -2523,7 +2523,7 @@ defmodule Ecto.Changeset do
   If a field is given to `validate_required/3` but it has not been passed
   as parameter during `cast/3` (i.e. it has not been changed), then
   `validate_required/3` will check for its current value in the data.
-  If the data contains an non-empty value for the field, then no error is
+  If the data contains a non-empty value for the field, then no error is
   added. This allows developers to use `validate_required/3` to perform
   partial updates. For example, on `insert` all fields would be required,
   because their default values on the data are all `nil`, but on `update`,

@@ -2914,7 +2914,7 @@ defmodule Ecto.Query do
 
   With this function it can be simplified to:
 
-      with_named_binding(query, :comments, fn  query, binding ->
+      with_named_binding(query, :comments, fn query, binding ->
         join(query, :left, [p], a in assoc(p, ^binding), as: ^binding)
       end)
 
