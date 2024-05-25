@@ -99,7 +99,7 @@ defmodule Ecto.Query.Builder.GroupBy do
     group_by = quote do: %Ecto.Query.ByExpr{
                            expr: unquote(expr),
                            params: unquote(params),
-                           subqueries: unquote(acc[:subqueries]),
+                           subqueries: unquote(acc.subqueries),
                            file: unquote(env.file),
                            line: unquote(env.line)}
     Builder.apply_query(query, __MODULE__, [group_by], env)
