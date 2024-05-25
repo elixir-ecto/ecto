@@ -206,8 +206,8 @@ defmodule Ecto.Query.Planner do
     |> plan_assocs()
     |> plan_combinations(adapter, cte_names)
     |> plan_wheres(adapter, cte_names)
-    |> plan_order_bys(adapter, cte_names)
-    |> plan_group_bys(adapter, cte_names)
+    |> plan_bys(:order_bys, adapter, cte_names)
+    |> plan_bys(:group_bys, adapter, cte_names)
     |> plan_distinct(adapter, cte_names)
     |> plan_windows(adapter, cte_names)
     |> plan_select(adapter, cte_names)
@@ -680,18 +680,18 @@ defmodule Ecto.Query.Planner do
     %{query | wheres: wheres, havings: havings}
   end
 
-  @spec plan_order_bys(Ecto.Query.t(), module, map()) :: Ecto.Query.t
-  defp plan_order_bys(query, adapter, cte_names) do
+  @spec plan_bys(Ecto.Query.t(), key :: :group_bys | :order_bys, module, map()) :: Ecto.Query.t
+  defp plan_bys(query, key, adapter, cte_names) do
     order_bys =
-      Enum.map(query.order_bys, fn
+      Enum.map(Map.get(query, key), fn
         %{subqueries: []} = order_by ->
           order_by
 
-          %{subqueries: subqueries} = order_by ->
+        %{subqueries: subqueries} = order_by ->
           %{order_by | subqueries: Enum.map(subqueries, &plan_subquery(&1, query, nil, adapter, false, cte_names))}
       end)
 
-    %{query | order_bys: order_bys}
+    Map.put(query, key, order_bys)
   end
 
   @spec plan_windows(Ecto.Query.t(), module, map()) :: Ecto.Query.t
@@ -720,20 +720,6 @@ defmodule Ecto.Query.Planner do
       _ ->
         query
     end
-  end
-
-  @spec plan_group_bys(Ecto.Query.t(), module, map()) :: Ecto.Query.t
-  defp plan_group_bys(query, adapter, cte_names) do
-    group_bys =
-      Enum.map(query.group_bys, fn
-        %{subqueries: []} = group_by ->
-          group_by
-
-          %{subqueries: subqueries} = group_by ->
-          %{group_by | subqueries: Enum.map(subqueries, &plan_subquery(&1, query, nil, adapter, false, cte_names))}
-      end)
-
-      %{query | group_bys: group_bys}
   end
 
   @spec plan_select(Ecto.Query.t(), module, map()) :: Ecto.Query.t
