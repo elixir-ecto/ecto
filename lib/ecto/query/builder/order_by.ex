@@ -136,8 +136,8 @@ defmodule Ecto.Query.Builder.OrderBy do
   Shared between order_by and distinct.
   """
   def order_by_or_distinct!(kind, query, exprs, params) do
-    {expr, {params, _, subqueries, aliases}} =
-      Enum.map_reduce(List.wrap(exprs), {params, length(params), [], %{}}, fn
+    {expr, {params, _, subqueries}} =
+      Enum.map_reduce(List.wrap(exprs), {params, length(params), []}, fn
         {dir, expr}, params_count when dir in @directions ->
           {expr, params} =
             dynamic_or_field!(kind, expr, query, params_count)
@@ -151,15 +151,15 @@ defmodule Ecto.Query.Builder.OrderBy do
           {{:asc, expr}, params}
       end)
 
-    {expr, params, subqueries, aliases}
+    {expr, params, subqueries}
   end
 
   @doc """
   Called at runtime to assemble order_by.
   """
   def order_by!(query, exprs, op, file, line) do
-    {expr, params, subqueries, aliases} = order_by_or_distinct!(:order_by, query, exprs, [])
-    expr = %Ecto.Query.ByExpr{expr: expr, params: Enum.reverse(params), line: line, file: file, subqueries: subqueries, aliases: aliases}
+    {expr, params, subqueries} = order_by_or_distinct!(:order_by, query, exprs, [])
+    expr = %Ecto.Query.ByExpr{expr: expr, params: Enum.reverse(params), line: line, file: file, subqueries: subqueries}
     apply(query, expr, op)
   end
 
@@ -167,19 +167,19 @@ defmodule Ecto.Query.Builder.OrderBy do
          _kind,
          %Ecto.Query.DynamicExpr{} = dynamic,
          query,
-         {params, count, subqueries, aliases}
+         {params, count, subqueries}
        ) do
-    {expr, params, subqueries, aliases, count} =
+    {expr, params, subqueries, _aliases, count} =
       Ecto.Query.Builder.Dynamic.partially_expand(
         query,
         dynamic,
         params,
         subqueries,
-        aliases,
+        %{},
         count
       )
 
-    {expr, {params, count, subqueries, aliases}}
+    {expr, {params, count, subqueries}}
   end
 
   defp dynamic_or_field!(_kind, field, _query, params_count) when is_atom(field) do
@@ -214,7 +214,7 @@ defmodule Ecto.Query.Builder.OrderBy do
 
   def build(query, binding, expr, op, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
-    {expr, {params, acc}} = escape(:order_by, expr, {[], %{subqueries: [], aliases: {:%{}, [], []}}}, binding, env)
+    {expr, {params, acc}} = escape(:order_by, expr, {[], %{subqueries: []}}, binding, env)
     params = Builder.escape_params(params)
 
     order_by =
@@ -222,7 +222,6 @@ defmodule Ecto.Query.Builder.OrderBy do
               expr: unquote(expr),
               params: unquote(params),
               subqueries: unquote(acc[:subqueries]),
-              aliases: unquote(acc[:aliases]),
               file: unquote(env.file),
               line: unquote(env.line)
             }

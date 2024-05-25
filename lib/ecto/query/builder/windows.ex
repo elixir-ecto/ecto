@@ -125,7 +125,7 @@ defmodule Ecto.Query.Builder.Windows do
   end
 
   defp escape_window(vars, {name, expr}, env) do
-    {compile_acc, runtime_acc, {params, acc}} = escape(expr, {[], %{subqueries: [], aliases: {:%{}, [], []}}}, vars, env)
+    {compile_acc, runtime_acc, {params, acc}} = escape(expr, {[], %{subqueries: []}}, vars, env)
     {name, compile_acc, runtime_acc, Builder.escape_params(params), acc}
   end
 
@@ -136,7 +136,6 @@ defmodule Ecto.Query.Builder.Windows do
          expr: unquote(compile_acc),
          params: unquote(params),
          subqueries: unquote(acc[:subqueries]),
-         aliases: unquote(acc[:aliases]),
          file: unquote(env.file),
          line: unquote(env.line)
        }
@@ -144,7 +143,7 @@ defmodule Ecto.Query.Builder.Windows do
   end
 
   defp build_runtime_window({name, compile_acc, runtime_acc, params, acc}, _env) do
-    {:{}, [], [name, Enum.reverse(compile_acc), runtime_acc, Enum.reverse(params), {:%{}, [], [subqueries: acc[:subqueries], aliases: acc[:aliases]]}]}
+    {:{}, [], [name, Enum.reverse(compile_acc), runtime_acc, Enum.reverse(params), {:%{}, [], [subqueries: acc[:subqueries]]}]}
   end
 
   @doc """
@@ -153,31 +152,31 @@ defmodule Ecto.Query.Builder.Windows do
   def runtime!(query, runtime, file, line) do
     windows =
       Enum.map(runtime, fn {name, compile_acc, runtime_acc, params, escape_acc} ->
-        {{acc, subqueries, aliases}, params} = do_runtime_window!(runtime_acc, query, {compile_acc, escape_acc[:subqueries], escape_acc[:aliases]}, params)
-        expr = %Ecto.Query.ByExpr{expr: Enum.reverse(acc), params: Enum.reverse(params), file: file, line: line, subqueries: subqueries, aliases: aliases}
+        {{acc, subqueries}, params} = do_runtime_window!(runtime_acc, query, {compile_acc, escape_acc[:subqueries]}, params)
+        expr = %Ecto.Query.ByExpr{expr: Enum.reverse(acc), params: Enum.reverse(params), file: file, line: line, subqueries: subqueries}
         {name, expr}
       end)
 
     apply(query, windows)
   end
 
-  defp do_runtime_window!([{:order_by, order_by} | kw], query, {acc, subqueries_acc, aliases_acc}, params) do
-    {order_by, params, subqueries, aliases} = OrderBy.order_by_or_distinct!(:order_by, query, order_by, params)
+  defp do_runtime_window!([{:order_by, order_by} | kw], query, {acc, subqueries_acc}, params) do
+    {order_by, params, subqueries} = OrderBy.order_by_or_distinct!(:order_by, query, order_by, params)
 
-    do_runtime_window!(kw, query, {[{:order_by, order_by} | acc], subqueries_acc ++ subqueries, Map.merge(aliases_acc, aliases)}, params)
+    do_runtime_window!(kw, query, {[{:order_by, order_by} | acc], subqueries_acc ++ subqueries}, params)
   end
 
-  defp do_runtime_window!([{:partition_by, partition_by} | kw], query, {acc, subqueries_acc, aliases_acc}, params) do
-    {partition_by, params, subqueries, aliases} = GroupBy.group_or_partition_by!(:partition_by, query, partition_by, params)
+  defp do_runtime_window!([{:partition_by, partition_by} | kw], query, {acc, subqueries_acc}, params) do
+    {partition_by, params, subqueries} = GroupBy.group_or_partition_by!(:partition_by, query, partition_by, params)
 
-    do_runtime_window!(kw, query, {[{:partition_by, partition_by} | acc], subqueries_acc ++ subqueries, Map.merge(aliases_acc, aliases)}, params)
+    do_runtime_window!(kw, query, {[{:partition_by, partition_by} | acc], subqueries_acc ++ subqueries}, params)
   end
 
-  defp do_runtime_window!([{:frame, frame} | kw], query, {acc, subqueries_acc, aliases_acc}, params) do
+  defp do_runtime_window!([{:frame, frame} | kw], query, {acc, subqueries_acc}, params) do
     case frame do
       %Ecto.Query.DynamicExpr{} ->
         {frame, params, _count} = Builder.Dynamic.partially_expand(:windows, query, frame, params, length(params))
-        do_runtime_window!(kw, query, {[{:frame, frame} | acc], subqueries_acc, aliases_acc}, params)
+        do_runtime_window!(kw, query, {[{:frame, frame} | acc], subqueries_acc}, params)
 
       _ ->
         raise ArgumentError,

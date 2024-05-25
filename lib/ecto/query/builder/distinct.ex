@@ -33,7 +33,7 @@ defmodule Ecto.Query.Builder.Distinct do
     apply(query, %Ecto.Query.ByExpr{expr: distinct, params: [], line: line, file: file})
   end
   def distinct!(query, distinct, file, line) do
-    {expr, params, subqueries, aliases} =
+    {expr, params, subqueries} =
       Builder.OrderBy.order_by_or_distinct!(:distinct, query, distinct, [])
 
     expr = %Ecto.Query.ByExpr{
@@ -41,8 +41,7 @@ defmodule Ecto.Query.Builder.Distinct do
       params: Enum.reverse(params),
       line: line,
       file: file,
-      subqueries: subqueries,
-      aliases: aliases
+      subqueries: subqueries
     }
 
     apply(query, expr)
@@ -64,14 +63,13 @@ defmodule Ecto.Query.Builder.Distinct do
 
   def build(query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
-    {expr, {params, acc}} = escape(expr, {[], %{subqueries: [], aliases: {:%{}, [], []}}}, binding, env)
+    {expr, {params, acc}} = escape(expr, {[], %{subqueries: []}}, binding, env)
     params = Builder.escape_params(params)
 
     distinct = quote do: %Ecto.Query.ByExpr{
                            expr: unquote(expr),
                            params: unquote(params),
                            subqueries: unquote(acc[:subqueries]),
-                           aliases: unquote(acc[:aliases]),
                            file: unquote(env.file),
                            line: unquote(env.line)}
     Builder.apply_query(query, __MODULE__, [distinct], env)
