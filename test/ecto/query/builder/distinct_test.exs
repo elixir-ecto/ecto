@@ -77,7 +77,6 @@ defmodule Ecto.Query.Builder.DistinctTest do
       assert [_] = distinct.subqueries
     end
 
-
     test "raises on non-atoms" do
       message = "expected a field as an atom in `distinct`, got: `\"temp\"`"
       assert_raise ArgumentError, message, fn ->
