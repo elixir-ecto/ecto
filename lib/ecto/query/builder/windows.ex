@@ -135,7 +135,7 @@ defmodule Ecto.Query.Builder.Windows do
        %Ecto.Query.ByExpr{
          expr: unquote(compile_acc),
          params: unquote(params),
-         subqueries: unquote(acc[:subqueries]),
+         subqueries: unquote(acc.subqueries),
          file: unquote(env.file),
          line: unquote(env.line)
        }
