@@ -152,7 +152,7 @@ defmodule Ecto.Query.Builder.Windows do
   def runtime!(query, runtime, file, line) do
     windows =
       Enum.map(runtime, fn {name, compile_acc, runtime_acc, params, escape_acc} ->
-        {{acc, subqueries}, params} = do_runtime_window!(runtime_acc, query, {compile_acc, escape_acc[:subqueries]}, params)
+        {{acc, subqueries}, params} = do_runtime_window!(runtime_acc, query, {compile_acc, escape_acc.subqueries}, params)
         expr = %Ecto.Query.ByExpr{expr: Enum.reverse(acc), params: Enum.reverse(params), file: file, line: line, subqueries: subqueries}
         {name, expr}
       end)
