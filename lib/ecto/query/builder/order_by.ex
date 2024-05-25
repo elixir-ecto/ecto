@@ -217,7 +217,7 @@ defmodule Ecto.Query.Builder.OrderBy do
       quote do: %Ecto.Query.ByExpr{
               expr: unquote(expr),
               params: unquote(params),
-              subqueries: unquote(acc[:subqueries]),
+              subqueries: unquote(acc.subqueries),
               file: unquote(env.file),
               line: unquote(env.line)
             }
