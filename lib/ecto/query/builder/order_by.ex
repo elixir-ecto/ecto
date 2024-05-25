@@ -139,9 +139,7 @@ defmodule Ecto.Query.Builder.OrderBy do
     {expr, {params, _, subqueries}} =
       Enum.map_reduce(List.wrap(exprs), {params, length(params), []}, fn
         {dir, expr}, params_count when dir in @directions ->
-          {expr, params} =
-            dynamic_or_field!(kind, expr, query, params_count)
-
+          {expr, params} = dynamic_or_field!(kind, expr, query, params_count)
           {{dir, expr}, params}
 
         expr, params_count ->
