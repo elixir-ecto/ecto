@@ -143,9 +143,7 @@ defmodule Ecto.Query.Builder.OrderBy do
           {{dir, expr}, params}
 
         expr, params_count ->
-          {expr, params} =
-            dynamic_or_field!(kind, expr, query, params_count)
-
+          {expr, params} = dynamic_or_field!(kind, expr, query, params_count)
           {{:asc, expr}, params}
       end)
 
