@@ -2396,7 +2396,7 @@ defmodule Ecto.Schema do
 
     Module.put_attribute(mod, :ecto_changeset_fields, {name, {:embed, struct}})
     Module.put_attribute(mod, :ecto_embeds, {name, struct})
-    define_field(mod, name, {:parameterized, Ecto.Embedded, struct}, opts)
+    define_field(mod, name, {:parameterized, {Ecto.Embedded, struct}}, opts)
   end
 
   defp put_struct_field(mod, name, assoc) do
@@ -2430,7 +2430,7 @@ defmodule Ecto.Schema do
     end
   end
 
-  defp check_options!({:parameterized, _, _}, _opts, _valid, _fun_arity) do
+  defp check_options!({:parameterized, _}, _opts, _valid, _fun_arity) do
     :ok
   end
 
@@ -2504,7 +2504,7 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :ecto_autogenerate, {[name], mfa})
   end
 
-  defp store_type_autogenerate!(mod, name, source, {:parameterized, typemod, params} = type, pk?) do
+  defp store_type_autogenerate!(mod, name, source, {:parameterized, {typemod, params}} = type, pk?) do
     cond do
       store_autogenerate_id!(mod, name, source, type, pk?) ->
         :ok

@@ -26,28 +26,31 @@ defmodule Ecto.MultiTest do
 
   test "insert changeset" do
     changeset = Changeset.change(%Comment{})
-    multi     =
+
+    multi =
       Multi.new()
       |> Multi.insert(:comment, changeset)
 
-    assert multi.names      == MapSet.new([:comment])
+    assert multi.names == MapSet.new([:comment])
     assert multi.operations == [{:comment, {:changeset, %{changeset | action: :insert}, []}}]
   end
 
   test "insert struct" do
-    struct    = %Comment{}
+    struct = %Comment{}
     changeset = Changeset.change(struct)
-    multi     =
+
+    multi =
       Multi.new()
       |> Multi.insert(:comment, struct)
 
-    assert multi.names      == MapSet.new([:comment])
+    assert multi.names == MapSet.new([:comment])
     assert multi.operations == [{:comment, {:changeset, %{changeset | action: :insert}, []}}]
   end
 
   test "insert fun" do
     changeset = Changeset.change(%Comment{})
     fun = fn _changes -> {:ok, changeset} end
+
     multi =
       Multi.new()
       |> Multi.insert(:fun, fun)
@@ -58,17 +61,19 @@ defmodule Ecto.MultiTest do
 
   test "update changeset" do
     changeset = Changeset.change(%Comment{})
-    multi     =
+
+    multi =
       Multi.new()
       |> Multi.update(:comment, changeset)
 
-    assert multi.names      == MapSet.new([:comment])
+    assert multi.names == MapSet.new([:comment])
     assert multi.operations == [{:comment, {:changeset, %{changeset | action: :update}, []}}]
   end
 
   test "update fun" do
     changeset = Changeset.change(%Comment{})
     fun = fn _changes -> {:ok, changeset} end
+
     multi =
       Multi.new()
       |> Multi.update(:fun, fun)
@@ -79,11 +84,12 @@ defmodule Ecto.MultiTest do
 
   test "insert_or_update changeset will insert the changeset if not loaded" do
     changeset = Changeset.change(%Comment{})
-    multi     =
+
+    multi =
       Multi.new()
       |> Multi.insert_or_update(:comment, changeset)
 
-    assert multi.names      == MapSet.new([:comment])
+    assert multi.names == MapSet.new([:comment])
     assert multi.operations == [{:comment, {:changeset, %{changeset | action: :insert}, []}}]
   end
 
@@ -99,17 +105,19 @@ defmodule Ecto.MultiTest do
   test "insert_or_update changeset will update the changeset if it was loaded" do
     changeset = Changeset.change(%Comment{id: 1}, x: 2)
     changeset = put_in(changeset.data.__meta__.state, :loaded)
-    multi     =
+
+    multi =
       Multi.new()
       |> Multi.insert_or_update(:comment, changeset)
 
-    assert multi.names      == MapSet.new([:comment])
+    assert multi.names == MapSet.new([:comment])
     assert multi.operations == [{:comment, {:changeset, %{changeset | action: :update}, []}}]
   end
 
   test "insert_or_update fun" do
     changeset = Changeset.change(%Comment{})
     fun = fn _changes -> {:ok, changeset} end
+
     multi =
       Multi.new()
       |> Multi.insert_or_update(:fun, fun)
@@ -120,28 +128,31 @@ defmodule Ecto.MultiTest do
 
   test "delete changeset" do
     changeset = Changeset.change(%Comment{})
-    multi     =
+
+    multi =
       Multi.new()
       |> Multi.delete(:comment, changeset)
 
-    assert multi.names      == MapSet.new([:comment])
+    assert multi.names == MapSet.new([:comment])
     assert multi.operations == [{:comment, {:changeset, %{changeset | action: :delete}, []}}]
   end
 
   test "delete struct" do
-    struct    = %Comment{}
+    struct = %Comment{}
     changeset = Changeset.change(struct)
-    multi     =
+
+    multi =
       Multi.new()
       |> Multi.delete(:comment, struct)
 
-    assert multi.names      == MapSet.new([:comment])
+    assert multi.names == MapSet.new([:comment])
     assert multi.operations == [{:comment, {:changeset, %{changeset | action: :delete}, []}}]
   end
 
   test "delete fun" do
     changeset = Changeset.change(%Comment{})
     fun = fn _changes -> {:ok, changeset} end
+
     multi =
       Multi.new()
       |> Multi.delete(:fun, fun)
@@ -215,38 +226,41 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.error(:oops, :value)
 
-    assert multi.names      == MapSet.new([:oops])
+    assert multi.names == MapSet.new([:oops])
     assert multi.operations == [{:oops, {:error, :value}}]
   end
 
   test "run with fun" do
     fun = fn _repo, changes -> {:ok, changes} end
+
     multi =
       Multi.new()
       |> Multi.run(:fun, fun)
 
-    assert multi.names      == MapSet.new([:fun])
+    assert multi.names == MapSet.new([:fun])
     assert multi.operations == [{:fun, {:run, fun}}]
   end
 
   test "run named with tuple" do
     fun = fn _repo, changes -> {:ok, changes} end
+
     multi =
       Multi.new()
       |> Multi.run({:fun, 3}, fun)
 
-    assert multi.names      == MapSet.new([{:fun, 3}])
+    assert multi.names == MapSet.new([{:fun, 3}])
     assert multi.operations == [{{:fun, 3}, {:run, fun}}]
   end
 
   test "run named with char_list" do
     fun = fn _repo, changes -> {:ok, changes} end
+
     multi =
       Multi.new()
-      |> Multi.run('myFunction', fun)
+      |> Multi.run(~c"myFunction", fun)
 
-    assert multi.names      == MapSet.new(['myFunction'])
-    assert multi.operations == [{'myFunction', {:run, fun}}]
+    assert multi.names == MapSet.new([~c"myFunction"])
+    assert multi.operations == [{~c"myFunction", {:run, fun}}]
   end
 
   test "run with mfa" do
@@ -254,7 +268,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.run(:fun, __MODULE__, :run_ok, [])
 
-    assert multi.names      == MapSet.new([:fun])
+    assert multi.names == MapSet.new([:fun])
     assert multi.operations == [{:fun, {:run, {__MODULE__, :run_ok, []}}}]
   end
 
@@ -341,19 +355,19 @@ defmodule Ecto.MultiTest do
     lhs = Multi.new() |> Multi.run(:one, fun) |> Multi.run(:two, fun)
     rhs = Multi.new() |> Multi.run(:three, fun) |> Multi.run(:four, fun)
 
-    merged     = Multi.append(lhs, rhs)
+    merged = Multi.append(lhs, rhs)
     operations = Keyword.keys(merged.operations)
     assert merged.names == MapSet.new([:one, :two, :three, :four])
-    assert operations   == [:four, :three, :two, :one]
+    assert operations == [:four, :three, :two, :one]
 
-    merged     = Multi.prepend(lhs, rhs)
+    merged = Multi.prepend(lhs, rhs)
     operations = Keyword.keys(merged.operations)
     assert merged.names == MapSet.new([:one, :two, :three, :four])
-    assert operations   == [:two, :one, :four, :three]
+    assert operations == [:two, :one, :four, :three]
   end
 
   test "append/prepend with repetition" do
-    fun   = fn _, _ -> {:ok, :ok} end
+    fun = fn _, _ -> {:ok, :ok} end
     multi = Multi.new() |> Multi.run(:run, fun)
 
     assert_raise ArgumentError, ~r"both declared operations: \[:run\]", fn ->
@@ -367,6 +381,7 @@ defmodule Ecto.MultiTest do
 
   test "to_list" do
     changeset = Changeset.change(%Comment{id: 1}, x: 1)
+
     multi =
       Multi.new()
       |> Multi.insert(:insert, changeset)
@@ -382,18 +397,18 @@ defmodule Ecto.MultiTest do
       |> Multi.delete_all({:delete_all, 2}, Comment)
 
     assert [
-      {:insert,          {:insert, _, []}},
-      {{:insert, 1},     {:insert, _, []}},
-      {{:insert, 2},     {:insert, _, []}},
-      {:run,             {:run, _}},
-      {:update,          {:update, _, []}},
-      {:delete,          {:delete, _, []}},
-      {:insert_all,      {:insert_all, _, _, []}},
-      {:update_all,      {:update_all, _, _, []}},
-      {:delete_all,      {:delete_all, _, []}},
-      {{:delete_all, 1}, {:delete_all, _, []}},
-      {{:delete_all, 2}, {:delete_all, _, []}},
-    ] = Ecto.Multi.to_list(multi)
+             {:insert, {:insert, _, []}},
+             {{:insert, 1}, {:insert, _, []}},
+             {{:insert, 2}, {:insert, _, []}},
+             {:run, {:run, _}},
+             {:update, {:update, _, []}},
+             {:delete, {:delete, _, []}},
+             {:insert_all, {:insert_all, _, _, []}},
+             {:update_all, {:update_all, _, _, []}},
+             {:delete_all, {:delete_all, _, []}},
+             {{:delete_all, 1}, {:delete_all, _, []}},
+             {{:delete_all, 2}, {:delete_all, _, []}}
+           ] = Ecto.Multi.to_list(multi)
   end
 
   test "put" do
@@ -431,6 +446,7 @@ defmodule Ecto.MultiTest do
 
   test "repeating an operation" do
     fun = fn _, _ -> {:ok, :ok} end
+
     assert_raise RuntimeError, ~r":run is already a member", fn ->
       Multi.new() |> Multi.run(:run, fun) |> Multi.run(:run, fun)
     end
@@ -439,6 +455,7 @@ defmodule Ecto.MultiTest do
   describe "merge/2" do
     test "with fun" do
       changeset = Changeset.change(%Comment{})
+
       multi =
         Multi.new()
         |> Multi.insert(:insert, changeset)
@@ -453,6 +470,7 @@ defmodule Ecto.MultiTest do
 
     test "with mfa" do
       changeset = Changeset.change(%Comment{})
+
       multi =
         Multi.new()
         |> Multi.insert(:insert, changeset)
@@ -465,7 +483,7 @@ defmodule Ecto.MultiTest do
 
     test "rollbacks on errors" do
       error = fn _, _ -> {:error, :error} end
-      ok    = fn _, _ -> {:ok, :ok} end
+      ok = fn _, _ -> {:ok, :ok} end
 
       multi =
         Multi.new()
@@ -522,6 +540,7 @@ defmodule Ecto.MultiTest do
   describe "Repo.transaction" do
     test "on success" do
       changeset = Changeset.change(%Comment{id: 1}, x: 1)
+
       multi =
         Multi.new()
         |> Multi.put(:put, 1)
@@ -536,23 +555,25 @@ defmodule Ecto.MultiTest do
 
       assert {:ok, changes} = TestRepo.transaction(multi)
       assert_received {:transaction, _}
-      assert {:messages, [
-        {:insert, %{source: "comments"}},
-        {:update, %{source: "comments"}},
-        {:update, %{source: "comments"}},
-        {:delete, %{source: "comments"}},
-        {:insert_all, %{source: "comments"}, [[x: 1]]},
-        {:update_all, %{from: %{source: {"comments", _}}}},
-        {:delete_all, %{from: %{source: {"comments", _}}}}
-      ]} = Process.info(self(), :messages)
+
+      assert {:messages,
+              [
+                {:insert, %{source: "comments"}},
+                {:update, %{source: "comments"}},
+                {:update, %{source: "comments"}},
+                {:delete, %{source: "comments"}},
+                {:insert_all, %{source: "comments"}, [[x: 1]]},
+                {:update_all, %{from: %{source: {"comments", _}}}},
+                {:delete_all, %{from: %{source: {"comments", _}}}}
+              ]} = Process.info(self(), :messages)
 
       assert %Comment{} = changes.insert
       assert %Comment{} = changes.update
       assert %Comment{} = changes.update_fun
       assert %Comment{} = changes.delete
-      assert {1, nil}   = changes.insert_all
-      assert {1, nil}   = changes.update_all
-      assert {1, nil}   = changes.delete_all
+      assert {1, nil} = changes.insert_all
+      assert {1, nil} = changes.update_all
+      assert {1, nil} = changes.delete_all
       assert Map.has_key?(changes.run, :insert)
       refute Map.has_key?(changes.run, :update)
     end
@@ -569,10 +590,10 @@ defmodule Ecto.MultiTest do
         |> Multi.inspect(only: :put2)
 
       assert capture_io(fn ->
-        assert {:ok, result} = TestRepo.transaction(multi)
-        refute Map.has_key?(result, :before_put)
-        refute Map.has_key?(result, :after_put)
-      end) == "%{}\n%{put: 1}\n%{put2: 1}\n"
+               assert {:ok, result} = TestRepo.transaction(multi)
+               refute Map.has_key?(result, :before_put)
+               refute Map.has_key?(result, :after_put)
+             end) == "%{}\n%{put: 1}\n%{put2: 1}\n"
     end
 
     test "with empty multi" do
@@ -583,6 +604,7 @@ defmodule Ecto.MultiTest do
 
     test "rolls back from run" do
       changeset = Changeset.change(%Comment{id: 1}, x: 1)
+
       multi =
         Multi.new()
         |> Multi.insert(:insert, changeset)
@@ -601,8 +623,10 @@ defmodule Ecto.MultiTest do
 
     test "rolls back from repo" do
       changeset = Changeset.change(%Comment{id: 1}, x: 1)
-      invalid   = put_in(changeset.data.__meta__.context, {:invalid, [unique: "comments_x_index"]})
-                  |> Changeset.unique_constraint(:x)
+
+      invalid =
+        put_in(changeset.data.__meta__.context, {:invalid, [unique: "comments_x_index"]})
+        |> Changeset.unique_constraint(:x)
 
       multi =
         Multi.new()
@@ -617,7 +641,13 @@ defmodule Ecto.MultiTest do
       assert {:messages, [{:insert, %{source: "comments"}}]} = Process.info(self(), :messages)
       assert %Comment{} = changes.insert
       assert "ok" == changes.run
-      assert error.errors == [x: {"has already been taken", [constraint: :unique, constraint_name: "comments_x_index"]}]
+
+      assert error.errors == [
+               x:
+                 {"has already been taken",
+                  [constraint: :unique, constraint_name: "comments_x_index"]}
+             ]
+
       refute Map.has_key?(changes, :update)
     end
 
