@@ -16,6 +16,7 @@ defmodule Ecto.EnumTest do
       field :my_string_enums, {:array, Ecto.Enum}, values: [foo: "fooo", bar: "baar", baz: "baaz"]
       field :virtual_enum, Ecto.Enum, values: [:foo, :bar, :baz], virtual: true
       field :not_enum, :string
+
       embeds_one :embed, Embed do
         field :dumped_enum, Ecto.Enum, values: [foo: 1, bar: 2], embed_as: :dumped
         field :non_dumped_enum, Ecto.Enum, values: [foo: 1, bar: 2], embed_as: :values
@@ -27,109 +28,121 @@ defmodule Ecto.EnumTest do
     my_enum: Ecto.ParameterizedType.init(Ecto.Enum, values: [:foo, :bar, :baz]),
     my_enums: {:array, Ecto.ParameterizedType.init(Ecto.Enum, values: [:foo, :bar, :baz])},
     my_integer_enum: Ecto.ParameterizedType.init(Ecto.Enum, values: [foo: 1, bar: 2, baz: 5]),
-    my_integer_enums: {:array, Ecto.ParameterizedType.init(Ecto.Enum, values: [foo: 1, bar: 2, baz: 5])},
-    my_string_enum: Ecto.ParameterizedType.init(Ecto.Enum, values: [foo: "fooo", bar: "baar", baz: "baaz"]),
-    my_string_enums: {:array, Ecto.ParameterizedType.init(Ecto.Enum, values: [foo: "fooo", bar: "baar", baz: "baaz"])}
+    my_integer_enums:
+      {:array, Ecto.ParameterizedType.init(Ecto.Enum, values: [foo: 1, bar: 2, baz: 5])},
+    my_string_enum:
+      Ecto.ParameterizedType.init(Ecto.Enum, values: [foo: "fooo", bar: "baar", baz: "baaz"]),
+    my_string_enums:
+      {:array,
+       Ecto.ParameterizedType.init(Ecto.Enum, values: [foo: "fooo", bar: "baar", baz: "baaz"])}
   }
 
   describe "Ecto.Enum" do
     test "schema" do
       assert EnumSchema.__schema__(:type, :my_enum) ==
-               {:parameterized, Ecto.Enum,
-                %{
-                  on_dump: %{bar: "bar", baz: "baz", foo: "foo"},
-                  on_load: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
-                  on_cast: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
-                  mappings: [foo: "foo", bar: "bar", baz: "baz"],
-                  type: :string,
-                  embed_as: :self
-                }}
+               {:parameterized,
+                {Ecto.Enum,
+                 %{
+                   on_dump: %{bar: "bar", baz: "baz", foo: "foo"},
+                   on_load: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
+                   on_cast: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
+                   mappings: [foo: "foo", bar: "bar", baz: "baz"],
+                   type: :string,
+                   embed_as: :self
+                 }}}
 
       assert EnumSchema.__schema__(:type, :my_enums) ==
                {
                  :array,
-                 {:parameterized, Ecto.Enum,
-                  %{
-                    on_dump: %{bar: "bar", baz: "baz", foo: "foo"},
-                    on_load: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
-                    on_cast: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
-                    mappings: [foo: "foo", bar: "bar", baz: "baz"],
-                    type: :string,
-                    embed_as: :self
-                  }}
+                 {:parameterized,
+                  {Ecto.Enum,
+                   %{
+                     on_dump: %{bar: "bar", baz: "baz", foo: "foo"},
+                     on_load: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
+                     on_cast: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
+                     mappings: [foo: "foo", bar: "bar", baz: "baz"],
+                     type: :string,
+                     embed_as: :self
+                   }}}
                }
 
       assert EnumSchema.__schema__(:type, :my_integer_enum) ==
-               {:parameterized, Ecto.Enum,
-                %{
-                  on_dump: %{bar: 2, baz: 5, foo: 1},
-                  on_load: %{2 => :bar, 5 => :baz, 1 => :foo},
-                  on_cast: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
-                  mappings: [foo: 1, bar: 2, baz: 5],
-                  type: :integer,
-                  embed_as: :self
-                }}
+               {:parameterized,
+                {Ecto.Enum,
+                 %{
+                   on_dump: %{bar: 2, baz: 5, foo: 1},
+                   on_load: %{2 => :bar, 5 => :baz, 1 => :foo},
+                   on_cast: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
+                   mappings: [foo: 1, bar: 2, baz: 5],
+                   type: :integer,
+                   embed_as: :self
+                 }}}
 
       assert EnumSchema.__schema__(:type, :my_integer_enums) ==
                {
                  :array,
-                 {:parameterized, Ecto.Enum,
-                  %{
-                    on_dump: %{bar: 2, baz: 5, foo: 1},
-                    on_load: %{2 => :bar, 5 => :baz, 1 => :foo},
-                    on_cast: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
-                    mappings: [foo: 1, bar: 2, baz: 5],
-                    type: :integer,
-                    embed_as: :self
-                  }}
+                 {:parameterized,
+                  {Ecto.Enum,
+                   %{
+                     on_dump: %{bar: 2, baz: 5, foo: 1},
+                     on_load: %{2 => :bar, 5 => :baz, 1 => :foo},
+                     on_cast: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
+                     mappings: [foo: 1, bar: 2, baz: 5],
+                     type: :integer,
+                     embed_as: :self
+                   }}}
                }
 
       assert EnumSchema.__schema__(:type, :my_string_enum) ==
-               {:parameterized, Ecto.Enum,
-                %{
-                  on_dump: %{bar: "baar", baz: "baaz", foo: "fooo"},
-                  on_load: %{"baar" => :bar, "baaz" => :baz, "fooo" => :foo},
-                  on_cast: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
-                  mappings: [foo: "fooo", bar: "baar", baz: "baaz"],
-                  type: :string,
-                  embed_as: :self
-                }}
+               {:parameterized,
+                {Ecto.Enum,
+                 %{
+                   on_dump: %{bar: "baar", baz: "baaz", foo: "fooo"},
+                   on_load: %{"baar" => :bar, "baaz" => :baz, "fooo" => :foo},
+                   on_cast: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
+                   mappings: [foo: "fooo", bar: "baar", baz: "baaz"],
+                   type: :string,
+                   embed_as: :self
+                 }}}
 
       assert EnumSchema.__schema__(:type, :my_string_enums) ==
                {
                  :array,
-                 {:parameterized, Ecto.Enum,
-                  %{
-                    on_dump: %{bar: "baar", baz: "baaz", foo: "fooo"},
-                    on_load: %{"baar" => :bar, "baaz" => :baz, "fooo" => :foo},
-                    on_cast: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
-                    mappings: [foo: "fooo", bar: "baar", baz: "baaz"],
-                    type: :string,
-                    embed_as: :self
-                  }}
+                 {:parameterized,
+                  {Ecto.Enum,
+                   %{
+                     on_dump: %{bar: "baar", baz: "baaz", foo: "fooo"},
+                     on_load: %{"baar" => :bar, "baaz" => :baz, "fooo" => :foo},
+                     on_cast: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
+                     mappings: [foo: "fooo", bar: "baar", baz: "baaz"],
+                     type: :string,
+                     embed_as: :self
+                   }}}
                }
 
       assert EnumSchema.Embed.__schema__(:type, :non_dumped_enum) ==
-               {:parameterized, Ecto.Enum,
-                  %{
-                    on_dump: %{foo: 1, bar: 2},
-                    on_load: %{1 => :foo, 2 => :bar},
-                    on_cast: %{"foo" => :foo, "bar" => :bar},
-                    mappings: [foo: 1, bar: 2],
-                    type: :integer,
-                    embed_as: :self
-                  }}
+               {:parameterized,
+                {Ecto.Enum,
+                 %{
+                   on_dump: %{foo: 1, bar: 2},
+                   on_load: %{1 => :foo, 2 => :bar},
+                   on_cast: %{"foo" => :foo, "bar" => :bar},
+                   mappings: [foo: 1, bar: 2],
+                   type: :integer,
+                   embed_as: :self
+                 }}}
 
       assert EnumSchema.Embed.__schema__(:type, :dumped_enum) ==
-               {:parameterized, Ecto.Enum,
-                %{
-                  on_dump: %{foo: 1, bar: 2},
-                  on_load: %{1 => :foo, 2 => :bar},
-                  on_cast: %{"foo" => :foo, "bar" => :bar},
-                  mappings: [foo: 1, bar: 2],
-                  type: :integer,
-                  embed_as: :dump
-                }}
+               {:parameterized,
+                {Ecto.Enum,
+                 %{
+                   on_dump: %{foo: 1, bar: 2},
+                   on_load: %{1 => :foo, 2 => :bar},
+                   on_cast: %{"foo" => :foo, "bar" => :bar},
+                   mappings: [foo: 1, bar: 2],
+                   type: :integer,
+                   embed_as: :dump
+                 }}}
     end
 
     test "type" do
@@ -218,6 +231,7 @@ defmodule Ecto.EnumTest do
       assert_raise ArgumentError, message, fn ->
         defmodule SchemaDuplicateEnumMappings do
           use Ecto.Schema
+
           schema "duplicate_values" do
             embeds_one :embed, Embed do
               field :name, Ecto.Enum, values: [:foo, :bar], embed_as: :invalid
@@ -379,12 +393,12 @@ defmodule Ecto.EnumTest do
       assert %EnumSchema{embed: %{dumped_enum: :foo}} =
                TestRepo.insert!(%EnumSchema{embed: %EnumSchema.Embed{dumped_enum: :foo}})
 
-      assert_receive {:insert, %{fields:  [embed: %{dumped_enum: 1}]}}
+      assert_receive {:insert, %{fields: [embed: %{dumped_enum: 1}]}}
 
       assert %EnumSchema{embed: %{non_dumped_enum: :foo}} =
                TestRepo.insert!(%EnumSchema{embed: %EnumSchema.Embed{non_dumped_enum: :foo}})
 
-      assert_receive {:insert, %{fields:  [embed: %{non_dumped_enum: :foo}]}}
+      assert_receive {:insert, %{fields: [embed: %{non_dumped_enum: :foo}]}}
     end
 
     test "rejects invalid atom" do
@@ -449,22 +463,37 @@ defmodule Ecto.EnumTest do
       Process.put(:test_repo_all_results, {1, [[1, nil, nil, nil, nil, "fooo", nil, nil, %{}]]})
       assert [%Ecto.EnumTest.EnumSchema{my_string_enum: :foo}] = TestRepo.all(EnumSchema)
 
-      Process.put(:test_repo_all_results, {1, [[1, nil, nil, nil, nil, nil, ["fooo"], nil, nil, %{}]]})
+      Process.put(
+        :test_repo_all_results,
+        {1, [[1, nil, nil, nil, nil, nil, ["fooo"], nil, nil, %{}]]}
+      )
+
       assert [%Ecto.EnumTest.EnumSchema{my_string_enums: [:foo]}] = TestRepo.all(EnumSchema)
 
-      Process.put(:test_repo_all_results, {1, [[1, nil, nil, nil, nil, nil, nil, nil, %{"dumped_enum" => 1}]]})
+      Process.put(
+        :test_repo_all_results,
+        {1, [[1, nil, nil, nil, nil, nil, nil, nil, %{"dumped_enum" => 1}]]}
+      )
+
       assert [%Ecto.EnumTest.EnumSchema{embed: %{dumped_enum: :foo}}] = TestRepo.all(EnumSchema)
 
-      Process.put(:test_repo_all_results, {1, [[1, nil, nil, nil, nil, nil, nil, nil, %{"non_dumped_enum" => "foo"}]]})
-      assert [%Ecto.EnumTest.EnumSchema{embed: %{non_dumped_enum: :foo}}] = TestRepo.all(EnumSchema)
+      Process.put(
+        :test_repo_all_results,
+        {1, [[1, nil, nil, nil, nil, nil, nil, nil, %{"non_dumped_enum" => "foo"}]]}
+      )
+
+      assert [%Ecto.EnumTest.EnumSchema{embed: %{non_dumped_enum: :foo}}] =
+               TestRepo.all(EnumSchema)
     end
 
     test "reject invalid values" do
       Process.put(:test_repo_all_results, {1, [[1, "foo2", nil]]})
 
-      assert_raise ArgumentError, ~r/cannot load `\"foo2\"` as type #Ecto\.Enum<values: \[:foo, :bar, :baz\]>/, fn ->
-        TestRepo.all(EnumSchema)
-      end
+      assert_raise ArgumentError,
+                   ~r/cannot load `\"foo2\"` as type #Ecto\.Enum<values: \[:foo, :bar, :baz\]>/,
+                   fn ->
+                     TestRepo.all(EnumSchema)
+                   end
     end
   end
 
@@ -500,7 +529,13 @@ defmodule Ecto.EnumTest do
       assert Ecto.Enum.dump_values(@schemaless_types, :my_enum) == ["foo", "bar", "baz"]
       assert Ecto.Enum.dump_values(@schemaless_types, :my_enums) == ["foo", "bar", "baz"]
       assert Ecto.Enum.dump_values(@schemaless_types, :my_string_enum) == ["fooo", "baar", "baaz"]
-      assert Ecto.Enum.dump_values(@schemaless_types, :my_string_enums) == ["fooo", "baar", "baaz"]
+
+      assert Ecto.Enum.dump_values(@schemaless_types, :my_string_enums) == [
+               "fooo",
+               "baar",
+               "baaz"
+             ]
+
       assert Ecto.Enum.dump_values(@schemaless_types, :my_integer_enum) == [1, 2, 5]
       assert Ecto.Enum.dump_values(@schemaless_types, :my_integer_enums) == [1, 2, 5]
     end
@@ -510,16 +545,47 @@ defmodule Ecto.EnumTest do
     test "returns correct values" do
       assert Ecto.Enum.mappings(EnumSchema, :my_enum) == [foo: "foo", bar: "bar", baz: "baz"]
       assert Ecto.Enum.mappings(EnumSchema, :my_enums) == [foo: "foo", bar: "bar", baz: "baz"]
-      assert Ecto.Enum.mappings(EnumSchema, :my_string_enum) == [foo: "fooo", bar: "baar", baz: "baaz"]
-      assert Ecto.Enum.mappings(EnumSchema, :my_string_enums) == [foo: "fooo", bar: "baar", baz: "baaz"]
+
+      assert Ecto.Enum.mappings(EnumSchema, :my_string_enum) == [
+               foo: "fooo",
+               bar: "baar",
+               baz: "baaz"
+             ]
+
+      assert Ecto.Enum.mappings(EnumSchema, :my_string_enums) == [
+               foo: "fooo",
+               bar: "baar",
+               baz: "baaz"
+             ]
+
       assert Ecto.Enum.mappings(EnumSchema, :my_integer_enum) == [foo: 1, bar: 2, baz: 5]
       assert Ecto.Enum.mappings(EnumSchema, :my_integer_enums) == [foo: 1, bar: 2, baz: 5]
       assert Ecto.Enum.mappings(EnumSchema, :virtual_enum) == [foo: "foo", bar: "bar", baz: "baz"]
 
-      assert Ecto.Enum.mappings(@schemaless_types, :my_enum) == [foo: "foo", bar: "bar", baz: "baz"]
-      assert Ecto.Enum.mappings(@schemaless_types, :my_enums) == [foo: "foo", bar: "bar", baz: "baz"]
-      assert Ecto.Enum.mappings(@schemaless_types, :my_string_enum) == [foo: "fooo", bar: "baar", baz: "baaz"]
-      assert Ecto.Enum.mappings(@schemaless_types, :my_string_enums) == [foo: "fooo", bar: "baar", baz: "baaz"]
+      assert Ecto.Enum.mappings(@schemaless_types, :my_enum) == [
+               foo: "foo",
+               bar: "bar",
+               baz: "baz"
+             ]
+
+      assert Ecto.Enum.mappings(@schemaless_types, :my_enums) == [
+               foo: "foo",
+               bar: "bar",
+               baz: "baz"
+             ]
+
+      assert Ecto.Enum.mappings(@schemaless_types, :my_string_enum) == [
+               foo: "fooo",
+               bar: "baar",
+               baz: "baaz"
+             ]
+
+      assert Ecto.Enum.mappings(@schemaless_types, :my_string_enums) == [
+               foo: "fooo",
+               bar: "baar",
+               baz: "baaz"
+             ]
+
       assert Ecto.Enum.mappings(@schemaless_types, :my_integer_enum) == [foo: 1, bar: 2, baz: 5]
       assert Ecto.Enum.mappings(@schemaless_types, :my_integer_enums) == [foo: 1, bar: 2, baz: 5]
     end

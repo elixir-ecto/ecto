@@ -314,8 +314,8 @@ defmodule Ecto.Enum do
 
   def mappings(types, field) when is_map(types) do
     case types do
-      %{^field => {:parameterized, Ecto.Enum, %{mappings: mappings}}} -> mappings
-      %{^field => {_, {:parameterized, Ecto.Enum, %{mappings: mappings}}}} -> mappings
+      %{^field => {:parameterized, {Ecto.Enum, %{mappings: mappings}}}} -> mappings
+      %{^field => {_, {:parameterized, {Ecto.Enum, %{mappings: mappings}}}}} -> mappings
       %{^field => _} -> raise ArgumentError, "#{field} is not an Ecto.Enum field"
       %{} -> raise ArgumentError, "#{field} does not exist"
     end

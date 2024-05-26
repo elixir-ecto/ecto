@@ -193,7 +193,7 @@ defmodule Ecto.ParameterizedType do
   Useful when manually initializing a type for schemaless changesets.
   """
   def init(type, opts) do
-    {:parameterized, type, type.init(opts)}
+    {:parameterized, {type, type.init(opts)}}
   end
 
   @doc false
