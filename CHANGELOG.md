@@ -5,6 +5,7 @@
 ### Enhancements
 
   * [Ecto.Query] Introduce `is_named_binding` guard
+  * [Ecto.Query] Subqueries are now supported in `distinct`, `group_by`, `order_by` and `window` expressions
   * [Ecto.Repo] Allow Hot Updates on upsert queries in Postgres by removing duplicate fields during replace_all
   * [Ecto.Schema] Allow schema fields to be read-only
   * [Ecto.Schema] Add `:defaults_to_struct` option to embeds_one
@@ -17,6 +18,11 @@
   * [Ecto.Query] Validate `:prefix` is a string/binary, warn otherwise
   * [Ecto.Repo] Raise if empty list is given to `{:replace, fields}`
   * [Ecto.Repo] Validate `:prefix` is a string/binary, warn otherwise
+
+### Adapter changes
+
+  * `distinct`, `group_by`, `order_by` and `window` expressions use the new `Ecto.Query.ByExpr`
+    struct rather than the old `Ecto.Query.QueryExpr` struct
 
 ### Potential incompatibilities
 
