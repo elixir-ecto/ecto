@@ -1290,7 +1290,7 @@ defmodule Ecto.Changeset do
     drop = opts_key_from_params(:drop_param, opts, params)
 
     changeset =
-      if is_map_key(params, param_key) or is_list(sort) or is_list(drop) do
+      if is_map_key(params, param_key) or is_list(sort) do
         value = Map.get(params, param_key)
         original = Map.get(data, key)
         current = Relation.load!(data, original)
