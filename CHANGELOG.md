@@ -18,6 +18,11 @@
   * [Ecto.Repo] Raise if empty list is given to `{:replace, fields}`
   * [Ecto.Repo] Validate `:prefix` is a string/binary, warn otherwise
 
+### Adapter changes
+
+  * `distinct`, `group_by`, `order_by` and `window` expressions use the new `Ecto.Query.ByExpr`
+    struct rather than the old `Ecto.Query.QueryExpr` struct
+
 ### Potential incompatibilities
 
   * [Ecto.ParameterizedType] Parameterized types are now represented internally as `{:parameterized, {mod, state}}`. While this representation is private, projects may have been relying on it, and therefore they need to adapt accordingly. Use `Ecto.ParameterizedType.init/2` to instantiate parameterized types.
