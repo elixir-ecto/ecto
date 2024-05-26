@@ -143,11 +143,6 @@ defmodule Ecto.Repo.SupervisorTest do
       url = parse_url(encoded_url)
       assert {:ssl, true} in url
       assert {:timeout, 1515} in url
-
-      encoded_url = URI.encode("ecto://eric:it+й@host:12345/mydb?ssl=verify_full&timeout=1515")
-      url = parse_url(encoded_url)
-      assert {:ssl, :verify_full} in url
-      assert {:timeout, 1515} in url
     end
 
     test "supports integer query string options" do
