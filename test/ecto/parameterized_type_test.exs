@@ -50,7 +50,7 @@ defmodule Ecto.ParameterizedTypeTest do
   test "operations" do
     assert Ecto.Type.type(@p_self_type) == :custom
     assert Ecto.Type.type(@p_dump_type) == :custom
-    assert Ecto.Type.type({:maybe, @p_self_type}) == :custom
+    assert Ecto.Type.type({:try, @p_self_type}) == :custom
 
     assert Ecto.Type.embed_as(@p_self_type, :foo) == :self
     assert Ecto.Type.embed_as(@p_dump_type, :foo) == :dump
@@ -180,23 +180,23 @@ defmodule Ecto.ParameterizedTypeTest do
     assert Ecto.Type.cast({:map, @p_self_type}, nil) == {:ok, nil}
   end
 
-  test "with maybe" do
-    assert Ecto.Type.embedded_load({:maybe, @p_self_type}, :foo, :json) == {:ok, :cast}
-    assert Ecto.Type.embedded_load({:maybe, @p_dump_type}, :foo, :json) == {:ok, :load}
-    assert Ecto.Type.embedded_load({:maybe, @p_error_type}, :foo, :json) == {:ok, :foo}
+  test "with try" do
+    assert Ecto.Type.embedded_load({:try, @p_self_type}, :foo, :json) == {:ok, :cast}
+    assert Ecto.Type.embedded_load({:try, @p_dump_type}, :foo, :json) == {:ok, :load}
+    assert Ecto.Type.embedded_load({:try, @p_error_type}, :foo, :json) == {:ok, :foo}
 
-    assert Ecto.Type.embedded_dump({:maybe, @p_self_type}, :foo, :json) == {:ok, :foo}
-    assert Ecto.Type.embedded_dump({:maybe, @p_dump_type}, :foo, :json) == {:ok, :dump}
-    assert Ecto.Type.embedded_dump({:maybe, @p_error_type}, :foo, :json) == {:ok, :foo}
+    assert Ecto.Type.embedded_dump({:try, @p_self_type}, :foo, :json) == {:ok, :foo}
+    assert Ecto.Type.embedded_dump({:try, @p_dump_type}, :foo, :json) == {:ok, :dump}
+    assert Ecto.Type.embedded_dump({:try, @p_error_type}, :foo, :json) == {:ok, :foo}
 
-    assert Ecto.Type.load({:maybe, @p_self_type}, :foo) == {:ok, :load}
-    assert Ecto.Type.load({:maybe, @p_error_type}, :foo) == {:ok, :foo}
+    assert Ecto.Type.load({:try, @p_self_type}, :foo) == {:ok, :load}
+    assert Ecto.Type.load({:try, @p_error_type}, :foo) == {:ok, :foo}
 
-    assert Ecto.Type.dump({:maybe, @p_self_type}, :foo) == {:ok, :dump}
-    assert Ecto.Type.dump({:maybe, @p_error_type}, :foo) == {:ok, :foo}
+    assert Ecto.Type.dump({:try, @p_self_type}, :foo) == {:ok, :dump}
+    assert Ecto.Type.dump({:try, @p_error_type}, :foo) == {:ok, :foo}
 
-    assert Ecto.Type.cast({:maybe, @p_self_type}, :foo) == {:ok, :cast}
-    assert Ecto.Type.cast({:maybe, @p_error_type}, :foo) == {:ok, :foo}
+    assert Ecto.Type.cast({:try, @p_self_type}, :foo) == {:ok, :cast}
+    assert Ecto.Type.cast({:try, @p_error_type}, :foo) == {:ok, :foo}
   end
 
   defmodule MyParameterizedTypeForPrimaryKey do

@@ -246,27 +246,27 @@ defmodule Ecto.TypeTest do
     assert cast({:in, :integer}, nil) == :error
   end
 
-  test "{:param, :any_datetime}" do
+  test "{:supertype, :datetime}" do
     value = ~N[2010-04-17 14:00:00]
-    assert cast({:param, :any_datetime}, value) == {:ok, value}
+    assert cast({:supertype, :datetime}, value) == {:ok, value}
 
     value = ~N[2010-04-17 14:00:00.123]
-    assert cast({:param, :any_datetime}, value) == {:ok, value}
+    assert cast({:supertype, :datetime}, value) == {:ok, value}
 
     value = DateTime.utc_now()
-    assert cast({:param, :any_datetime}, value) == {:ok, value}
+    assert cast({:supertype, :datetime}, value) == {:ok, value}
 
     value = "2010-04-17 14:00:00"
-    assert cast({:param, :any_datetime}, value) == {:ok, ~N[2010-04-17 14:00:00]}
+    assert cast({:supertype, :datetime}, value) == {:ok, ~N[2010-04-17 14:00:00]}
 
     value = Map.from_struct(~N[2010-04-17 14:00:00])
-    assert cast({:param, :any_datetime}, value) == {:ok, ~N[2010-04-17 14:00:00]}
+    assert cast({:supertype, :datetime}, value) == {:ok, ~N[2010-04-17 14:00:00]}
 
-    assert match?(:naive_datetime, {:param, :any_datetime})
-    assert match?(:naive_datetime_usec, {:param, :any_datetime})
-    assert match?(:utc_datetime, {:param, :any_datetime})
-    assert match?(:utc_datetime_usec, {:param, :any_datetime})
-    refute match?(:string, {:param, :any_datetime})
+    assert match?(:naive_datetime, {:supertype, :datetime})
+    assert match?(:naive_datetime_usec, {:supertype, :datetime})
+    assert match?(:utc_datetime, {:supertype, :datetime})
+    assert match?(:utc_datetime_usec, {:supertype, :datetime})
+    refute match?(:string, {:supertype, :datetime})
   end
 
   test "integer" do
@@ -302,14 +302,14 @@ defmodule Ecto.TypeTest do
   end
 
   test "maybe" do
-    assert dump({:maybe, :decimal}, Decimal.new(1)) == {:ok, Decimal.new(1)}
-    assert dump({:maybe, :decimal}, "not decimal") == {:ok, "not decimal"}
+    assert dump({:try, :decimal}, Decimal.new(1)) == {:ok, Decimal.new(1)}
+    assert dump({:try, :decimal}, "not decimal") == {:ok, "not decimal"}
 
-    assert load({:maybe, :decimal}, 1) == {:ok, Decimal.new(1)}
-    assert load({:maybe, :decimal}, "not decimal") == {:ok, "not decimal"}
+    assert load({:try, :decimal}, 1) == {:ok, Decimal.new(1)}
+    assert load({:try, :decimal}, "not decimal") == {:ok, "not decimal"}
 
-    assert cast({:maybe, :decimal}, 1) == {:ok, Decimal.new(1)}
-    assert cast({:maybe, :decimal}, "not decimal") == {:ok, "not decimal"}
+    assert cast({:try, :decimal}, 1) == {:ok, Decimal.new(1)}
+    assert cast({:try, :decimal}, "not decimal") == {:ok, "not decimal"}
   end
 
   describe "embeds" do

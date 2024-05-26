@@ -225,14 +225,14 @@ defmodule Ecto.Type do
 
   @type composite :: {:array, t} | {:map, t} | private_composite
 
-  @typep private_composite :: {:maybe, t} | {:in, t} | {:param, :any_datetime}
+  @typep private_composite :: {:try, t} | {:in, t} | {:supertype, :datetime}
 
   @base ~w(
     integer float decimal boolean string bitstring map binary id binary_id any
     utc_datetime naive_datetime date time
     utc_datetime_usec naive_datetime_usec time_usec
   )a
-  @composite ~w(array map maybe in param)a
+  @composite ~w(array map try in param)a
   @variadic ~w(in splice)a
 
   @doc """
@@ -437,7 +437,7 @@ defmodule Ecto.Type do
   def type({:parameterized, {type, params}}), do: type.type(params)
   def type({:array, type}), do: {:array, type(type)}
   def type({:map, type}), do: {:map, type(type)}
-  def type({:maybe, type}), do: type(type)
+  def type({:try, type}), do: type(type)
   def type(type) when type in @base, do: type
   def type(type) when is_atom(type), do: type.type()
   def type(type), do: type
@@ -478,10 +478,10 @@ defmodule Ecto.Type do
   defp do_match?(:binary_id, :binary), do: true
   defp do_match?(:id, :integer), do: true
   defp do_match?(type, type), do: true
-  defp do_match?(:naive_datetime, {:param, :any_datetime}), do: true
-  defp do_match?(:naive_datetime_usec, {:param, :any_datetime}), do: true
-  defp do_match?(:utc_datetime, {:param, :any_datetime}), do: true
-  defp do_match?(:utc_datetime_usec, {:param, :any_datetime}), do: true
+  defp do_match?(:naive_datetime, {:supertype, :datetime}), do: true
+  defp do_match?(:naive_datetime_usec, {:supertype, :datetime}), do: true
+  defp do_match?(:utc_datetime, {:supertype, :datetime}), do: true
+  defp do_match?(:utc_datetime_usec, {:supertype, :datetime}), do: true
   defp do_match?(_, _), do: false
 
   @doc """
@@ -526,7 +526,7 @@ defmodule Ecto.Type do
     {:ok, nil}
   end
 
-  def dump({:maybe, type}, value, dumper) do
+  def dump({:try, type}, value, dumper) do
     case dump(type, value, dumper) do
       {:ok, _} = ok -> ok
       :error -> {:ok, value}
@@ -564,7 +564,7 @@ defmodule Ecto.Type do
   def dump(:naive_datetime_usec, value, _dumper), do: dump_naive_datetime_usec(value)
   def dump(:utc_datetime, value, _dumper), do: dump_utc_datetime(value)
   def dump(:utc_datetime_usec, value, _dumper), do: dump_utc_datetime_usec(value)
-  def dump({:param, :any_datetime}, value, _dumper), do: dump_any_datetime(value)
+  def dump({:supertype, :datetime}, value, _dumper), do: dump_any_datetime(value)
   def dump(mod, value, _dumper) when is_atom(mod), do: mod.dump(value)
 
   defp dump_float(term) when is_float(term), do: {:ok, term}
@@ -630,7 +630,7 @@ defmodule Ecto.Type do
     {:ok, nil}
   end
 
-  def load({:maybe, type}, value, loader) do
+  def load({:try, type}, value, loader) do
     case load(type, value, loader) do
       {:ok, _} = ok -> ok
       :error -> {:ok, value}
@@ -804,7 +804,7 @@ defmodule Ecto.Type do
   def cast({:in, _type}, nil), do: :error
   def cast(_type, nil), do: {:ok, nil}
 
-  def cast({:maybe, type}, value) do
+  def cast({:try, type}, value) do
     case cast(type, value) do
       {:ok, _} = ok -> ok
       _ -> {:ok, value}
@@ -833,7 +833,7 @@ defmodule Ecto.Type do
   defp cast_fun(:naive_datetime_usec), do: &maybe_pad_usec(cast_naive_datetime(&1))
   defp cast_fun(:utc_datetime), do: &maybe_truncate_usec(cast_utc_datetime(&1))
   defp cast_fun(:utc_datetime_usec), do: &maybe_pad_usec(cast_utc_datetime(&1))
-  defp cast_fun({:param, :any_datetime}), do: &cast_any_datetime(&1)
+  defp cast_fun({:supertype, :datetime}), do: &cast_any_datetime(&1)
   defp cast_fun({:parameterized, {mod, params}}), do: &mod.cast(&1, params)
   defp cast_fun({qual, type}) when qual in @variadic, do: cast_fun({:array, type})
 

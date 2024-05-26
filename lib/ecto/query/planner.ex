@@ -1835,7 +1835,7 @@ defmodule Ecto.Query.Planner do
         # If it is possible to upcast, we do it, otherwise keep the DB value.
         # For example, an average of integers will return a decimal, which can't be cast
         # as an integer. But an average of "moneys" should be upcast.
-        _ -> {:maybe, Keyword.fetch!(dot_meta, :type)}
+        _ -> {:try, Keyword.fetch!(dot_meta, :type)}
       end
 
     {{:value, type}, [expr | fields], from}
