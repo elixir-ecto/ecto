@@ -4,6 +4,7 @@ defmodule Ecto.Query.Planner do
 
   alias Ecto.Query.{
     BooleanExpr,
+    ByExpr,
     DynamicExpr,
     FromExpr,
     JoinExpr,
@@ -226,6 +227,10 @@ defmodule Ecto.Query.Planner do
     |> plan_assocs()
     |> plan_combinations(adapter, cte_names)
     |> plan_wheres(adapter, cte_names)
+    |> plan_bys(:order_bys, adapter, cte_names)
+    |> plan_bys(:group_bys, adapter, cte_names)
+    |> plan_distinct(adapter, cte_names)
+    |> plan_windows(adapter, cte_names)
     |> plan_select(adapter, cte_names)
     |> plan_cache(operation, adapter)
   rescue
@@ -835,7 +840,6 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  @spec plan_wheres(Ecto.Query.t(), module, map()) :: Ecto.Query.t()
   defp plan_wheres(query, adapter, cte_names) do
     wheres =
       Enum.map(query.wheres, fn
@@ -866,7 +870,45 @@ defmodule Ecto.Query.Planner do
     %{query | wheres: wheres, havings: havings}
   end
 
-  @spec plan_select(Ecto.Query.t(), module, map()) :: Ecto.Query.t()
+  defp plan_bys(query, key, adapter, cte_names) do
+    order_bys =
+      Enum.map(Map.get(query, key), fn
+        %{subqueries: []} = order_by ->
+          order_by
+
+        %{subqueries: subqueries} = order_by ->
+          %{order_by | subqueries: Enum.map(subqueries, &plan_subquery(&1, query, nil, adapter, false, cte_names))}
+      end)
+
+    Map.put(query, key, order_bys)
+  end
+
+  defp plan_windows(query, adapter, cte_names) do
+    windows =
+      Enum.map(query.windows, fn
+        {key, %{subqueries: []} = window} ->
+          {key, window}
+
+        {key, %{subqueries: subqueries} = window} ->
+          {key, %{window | subqueries: Enum.map(subqueries, &plan_subquery(&1, query, nil, adapter, false, cte_names))}}
+      end)
+
+    %{query | windows: windows}
+  end
+
+  defp plan_distinct(query, adapter, cte_names) do
+    case query.distinct do
+      %Ecto.Query.ByExpr{subqueries: []} ->
+        query
+
+      %Ecto.Query.ByExpr{subqueries: subqueries} = by_expr ->
+        %{query | distinct: %{by_expr | subqueries: Enum.map(subqueries, &plan_subquery(&1, query, nil, adapter, false, cte_names))}}
+
+      _ ->
+        query
+    end
+  end
+
   defp plan_select(query, adapter, cte_names) do
     case query do
       %{select: %{subqueries: [_ | _] = subqueries}} ->
@@ -999,9 +1041,16 @@ defmodule Ecto.Query.Planner do
   end
 
   defp expr_to_cache(%QueryExpr{expr: expr}), do: expr
+
   defp expr_to_cache(%SelectExpr{expr: expr, subqueries: []}), do: expr
 
   defp expr_to_cache(%SelectExpr{expr: expr, subqueries: subqueries}) do
+    {expr, Enum.map(subqueries, fn %{cache: cache} -> {:subquery, cache} end)}
+  end
+
+  defp expr_to_cache(%ByExpr{expr: expr, subqueries: []}), do: expr
+
+  defp expr_to_cache(%ByExpr{expr: expr, subqueries: subqueries}) do
     {expr, Enum.map(subqueries, fn %{cache: cache} -> {:subquery, cache} end)}
   end
 

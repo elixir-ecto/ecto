@@ -431,6 +431,11 @@ defmodule Ecto.Query do
     defstruct [:expr, :file, :line, params: []]
   end
 
+  defmodule ByExpr do
+    @moduledoc false
+    defstruct [:expr, :file, :line, params: [], subqueries: []]
+  end
+
   defmodule BooleanExpr do
     @moduledoc false
     defstruct [:op, :expr, :file, :line, params: [], subqueries: []]
@@ -2866,7 +2871,7 @@ defmodule Ecto.Query do
     schema = assert_schema!(query)
     pks = schema.__schema__(:primary_key)
     expr = for pk <- pks, do: {dir, field(0, pk)}
-    %QueryExpr{expr: expr, file: __ENV__.file, line: __ENV__.line}
+    %ByExpr{expr: expr, file: __ENV__.file, line: __ENV__.line}
   end
 
   defp assert_schema!(%{from: %Ecto.Query.FromExpr{source: {_source, schema}}})

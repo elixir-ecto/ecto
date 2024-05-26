@@ -63,6 +63,20 @@ defmodule Ecto.Query.Builder.DistinctTest do
              [{1, {0, :foo}}, {"bar", {0, :bar}}, {2, {0, :baz}}, {"bat", {0, :bat}}]
     end
 
+    test "supports subqueries" do
+      distinct = [
+        asc: dynamic([p], exists(from other_post in "posts", where: other_post.id == parent_as(:p).id))
+      ]
+
+      %{distinct: distinct} = from p in "posts", as: :p, distinct: ^distinct
+      assert distinct.expr ==  [asc: {:exists, [], [subquery: 0]}]
+      assert [_] = distinct.subqueries
+
+      %{distinct: distinct} = from p in "posts", as: :p, distinct: [asc: exists(from other_post in "posts", where: other_post.id == parent_as(:p).id)]
+      assert distinct.expr ==  [asc: {:exists, [], [subquery: 0]}]
+      assert [_] = distinct.subqueries
+    end
+
     test "raises on non-atoms" do
       message = "expected a field as an atom in `distinct`, got: `\"temp\"`"
       assert_raise ArgumentError, message, fn ->

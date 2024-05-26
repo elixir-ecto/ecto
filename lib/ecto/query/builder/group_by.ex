@@ -49,21 +49,21 @@ defmodule Ecto.Query.Builder.GroupBy do
   Shared between group_by and partition_by.
   """
   def group_or_partition_by!(kind, query, exprs, params) do
-    {expr, {params, _}} =
-      Enum.map_reduce(List.wrap(exprs), {params, length(params)}, fn
+    {expr, {params, _, subqueries}} =
+      Enum.map_reduce(List.wrap(exprs), {params, length(params), []}, fn
         field, params_count when is_atom(field) ->
           {to_field(field), params_count}
 
-        %Ecto.Query.DynamicExpr{} = dynamic, {params, count} ->
-          {expr, params, count} = Builder.Dynamic.partially_expand(kind, query, dynamic, params, count)
-          {expr, {params, count}}
+        %Ecto.Query.DynamicExpr{} = dynamic, {params, count, subqueries} ->
+          {expr, params, subqueries, _aliases, count} = Builder.Dynamic.partially_expand(query, dynamic, params, subqueries, %{}, count)
+          {expr, {params, count, subqueries}}
 
         other, _params_count ->
           raise ArgumentError,
                 "expected a list of fields and dynamics in `#{kind}`, got: `#{inspect other}`"
       end)
 
-    {expr, params}
+    {expr, params, subqueries}
   end
 
   defp to_field(field), do: {{:., [], [{:&, [], [0]}, field]}, [], []}
@@ -72,8 +72,8 @@ defmodule Ecto.Query.Builder.GroupBy do
   Called at runtime to assemble group_by.
   """
   def group_by!(query, group_by, file, line) do
-    {expr, params} = group_or_partition_by!(:group_by, query, group_by, [])
-    expr = %Ecto.Query.QueryExpr{expr: expr, params: Enum.reverse(params), line: line, file: file}
+    {expr, params, subqueries} = group_or_partition_by!(:group_by, query, group_by, [])
+    expr = %Ecto.Query.ByExpr{expr: expr, params: Enum.reverse(params), line: line, file: file, subqueries: subqueries}
     apply(query, expr)
   end
 
@@ -93,12 +93,13 @@ defmodule Ecto.Query.Builder.GroupBy do
 
   def build(query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
-    {expr, {params, _acc}} = escape(:group_by, expr, {[], %{}}, binding, env)
+    {expr, {params, acc}} = escape(:group_by, expr, {[], %{subqueries: []}}, binding, env)
     params = Builder.escape_params(params)
 
-    group_by = quote do: %Ecto.Query.QueryExpr{
+    group_by = quote do: %Ecto.Query.ByExpr{
                            expr: unquote(expr),
                            params: unquote(params),
+                           subqueries: unquote(acc.subqueries),
                            file: unquote(env.file),
                            line: unquote(env.line)}
     Builder.apply_query(query, __MODULE__, [group_by], env)

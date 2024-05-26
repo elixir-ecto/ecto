@@ -53,6 +53,19 @@ defmodule Ecto.Query.Builder.GroupByTest do
       assert group_by("q", [q], ^[key]).group_bys == group_by("q", [q], [q.title]).group_bys
     end
 
+    test "accepts subqueries" do
+      key = dynamic([p], exists(from other_q in "q", where: other_q.title == parent_as(:q).title))
+      assert [group_by] = group_by("q", [q], ^key).group_bys
+
+      assert group_by.expr == [{:exists, [], [{:subquery, 0}]}]
+      assert [_] = group_by.subqueries
+
+      assert [group_by] = group_by("q", [q], exists(from other_q in "q", where: other_q.title == parent_as(:q).title)).group_bys
+
+      assert group_by.expr == [{:exists, [], [{:subquery, 0}]}]
+      assert [_] = group_by.subqueries
+    end
+
     test "raises when no a field or a list of fields" do
       message = "expected a field as an atom in `group_by`, got: `\"temp\"`"
       assert_raise ArgumentError, message, fn ->
