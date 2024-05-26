@@ -5,6 +5,7 @@
 ### Enhancements
 
   * [Ecto.Query] Introduce `is_named_binding` guard
+  * [Ecto.Query] Subqueries are now supported in `distinct`, `group_by`, `order_by` and `window` expressions
   * [Ecto.Repo] Allow Hot Updates on upsert queries in Postgres by removing duplicate fields during replace_all
   * [Ecto.Schema] Allow schema fields to be read-only
   * [Ecto.Schema] Add `:defaults_to_struct` option to embeds_one
