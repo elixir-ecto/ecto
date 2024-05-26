@@ -876,6 +876,8 @@ defmodule Ecto.Query.Planner do
     end
   end
 
+  defp plan_windows(%{windows: []} = query, _fun), do: query
+
   defp plan_windows(query, fun) do
     windows =
       Enum.map(query.windows, fn
