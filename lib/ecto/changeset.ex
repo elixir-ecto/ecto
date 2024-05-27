@@ -2003,7 +2003,7 @@ defmodule Ecto.Changeset do
       update or delete them). Different to passing changesets, structs are not
       change tracked in any fashion. In other words, if you change a comment
       struct and give it to `put_assoc/4`, the updates in the struct won't be
-      persisted. You must use changesets instead. `put_assoc/4` with structs
+      persisted. You must use changesets, keyword lists, or maps instead. `put_assoc/4` with structs
       only takes care of guaranteeing that the comments and the parent data
       are associated. This is extremely useful when associating existing data,
       as we will see in the "Example: Adding tags to a post" section.
