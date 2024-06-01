@@ -1515,10 +1515,10 @@ defmodule Ecto.Changeset do
 
   defp cast_merge(cs1, cs2) do
     new_params = (cs1.params || cs2.params) && Map.merge(cs1.params || %{}, cs2.params || %{})
+    new_types = Map.merge(cs1.types, cs2.types)
     new_changes = Map.merge(cs1.changes, cs2.changes)
     new_errors = Enum.uniq(cs1.errors ++ cs2.errors)
     new_required = Enum.uniq(cs1.required ++ cs2.required)
-    new_types = cs1.types || cs2.types
     new_valid? = cs1.valid? and cs2.valid?
 
     %{
