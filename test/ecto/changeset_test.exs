@@ -661,6 +661,12 @@ defmodule Ecto.ChangesetTest do
     assert length(constraints(changeset)) == 2
   end
 
+  test "merge/2: merges types" do
+    cs1 = cast({%{}, %{title: :string}}, %{title: "foo"}, ~w(title)a)
+    cs2 = cast({%{}, %{body: :string}}, %{body: "foo"}, ~w(body)a)
+    assert merge(cs1, cs2).types == %{title: :string, body: :string}
+  end
+
   test "merge/2: merges parameters" do
     empty = cast(%Post{}, %{}, ~w(title)a)
     cs1 = cast(%Post{}, %{body: "foo"}, ~w(body)a)
