@@ -360,7 +360,7 @@ defmodule Ecto.Changeset do
             constraints: [],
             filters: %{},
             action: nil,
-            types: nil,
+            types: %{},
             empty_values: @empty_values,
             repo: nil,
             repo_opts: []
@@ -379,7 +379,7 @@ defmodule Ecto.Changeset do
           validations: [validation],
           filters: %{optional(atom) => term},
           action: action,
-          types: nil | %{atom => Ecto.Type.t() | {:assoc, term()} | {:embed, term()}}
+          types: types
         }
 
   @type t :: t(Ecto.Schema.t() | map | nil)
@@ -394,7 +394,7 @@ defmodule Ecto.Changeset do
           error_type: atom
         }
   @type data :: map()
-  @type types :: map()
+  @type types :: %{atom => Ecto.Type.t() | {:assoc, term()} | {:embed, term()}}
   @type traverse_result :: %{atom => [term] | traverse_result}
   @type validation :: {atom, term}
 
@@ -478,10 +478,6 @@ defmodule Ecto.Changeset do
 
   def change({data, types}, changes) when is_map(data) do
     change(%Changeset{data: data, types: Enum.into(types, %{}), valid?: true}, changes)
-  end
-
-  def change(%Changeset{types: nil}, _changes) do
-    raise ArgumentError, "changeset does not have types information"
   end
 
   def change(%Changeset{changes: changes, types: types} = changeset, new_changes)
@@ -737,10 +733,6 @@ defmodule Ecto.Changeset do
 
   def cast({data, types}, params, permitted, opts) when is_map(data) do
     cast(data, types, %{}, params, permitted, opts)
-  end
-
-  def cast(%Changeset{types: nil}, _params, _permitted, _opts) do
-    raise ArgumentError, "changeset does not have types information"
   end
 
   def cast(%Changeset{} = changeset, params, permitted, opts) do
@@ -1743,10 +1735,6 @@ defmodule Ecto.Changeset do
     get_relation(:embed, changeset, name)
   end
 
-  defp get_relation(_tag, %{types: nil}, _name) do
-    raise ArgumentError, "changeset does not have types information"
-  end
-
   defp get_relation(tag, %{changes: changes, data: data, types: types}, name) do
     _ = relation!(:get, tag, name, Map.get(types, name))
 
@@ -1886,10 +1874,6 @@ defmodule Ecto.Changeset do
 
   """
   @spec put_change(t, atom, term) :: t
-  def put_change(%Changeset{types: nil}, _key, _value) do
-    raise ArgumentError, "changeset does not have types information"
-  end
-
   def put_change(%Changeset{data: data, types: types} = changeset, key, value) do
     type = Map.get(types, key)
 
@@ -2153,10 +2137,6 @@ defmodule Ecto.Changeset do
     put_relation(:embed, changeset, name, value, opts)
   end
 
-  defp put_relation(_tag, %{types: nil}, _name, _value, _opts) do
-    raise ArgumentError, "changeset does not have types information"
-  end
-
   defp put_relation(tag, changeset, name, value, _opts) do
     %{data: data, types: types, changes: changes, errors: errors, valid?: valid?} = changeset
     relation = relation!(:put, tag, name, Map.get(types, name))
@@ -2189,10 +2169,6 @@ defmodule Ecto.Changeset do
 
   """
   @spec force_change(t, atom, term) :: t
-  def force_change(%Changeset{types: nil}, _key, _value) do
-    raise ArgumentError, "changeset does not have types information"
-  end
-
   def force_change(%Changeset{types: types} = changeset, key, value) do
     case Map.get(types, key) do
       {tag, _} when tag in @relations ->
