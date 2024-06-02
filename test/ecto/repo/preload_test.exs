@@ -16,8 +16,9 @@ defmodule Ecto.Repo.PreloadTest do
     def changeset(%__MODULE__{} = collection, attrs) do
       collection
       |> cast(attrs, [:name])
+      |> validate_required([:name])
       |> validate_length(:name, max: 20)
-      |> cast_assoc(:books)
+      |> cast_assoc(:books, sort_param: :books_sort)
     end
   end
 
@@ -36,8 +37,9 @@ defmodule Ecto.Repo.PreloadTest do
     def changeset(%__MODULE__{} = book, attrs) do
       book
       |> cast(attrs, [:title, :collection_id])
+      |> validate_required([:title])
       |> cast_assoc(:collection)
-      |> cast_assoc(:chapters)
+      |> cast_assoc(:chapters, sort_param: :chapters_sort)
     end
   end
 
@@ -55,37 +57,50 @@ defmodule Ecto.Repo.PreloadTest do
     def changeset(%__MODULE__{} = chapter, attrs) do
       chapter
       |> cast(attrs, [:title, :book_id])
+      |> validate_required([:title])
       |> cast_assoc(:book)
     end
   end
 
   @collection_attrs %{
     "name" => "The Con Collection",
-    "books" => [
-      %{
+    "books_sort" => [0, "new"],
+    "books" => %{
+      0 => %{
         "title" => "Necronomicon",
         "chapters" => [
           %{"title" => "Necro 1"},
         ]
       }
-    ]
+    }
   }
 
-  @tag skip: true
-  test "preload_in_result - {:ok, struct}" do
-    # Insert a new collection
-    {:ok, inserted_collection} =
+  test "preload_in_changeset" do
+    changeset =
       %Collection{}
+      |> TestRepo.preload(books: [:chapters])
       |> Collection.changeset(@collection_attrs)
-      |> TestRepo.insert()
 
-    # Get the associations (which are not preloaded by default!)
-    retreived_collection = TestRepo.get!(Collection, inserted_collection.id)
+    # There are now two book changesets
+    assert [book_changeset_1, book_changeset_2] = changeset.changes.books
 
-    {:ok, _updated_collection} =
-      retreived_collection
-      |> Collection.changeset(%{"name" => "A valid name"})
-      |> TestRepo.update()
-      |> TestRepo.preload_in_result(books: [:chapters])
+    assert %Ecto.Changeset{} = book_changeset_1
+    assert %Ecto.Changeset{} = book_changeset_2
+
+    # The associations are not loaded!
+    assert %Ecto.Association.NotLoaded{} = book_changeset_1.data.chapters
+    assert %Ecto.Association.NotLoaded{} = book_changeset_2.data.chapters
+
+    # Call our new `preload_in_changeset/2` function
+    preloaded_changeset = TestRepo.preload_in_changeset(changeset, books: [:chapters])
+
+    assert [preloaded_book_changeset_1, preloaded_book_changeset_2] = preloaded_changeset.changes.books
+
+    assert %Ecto.Changeset{} = preloaded_book_changeset_1
+    assert %Ecto.Changeset{} = preloaded_book_changeset_2
+
+    # Preloaded (empty) associations
+    assert [] == preloaded_book_changeset_1.data.chapters
+    assert [] == preloaded_book_changeset_2.data.chapters
   end
 end
