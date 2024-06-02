@@ -696,4 +696,153 @@ defmodule Ecto.Repo.Preloader do
   defp filter_and_reraise(exception, stacktrace) do
     reraise exception, Enum.reject(stacktrace, &match?({__MODULE__, _, _, _}, &1))
   end
+
+  # Preload in changeset or in result
+
+  @doc """
+  Implementation for `Ecto.Repo.preload_in_result/2`.
+  """
+
+  @spec preload({:ok, struct} | {:error, changeset}, atom, atom | list, {adapter_meta :: map, opts :: Keyword.t}) ::
+    {:ok, struct} | {:error, changeset} when struct: Ecto.Schema.t, changeset: Ecto.Changeset.t
+
+  def preload_in_result({:ok, struct}, repo_name, preloads, tuplet) do
+    {:ok, preload(struct, repo_name, preloads, tuplet)}
+  end
+
+  def preload_in_result({:error, changeset}, repo_name, preloads, tuplet) do
+    {:error, preload_in_changeset(changeset, repo_name, preloads, tuplet)}
+  end
+
+  @doc """
+  Implementation for `Ecto.Repo.preload_in_changeset/2`.
+  """
+
+  @spec preload_in_changeset(changeset, atom, atom | list, {adapter_meta :: map, opts :: Keyword.t}) ::
+    changeset when changeset: Ecto.Changeset.t
+
+  def preload_in_changeset(%Ecto.Changeset{} = changeset, repo_name, preloads, tuplet) do
+    preloaded_data = optimized_preload_data(changeset.data, repo_name, preloads, tuplet)
+    preloaded_changes = preload_in_changes(changeset.changes, repo_name, preloads, tuplet)
+    %{changeset | data: preloaded_data, changes: preloaded_changes}
+  end
+
+  defp optimized_preload_data(data, repo_name, preloads, tuplet) do
+    case primary_key_value_for_data(data) do
+      # If the ID is nil, then no association can refer back to it,
+      # which means that the preloaded data is always the default value
+      # for an association of that cardinality.
+      nil ->
+        # We will now iterate over the preloads and make them all
+        # into `nil` (if it's an association with cardinality `:one`)
+        # or into the empty list `[]` (if it is an association with cardinality `:many`)
+
+        # Make sure preloads is a list (actually it can be given a an atom,
+        # but normalizing it to a list makes everything below simpler)
+        preloads = List.wrap(preloads)
+
+        # Now, reduce over the preloads to make the associations into either
+        # `nil` or `[]`.
+        Enum.reduce(preloads, data, fn preload, current_data ->
+          key =
+            case preload do
+              {key, _deeper_preloads} when is_atom(key) -> key
+              key when is_atom(key) -> key
+            end
+
+          case Map.get(current_data, key) do
+            # I think I'm using private attributes of this structure,
+            # and that's the main reason to include this in Ecto
+            %Ecto.Association.NotLoaded{__cardinality__: :many} ->
+              Map.put(current_data, key, [])
+
+            %Ecto.Association.NotLoaded{__cardinality__: :one} ->
+              Map.put(current_data, key, nil)
+
+            _other ->
+              current_data
+          end
+        end)
+
+      _other ->
+        preload(data, repo_name, preloads, tuplet)
+    end
+  end
+
+  defp preload_in_changes(changes, repo_name, preloads, tuplet) do
+    keys_to_preload = get_current_level_of_preloads(preloads)
+
+    for {key, new_value} <- changes, into: %{} do
+      if key in keys_to_preload do
+        # We want to preload this key!
+        # Time to do some work...
+        possibly_preloaded_value =
+          case new_value do
+            %Ecto.Changeset{} = inner_changeset ->
+              # Get deeper in the preloads "tree"
+              preloads_for_change = preloads_for(preloads, key)
+              preload_in_changeset(inner_changeset, repo_name, preloads_for_change, tuplet)
+
+            list when is_list(list) ->
+              # Get deeper in the preloads "tree"
+              preloads_for_change = preloads_for(preloads, key)
+
+              all_changeset? =
+                list
+                |> Enum.map(fn e -> is_struct(e, Ecto.Changeset) end)
+                |> Enum.all?()
+
+              case all_changeset? do
+                true ->
+                  # Recursively preload associations in the child changesets.
+                  # This will lead to N queries, which is probably not very
+                  # efficient, but I believe there is space to optimize this further.
+                  for inner_changeset <- list do
+                    preload_in_changeset(inner_changeset, repo_name, preloads_for_change, tuplet)
+                  end
+
+                false ->
+                  list
+              end
+
+            other ->
+              other
+          end
+
+        {key, possibly_preloaded_value}
+      else
+        # We don't want to preload this key,
+        # we just return the value as it is
+        {key, new_value}
+      end
+    end
+  end
+
+  defp primary_key_value_for_data(ecto_data) do
+    key =
+      case ecto_data.__meta__.schema.__schema__(:primary_key) do
+        [] ->
+          nil
+
+        [primary_key | _other_primary_keys] ->
+          primary_key
+      end
+
+    Map.get(ecto_data, key)
+  end
+
+  defp preloads_for(preloads, key) do
+    preloads
+    |> Keyword.get(key, [])
+    |> List.wrap()
+  end
+
+  defp get_current_level_of_preloads(preloads) do
+    for preload <- preloads do
+      case preload do
+        {key, _deeper} when is_atom(key) -> key
+        key when is_atom(key) -> key
+      end
+    end
+  end
 end
