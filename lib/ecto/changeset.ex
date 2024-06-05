@@ -1027,7 +1027,8 @@ defmodule Ecto.Changeset do
 
     * If there is an associated child with an ID and its ID is not given
       as parameter, the `:on_replace` callback for that association will
-      be invoked (see the "On replace" section on the module documentation)
+      be invoked (see the ["On replace" section](#module-the-on_replace-option)
+      on the module documentation)
 
   If two or more addresses have the same IDs, Ecto will consider that an
   error and add an error to the changeset saying that there are duplicate

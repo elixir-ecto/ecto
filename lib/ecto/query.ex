@@ -870,7 +870,8 @@ defmodule Ecto.Query do
       )
 
   If you need to refer to a parent binding which is not known when writing the subquery,
-  you can use `parent_as` as shown in the examples under "Named bindings" in this module doc.
+  you can use `parent_as` as shown in the examples under ["Named bindings"](#module-named-bindings)
+  in this module doc.
 
   You can also use subquery directly in `select` and `select_merge`:
 
@@ -2885,7 +2886,8 @@ defmodule Ecto.Query do
   @doc """
   Returns `true` if the query has a binding with the given name, otherwise `false`.
 
-  For more information on named bindings see "Named bindings" in this module doc.
+  For more information on named bindings see ["Named bindings"](#module-named-bindings)
+  in this module doc.
   """
   def has_named_binding?(%Ecto.Query{aliases: aliases}, key) do
     Map.has_key?(aliases, key)
@@ -2923,7 +2925,8 @@ defmodule Ecto.Query do
         join(query, :left, [p], a in assoc(p, ^binding), as: ^binding)
       end)
 
-  For more information on named bindings see "Named bindings" in this module doc or `has_named_binding?/2`.
+  For more information on named bindings see ["Named bindings"](#module-named-bindings)
+  in this module doc or `has_named_binding?/2`.
   """
   def with_named_binding(%Ecto.Query{} = query, key, fun) do
     if has_named_binding?(query, key) do

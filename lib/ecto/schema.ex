@@ -822,7 +822,8 @@ defmodule Ecto.Schema do
       association, defaults to the primary key on the schema
 
     * `:through` - Allow this association to be defined in terms of existing
-      associations. Read the section on `:through` associations for more info
+      associations. Read the [section on `:through` associations](#has_many/3-has_many-has_one-through)
+      for more info
 
     * `:on_delete` - The action taken on associations when parent record
       is deleted. May be `:nothing` (default), `:nilify_all` and `:delete_all`.
