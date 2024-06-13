@@ -112,27 +112,23 @@ defmodule Ecto.Repo.Schema do
 
     ix = case query.select do
       %Ecto.Query.SelectExpr{expr: {:&, _, [ix]}} -> ix
+      %Ecto.Query.SelectExpr{expr: {:merge, _, [{:&, _, [ix]} | _]}} -> ix
       _ -> nil
     end
 
     header = case query.select do
       %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}} ->
-        Enum.map(args, fn {field, _} ->
-          case dumper do
-            %{^field => {_, _, false}} -> field
-            %{} -> raise ArgumentError, "cannot select unwritable field `#{field}` for insert_all"
-            nil -> field
-          end
-        end)
+        Enum.map(args, fn {field, _} -> extract_field(field, dumper) end)
+
+      %Ecto.Query.SelectExpr{expr: {:merge, _ctx, merge_args}, take: %{^ix => {_fun, take_fields}}} ->
+        [_, {_, _, merge_fields}] = merge_args
+
+        merge_fields = Enum.map(merge_fields, &elem(&1, 0))
+
+        Enum.map(merge_fields ++ take_fields, fn field -> extract_field(field, dumper) end)
 
       %Ecto.Query.SelectExpr{take: %{^ix => {_fun, fields}}} ->
-        Enum.map(fields, fn field ->
-          case dumper do
-            %{^field => {_, _, false}} -> field
-            %{} -> raise ArgumentError, "cannot select unwritable field `#{field}` for insert_all"
-            nil -> field
-          end
-        end)
+        Enum.map(fields, fn field -> extract_field(field, dumper) end)
 
       _ ->
         raise ArgumentError, """
@@ -161,6 +157,19 @@ defmodule Ecto.Repo.Schema do
 
   defp extract_header_and_fields(_repo, rows_or_query, _schema, _dumper, _autogen_id, _placeholder_map, _adapter, _opts) do
     raise ArgumentError, "expected a list of rows or a query, but got #{inspect rows_or_query} as rows_or_query argument in insert_all"
+  end
+
+  defp extract_field(field, dumper) do
+    case dumper do
+      %{^field => {_, _, false}} ->
+        field
+
+      %{} ->
+        raise ArgumentError, "cannot select unwritable field `#{field}` for insert_all"
+
+      nil ->
+        field
+    end
   end
 
   defp init_mapper(nil, _dumper, _adapter, placeholder_map) do

@@ -680,6 +680,17 @@ defmodule Ecto.RepoTest do
       assert_received {:insert_all, %{source: "my_schema"}, {%Ecto.Query{}, _params}}
     end
 
+    test "takes query selecting on map + select_merge" do
+      query =
+        from s in MySchema,
+          select: map(s, [:x]),
+          select_merge: %{y: s.y}
+
+      TestRepo.insert_all(MySchema, query)
+
+      assert_received {:insert_all, %{source: "my_schema"}, {%Ecto.Query{}, _params}}
+    end
+
     test "raises when a bad query is given as source" do
       assert_raise ArgumentError, fn ->
         TestRepo.insert_all(MySchema, from(s in MySchema))
