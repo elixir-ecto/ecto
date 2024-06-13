@@ -596,6 +596,60 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes == %{}
   end
 
+  test "nested schemaless changeset" do
+    {data, types} =
+      {%{},
+       %{
+         name: :string,
+         age: :integer,
+         favorite_fruits: {:array, :string},
+         metadata:
+           {:map,
+            %{
+              favorite_color: :string,
+              favorite_fruits: {:array, :string},
+              addresses: {:array, {:map, %{city: :string}}}
+            }}
+       }}
+
+    success_params = %{
+      name: "Jim",
+      age: 92,
+      metadata: %{
+        favorite_color: "green",
+        favorite_fruits: ["passionfruit", "tomato"],
+        foo: "bar",
+        addresses: [
+          %{city: "Sao Paulo"},
+          %{city: "Grozny"}
+        ]
+      }
+    }
+
+    changeset = cast({data, types}, success_params, [:name, :age, :metadata])
+    expected_result = Map.update!(success_params, :metadata, &Map.delete(&1, :foo))
+    assert changeset.changes == expected_result
+
+    # Invalid address
+    failure_params = %{
+      name: "Jim",
+      age: 92,
+      metadata: %{
+        favorite_color: "green",
+        favorite_fruits: ["passionfruit", "tomato"],
+        foo: "bar",
+        addresses: [
+          %{city: 1}
+        ]
+      }
+    }
+
+    changeset = cast({data, types}, failure_params, [:name, :age, :metadata])
+    refute changeset.valid?
+    assert {"is invalid", error_meta} = changeset.errors[:metadata]
+    assert error_meta[:source] == [:addresses, 0, :city]
+  end
+
   ## Changeset functions
 
   test "merge/2: merges changes" do

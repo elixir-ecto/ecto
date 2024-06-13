@@ -852,6 +852,11 @@ defmodule Ecto.Type do
     &map(&1, fun, false, %{})
   end
 
+  defp cast_fun({:map, %{} = map_types}) do
+    funs = Map.new(map_types, fn {key, type} -> {key, cast_fun(type)} end)
+    &map(&1, funs, true, %{})
+  end
+
   defp cast_fun({:map, type}) do
     fun = cast_fun(type)
     &map(&1, fun, true, %{})
@@ -1272,6 +1277,11 @@ defmodule Ecto.Type do
     end
   end
 
+  defp equal_fun({:map, %{} = map_types}) do
+    funs = Map.new(map_types, fn {key, type} -> {key, cast_fun(type)} end)
+    &equal_map?(funs, &1, &2)
+  end
+
   defp equal_fun({:map, type}) do
     if fun = equal_fun(type) do
       &equal_map?(fun, &1, &2)
@@ -1319,7 +1329,9 @@ defmodule Ecto.Type do
     end
   end
 
-  defp equal_map?(fun, [{key, val} | tail], other_map) do
+  defp equal_map?(fun_or_funs, [{key, val} | tail], other_map) do
+    fun = if is_function(fun_or_funs), do: fun_or_funs, else: fun_or_funs[key]
+
     case other_map do
       %{^key => other_val} -> fun.(val, other_val) and equal_map?(fun, tail, other_map)
       _ -> false
@@ -1391,8 +1403,12 @@ defmodule Ecto.Type do
     :error
   end
 
-  defp map(map, fun, skip_nil?, acc) when is_map(map) do
+  defp map(map, fun, skip_nil?, acc) when is_map(map) and is_function(fun) do
     map_each(Map.to_list(map), fun, skip_nil?, acc)
+  end
+
+  defp map(map, funs, skip_nil?, acc) when is_map(map) and is_map(funs) do
+    map_each(Map.to_list(map), funs, skip_nil?, acc)
   end
 
   defp map(_, _, _, _) do
@@ -1403,16 +1419,27 @@ defmodule Ecto.Type do
     map_each(t, fun, true, Map.put(acc, key, nil))
   end
 
-  defp map_each([{key, value} | t], fun, skip_nil?, acc) do
-    case fun.(value) do
-      {:ok, value} ->
-        map_each(t, fun, skip_nil?, Map.put(acc, key, value))
+  defp map_each([{key, value} | t], fun_or_funs, skip_nil?, acc) do
+    fun = if is_function(fun_or_funs), do: fun_or_funs, else: fun_or_funs[key]
 
-      :error ->
-        :error
+    if fun do
+      case fun.(value) do
+        {:ok, value} ->
+          map_each(t, fun_or_funs, skip_nil?, Map.put(acc, key, value))
 
-      {:error, custom_errors} ->
-        {:error, Keyword.update(custom_errors, :source, [key], &[key | &1])}
+        :error ->
+          # Else branch needed for backwards compatibility
+          if is_map(fun_or_funs) do
+            {:error, [source: [key]]}
+          else
+            :error
+          end
+
+        {:error, custom_errors} ->
+          {:error, Keyword.update(custom_errors, :source, [key], &[key | &1])}
+      end
+    else
+      map_each(t, fun_or_funs, skip_nil?, acc)
     end
   end
 
