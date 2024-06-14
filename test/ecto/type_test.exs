@@ -243,6 +243,8 @@ defmodule Ecto.TypeTest do
 
   test "in" do
     assert cast({:in, :integer}, ["1", "2", "3"]) == {:ok, [1, 2, 3]}
+    assert {:ok, list} = cast({:in, :integer}, MapSet.new(~w(1 2 3)))
+    assert [1, 2, 3] = Enum.sort(list)
     assert cast({:in, :integer}, nil) == :error
   end
 
