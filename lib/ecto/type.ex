@@ -1387,6 +1387,13 @@ defmodule Ecto.Type do
     {:ok, Enum.reverse(acc)}
   end
 
+  defp array_with_index(%_{} = struct, fun, skip_nil?, index, acc) do
+    case Enumerable.impl_for(struct) do
+      nil -> :error
+      _ -> struct |> Enum.to_list() |> array_with_index(fun, skip_nil?, index, acc)
+    end
+  end
+
   defp array_with_index(_, _, _, _, _) do
     :error
   end

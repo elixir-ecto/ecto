@@ -135,8 +135,9 @@ defmodule Ecto.Query.API do
 
       from p in Post, where: p.id in [1, 2, 3]
 
-  The right side may either be a list, a literal list
-  or even a column in the database with array type:
+  The right side may either be a literal list, an interpolated list,
+  any struct that implements the `Enumerable` protocol, or even a
+  column in the database with array type:
 
       from p in Post, where: "elixir" in p.tags
 
