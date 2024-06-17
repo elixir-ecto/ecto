@@ -963,9 +963,10 @@ defmodule Ecto.Integration.RepoTest do
     end
 
     test "insert_all with query and source field" do
+      %{id: post_id} = TestRepo.insert!(%Post{})
       TestRepo.insert!(%Permalink{url: "url", title: "title"})
 
-      source = from p in Permalink, select: %{url: p.title}
+      source = from p in Permalink, select: %{url: p.title, post_id: ^post_id}
       assert {1, _} = TestRepo.insert_all(Permalink, source)
     end
   end
