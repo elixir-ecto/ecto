@@ -119,7 +119,7 @@ defmodule Ecto.Repo.Schema do
       %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}} ->
         Enum.map(args, fn {field, _} ->
           case dumper do
-            %{^field => {_, _, false}} -> field
+            %{^field => {source, _, false}} -> source
             %{} -> raise ArgumentError, "cannot select unwritable field `#{field}` for insert_all"
             nil -> field
           end
@@ -128,7 +128,7 @@ defmodule Ecto.Repo.Schema do
       %Ecto.Query.SelectExpr{take: %{^ix => {_fun, fields}}} ->
         Enum.map(fields, fn field ->
           case dumper do
-            %{^field => {_, _, false}} -> field
+            %{^field => {source, _, false}} -> source
             %{} -> raise ArgumentError, "cannot select unwritable field `#{field}` for insert_all"
             nil -> field
           end
