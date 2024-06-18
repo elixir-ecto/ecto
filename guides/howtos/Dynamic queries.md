@@ -44,7 +44,7 @@ end
 
 The examples above show you can build and compose queries at a high-level: by composing each call to `where`, `order_by`, and so on. However, sometimes you want the contents of the `where` or the `order_by` themselves to be defined dynamically. For example, a web application that provides search functionality on top of existing posts. The user should be able to specify multiple criteria, such as the author name, the post category, publishing interval, etc.
 
-Futhermore, while many developers prefer the pipe-based syntax, having to repeat the binding `p` made it quite verbose compared to the keyword one.
+Furthermore, while many developers prefer the pipe-based syntax, having to repeat the binding `p` made it quite verbose compared to the keyword one.
 
 To solve those problems, Ecto also provides a data-structure centric API to build queries as well as a very powerful mechanism for dynamic queries. Let's take a look.
 

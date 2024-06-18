@@ -576,7 +576,7 @@ defmodule Ecto.Repo.Queryable do
     end
 
     unless Enum.all?(structs, &(&1.__struct__ == head.__struct__)) do
-      raise ArgumentError, "expected an homogenous list, received different struct types"
+      raise ArgumentError, "expected an homogeneous list, received different struct types"
     end
 
     :ok
