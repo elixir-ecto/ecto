@@ -1761,7 +1761,7 @@ defmodule Ecto.Schema do
   Ecto provides this guarantee for all built-in types.
 
   When decoding, if a key exists in the database not defined in the
-  schema, it'll be ignored. If a field exists in the schema thats not
+  schema, it'll be ignored. If a field exists in the schema that's not
   in the database, it's value will be `nil`.
   """
   defmacro embeds_one(name, schema, opts \\ [])

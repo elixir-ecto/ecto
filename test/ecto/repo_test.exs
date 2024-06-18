@@ -296,7 +296,7 @@ defmodule Ecto.RepoTest do
     end
 
     test "raises when receives multiple struct types" do
-      message = ~r"expected an homogenous list"
+      message = ~r"expected an homogeneous list"
 
       assert_raise ArgumentError, message, fn ->
         TestRepo.reload([%MySchemaWithAssoc{id: 1}, %MySchema{id: 2}])
