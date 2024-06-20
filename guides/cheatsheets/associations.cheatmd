@@ -273,7 +273,7 @@ IO.inspect(movie.characters)
 
 characters =
   Enum.map(movie.characters, fn character ->
-    change(character, %{age: character.age + 1})
+    change(character, age: character.age + 1)
   end)
 
 {:ok, movie} =
