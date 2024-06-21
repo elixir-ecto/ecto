@@ -2658,39 +2658,13 @@ defmodule Ecto.Query do
   Nested associations can also be preloaded in both formats:
 
       Repo.all from p in Post,
-                 preload: [comments: :likes]
+                 preload: [:author, comments: :likes]
 
       Repo.all from p in Post,
                  join: c in assoc(p, :comments),
                  join: l in assoc(c, :likes),
                  where: l.inserted_at > c.updated_at,
-                 preload: [comments: {c, likes: l}]
-
-  Applying a limit to the association can be achieved with `inner_lateral_join`:
-
-      Repo.all from p in Post, as: :post,
-                 join: c in assoc(p, :comments),
-                 inner_lateral_join: top_five in subquery(
-                   from Comment,
-                   where: [post_id: parent_as(:post).id],
-                   order_by: :popularity,
-                   limit: 5,
-                   select: [:id]
-                 ), on: top_five.id == c.id,
-                 preload: [comments: c]
-
-  Preloaded joins can also be specified dynamically using `dynamic`:
-
-      preloads = [comments: dynamic([comments: c], c)]
-
-      Repo.all from p in Post,
-                 join: c in assoc(p, :comments),
-                 as: :comments,
-                 where: c.published_at > p.updated_at,
-                 preload: ^preloads
-
-  See "`preload`" in the documentation for `dynamic/2` for more
-  details.
+                 preload: [:author, comments: {c, likes: l}]
 
   ## Preload queries
 
@@ -2704,9 +2678,9 @@ defmodule Ecto.Query do
   then another for loading the comments associated with the posts.
   Comments will be ordered by `published_at`.
 
-  When specifying a preload query, you can still preload the associations of
-  those records. For instance, you could preload an author's published posts and
-  the comments on those posts:
+  When specifying a preload query, you can still nest preloads.
+  For instance, you could preload an author's published posts and
+  their comments as follows:
 
       posts_query = from p in Post, where: p.state == :published
       Repo.all from a in Author, preload: [posts: ^{posts_query, [:comments]}]
@@ -2717,11 +2691,6 @@ defmodule Ecto.Query do
       posts_query =
         from p in Post, where: p.state == :published, preload: :related_posts
 
-  The same can be written as pipe based query:
-
-      posts_query =
-        Post |> where([p], p.state == :published) |> preload(:related_posts)
-
   Note: keep in mind operations like limit and offset in the preload
   query will affect the whole result set and not each association. For
   example, the query below:
@@ -2730,7 +2699,7 @@ defmodule Ecto.Query do
       Repo.all from p in Post, preload: [comments: ^comments_query]
 
   won't bring the top of comments per post. Rather, it will only bring
-  the 5 top comments across all posts. Instead, use a window:
+  the 5 top comments across all posts. Instead, you must use a window:
 
       ranking_query =
         from c in Comment,
@@ -2744,13 +2713,14 @@ defmodule Ecto.Query do
 
       Repo.all from p in Post, preload: [comments: ^comments_query]
 
-  Similarly, if you have a `:through` association, such as posts has many
-  `comments_authors` through comments (`posts->comments->comments_authors`),
-  the query will only customize the relationship between comments and
-  comments_authors, even if preloaded through posts. This means `order_by`
-  clauses on `:through` associations affect only the direct relationship
-  between `comments` and `comments_authors`, not between `posts` and
-  `comments_authors`.
+  For `:through` associations, such as a post may have many comments_authors,
+  written as `has_many :comments_authors, through: [:comments, :author]`
+  the query given to preload customizes the relationship between comments and
+  authors, even if preloaded through posts. Another way to put it, in case of
+  `:through` associations, the query given to preload customizes the last join
+  of the association chain. This means `order_by` clauses on `:through`
+  associations affect only the direct relationship between `comments` and
+  `authors`, not between posts and comments.
 
   ## Preload functions
 
@@ -2789,7 +2759,19 @@ defmodule Ecto.Query do
       function, the function will receive a list of "post_ids" as the argument
       and it must return a tuple in the format of `{post_id, tag}`
 
-  If you want to reset the loaded fields, see `Ecto.reset_fields/2`.
+  ## Dynamic preloads
+
+  Preloads can also be specified dynamically using the `dynamic` macro:
+
+        preloads = [comments: dynamic([comments: c], c)]
+
+        Repo.all from p in Post,
+                   join: c in assoc(p, :comments),
+                   as: :comments,
+                   where: c.published_at > p.updated_at,
+                   preload: ^preloads
+
+  See `dynamic/2` for more information.
 
   ## Keywords example
 
