@@ -2724,9 +2724,11 @@ defmodule Ecto.Query do
 
   ## Preload functions
 
-  Preload also allows functions to be given. In such cases, the function
-  receives the IDs of the parent association and it must return the associated
-  data. Ecto then will map this data and sort it by the relationship key:
+  Preload also allows functions to be given. If the function has an arity of 1,
+  it receives only the IDs of the parent association. If it has an arity of 2, it
+  receives the IDS of the parent association as the first argument and the association
+  metadata as the second argument. Both functions must return the associated data.
+  Ecto then will map this data and sort it by the relationship key:
 
       comment_preloader = fn post_ids -> fetch_comments_by_post_ids(post_ids) end
       Repo.all from p in Post, preload: [comments: ^comment_preloader]
@@ -2758,6 +2760,33 @@ defmodule Ecto.Query do
       if a post has many tags, when preloading the tags with a custom
       function, the function will receive a list of "post_ids" as the argument
       and it must return a tuple in the format of `{post_id, tag}`
+
+  The 2-arity version of the function is especially useful if you would like to
+  build a general preloader that works across all associations. For example, if
+  you would like to build a preloader for lateral joins that finds the newest
+  associations you may do the following:
+
+      lateral_preloader = fn ids, assoc -> newest_records(ids, assoc, 5) end
+
+      def newest_records(parent_ids, assoc, n) do
+        %{related_key: related_key, queryable: queryable} = assoc
+
+        squery =
+          from q in queryable,
+            where: field(q, ^related_key) == parent_as(:parent_ids).id,
+            order_by: {:desc, :created_at},
+            limit: ^n
+
+        query =
+          from f in fragment("SELECT id from UNNEST(?::int[]) AS id", ^parent_ids), as: :parent_ids,
+            inner_lateral_join: s in subquery(squery), on: true,
+            select: s
+
+        Repo.all(query)
+      end
+
+  For the list of available metadata, see the module documentation of the association types.
+  For example, see `Ecto.Association.BelongsTo`.
 
   ## Dynamic preloads
 
