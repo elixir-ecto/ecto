@@ -2766,24 +2766,24 @@ defmodule Ecto.Query do
   you would like to build a preloader for lateral joins that finds the newest
   associations you may do the following:
 
-    lateral_preloader = fn ids, assoc -> newest_records(ids, assoc, 5) end
+      lateral_preloader = fn ids, assoc -> newest_records(ids, assoc, 5) end
 
-    def newest_records(parent_ids, assoc, n) do
-     %{related_key: related_key, queryable: queryable} = assoc
+      def newest_records(parent_ids, assoc, n) do
+        %{related_key: related_key, queryable: queryable} = assoc
 
-      squery =
-        from q in queryable,
-          where: field(q, ^related_key) == parent_as(:parent_ids).id,
-          order_by: {:desc, :created_at},
-          limit: ^n
+        squery =
+          from q in queryable,
+            where: field(q, ^related_key) == parent_as(:parent_ids).id,
+            order_by: {:desc, :created_at},
+            limit: ^n
 
-      query =
-        from f in fragment("SELECT id from UNNEST(?::int[]) AS id", ^parent_ids), as: :parent_ids,
-          inner_lateral_join: s in subquery(squery), on: true,
-          select: s
+        query =
+          from f in fragment("SELECT id from UNNEST(?::int[]) AS id", ^parent_ids), as: :parent_ids,
+            inner_lateral_join: s in subquery(squery), on: true,
+            select: s
 
-      Repo.all(query)
-    end
+        Repo.all(query)
+      end
 
   For the list of available metadata, see the module documentation of the association types.
   For example, see `Ecto.Association.BelongsTo`.
