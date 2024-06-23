@@ -349,30 +349,19 @@ defmodule Ecto.Integration.PreloadTest do
 
   test "preload with 2-arity function" do
     p = TestRepo.insert!(%Post{title: "1"})
+    c1 = TestRepo.insert!(%Comment{post_id: p.id})
+    c2 = TestRepo.insert!(%Comment{post_id: p.id})
 
-    _c1 = TestRepo.insert!(%Comment{lock_version: 1, post_id: p.id})
-    %{lock_version: c2_lock} = TestRepo.insert!(%Comment{lock_version: 2, post_id: p.id})
-    %{lock_version: c3_lock} = TestRepo.insert!(%Comment{lock_version: 3, post_id: p.id})
-
-    lateral_preloader = fn parent_ids, assoc ->
+    # making a simple preloader so that it works across all adapters
+    preloader = fn parent_ids, assoc ->
       %{related_key: related_key, queryable: queryable} = assoc
 
-      squery =
-        from q in queryable,
-          where: field(q, ^related_key) == parent_as(:parent_ids).id,
-          order_by: {:desc, :lock_version},
-          limit: 2
-
-      query =
-        from f in fragment("SELECT id from UNNEST(?::int[]) AS id", ^parent_ids), as: :parent_ids,
-          inner_lateral_join: s in subquery(squery), on: true,
-          select: s
-
-      TestRepo.all(query)
+      from(q in queryable, where: field(q, ^related_key) in ^parent_ids, order_by: q.id)
+      |> TestRepo.all()
     end
 
-    assert p = TestRepo.preload(p, comments: lateral_preloader)
-    assert [%Comment{lock_version: ^c3_lock}, %Comment{lock_version: ^c2_lock}] = p.comments
+    assert p = TestRepo.preload(p, comments: preloader)
+    assert [^c1, ^c2] = p.comments
   end
 
   test "preload many_to_many with function" do
