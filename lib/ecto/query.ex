@@ -2785,6 +2785,9 @@ defmodule Ecto.Query do
       Repo.all(query)
     end
 
+  See, for example, the module documentation for `Ecto.Association.BelongsTo` for
+  the list of available metadata.
+
   ## Dynamic preloads
 
   Preloads can also be specified dynamically using the `dynamic` macro:
