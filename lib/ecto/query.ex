@@ -2785,8 +2785,8 @@ defmodule Ecto.Query do
       Repo.all(query)
     end
 
-  See, for example, the module documentation of `Ecto.Association.BelongsTo` for
-  the list of available metadata.
+  For the list of available metadata, see the module documentation of the association types.
+  For example, see `Ecto.Association.BelongsTo`.
 
   ## Dynamic preloads
 
