@@ -277,12 +277,13 @@ defmodule Ecto.Repo.Preloader do
     end
   end
 
-  defp fetch_query(ids, assoc, _repo_name, query, _prefix, related_key, _take, _tuplet) when is_function(query, 1) do
+  defp fetch_query(ids, assoc, _repo_name, query, _prefix, related_key, _take, _tuplet)
+       when is_function(query, 1) or is_function(query, 2) do
     # Note we use an explicit sort because we don't want
     # to reorder based on the struct. Only the ID.
     ids
-    |> Enum.uniq
-    |> query.()
+    |> Enum.uniq()
+    |> preload_function(assoc, query)
     |> fetched_records_to_tuple_ids(assoc, related_key)
     |> Enum.sort(fn {id1, _}, {id2, _} -> id1 <= id2 end)
     |> unzip_ids([], [])
@@ -322,6 +323,9 @@ defmodule Ecto.Repo.Preloader do
 
     unzip_ids Ecto.Repo.Queryable.all(repo_name, query, tuplet), [], []
   end
+
+  defp preload_function(ids, _assoc, query) when is_function(query, 1), do: query.(ids)
+  defp preload_function(ids, assoc, query) when is_function(query, 2), do: query.(ids, assoc)
 
   defp fetched_records_to_tuple_ids([], _assoc, _related_key),
     do: []
@@ -573,13 +577,13 @@ defmodule Ecto.Repo.Preloader do
   end
 
   defp normalize_each({atom, {query, list}}, acc, take, original)
-       when is_atom(atom) and (is_map(query) or is_function(query, 1)) do
+       when is_atom(atom) and (is_map(query) or is_function(query, 1) or is_function(query, 2)) do
     fields = take(take, atom)
     [{atom, {fields, query!(query), normalize_each(wrap(list, original), [], fields, original)}}|acc]
   end
 
   defp normalize_each({atom, query}, acc, take, _original)
-       when is_atom(atom) and (is_map(query) or is_function(query, 1)) do
+       when is_atom(atom) and (is_map(query) or is_function(query, 1) or is_function(query, 2)) do
     [{atom, {take(take, atom), query!(query), []}}|acc]
   end
 
@@ -597,6 +601,7 @@ defmodule Ecto.Repo.Preloader do
   end
 
   defp query!(query) when is_function(query, 1), do: query
+  defp query!(query) when is_function(query, 2), do: query
   defp query!(%Ecto.Query{} = query), do: query
 
   defp take(take, field) do
