@@ -651,25 +651,19 @@ defmodule Ecto.Integration.JoinsTest do
 
   test "joining and preloading through a subquery" do
     %{id: p_id} = TestRepo.insert!(%Post{})
-    _c1 = TestRepo.insert!(%Comment{post_id: p_id})
+    %{id: c1_id} = TestRepo.insert!(%Comment{post_id: p_id})
     %{id: c2_id} = TestRepo.insert!(%Comment{post_id: p_id})
 
-    squery =
-      from c in Comment,
-        where: parent_as(:post).id == c.post_id,
-        order_by: {:desc, c.id},
-        limit: 1
-
     q =
-      from p in Post,
-        as: :post,
-        inner_lateral_join: c in subquery(squery),
-        on: true,
+      from p1 in Post,
+        inner_lateral_join: c in subquery(from c in Comment, order_by: c.id),
+        on: p1.id == c.post_id,
         join: p2 in Post,
         on: c.post_id == p2.id,
         preload: [comments: {c, post: p2}]
 
-    assert [%Post{id: ^p_id, comments: [comment]}] = TestRepo.all(q)
-    assert %Comment{id: ^c2_id, post: %Post{id: ^p_id}} = comment
+    assert [%Post{id: ^p_id, comments: [comment1, comment2]}] = TestRepo.all(q)
+    assert %Comment{id: ^c1_id, post: %Post{id: ^p_id}} = comment1
+    assert %Comment{id: ^c2_id, post: %Post{id: ^p_id}} = comment2
   end
 end
