@@ -669,7 +669,7 @@ defmodule Ecto.Integration.JoinsTest do
         on: c.post_id == p2.id,
         preload: [comments: {c, post: p2}]
 
-    assert [%Post{id: ^p_id, comments: [comment]}] = TestRepo.all(q, log: :error)
+    assert [%Post{id: ^p_id, comments: [comment]}] = TestRepo.all(q)
     assert %Comment{id: ^c2_id, post: %Post{id: ^p_id}} = comment
   end
 end
