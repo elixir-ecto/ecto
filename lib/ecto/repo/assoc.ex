@@ -16,7 +16,7 @@ defmodule Ecto.Repo.Assoc do
   def query(rows, assocs, sources, fun) do
     # Create rose tree of accumulator dicts in the same
     # structure as the fields tree
-    accs = create_accs(0, assocs, sources, [])
+    accs = create_accs(0, assocs, nil, sources, [])
 
     # Populate tree of dicts of associated entities from the result set
     {_keys, _cache, rows, sub_dicts} = Enum.reduce(rows, accs, fn row, acc ->
@@ -24,7 +24,7 @@ defmodule Ecto.Repo.Assoc do
     end)
 
     # Create the reflections that will be loaded into memory.
-    refls = create_refls(0, assocs, sub_dicts, sources)
+    refls = create_refls(0, assocs, sub_dicts, nil, sources)
 
     # Retrieve and load the assocs from cached dictionaries recursively
     for {item, sub_structs} <- Enum.reverse(rows) do
@@ -95,26 +95,42 @@ defmodule Ecto.Repo.Assoc do
   defp maybe_first(list, :one), do: List.first(list)
   defp maybe_first(list, _), do: list
 
-  defp create_refls(idx, fields, dicts, sources) do
-    {_source, schema, _prefix} = elem(sources, idx)
+  defp create_refls(idx, fields, dicts, parent_field, sources) do
+    schema = get_assoc_schema(sources, idx, parent_field)
 
     Enum.map(:lists.zip(dicts, fields), fn
       {{_primary_keys, _cache, dict, sub_dicts}, {field, {child_idx, child_fields}}} ->
-        sub_refls = create_refls(child_idx, child_fields, sub_dicts, sources)
+        sub_refls = create_refls(child_idx, child_fields, sub_dicts, field, sources)
         {dict, schema.__schema__(:association, field), sub_refls}
     end)
   end
 
-  defp create_accs(idx, fields, sources, initial_dict) do
-    acc = Enum.map(fields, fn {_field, {child_idx, child_fields}} ->
-      create_accs(child_idx, child_fields, sources, %{})
+  defp create_accs(idx, fields, parent_field, sources, initial_dict) do
+    acc = Enum.map(fields, fn {field, {child_idx, child_fields}} ->
+      create_accs(child_idx, child_fields, field, sources, %{})
     end)
 
-    {_source, schema, _prefix} = elem(sources, idx)
+    schema = get_assoc_schema(sources, idx, parent_field)
 
     case schema.__schema__(:primary_key) do
       [] -> raise Ecto.NoPrimaryKeyFieldError, schema: schema
       pk -> {pk, %{}, initial_dict, acc}
+    end
+  end
+
+  defp get_assoc_schema(sources, 0, _field) do
+    {_, schema, _} = elem(sources, 0)
+    schema
+  end
+
+  defp get_assoc_schema(sources, idx, field) do
+    case elem(sources, idx) do
+      {_, schema, _} ->
+        schema
+
+      %Ecto.SubQuery{} ->
+        {_, parent_schema, _} = elem(sources, idx - 1)
+        parent_schema.__schema__(:association, field).related
     end
   end
 end
