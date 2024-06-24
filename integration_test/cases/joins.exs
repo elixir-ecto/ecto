@@ -656,7 +656,7 @@ defmodule Ecto.Integration.JoinsTest do
 
     q =
       from p1 in Post,
-        inner_lateral_join: c in subquery(from c in Comment, order_by: c.id),
+        inner_join: c in subquery(from c in Comment, order_by: c.id),
         on: p1.id == c.post_id,
         join: p2 in Post,
         on: c.post_id == p2.id,
