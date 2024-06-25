@@ -488,6 +488,19 @@ defmodule Ecto.Integration.PreloadTest do
            [%{id: u1.id}, %{id: u2.id}, %{id: u3.id}, %{id: u4.id}]
   end
 
+  test "preload into a subquery source" do
+    %{id: p_id} = TestRepo.insert!(%Post{})
+    %{id: c_id} = TestRepo.insert!(%Comment{post_id: p_id})
+
+    q =
+      from c in subquery(from c in Comment),
+        join: p in Post,
+        on: c.post_id == p.id,
+        preload: [post: p]
+
+    assert [%Comment{id: ^c_id, post: %Post{id: ^p_id}}] = TestRepo.all(q)
+  end
+
   ## With take
 
   test "preload with take" do
