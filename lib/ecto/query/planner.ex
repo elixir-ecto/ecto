@@ -1155,15 +1155,22 @@ defmodule Ecto.Query.Planner do
   Prepare association fields found in the query.
   """
   def plan_assocs(query) do
-    plan_assocs(query, 0, query.assocs)
+    plan_assocs(query, 0, query.assocs, nil)
     query
   end
 
-  defp plan_assocs(_query, _ix, []), do: :ok
+  defp plan_assocs(_query, _ix, [], _owner_refl), do: :ok
 
-  defp plan_assocs(query, ix, assocs) do
-    # We validate the schema exists when preparing joins above
-    {_, parent_schema, _} = get_preload_source!(query, ix)
+  defp plan_assocs(query, ix, assocs, owner_refl) do
+    # We validate the schema exists when preparing joins.
+    # If preloading into a subquery, we assume its schema
+    # is the same as the related schema from the association
+    # metadata of the owner.
+    parent_schema =
+      case get_preload_source!(query, ix) do
+        {_, schema, _} -> schema
+        %Ecto.SubQuery{} -> owner_refl.related
+      end
 
     Enum.each(assocs, fn {assoc, {child_ix, child_assocs}} ->
       refl = parent_schema.__schema__(:association, assoc)
@@ -1191,7 +1198,7 @@ defmodule Ecto.Query.Planner do
           :ok
       end
 
-      plan_assocs(query, child_ix, child_assocs)
+      plan_assocs(query, child_ix, child_assocs, refl)
     end)
   end
 
@@ -2283,11 +2290,14 @@ defmodule Ecto.Query.Planner do
       {source, schema, _} = all when is_binary(source) and schema != nil ->
         all
 
+      %Ecto.SubQuery{} = subquery when ix != 0 ->
+        subquery
+
       _ ->
         error!(
           query,
-          "can only preload sources with a schema " <>
-            "(fragments, binary and subqueries are not supported)"
+          "can only preload sources with a schema or subqueries in `join`" <>
+            "(fragments, binaries and subqueries in `from` are not supported)"
         )
     end
   end

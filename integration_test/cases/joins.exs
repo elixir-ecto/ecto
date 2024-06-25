@@ -648,4 +648,25 @@ defmodule Ecto.Integration.JoinsTest do
     assert %Permalink{post: %Post{}, user_posts: [%Post{}]} = comment.post_permalink
     assert not Ecto.assoc_loaded?(comment.post_permalink.user)
   end
+
+  test "joining and preloading through a subquery" do
+    %{id: p_id} = TestRepo.insert!(%Post{})
+    %{id: c1_id} = TestRepo.insert!(%Comment{post_id: p_id})
+    %{id: c2_id} = TestRepo.insert!(%Comment{post_id: p_id})
+
+    q =
+      from p1 in Post,
+        left_join: u in User,
+        on: p1.author_id == u.id,
+        inner_join: c in subquery(from c in Comment),
+        on: p1.id == c.post_id,
+        join: p2 in Post,
+        on: c.post_id == p2.id,
+        preload: [author: u, force_comments: {c, post: p2}]
+
+    assert [%Post{id: ^p_id, force_comments: comments}] = TestRepo.all(q)
+    [comment1, comment2] = Enum.sort_by(comments, & &1.id)
+    assert %Comment{id: ^c1_id, post: %Post{id: ^p_id}} = comment1
+    assert %Comment{id: ^c2_id, post: %Post{id: ^p_id}} = comment2
+  end
 end
