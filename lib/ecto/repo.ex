@@ -587,6 +587,28 @@ defmodule Ecto.Repo do
           )
         end
 
+        def preload_in_result(result, preloads, opts \\ []) do
+          repo = get_dynamic_repo()
+
+          Ecto.Repo.Preloader.preload_in_result(
+            result,
+            repo,
+            preloads,
+            Ecto.Repo.Supervisor.tuplet(repo, prepare_opts(:preload, opts))
+          )
+        end
+
+        def preload_in_changeset(changeset, preloads, opts \\ []) do
+          repo = get_dynamic_repo()
+
+          Ecto.Repo.Preloader.preload_in_changeset(
+            changeset,
+            repo,
+            preloads,
+            Ecto.Repo.Supervisor.tuplet(repo, prepare_opts(:preload, opts))
+          )
+        end
+
         def prepare_query(operation, query, opts), do: {query, opts}
         defoverridable prepare_query: 3
       end
