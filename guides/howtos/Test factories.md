@@ -1,6 +1,8 @@
-# Test factories
+# Test factories and test fixtures
 
 Many projects depend on external libraries to build their test data. Some of those libraries are called factories because they provide convenience functions for producing different groups of data. However, given Ecto is able to manage complex data trees, we can implement such functionality without relying on third-party projects.
+
+## Test factories
 
 To get started, let's create a file at "test/support/factory.ex" with the following contents:
 
@@ -80,3 +82,62 @@ insert!(:post, title: "custom title")
 ```
 
 By building the functionality we need on top of Ecto capabilities, we are able to extend and improve our factories on whatever way we desire, without being constrained to third-party limitations.
+
+## Test fixtures
+
+Alternatively, test fixtures can be created with a very similar pattern. The difference is that the fixtures don't create anything in the database, but instead rely on your application code to do that, usings its existing validations, constraints, and other logic.
+
+```elixir
+defmodule MyApp.Fixtures do
+  def post(attrs \\ %{}) do
+    %{
+      title: "hello world"
+    }
+    |> merge!(attrs, MyApp.Post)
+  end
+
+  def comment(attrs \\ %{}) do
+    %{
+      body: "good post"
+    }
+    |> merge!(attrs, MyApp.Comment)
+  end
+
+  def user(attrs \\ %{}) do
+    name = attrs[:name] || "name"
+    username = "#{String.downcase(name)}#{System.unique_integer()}"
+
+    %{
+      email: "#{username}@example.com",
+      username: username,
+    }
+    |> merge!(attrs, MyApp.User)
+  end
+
+  defp merge!(defaults, overrides, module) do
+    map = Map.merge(defaults, Map.new(overrides))
+    allowed_keys = module |> Map.from_struct() |> Map.keys()
+
+    case Map.keys(map) -- allowed_keys do
+      [] -> map
+      extra_keys -> raise ArgumentError, "Non-allowed keys found in map: #{inspect(extra_keys)}"
+    end
+  end
+end
+```
+
+Now in any of the tests that need to generate data, we can alias the `MyApp.Fixtures` module and use its functions:
+
+```elixir
+alias MyApp.Fixtures
+
+Fixtures.post() |> MyApp.Post.changeset()
+#=> %Ecto.Changeset{... id: nil, title: "hello world", ...}
+
+Fixtures.post(title: "custom title") |> MyApp.Post.changeset()
+#=> %Ecto.Changeset{id: nil, title: "custom title", ...}
+
+Fixtures.post(title: "custom title") |> MyApp.create_post()
+#=> {:ok, %MyApp.Post{id: ..., title: "custom title"}}
+```
+
