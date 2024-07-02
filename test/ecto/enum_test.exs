@@ -294,7 +294,7 @@ defmodule Ecto.EnumTest do
     test "rejects bad strings" do
       type = EnumSchema.__schema__(:type, :my_enum)
 
-      {:parameterized, Ecto.Enum, %{on_cast: on_cast}} = type
+      {:parameterized, {Ecto.Enum, %{on_cast: on_cast}}} = type
       enum = Map.keys(on_cast)
 
       assert %Changeset{
@@ -305,7 +305,7 @@ defmodule Ecto.EnumTest do
 
       type = EnumSchema.__schema__(:type, :my_enums)
 
-      {:array, {:parameterized, Ecto.Enum, %{on_cast: on_cast}}} = type
+      {:array, {:parameterized, {Ecto.Enum, %{on_cast: on_cast}}}} = type
       enum = Map.keys(on_cast)
 
       assert %Changeset{
@@ -316,7 +316,7 @@ defmodule Ecto.EnumTest do
 
       type = EnumSchema.__schema__(:type, :my_string_enum)
 
-      {:parameterized, Ecto.Enum, %{on_cast: on_cast}} = type
+      {:parameterized, {Ecto.Enum, %{on_cast: on_cast}}} = type
       enum = Map.keys(on_cast)
 
       assert %Changeset{
@@ -327,7 +327,7 @@ defmodule Ecto.EnumTest do
 
       type = EnumSchema.__schema__(:type, :my_string_enums)
 
-      {:array, {:parameterized, Ecto.Enum, %{on_cast: on_cast}}} = type
+      {:array, {:parameterized, {Ecto.Enum, %{on_cast: on_cast}}}} = type
       enum = Map.keys(on_cast)
 
       assert %Changeset{
@@ -340,7 +340,7 @@ defmodule Ecto.EnumTest do
     test "rejects bad integers" do
       type = EnumSchema.__schema__(:type, :my_integer_enum)
 
-      {:parameterized, Ecto.Enum, %{on_cast: on_cast}} = type
+      {:parameterized, {Ecto.Enum, %{on_cast: on_cast}}} = type
       enum = Map.keys(on_cast)
 
       assert %Changeset{
@@ -351,7 +351,7 @@ defmodule Ecto.EnumTest do
 
       type = EnumSchema.__schema__(:type, :my_integer_enums)
 
-      {:array, {:parameterized, Ecto.Enum, %{on_cast: on_cast}}} = type
+      {:array, {:parameterized, {Ecto.Enum, %{on_cast: on_cast}}}} = type
       enum = Map.keys(on_cast)
 
       assert %Changeset{
@@ -364,7 +364,7 @@ defmodule Ecto.EnumTest do
     test "rejects bad atoms" do
       type = EnumSchema.__schema__(:type, :my_enum)
 
-      {:parameterized, Ecto.Enum, %{on_cast: on_cast}} = type
+      {:parameterized, {Ecto.Enum, %{on_cast: on_cast}}} = type
       enum = Map.keys(on_cast)
 
       assert %Changeset{
