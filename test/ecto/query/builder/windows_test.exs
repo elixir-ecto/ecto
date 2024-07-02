@@ -77,6 +77,20 @@ defmodule Ecto.Query.Builder.WindowsTest do
       assert query.windows[:w].params == [{"foo", {0, :foo}}]
     end
 
+    test "supports subqueries" do
+      partition_by = [dynamic([p], exists(from other_q in "q", where: other_q.title == parent_as(:q).title))]
+
+      query = "q" |> windows([p], w: [partition_by: ^partition_by])
+
+      assert query.windows[:w].expr[:partition_by] == [{:exists, [], [subquery: 0]}]
+      assert [_] = query.windows[:w].subqueries
+
+      query = "q" |> windows([p], w: [partition_by: exists(from other_q in "q", where: other_q.title == parent_as(:q).title)])
+
+      assert query.windows[:w].expr[:partition_by] == [{:exists, [], [subquery: 0]}]
+      assert [_] = query.windows[:w].subqueries
+    end
+
     test "raises on invalid partition by" do
       assert_raise ArgumentError, ~r"expected a list of fields and dynamics in `partition_by`", fn ->
         windows("q", w: [partition_by: ^[1]])

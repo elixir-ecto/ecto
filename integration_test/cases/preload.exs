@@ -329,7 +329,7 @@ defmodule Ecto.Integration.PreloadTest do
 
   ## With queries
 
-  test "preload with function" do
+  test "preload with 1-arity function" do
     p1 = TestRepo.insert!(%Post{title: "1"})
     p2 = TestRepo.insert!(%Post{title: "2"})
     p3 = TestRepo.insert!(%Post{title: "3"})
@@ -345,6 +345,23 @@ defmodule Ecto.Integration.PreloadTest do
     assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = pe1.comments
     assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = pe2.comments
     assert [] = pe3.comments
+  end
+
+  test "preload with 2-arity function" do
+    p = TestRepo.insert!(%Post{title: "1"})
+    c1 = TestRepo.insert!(%Comment{post_id: p.id})
+    c2 = TestRepo.insert!(%Comment{post_id: p.id})
+
+    # making a simple preloader so that it works across all adapters
+    preloader = fn parent_ids, assoc ->
+      %{related_key: related_key, queryable: queryable} = assoc
+
+      from(q in queryable, where: field(q, ^related_key) in ^parent_ids, order_by: q.id)
+      |> TestRepo.all()
+    end
+
+    assert p = TestRepo.preload(p, comments: preloader)
+    assert [^c1, ^c2] = p.comments
   end
 
   test "preload many_to_many with function" do
@@ -469,6 +486,19 @@ defmodule Ecto.Integration.PreloadTest do
     np1 = TestRepo.preload(p1, comments_authors: from(u in User, order_by: u.name, select: %{id: u.id}))
     assert np1.comments_authors ==
            [%{id: u1.id}, %{id: u2.id}, %{id: u3.id}, %{id: u4.id}]
+  end
+
+  test "preload into a subquery source" do
+    %{id: p_id} = TestRepo.insert!(%Post{})
+    %{id: c_id} = TestRepo.insert!(%Comment{post_id: p_id})
+
+    q =
+      from c in subquery(from c in Comment),
+        join: p in Post,
+        on: c.post_id == p.id,
+        preload: [post: p]
+
+    assert [%Comment{id: ^c_id, post: %Post{id: ^p_id}}] = TestRepo.all(q)
   end
 
   ## With take

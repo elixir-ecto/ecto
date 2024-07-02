@@ -268,12 +268,12 @@ movie =
   |> Repo.preload(:characters)
 
 IO.inspect(movie.characters)
-#=> [%{name: "Andy Dufresne", age: 50},
-#=>  %{name: "Red", age: 60}]
+#=> [%Character{name: "Andy Dufresne", age: 50},
+#=>  %Character{name: "Red", age: 60}]
 
 characters =
   Enum.map(movie.characters, fn character ->
-    update_in(character.age, &(&1 + 1)))
+    change(character, age: character.age + 1)
   end)
 
 {:ok, movie} =

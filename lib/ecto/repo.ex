@@ -704,7 +704,7 @@ defmodule Ecto.Repo do
   @doc """
   Loads `data` into a schema or a map.
 
-  The first argument can be a a schema module or a map (of types).
+  The first argument can be a schema module or a map (of types).
   The first argument determines the return value: a struct or a map,
   respectively.
 
@@ -1427,9 +1427,11 @@ defmodule Ecto.Repo do
   both (`{"users", MyApp.User}`) as the first argument. The second
   argument is a list of entries to be inserted, either as keyword
   lists or as maps. The keys of the entries are the field names as
-  atoms and the value should be the respective value for the field
-  type or, optionally, an `Ecto.Query` that returns a single entry
-  with a single value.
+  atoms, when a schema module is specified in the first argument.
+  Otherwise, the keys can be either atoms or strings representing
+  the names of the columns in the underlying datastore. The value
+  should be the respective value for the field type or, optionally,
+  an `Ecto.Query` that returns a single entry with a single value.
 
   It returns a tuple containing the number of entries
   and any returned result as second element. If the database
@@ -1587,11 +1589,11 @@ defmodule Ecto.Repo do
   """
   @doc group: "Schema API"
   @callback insert_all(
-              schema_or_source :: binary | {binary, module} | module,
-              entries_or_query :: [%{atom => value} | Keyword.t(value)] | Ecto.Query.t(),
+              schema_or_source :: binary() | {binary(), module()} | module(),
+              entries_or_query :: [%{(atom() | String.t()) => value} | Keyword.t(value)] | Ecto.Query.t(),
               opts :: Keyword.t()
-            ) :: {non_neg_integer, nil | [term]}
-            when value: term | Ecto.Query.t()
+            ) :: {non_neg_integer(), nil | [term()]}
+            when value: term() | Ecto.Query.t()
 
   @doc """
   Inserts a struct defined via `Ecto.Schema` or a changeset.
@@ -2092,7 +2094,7 @@ defmodule Ecto.Repo do
       ** (Postgrex.Error) ERROR 25P02 (in_failed_sql_transaction) current transaction is aborted, commands ignored until end of transaction block
 
   If the changeset is invalid before it reaches the database due to a validation error,
-  no statement is sent to the database, an `:error` tuple is returned, and `repo.insert(%Failure{})`
+  no statement is sent to the database, an `:error` tuple is returned, and `repo.insert(%Status{value: "failure"})`
   operation will execute as usual.
 
   We have two options to deal with such scenarios:

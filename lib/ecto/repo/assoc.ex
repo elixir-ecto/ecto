@@ -96,12 +96,13 @@ defmodule Ecto.Repo.Assoc do
   defp maybe_first(list, _), do: list
 
   defp create_refls(idx, fields, dicts, sources) do
-    {_source, schema, _prefix} = elem(sources, idx)
+    schema = get_assoc_schema(sources, idx)
 
     Enum.map(:lists.zip(dicts, fields), fn
       {{_primary_keys, _cache, dict, sub_dicts}, {field, {child_idx, child_fields}}} ->
+        refl = schema.__schema__(:association, field)
         sub_refls = create_refls(child_idx, child_fields, sub_dicts, sources)
-        {dict, schema.__schema__(:association, field), sub_refls}
+        {dict, refl, sub_refls}
     end)
   end
 
@@ -110,11 +111,21 @@ defmodule Ecto.Repo.Assoc do
       create_accs(child_idx, child_fields, sources, %{})
     end)
 
-    {_source, schema, _prefix} = elem(sources, idx)
+    schema = get_assoc_schema(sources, idx)
 
     case schema.__schema__(:primary_key) do
       [] -> raise Ecto.NoPrimaryKeyFieldError, schema: schema
       pk -> {pk, %{}, initial_dict, acc}
+    end
+  end
+
+  defp get_assoc_schema(sources, idx) do
+    case elem(sources, idx) do
+      {_, schema, _} ->
+        schema
+
+      %Ecto.SubQuery{select: {:source, {_, schema}, _, _}} ->
+        schema
     end
   end
 end

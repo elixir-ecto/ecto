@@ -296,7 +296,7 @@ defmodule Ecto.RepoTest do
     end
 
     test "raises when receives multiple struct types" do
-      message = ~r"expected an homogenous list"
+      message = ~r"expected an homogeneous list"
 
       assert_raise ArgumentError, message, fn ->
         TestRepo.reload([%MySchemaWithAssoc{id: 1}, %MySchema{id: 2}])
@@ -1685,6 +1685,14 @@ defmodule Ecto.RepoTest do
       TestRepo.insert(%MySchemaWithAssoc{id: 1, parent: %MyParent{}}, on_conflict: :replace_all)
       assert_received {:insert, %{source: "my_schema", on_conflict: {_, _, _}}}
       assert_received {:insert, %{source: "my_parent", on_conflict: {:raise, _, _}}}
+    end
+
+    test "raises on empty list of replace fields" do
+      msg = ":on_conflict option with `{:replace, fields}` requires a non-empty list of fields"
+
+      assert_raise ArgumentError, msg, fn ->
+        TestRepo.insert(%MySchema{id: 1}, on_conflict: {:replace, []})
+      end
     end
 
     test "raises on unknown on_conflict value" do

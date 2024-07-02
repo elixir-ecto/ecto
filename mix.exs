@@ -2,7 +2,7 @@ defmodule Ecto.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/elixir-ecto/ecto"
-  @version "3.11.1"
+  @version "3.12.0-dev"
 
   def project do
     [
@@ -60,7 +60,7 @@ defmodule Ecto.MixProject do
       skip_undefined_reference_warnings_on: ["CHANGELOG.md"],
       extras: extras(),
       groups_for_extras: groups_for_extras(),
-      groups_for_functions: [
+      groups_for_docs: [
         group_for_function("Query API"),
         group_for_function("Schema API"),
         group_for_function("Transaction API"),

@@ -30,11 +30,20 @@ defmodule Ecto.Query.Builder.Distinct do
   Called at runtime to verify distinct.
   """
   def distinct!(query, distinct, file, line) when is_boolean(distinct) do
-    apply(query, %Ecto.Query.QueryExpr{expr: distinct, params: [], line: line, file: file})
+    apply(query, %Ecto.Query.ByExpr{expr: distinct, params: [], line: line, file: file})
   end
   def distinct!(query, distinct, file, line) do
-    {expr, params} = Builder.OrderBy.order_by_or_distinct!(:distinct, query, distinct, [])
-    expr = %Ecto.Query.QueryExpr{expr: expr, params: Enum.reverse(params), line: line, file: file}
+    {expr, params, subqueries} =
+      Builder.OrderBy.order_by_or_distinct!(:distinct, query, distinct, [])
+
+    expr = %Ecto.Query.ByExpr{
+      expr: expr,
+      params: Enum.reverse(params),
+      line: line,
+      file: file,
+      subqueries: subqueries
+    }
+
     apply(query, expr)
   end
 
@@ -54,12 +63,13 @@ defmodule Ecto.Query.Builder.Distinct do
 
   def build(query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
-    {expr, {params, _acc}} = escape(expr, {[], %{}}, binding, env)
+    {expr, {params, acc}} = escape(expr, {[], %{subqueries: []}}, binding, env)
     params = Builder.escape_params(params)
 
-    distinct = quote do: %Ecto.Query.QueryExpr{
+    distinct = quote do: %Ecto.Query.ByExpr{
                            expr: unquote(expr),
                            params: unquote(params),
+                           subqueries: unquote(acc.subqueries),
                            file: unquote(env.file),
                            line: unquote(env.line)}
     Builder.apply_query(query, __MODULE__, [distinct], env)

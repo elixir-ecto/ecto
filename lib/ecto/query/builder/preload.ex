@@ -302,7 +302,7 @@ defmodule Ecto.Query.Builder.Preload do
     raise ArgumentError,
       "invalid preload for key `#{inspect(key)}`: #{inspect(other)}. " <>
       "Preloads can be a query, a function (arity 1), or a dynamic that " <>
-      "evalutes to a single binding."
+      "evaluates to a single binding."
   end
 
   defp assert_assoc!(mode, _atom) when mode in [:both, :assoc], do: :ok

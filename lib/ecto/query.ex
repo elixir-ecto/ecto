@@ -353,7 +353,7 @@ defmodule Ecto.Query do
   or `join` is used. The query prefix is used only if none of the above
   are declared.
 
-  Let's see some examples. To see the query prefix globally, the simplest
+  Let's see some examples. To set the query prefix globally, the simplest
   mechanism is to pass an option to the repository operation:
 
       results = Repo.all(query, prefix: "accounts")
@@ -429,6 +429,11 @@ defmodule Ecto.Query do
   defmodule QueryExpr do
     @moduledoc false
     defstruct [:expr, :file, :line, params: []]
+  end
+
+  defmodule ByExpr do
+    @moduledoc false
+    defstruct [:expr, :file, :line, params: [], subqueries: []]
   end
 
   defmodule BooleanExpr do
@@ -865,7 +870,8 @@ defmodule Ecto.Query do
       )
 
   If you need to refer to a parent binding which is not known when writing the subquery,
-  you can use `parent_as` as shown in the examples under "Named bindings" in this module doc.
+  you can use `parent_as` as shown in the examples under ["Named bindings"](#module-named-bindings)
+  in this module doc.
 
   You can also use subquery directly in `select` and `select_merge`:
 
@@ -897,9 +903,7 @@ defmodule Ecto.Query do
     :right_join,
     :full_join,
     :inner_lateral_join,
-    :left_lateral_join,
-    :array_join,
-    :left_array_join
+    :left_lateral_join
   ]
 
   @doc """
@@ -948,8 +952,6 @@ defmodule Ecto.Query do
       Ecto.Query.exclude(query, :full_join)
       Ecto.Query.exclude(query, :inner_lateral_join)
       Ecto.Query.exclude(query, :left_lateral_join)
-      Ecto.Query.exclude(query, :array_join)
-      Ecto.Query.exclude(query, :left_array_join)
 
   However, keep in mind that if a join is removed and its bindings
   were referenced elsewhere, the bindings won't be removed, leading
@@ -1196,8 +1198,6 @@ defmodule Ecto.Query do
   defp join_qual(:cross_lateral_join), do: :cross_lateral
   defp join_qual(:left_lateral_join), do: :left_lateral
   defp join_qual(:inner_lateral_join), do: :inner_lateral
-  defp join_qual(:array_join), do: :array
-  defp join_qual(:left_array_join), do: :left_array
 
   defp collect_with_ties([{:with_ties, with_ties} | t], nil),
     do: collect_with_ties(t, with_ties)
@@ -1249,12 +1249,11 @@ defmodule Ecto.Query do
   Receives a source that is to be joined to the query and a condition for
   the join. The join condition can be any expression that evaluates
   to a boolean value. The qualifier must be one of `:inner`, `:left`,
-  `:right`, `:cross`, `:cross_lateral`, `:full`, `:inner_lateral`, `:left_lateral`,
-  `:array` or `:left_array`.
+  `:right`, `:cross`, `:cross_lateral`, `:full`, `:inner_lateral` or `:left_lateral`.
 
   For a keyword query the `:join` keyword can be changed to `:inner_join`,
-  `:left_join`, `:right_join`, `:cross_join`, `:cross_lateral_join`, `:full_join`, `:inner_lateral_join`,
-  `:left_lateral_join`, `:array_join` or `:left_array_join`. `:join` is equivalent to `:inner_join`.
+  `:left_join`, `:right_join`, `:cross_join`, `:cross_lateral_join`, `:full_join`, `:inner_lateral_join`
+  or `:left_lateral_join`. `:join` is equivalent to `:inner_join`.
 
   Currently it is possible to join on:
 
@@ -1403,18 +1402,6 @@ defmodule Ecto.Query do
   disclaimers about such functionality.
 
   Join hints must be static compile-time strings when they are specified as (list of) strings.
-
-  ## Array joins
-
-  The `:array` and `:left_array` qualifiers can be used to join with array
-  columns in [Clickhouse:](https://clickhouse.com/docs/en/sql-reference/statements/select/array-join)
-
-      from at in "arrays_test",
-        array_join: a in "arr",
-        select: %{s: at.s, arr: a}
-
-  Note that only the columns in the base table (i.e. the table referenced in `FROM`) can be used in the array join.
-
   """
   @join_opts [:on | @from_join_opts]
 
@@ -2671,39 +2658,13 @@ defmodule Ecto.Query do
   Nested associations can also be preloaded in both formats:
 
       Repo.all from p in Post,
-                 preload: [comments: :likes]
+                 preload: [:author, comments: :likes]
 
       Repo.all from p in Post,
                  join: c in assoc(p, :comments),
                  join: l in assoc(c, :likes),
                  where: l.inserted_at > c.updated_at,
-                 preload: [comments: {c, likes: l}]
-
-  Applying a limit to the association can be achieved with `inner_lateral_join`:
-
-      Repo.all from p in Post, as: :post,
-                 join: c in assoc(p, :comments),
-                 inner_lateral_join: top_five in subquery(
-                   from Comment,
-                   where: [post_id: parent_as(:post).id],
-                   order_by: :popularity,
-                   limit: 5,
-                   select: [:id]
-                 ), on: top_five.id == c.id,
-                 preload: [comments: c]
-
-  Preloaded joins can also be specified dynamically using `dynamic`:
-
-      preloads = [comments: dynamic([comments: c], c)]
-
-      Repo.all from p in Post,
-                 join: c in assoc(p, :comments),
-                 as: :comments,
-                 where: c.published_at > p.updated_at,
-                 preload: ^preloads
-
-  See "`preload`" in the documentation for `dynamic/2` for more
-  details.
+                 preload: [:author, comments: {c, likes: l}]
 
   ## Preload queries
 
@@ -2717,9 +2678,9 @@ defmodule Ecto.Query do
   then another for loading the comments associated with the posts.
   Comments will be ordered by `published_at`.
 
-  When specifying a preload query, you can still preload the associations of
-  those records. For instance, you could preload an author's published posts and
-  the comments on those posts:
+  When specifying a preload query, you can still nest preloads.
+  For instance, you could preload an author's published posts and
+  their comments as follows:
 
       posts_query = from p in Post, where: p.state == :published
       Repo.all from a in Author, preload: [posts: ^{posts_query, [:comments]}]
@@ -2730,11 +2691,6 @@ defmodule Ecto.Query do
       posts_query =
         from p in Post, where: p.state == :published, preload: :related_posts
 
-  The same can be written as pipe based query:
-
-      posts_query =
-        Post |> where([p], p.state == :published) |> preload(:related_posts)
-
   Note: keep in mind operations like limit and offset in the preload
   query will affect the whole result set and not each association. For
   example, the query below:
@@ -2743,7 +2699,7 @@ defmodule Ecto.Query do
       Repo.all from p in Post, preload: [comments: ^comments_query]
 
   won't bring the top of comments per post. Rather, it will only bring
-  the 5 top comments across all posts. Instead, use a window:
+  the 5 top comments across all posts. Instead, you must use a window:
 
       ranking_query =
         from c in Comment,
@@ -2757,19 +2713,22 @@ defmodule Ecto.Query do
 
       Repo.all from p in Post, preload: [comments: ^comments_query]
 
-  Similarly, if you have a `:through` association, such as posts has many
-  `comments_authors` through comments (`posts->comments->comments_authors`),
-  the query will only customize the relationship between comments and
-  comments_authors, even if preloaded through posts. This means `order_by`
-  clauses on `:through` associations affect only the direct relationship
-  between `comments` and `comments_authors`, not between `posts` and
-  `comments_authors`.
+  For `:through` associations, such as a post may have many comments_authors,
+  written as `has_many :comments_authors, through: [:comments, :author]`
+  the query given to preload customizes the relationship between comments and
+  authors, even if preloaded through posts. Another way to put it, in case of
+  `:through` associations, the query given to preload customizes the last join
+  of the association chain. This means `order_by` clauses on `:through`
+  associations affect only the direct relationship between `comments` and
+  `authors`, not between posts and comments.
 
   ## Preload functions
 
-  Preload also allows functions to be given. In such cases, the function
-  receives the IDs of the parent association and it must return the associated
-  data. Ecto then will map this data and sort it by the relationship key:
+  Preload also allows functions to be given. If the function has an arity of 1,
+  it receives only the IDs of the parent association. If it has an arity of 2, it
+  receives the IDS of the parent association as the first argument and the association
+  metadata as the second argument. Both functions must return the associated data.
+  Ecto then will map this data and sort it by the relationship key:
 
       comment_preloader = fn post_ids -> fetch_comments_by_post_ids(post_ids) end
       Repo.all from p in Post, preload: [comments: ^comment_preloader]
@@ -2802,7 +2761,46 @@ defmodule Ecto.Query do
       function, the function will receive a list of "post_ids" as the argument
       and it must return a tuple in the format of `{post_id, tag}`
 
-  If you want to reset the loaded fields, see `Ecto.reset_fields/2`.
+  The 2-arity version of the function is especially useful if you would like to
+  build a general preloader that works across all associations. For example, if
+  you would like to build a preloader for lateral joins that finds the newest
+  associations you may do the following:
+
+      lateral_preloader = fn ids, assoc -> newest_records(ids, assoc, 5) end
+
+      def newest_records(parent_ids, assoc, n) do
+        %{related_key: related_key, queryable: queryable} = assoc
+
+        squery =
+          from q in queryable,
+            where: field(q, ^related_key) == parent_as(:parent_ids).id,
+            order_by: {:desc, :created_at},
+            limit: ^n
+
+        query =
+          from f in fragment("SELECT id from UNNEST(?::int[]) AS id", ^parent_ids), as: :parent_ids,
+            inner_lateral_join: s in subquery(squery), on: true,
+            select: s
+
+        Repo.all(query)
+      end
+
+  For the list of available metadata, see the module documentation of the association types.
+  For example, see `Ecto.Association.BelongsTo`.
+
+  ## Dynamic preloads
+
+  Preloads can also be specified dynamically using the `dynamic` macro:
+
+        preloads = [comments: dynamic([comments: c], c)]
+
+        Repo.all from p in Post,
+                   join: c in assoc(p, :comments),
+                   as: :comments,
+                   where: c.published_at > p.updated_at,
+                   preload: ^preloads
+
+  See `dynamic/2` for more information.
 
   ## Keywords example
 
@@ -2885,7 +2883,7 @@ defmodule Ecto.Query do
     schema = assert_schema!(query)
     pks = schema.__schema__(:primary_key)
     expr = for pk <- pks, do: {dir, field(0, pk)}
-    %QueryExpr{expr: expr, file: __ENV__.file, line: __ENV__.line}
+    %ByExpr{expr: expr, file: __ENV__.file, line: __ENV__.line}
   end
 
   defp assert_schema!(%{from: %Ecto.Query.FromExpr{source: {_source, schema}}})
@@ -2899,7 +2897,8 @@ defmodule Ecto.Query do
   @doc """
   Returns `true` if the query has a binding with the given name, otherwise `false`.
 
-  For more information on named bindings see "Named bindings" in this module doc.
+  For more information on named bindings see ["Named bindings"](#module-named-bindings)
+  in this module doc.
   """
   def has_named_binding?(%Ecto.Query{aliases: aliases}, key) do
     Map.has_key?(aliases, key)
@@ -2933,11 +2932,12 @@ defmodule Ecto.Query do
 
   With this function it can be simplified to:
 
-      with_named_binding(query, :comments, fn  query, binding ->
+      with_named_binding(query, :comments, fn query, binding ->
         join(query, :left, [p], a in assoc(p, ^binding), as: ^binding)
       end)
 
-  For more information on named bindings see "Named bindings" in this module doc or `has_named_binding?/2`.
+  For more information on named bindings see ["Named bindings"](#module-named-bindings)
+  in this module doc or `has_named_binding?/2`.
   """
   def with_named_binding(%Ecto.Query{} = query, key, fun) do
     if has_named_binding?(query, key) do

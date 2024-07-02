@@ -689,10 +689,19 @@ defmodule Ecto.Schema do
         end
 
         for clauses <-
-              Ecto.Schema.__schema__(fields, field_sources, assocs, embeds, virtual_fields, read_only),
+              Ecto.Schema.__schema__(
+                fields,
+                field_sources,
+                assocs,
+                embeds,
+                virtual_fields,
+                read_only
+              ),
             {args, body} <- clauses do
           def __schema__(unquote_splicing(args)), do: unquote(body)
         end
+
+        :ok
       end
 
     quote do
@@ -721,7 +730,7 @@ defmodule Ecto.Schema do
 
       The default value is validated against the field's type at compilation time
       and it will raise an ArgumentError if there is a type mismatch. If you cannot
-      infer  the field's type at compilation time, you can use the
+      infer the field's type at compilation time, you can use the
       `:skip_default_validation` option on the field to skip validations.
 
       Once a default value is set, if you send changes to the changeset that
@@ -813,7 +822,8 @@ defmodule Ecto.Schema do
       association, defaults to the primary key on the schema
 
     * `:through` - Allow this association to be defined in terms of existing
-      associations. Read the section on `:through` associations for more info
+      associations. Read the [section on `:through` associations](#has_many/3-has_many-has_one-through)
+      for more info
 
     * `:on_delete` - The action taken on associations when parent record
       is deleted. May be `:nothing` (default), `:nilify_all` and `:delete_all`.
@@ -1395,7 +1405,7 @@ defmodule Ecto.Schema do
     * `:preload_order` - Sets the default `order_by` when preloading the association.
       It may be a keyword list/list of fields or an MFA tuple, such as `{Mod, fun, []}`.
       Both cases must resolve to a valid `order_by` expression. See `Ecto.Query.order_by/3`
-      to learn more about about ordering expressions.
+      to learn more about ordering expressions.
       See the [preload order](#many_to_many/3-preload-order) section below to learn how
       this option can be utilized
 
@@ -1632,8 +1642,8 @@ defmodule Ecto.Schema do
 
     * `:primary_key` - The `:primary_key` option can be used with the same arguments
       as `@primary_key` (see the [Schema attributes](https://hexdocs.pm/ecto/Ecto.Schema.html#module-schema-attributes)
-      section for more info). Primary keys are automatically set up for  embedded  schemas as well,
-      defaulting  to  `{:id,  :binary_id, autogenerate:   true}`.
+      section for more info). Primary keys are automatically set up for embedded schemas as well,
+      defaulting to  `{:id,  :binary_id, autogenerate:   true}`.
 
     * `:on_replace` - The action taken on associations when the embed is
       replaced when casting or manipulating parent changeset. May be
@@ -1647,6 +1657,12 @@ defmodule Ecto.Schema do
     * `:load_in_query` - When false, the field will not be loaded when
       selecting the whole struct in a query, such as `from p in Post, select: p`.
       Defaults to `true`.
+
+    * `:defaults_to_struct` - When true, the field will default to the initialized
+      struct instead of nil, the same you would get from something like `%Order.Item{}`.
+      One important thing is that if the underlying data is explicitly nil when loading
+      the schema, it will still be loaded as nil, similar to how `:default` works in fields.
+      Defaults to `false`.
 
   ## Examples
 
@@ -1745,7 +1761,7 @@ defmodule Ecto.Schema do
   Ecto provides this guarantee for all built-in types.
 
   When decoding, if a key exists in the database not defined in the
-  schema, it'll be ignored. If a field exists in the schema thats not
+  schema, it'll be ignored. If a field exists in the schema that's not
   in the database, it's value will be `nil`.
   """
   defmacro embeds_one(name, schema, opts \\ [])
@@ -1905,8 +1921,8 @@ defmodule Ecto.Schema do
         end
       end
 
-  Primary keys are automatically set up for  embedded  schemas as well,
-  defaulting  to  `{:id,  :binary_id, autogenerate:   true}`. You can
+  Primary keys are automatically set up for embedded schemas as well,
+  defaulting to  `{:id,  :binary_id, autogenerate:   true}`. You can
   customize it by passing a `:primary_key` option with the same arguments
   as `@primary_key` (see the [Schema attributes](https://hexdocs.pm/ecto/Ecto.Schema.html#module-schema-attributes)
   section for more info).
@@ -2223,11 +2239,19 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :ecto_changeset_fields, {name, {:assoc, struct}})
   end
 
-  @valid_embeds_one_options [:on_replace, :source, :load_in_query]
+  @valid_embeds_one_options [:on_replace, :source, :load_in_query, :defaults_to_struct]
 
   @doc false
   def __embeds_one__(mod, name, schema, opts) when is_atom(schema) do
     check_options!(opts, @valid_embeds_one_options, "embeds_one/3")
+
+    opts =
+      if Keyword.get(opts, :defaults_to_struct) do
+        Keyword.put(opts, :default, schema.__schema__(:loaded))
+      else
+        opts
+      end
+
     embed(mod, :one, name, schema, opts)
   end
 
@@ -2373,7 +2397,7 @@ defmodule Ecto.Schema do
 
     Module.put_attribute(mod, :ecto_changeset_fields, {name, {:embed, struct}})
     Module.put_attribute(mod, :ecto_embeds, {name, struct})
-    define_field(mod, name, {:parameterized, Ecto.Embedded, struct}, opts)
+    define_field(mod, name, {:parameterized, {Ecto.Embedded, struct}}, opts)
   end
 
   defp put_struct_field(mod, name, assoc) do
@@ -2407,7 +2431,7 @@ defmodule Ecto.Schema do
     end
   end
 
-  defp check_options!({:parameterized, _, _}, _opts, _valid, _fun_arity) do
+  defp check_options!({:parameterized, _}, _opts, _valid, _fun_arity) do
     :ok
   end
 
@@ -2481,7 +2505,7 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :ecto_autogenerate, {[name], mfa})
   end
 
-  defp store_type_autogenerate!(mod, name, source, {:parameterized, typemod, params} = type, pk?) do
+  defp store_type_autogenerate!(mod, name, source, {:parameterized, {typemod, params}} = type, pk?) do
     cond do
       store_autogenerate_id!(mod, name, source, type, pk?) ->
         :ok

@@ -125,7 +125,16 @@ defmodule Ecto.Changeset do
 
   When applying changes using `cast/4`, an empty value will be automatically
   converted to the field's default value. If the field is an array type, any
-  empty value inside the array will be removed.
+  empty value inside the array will be removed. When a plain map is used in
+  the data portion of a schemaless changeset, every field's default value is
+  considered to be `nil`. For example:
+
+      iex> data = %{name: "Bob"}
+      iex> types = %{name: :string}
+      iex> params = %{name: ""}
+      iex> changeset = Ecto.Changeset.cast({data, types}, params, Map.keys(types))
+      iex> changeset.changes
+      %{name: nil}
 
   Empty values are stored as a list in the changeset's `:empty_values` field.
   The list contains elements of type `t:empty_value/0`. Those are either values,
@@ -351,7 +360,7 @@ defmodule Ecto.Changeset do
             constraints: [],
             filters: %{},
             action: nil,
-            types: nil,
+            types: %{},
             empty_values: @empty_values,
             repo: nil,
             repo_opts: []
@@ -370,7 +379,7 @@ defmodule Ecto.Changeset do
           validations: [validation],
           filters: %{optional(atom) => term},
           action: action,
-          types: nil | %{atom => Ecto.Type.t() | {:assoc, term()} | {:embed, term()}}
+          types: types
         }
 
   @type t :: t(Ecto.Schema.t() | map | nil)
@@ -385,7 +394,7 @@ defmodule Ecto.Changeset do
           error_type: atom
         }
   @type data :: map()
-  @type types :: map()
+  @type types :: %{atom => Ecto.Type.t() | {:assoc, term()} | {:embed, term()}}
   @type traverse_result :: %{atom => [term] | traverse_result}
   @type validation :: {atom, term}
 
@@ -469,10 +478,6 @@ defmodule Ecto.Changeset do
 
   def change({data, types}, changes) when is_map(data) do
     change(%Changeset{data: data, types: Enum.into(types, %{}), valid?: true}, changes)
-  end
-
-  def change(%Changeset{types: nil}, _changes) do
-    raise ArgumentError, "changeset does not have types information"
   end
 
   def change(%Changeset{changes: changes, types: types} = changeset, new_changes)
@@ -728,10 +733,6 @@ defmodule Ecto.Changeset do
 
   def cast({data, types}, params, permitted, opts) when is_map(data) do
     cast(data, types, %{}, params, permitted, opts)
-  end
-
-  def cast(%Changeset{types: nil}, _params, _permitted, _opts) do
-    raise ArgumentError, "changeset does not have types information"
   end
 
   def cast(%Changeset{} = changeset, params, permitted, opts) do
@@ -1026,7 +1027,8 @@ defmodule Ecto.Changeset do
 
     * If there is an associated child with an ID and its ID is not given
       as parameter, the `:on_replace` callback for that association will
-      be invoked (see the "On replace" section on the module documentation)
+      be invoked (see the ["On replace" section](#module-the-on_replace-option)
+      on the module documentation)
 
   If two or more addresses have the same IDs, Ecto will consider that an
   error and add an error to the changeset saying that there are duplicate
@@ -1077,7 +1079,7 @@ defmodule Ecto.Changeset do
   of `cast_assoc/3`. This opens up the possibility to work on a subset of the data,
   instead of all associations in the database.
 
-  Taking the initial example of users having addresses imagine those addresses
+  Taking the initial example of users having addresses, imagine those addresses
   are set up to belong to a country. If you want to allow users to bulk edit all
   addresses that belong to a single country, you can do so by changing the preload
   query:
@@ -1514,10 +1516,10 @@ defmodule Ecto.Changeset do
 
   defp cast_merge(cs1, cs2) do
     new_params = (cs1.params || cs2.params) && Map.merge(cs1.params || %{}, cs2.params || %{})
+    new_types = Map.merge(cs1.types, cs2.types)
     new_changes = Map.merge(cs1.changes, cs2.changes)
     new_errors = Enum.uniq(cs1.errors ++ cs2.errors)
     new_required = Enum.uniq(cs1.required ++ cs2.required)
-    new_types = cs1.types || cs2.types
     new_valid? = cs1.valid? and cs2.valid?
 
     %{
@@ -1734,10 +1736,6 @@ defmodule Ecto.Changeset do
     get_relation(:embed, changeset, name)
   end
 
-  defp get_relation(_tag, %{types: nil}, _name) do
-    raise ArgumentError, "changeset does not have types information"
-  end
-
   defp get_relation(tag, %{changes: changes, data: data, types: types}, name) do
     _ = relation!(:get, tag, name, Map.get(types, name))
 
@@ -1877,10 +1875,6 @@ defmodule Ecto.Changeset do
 
   """
   @spec put_change(t, atom, term) :: t
-  def put_change(%Changeset{types: nil}, _key, _value) do
-    raise ArgumentError, "changeset does not have types information"
-  end
-
   def put_change(%Changeset{data: data, types: types} = changeset, key, value) do
     type = Map.get(types, key)
 
@@ -1994,7 +1988,7 @@ defmodule Ecto.Changeset do
       update or delete them). Different to passing changesets, structs are not
       change tracked in any fashion. In other words, if you change a comment
       struct and give it to `put_assoc/4`, the updates in the struct won't be
-      persisted. You must use changesets instead. `put_assoc/4` with structs
+      persisted. You must use changesets, keyword lists, or maps instead. `put_assoc/4` with structs
       only takes care of guaranteeing that the comments and the parent data
       are associated. This is extremely useful when associating existing data,
       as we will see in the "Example: Adding tags to a post" section.
@@ -2144,10 +2138,6 @@ defmodule Ecto.Changeset do
     put_relation(:embed, changeset, name, value, opts)
   end
 
-  defp put_relation(_tag, %{types: nil}, _name, _value, _opts) do
-    raise ArgumentError, "changeset does not have types information"
-  end
-
   defp put_relation(tag, changeset, name, value, _opts) do
     %{data: data, types: types, changes: changes, errors: errors, valid?: valid?} = changeset
     relation = relation!(:put, tag, name, Map.get(types, name))
@@ -2180,10 +2170,6 @@ defmodule Ecto.Changeset do
 
   """
   @spec force_change(t, atom, term) :: t
-  def force_change(%Changeset{types: nil}, _key, _value) do
-    raise ArgumentError, "changeset does not have types information"
-  end
-
   def force_change(%Changeset{types: types} = changeset, key, value) do
     case Map.get(types, key) do
       {tag, _} when tag in @relations ->
@@ -2514,7 +2500,7 @@ defmodule Ecto.Changeset do
   If a field is given to `validate_required/3` but it has not been passed
   as parameter during `cast/3` (i.e. it has not been changed), then
   `validate_required/3` will check for its current value in the data.
-  If the data contains an non-empty value for the field, then no error is
+  If the data contains a non-empty value for the field, then no error is
   added. This allows developers to use `validate_required/3` to perform
   partial updates. For example, on `insert` all fields would be required,
   because their default values on the data are all `nil`, but on `update`,
@@ -4173,8 +4159,9 @@ defimpl Inspect, for: Ecto.Changeset do
   import Inspect.Algebra
 
   def inspect(%Ecto.Changeset{data: data} = changeset, opts) do
+    # The trailing element is skipped later on
     list =
-      for attr <- [:action, :changes, :errors, :data, :valid?] do
+      for attr <- [:action, :changes, :errors, :data, :valid?, :action] do
         {attr, Map.get(changeset, attr)}
       end
 
@@ -4191,20 +4178,20 @@ defimpl Inspect, for: Ecto.Changeset do
           []
       end
 
-    container_doc("#Ecto.Changeset<", list, ">", opts, fn
-      {:action, action}, opts ->
+    container_doc("#Ecto.Changeset<", list, ">", %{limit: 5}, fn
+      {:action, action}, _opts ->
         concat("action: ", to_doc(action, opts))
 
-      {:changes, changes}, opts ->
+      {:changes, changes}, _opts ->
         concat("changes: ", changes |> filter(redacted_fields) |> to_doc(opts))
 
       {:data, data}, _opts ->
         concat("data: ", to_struct(data, opts))
 
-      {:errors, errors}, opts ->
+      {:errors, errors}, _opts ->
         concat("errors: ", to_doc(errors, opts))
 
-      {:valid?, valid?}, opts ->
+      {:valid?, valid?}, _opts ->
         concat("valid?: ", to_doc(valid?, opts))
     end)
   end

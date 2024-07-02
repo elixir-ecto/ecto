@@ -119,7 +119,7 @@ defmodule Ecto.Repo.Schema do
       %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}} ->
         Enum.map(args, fn {field, _} ->
           case dumper do
-            %{^field => {_, _, false}} -> field
+            %{^field => {source, _, false}} -> source
             %{} -> raise ArgumentError, "cannot select unwritable field `#{field}` for insert_all"
             nil -> field
           end
@@ -128,7 +128,7 @@ defmodule Ecto.Repo.Schema do
       %Ecto.Query.SelectExpr{take: %{^ix => {_fun, fields}}} ->
         Enum.map(fields, fn field ->
           case dumper do
-            %{^field => {_, _, false}} -> field
+            %{^field => {source, _, false}} -> source
             %{} -> raise ArgumentError, "cannot select unwritable field `#{field}` for insert_all"
             nil -> field
           end
@@ -723,11 +723,18 @@ defmodule Ecto.Repo.Schema do
       :nothing ->
         {{:nothing, [], conflict_target}, []}
 
+      {:replace, []} ->
+        raise ArgumentError, ":on_conflict option with `{:replace, fields}` requires a non-empty list of fields"
+
       {:replace, keys} when is_list(keys) ->
         {{replace_fields!(dumper, keys), [], conflict_target}, []}
 
       :replace_all ->
-        {{replace_all_fields!(:replace_all, schema, []), [], conflict_target}, []}
+        # Remove the conflict targets from the replacing fields
+        # since the values don't change and this allows postgres to
+        # possibly perform a HOT optimization: https://www.postgresql.org/docs/current/storage-hot.html
+        to_remove = List.wrap(conflict_target)
+        {{replace_all_fields!(:replace_all, schema, to_remove), [], conflict_target}, []}
 
       {:replace_all_except, fields} ->
         {{replace_all_fields!(:replace_all_except, schema, fields), [], conflict_target}, []}

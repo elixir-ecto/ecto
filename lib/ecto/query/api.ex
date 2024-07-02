@@ -135,8 +135,9 @@ defmodule Ecto.Query.API do
 
       from p in Post, where: p.id in [1, 2, 3]
 
-  The right side may either be a list, a literal list
-  or even a column in the database with array type:
+  The right side may either be a literal list, an interpolated list,
+  any struct that implements the `Enumerable` protocol, or even a
+  column in the database with array type:
 
       from p in Post, where: "elixir" in p.tags
 
@@ -788,7 +789,7 @@ defmodule Ecto.Query.API do
 
   `type/2` is all about Ecto types. Therefore, you can perform `type(expr, :string)`
   but not `type(expr, :text)`, because `:text` is not an actual Ecto type. If you want
-  to peform casting exclusively at the database level, you can use fragment. For example,
+  to perform casting exclusively at the database level, you can use fragment. For example,
   in PostgreSQL, you might do `fragment("?::text", p.column)`.
   """
   def type(interpolated_value, type), do: doc!([interpolated_value, type])

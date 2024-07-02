@@ -1,5 +1,41 @@
 # Changelog for v3.x
 
+## v3.12.0-dev
+
+### Enhancements
+
+  * [Ecto.Query] Introduce `is_named_binding` guard
+  * [Ecto.Query] Subqueries are now supported in `distinct`, `group_by`, `order_by` and `window` expressions
+  * [Ecto.Repo] Allow Hot Updates on upsert queries in Postgres by removing duplicate fields during replace_all
+  * [Ecto.Schema] Allow schema fields to be read-only
+  * [Ecto.Schema] Add `:defaults_to_struct` option to embeds_one
+  * [Ecto.Type] Bubble up custom cast errors of the inner type for `{:map, type}` and `{:array, type}`
+
+### Bug fixes
+
+  * [Ecto.Query] Ignore query prefix in CTE sources
+  * [Ecto.Query] Fix a bug of `preload` when a through association is used in a join and has a nested separate query preload. Now the association chain is no longer preloaded and we simply preload directly onto the loaded through association.
+  * [Ecto.Query] Validate `:prefix` is a string/binary, warn otherwise
+  * [Ecto.Repo] Raise if empty list is given to `{:replace, fields}`
+  * [Ecto.Repo] Validate `:prefix` is a string/binary, warn otherwise
+
+### Adapter changes
+
+  * `distinct`, `group_by`, `order_by` and `window` expressions use the new `Ecto.Query.ByExpr`
+    struct rather than the old `Ecto.Query.QueryExpr` struct
+
+### Potential incompatibilities
+
+  * [Ecto.ParameterizedType] Parameterized types are now represented internally as `{:parameterized, {mod, state}}`. While this representation is private, projects may have been relying on it, and therefore they need to adapt accordingly. Use `Ecto.ParameterizedType.init/2` to instantiate parameterized types.
+  * [Ecto.Query] Drop `:array_join` join type. It was added for Clickhouse support but it is no longer used
+
+## v3.11.2 (2024-03-07)
+
+### Bug fixes
+
+  * [Ecto.Query] Fix compatibility with upcoming Elixir v1.17
+  * [Ecto.Repo] Do not hide failures when preloading if the parent process is trapping exits
+
 ## v3.11.1 (2023-12-07)
 
 ### Enhancements

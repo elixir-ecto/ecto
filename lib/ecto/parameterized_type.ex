@@ -88,7 +88,7 @@ defmodule Ecto.ParameterizedType do
   @type params :: term()
 
   @doc """
-  Callback to convert the options specified in  the field macro into parameters
+  Callback to convert the options specified in the field macro into parameters
   to be used in other callbacks.
 
   This function is called at compile time, and should raise if invalid values are
@@ -193,7 +193,7 @@ defmodule Ecto.ParameterizedType do
   Useful when manually initializing a type for schemaless changesets.
   """
   def init(type, opts) do
-    {:parameterized, type, type.init(opts)}
+    {:parameterized, {type, type.init(opts)}}
   end
 
   @doc false
