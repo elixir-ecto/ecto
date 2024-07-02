@@ -171,10 +171,8 @@ defmodule Ecto.Enum do
       %{on_cast: %{^data => as_atom}} ->
         {:ok, as_atom}
 
-      %{mappings: mappings} ->
-        enum = cast_values_from_mappings(mappings)
-
-        {:error, validation: :inclusion, enum: enum}
+      params ->
+        {:error, validation: :inclusion, enum: Map.keys(params.on_cast)}
     end
   end
 
