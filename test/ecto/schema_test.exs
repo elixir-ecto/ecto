@@ -650,6 +650,8 @@ defmodule Ecto.SchemaTest do
       has_many :posts, Post
       has_one :author, User
       belongs_to :comment, Comment
+      belongs_to :different_comment, Comment
+      belongs_to :recursive_assoc, AssocSchema
       has_many :comment_authors, through: [:comment, :authors]
       has_one :comment_main_author, through: [:comment, :main_author]
       has_many :emails, {"users_emails", Email}, on_replace: :delete
@@ -664,7 +666,28 @@ defmodule Ecto.SchemaTest do
 
   test "associations" do
     assert AssocSchema.__schema__(:association, :not_a_field) == nil
-    assert AssocSchema.__schema__(:fields) == [:id, :comment_id, :summary_id, :reference_id]
+
+    assert AssocSchema.__schema__(:fields) ==
+             [
+               :id,
+               :comment_id,
+               :different_comment_id,
+               :recursive_assoc_id,
+               :summary_id,
+               :reference_id
+             ]
+  end
+
+  test "associations for a given schema" do
+    for key <- AssocSchema.__schema__(:associations) do
+      assoc = AssocSchema.__schema__(:association, key)
+
+      assert is_struct(assoc, Ecto.Association.HasThrough) or
+               {key, assoc} in AssocSchema.__schema__(:associations, assoc.related)
+    end
+
+    assert [comment: _, different_comment: _] = AssocSchema.__schema__(:associations, Comment)
+    assert [] = AssocSchema.__schema__(:associations, Unknown)
   end
 
   test "has_many association" do

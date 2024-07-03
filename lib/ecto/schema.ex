@@ -433,6 +433,9 @@ defmodule Ecto.Schema do
   * `__schema__(:virtual_type, field)` - Returns the type of the given virtual field;
 
   * `__schema__(:associations)` - Returns a list of all association field names;
+  * `__schema__(:associations, module)` - Returns a keyword list of association
+    reflections of the given module;
+
   * `__schema__(:association, assoc)` - Returns the association reflection of the given assoc;
 
   * `__schema__(:embeds)` - Returns a list of all embedded field names;
@@ -2354,6 +2357,21 @@ defmodule Ecto.Schema do
         {[:association, name], Macro.escape(refl)}
       end
 
+    assocs_quoted =
+      for {_, %{related: _} = refl_a} <- assocs do
+        args = [:associations, refl_a.related]
+
+        body =
+          for {name, %{related: _} = refl_b} <- assocs,
+              refl_a.related == refl_b.related do
+            {name, refl_b}
+          end
+
+        {args, Macro.escape(body)}
+      end
+
+    assocs_quoted = Enum.uniq_by(assocs_quoted, &elem(&1, 0))
+
     assoc_names = Enum.map(assocs, &elem(&1, 0))
 
     embed_quoted =
@@ -2375,6 +2393,7 @@ defmodule Ecto.Schema do
       {[:type, quote(do: _)], nil},
       {[:virtual_type, quote(do: _)], nil},
       {[:association, quote(do: _)], nil},
+      {[:associations, quote(do: _)], []},
       {[:embed, quote(do: _)], nil}
     ]
 
@@ -2384,6 +2403,7 @@ defmodule Ecto.Schema do
       types_quoted,
       virtual_types_quoted,
       assoc_quoted,
+      assocs_quoted,
       embed_quoted,
       catch_all
     ]
