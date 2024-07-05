@@ -1033,11 +1033,11 @@ defmodule Ecto.Schema do
   Note `:through` associations are read-only. For example, you cannot use
   `Ecto.Changeset.cast_assoc/3` to modify through associations.
   """
-  defmacro has_many(name, queryable, opts \\ []) do
-    queryable = expand_literals(queryable, __CALLER__)
+  defmacro has_many(name, schema, opts \\ []) do
+    schema = expand_literals(schema, __CALLER__)
 
     quote do
-      Ecto.Schema.__has_many__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
+      Ecto.Schema.__has_many__(__MODULE__, unquote(name), unquote(schema), unquote(opts))
     end
   end
 
@@ -1109,11 +1109,11 @@ defmodule Ecto.Schema do
       [post] = Repo.all(from(p in Post, where: p.id == 42, preload: :permalink))
       post.permalink #=> %Permalink{...}
   """
-  defmacro has_one(name, queryable, opts \\ []) do
-    queryable = expand_literals(queryable, __CALLER__)
+  defmacro has_one(name, schema, opts \\ []) do
+    schema = expand_literals(schema, __CALLER__)
 
     quote do
-      Ecto.Schema.__has_one__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
+      Ecto.Schema.__has_one__(__MODULE__, unquote(name), unquote(schema), unquote(opts))
     end
   end
 
@@ -1316,11 +1316,11 @@ defmodule Ecto.Schema do
 
   See `many_to_many/3` for more information on this particular approach.
   """
-  defmacro belongs_to(name, queryable, opts \\ []) do
-    queryable = expand_literals(queryable, __CALLER__)
+  defmacro belongs_to(name, schema, opts \\ []) do
+    schema = expand_literals(schema, __CALLER__)
 
     quote do
-      Ecto.Schema.__belongs_to__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
+      Ecto.Schema.__belongs_to__(__MODULE__, unquote(name), unquote(schema), unquote(opts))
     end
   end
 
@@ -1612,12 +1612,12 @@ defmodule Ecto.Schema do
         {:error, changeset} -> # Handle the error
       end
   """
-  defmacro many_to_many(name, queryable, opts \\ []) do
-    queryable = expand_literals(queryable, __CALLER__)
+  defmacro many_to_many(name, schema, opts \\ []) do
+    schema = expand_literals(schema, __CALLER__)
     opts = expand_literals(opts, __CALLER__)
 
     quote do
-      Ecto.Schema.__many_to_many__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
+      Ecto.Schema.__many_to_many__(__MODULE__, unquote(name), unquote(schema), unquote(opts))
     end
   end
 
