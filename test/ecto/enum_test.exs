@@ -294,62 +294,83 @@ defmodule Ecto.EnumTest do
     test "rejects bad strings" do
       type = EnumSchema.__schema__(:type, :my_enum)
 
+      {:parameterized, {Ecto.Enum, %{on_cast: on_cast}}} = type
+      enum = Map.keys(on_cast)
+
       assert %Changeset{
                valid?: false,
                changes: %{},
-               errors: [my_enum: {"is invalid", [type: ^type, validation: :cast]}]
+               errors: [my_enum: {"is invalid", [type: ^type, validation: :inclusion, enum: ^enum]}]
              } = Changeset.cast(%EnumSchema{}, %{my_enum: "bar2"}, [:my_enum])
 
       type = EnumSchema.__schema__(:type, :my_enums)
 
+      {:array, {:parameterized, {Ecto.Enum, %{on_cast: on_cast}}}} = type
+      enum = Map.keys(on_cast)
+
       assert %Changeset{
                valid?: false,
                changes: %{},
-               errors: [my_enums: {"is invalid", [type: ^type, validation: :cast]}]
+               errors: [my_enums: {"is invalid", [type: ^type, validation: :inclusion, enum: ^enum, source: [0]]}]
              } = Changeset.cast(%EnumSchema{}, %{my_enums: ["bar2"]}, [:my_enums])
 
       type = EnumSchema.__schema__(:type, :my_string_enum)
 
+      {:parameterized, {Ecto.Enum, %{on_cast: on_cast}}} = type
+      enum = Map.keys(on_cast)
+
       assert %Changeset{
                valid?: false,
                changes: %{},
-               errors: [my_string_enum: {"is invalid", [type: ^type, validation: :cast]}]
+               errors: [my_string_enum: {"is invalid", [type: ^type, validation: :inclusion, enum: ^enum]}]
              } = Changeset.cast(%EnumSchema{}, %{my_string_enum: "baar2"}, [:my_string_enum])
 
       type = EnumSchema.__schema__(:type, :my_string_enums)
 
+      {:array, {:parameterized, {Ecto.Enum, %{on_cast: on_cast}}}} = type
+      enum = Map.keys(on_cast)
+
       assert %Changeset{
                valid?: false,
                changes: %{},
-               errors: [my_string_enums: {"is invalid", [type: ^type, validation: :cast]}]
+               errors: [my_string_enums: {"is invalid", [type: ^type, validation: :inclusion, enum: ^enum, source: [0]]}]
              } = Changeset.cast(%EnumSchema{}, %{my_string_enums: ["baar2"]}, [:my_string_enums])
     end
 
     test "rejects bad integers" do
       type = EnumSchema.__schema__(:type, :my_integer_enum)
 
+      {:parameterized, {Ecto.Enum, %{on_cast: on_cast}}} = type
+      enum = Map.keys(on_cast)
+
       assert %Changeset{
                valid?: false,
                changes: %{},
-               errors: [my_integer_enum: {"is invalid", [type: ^type, validation: :cast]}]
+               errors: [my_integer_enum: {"is invalid", [type: ^type, validation: :inclusion, enum: ^enum]}]
              } = Changeset.cast(%EnumSchema{}, %{my_integer_enum: 7}, [:my_integer_enum])
 
       type = EnumSchema.__schema__(:type, :my_integer_enums)
 
+      {:array, {:parameterized, {Ecto.Enum, %{on_cast: on_cast}}}} = type
+      enum = Map.keys(on_cast)
+
       assert %Changeset{
                valid?: false,
                changes: %{},
-               errors: [my_integer_enums: {"is invalid", [type: ^type, validation: :cast]}]
+               errors: [my_integer_enums: {"is invalid", [type: ^type, validation: :inclusion, enum: ^enum, source: [0]]}]
              } = Changeset.cast(%EnumSchema{}, %{my_integer_enums: [7]}, [:my_integer_enums])
     end
 
     test "rejects bad atoms" do
       type = EnumSchema.__schema__(:type, :my_enum)
 
+      {:parameterized, {Ecto.Enum, %{on_cast: on_cast}}} = type
+      enum = Map.keys(on_cast)
+
       assert %Changeset{
                valid?: false,
                changes: %{},
-               errors: [my_enum: {"is invalid", [type: ^type, validation: :cast]}]
+               errors: [my_enum: {"is invalid", [type: ^type, validation: :inclusion, enum: ^enum]}]
              } = Changeset.cast(%EnumSchema{}, %{my_enum: :bar2}, [:my_enum])
 
       type = EnumSchema.__schema__(:type, :my_enums)
