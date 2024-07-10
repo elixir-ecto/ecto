@@ -1792,6 +1792,7 @@ defmodule Ecto.RepoTest do
       use Ecto.Type
       def type(), do: :binary_id
       def cast("foo-" <> _ = id), do: {:ok, id}
+      def cast("invalid"), do: :invalid
       def cast(id), do: {:ok, "foo-" <> id}
       def load(uuid), do: {:ok, "foo-" <> uuid}
       def dump("foo-" <> uuid), do: {:ok, uuid}
@@ -1817,6 +1818,15 @@ defmodule Ecto.RepoTest do
 
       assert {:ok, inserted} = TestRepo.insert(changeset)
       assert inserted.id == "foo-" <> id
+    end
+
+    test "invalid Ecto.Type.cast/1 implementation raises" do
+      e =
+        assert_raise RuntimeError, fn ->
+          TestRepo.all(from s in MySchemaCustomPK, where: s.id == ^"invalid")
+        end
+
+      assert e.message =~ "expected Ecto.RepoTest.PrefixedID.cast/1 to return {:ok, v},"
     end
   end
 

@@ -2537,9 +2537,17 @@ defmodule Ecto.Query.Planner do
       {:ok, v} ->
         {:ok, v}
 
-      _ ->
+      :error ->
         {:error,
          "value `#{inspect(v)}` in `#{kind}` cannot be cast to type #{Ecto.Type.format(type)}"}
+
+      {:error, _meta} ->
+        {:error,
+         "value `#{inspect(v)}` in `#{kind}` cannot be cast to type #{Ecto.Type.format(type)}"}
+
+      other ->
+        raise "expected #{inspect(type)}.cast/1 to return {:ok, v}, :error, or {:error, meta}" <>
+                ", got: #{inspect(other)}"
     end
   end
 
