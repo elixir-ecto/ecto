@@ -1491,7 +1491,8 @@ defmodule Ecto.Repo do
 
   A query can be given instead of a list with entries. This query needs to select
   into a map containing only keys that are available as writeable columns in the
-  schema.
+  schema. This will query and insert the values all inside one query, without
+  another round trip to the application.
 
   ## Examples
 
