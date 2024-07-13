@@ -278,7 +278,9 @@ defmodule Ecto.Multi do
   @doc """
   Adds an insert operation to the multi.
 
-  Accepts the same arguments and options as `c:Ecto.Repo.insert/2` does.
+  The `name` must be unique from other statements in the multi.
+  
+  The remaining arguments and options are the same as in `c:Ecto.Repo.insert/2`.
 
   ## Example
 
@@ -317,7 +319,9 @@ defmodule Ecto.Multi do
   @doc """
   Adds an update operation to the multi.
 
-  Accepts the same arguments and options as `c:Ecto.Repo.update/2` does.
+  The `name` must be unique from other statements in the multi.
+  
+  The remaining arguments and options are the same as in `c:Ecto.Repo.update/2`.
 
   ## Example
 
@@ -349,7 +353,9 @@ defmodule Ecto.Multi do
   @doc """
   Inserts or updates a changeset depending on whether the changeset was persisted or not.
 
-  Accepts the same arguments and options as `c:Ecto.Repo.insert_or_update/2` does.
+  The `name` must be unique from other statements in the multi.
+  
+  The remaining arguments and options are the same as in `c:Ecto.Repo.insert_or_update/2`.
 
   ## Example
 
@@ -391,7 +397,9 @@ defmodule Ecto.Multi do
   @doc """
   Adds a delete operation to the multi.
 
-  Accepts the same arguments and options as `c:Ecto.Repo.delete/2` does.
+  The `name` must be unique from other statements in the multi.
+
+  The remaining arguments and options are the same as in `c:Ecto.Repo.delete/2`.
 
   ## Example
 
@@ -437,7 +445,9 @@ defmodule Ecto.Multi do
   @doc """
   Runs a query expecting one result and stores it in the multi.
 
-  Accepts the same arguments and options as `c:Ecto.Repo.one/2`.
+  The `name` must be unique from other statements in the multi.
+
+  The remaining arguments and options are the same as in `c:Ecto.Repo.one/2`.
 
   ## Example
 
@@ -467,7 +477,9 @@ defmodule Ecto.Multi do
   @doc """
   Runs a query and stores all entries in the multi.
 
-  Accepts the same arguments and options as `c:Ecto.Repo.all/2` does.
+  The `name` must be unique from other statements in the multi.
+  
+  The remaining arguments and options are the same as in `c:Ecto.Repo.all/2` does.
 
   ## Example
 
@@ -498,7 +510,9 @@ defmodule Ecto.Multi do
   @doc """
   Checks if there exists an entry matching the given query and stores a boolean in the multi.
 
-  Accepts the same arguments and options as `c:Ecto.Repo.exists?/2`.
+  The `name` must be unique from other statements in the multi.
+  
+  The remaining arguments and options are the same as in `c:Ecto.Repo.exists?/2`.
 
   ## Example
 
