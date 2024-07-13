@@ -50,9 +50,12 @@ defmodule Ecto.Query.Builder.OrderBy do
   @spec escape(:order_by | :distinct, Macro.t(), {list, term}, Keyword.t(), Macro.Env.t()) ::
           {Macro.t(), {list, term}}
   def escape(kind, expr, params_acc, vars, env) do
-    expr
-    |> List.wrap()
-    |> Enum.map_reduce(params_acc, &do_escape(&1, &2, kind, vars, env))
+    {ast, params_acc} =
+      expr
+      |> List.wrap()
+      |> Enum.map_reduce(params_acc, &do_escape(&1, &2, kind, vars, env))
+
+    {List.flatten(ast), params_acc}
   end
 
   defp do_escape({dir, {:^, _, [expr]}}, params_acc, kind, _vars, _env) do
@@ -79,7 +82,9 @@ defmodule Ecto.Query.Builder.OrderBy do
   end
 
   defp do_escape(expr, params_acc, kind, vars, env) do
-    case Builder.escape(expr, :any, params_acc, vars, env) do
+    {ast, params_acc} = Builder.escape(expr, :any, params_acc, vars, env)
+
+    case ast do
       expr when is_list(expr) -> escape(kind, expr, params_acc, vars, env)
       {ast, params_acc} -> {{:asc, ast}, params_acc}
     end
