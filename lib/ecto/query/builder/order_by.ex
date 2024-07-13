@@ -78,9 +78,11 @@ defmodule Ecto.Query.Builder.OrderBy do
     {{quoted_dir!(kind, dir), ast}, params_acc}
   end
 
-  defp do_escape(expr, params_acc, _kind, vars, env) do
-    {ast, params_acc} = Builder.escape(expr, :any, params_acc, vars, env)
-    {{:asc, ast}, params_acc}
+  defp do_escape(expr, params_acc, kind, vars, env) do
+    case Builder.escape(expr, :any, params_acc, vars, env) do
+      expr when is_list(expr) -> escape(kind, expr, params_acc, vars, env)
+      {ast, params_acc} -> {{:asc, ast}, params_acc}
+    end
   end
 
   @doc """
