@@ -44,7 +44,7 @@ defmodule Ecto.Query.Builder.OrderByTest do
       assert {Macro.escape(quote do [asc: 1 > 2] end), {[], %{}}} ==
              escape(:order_by, quote do 1 > 2 end, {[], %{}}, [], __ENV__)
 
-      assert {Macro.escape(quote do [desc: &0.id, asc: fragment({:raw, "lower("}, {:expr, &0.title()}, {:raw, ")"}), asc: nth_value(&0.links, 1)] end), {[], %{}}} ==
+      assert {Macro.escape(quote do [desc: &0.id(), asc: fragment({:raw, "lower("}, {:expr, &0.title()}, {:raw, ")"}), asc: nth_value(&0.links(), 1)] end), {[], %{}}} ==
              escape(:order_by, quote do my_complex_order(x) end, {[], %{}}, [x: 0], __ENV__)
     end
 
