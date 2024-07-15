@@ -98,7 +98,8 @@ defmodule Ecto.Query.Builder.Select do
   end
 
   # List
-  defp escape([{dir, _} | _] = expr, params_acc, vars, env) when dir in ~w(asc desc)a do
+  defp escape([{dir, _} | _] = expr, params_acc, vars, env)
+       when dir in ~w(asc asc_nulls_last asc_nulls_first desc desc_nulls_last desc_nulls_first)a do
     Builder.escape(expr, :any, params_acc, vars, {env, &escape_expansion/5})
   end
 

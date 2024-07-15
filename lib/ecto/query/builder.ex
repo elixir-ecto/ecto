@@ -292,7 +292,8 @@ defmodule Ecto.Query.Builder do
   end
 
   # lists
-  def escape([{dir, _} | _] = expr, _type, params_acc, _vars, _env) when dir in ~w(asc desc)a do
+  def escape([{dir, _} | _] = expr, _type, params_acc, _vars, _env)
+      when dir in ~w(asc asc_nulls_last asc_nulls_first desc desc_nulls_last desc_nulls_first)a do
     {expr, params_acc}
   end
 
