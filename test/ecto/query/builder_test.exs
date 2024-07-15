@@ -146,6 +146,18 @@ defmodule Ecto.Query.BuilderTest do
            escape(quote(do: my_first_value(x.id()) |> over(:w)), [x: 0], __ENV__)
   end
 
+  defmacro my_custom_field(p) do
+    quote do
+      fragment("lower(?)", unquote(p).title)
+    end
+  end
+
+  defmacro my_complex_order(p) do
+    quote do
+      [desc: unquote(p).id, asc: my_custom_field(unquote(p)), asc: nth_value(unquote(p).links, 1)]
+    end
+  end
+
   test "escape over with window parts" do
     assert {Macro.escape(quote(do: over(row_number(), []))), []}  ==
            escape(quote(do: over(row_number())), [], __ENV__)
@@ -155,6 +167,9 @@ defmodule Ecto.Query.BuilderTest do
 
     assert {Macro.escape(quote(do: over(nth_value(&0.id(), 1), order_by: [asc: &0.id()]))), []} ==
            escape(quote(do: nth_value(x.id(), 1) |> over(order_by: x.id())), [x: 0], __ENV__)
+
+    assert {Macro.escape(quote(do: over(nth_value(&0.id(), 1), order_by: [desc: &0.id(), asc: fragment({:raw, "lower("}, {:expr, &0.title()}, {:raw, ")"}), asc: nth_value(&0.links(), 1)]))), []} ==
+           escape(quote(do: nth_value(x.id(), 1) |> over(order_by: my_complex_order(x))), [x: 0], __ENV__)
 
     assert {Macro.escape(quote(do: over(nth_value(&0.id(), 1), partition_by: [&0.id()]))), []} ==
            escape(quote(do: nth_value(x.id(), 1) |> over(partition_by: x.id())), [x: 0], __ENV__)

@@ -7,6 +7,14 @@ defmodule Ecto.Query.Builder.OrderByTest do
   import Ecto.Query
 
   describe "escape" do
+    defmacro my_custom_field(p) do
+      quote(do: fragment("lower(?)", unquote(p).title))
+    end
+
+    defmacro my_complex_order(p) do
+      quote(do: [desc: unquote(p).id, asc: my_custom_field(unquote(p)), asc: nth_value(unquote(p).links, 1)])
+    end
+
     test "handles expressions and params" do
       assert {Macro.escape(quote do [asc: &0.y()] end), {[], %{}}} ==
              escape(:order_by, quote do x.y() end, {[], %{}}, [x: 0], __ENV__)
@@ -35,6 +43,9 @@ defmodule Ecto.Query.Builder.OrderByTest do
       import Kernel, except: [>: 2]
       assert {Macro.escape(quote do [asc: 1 > 2] end), {[], %{}}} ==
              escape(:order_by, quote do 1 > 2 end, {[], %{}}, [], __ENV__)
+
+      assert {Macro.escape(quote do [desc: &0.id(), asc: fragment({:raw, "lower("}, {:expr, &0.title()}, {:raw, ")"}), asc: nth_value(&0.links(), 1)] end), {[], %{}}} ==
+             escape(:order_by, quote do my_complex_order(x) end, {[], %{}}, [x: 0], __ENV__)
     end
 
     test "raises on unbound variables" do

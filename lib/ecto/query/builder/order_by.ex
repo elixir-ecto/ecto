@@ -52,35 +52,38 @@ defmodule Ecto.Query.Builder.OrderBy do
   def escape(kind, expr, params_acc, vars, env) do
     expr
     |> List.wrap()
-    |> Enum.map_reduce(params_acc, &do_escape(&1, &2, kind, vars, env))
+    |> Enum.flat_map_reduce(params_acc, &do_escape(&1, &2, kind, vars, env))
   end
 
   defp do_escape({dir, {:^, _, [expr]}}, params_acc, kind, _vars, _env) do
-    {{quoted_dir!(kind, dir),
-      quote(do: Ecto.Query.Builder.OrderBy.field!(unquote(kind), unquote(expr)))}, params_acc}
+    {[{quoted_dir!(kind, dir),
+      quote(do: Ecto.Query.Builder.OrderBy.field!(unquote(kind), unquote(expr)))}], params_acc}
   end
 
   defp do_escape({:^, _, [expr]}, params_acc, kind, _vars, _env) do
-    {{:asc, quote(do: Ecto.Query.Builder.OrderBy.field!(unquote(kind), unquote(expr)))},
+    {[{:asc, quote(do: Ecto.Query.Builder.OrderBy.field!(unquote(kind), unquote(expr)))}],
      params_acc}
   end
 
   defp do_escape({dir, field}, params_acc, kind, _vars, _env) when is_atom(field) do
-    {{quoted_dir!(kind, dir), Macro.escape(to_field(field))}, params_acc}
+    {[{quoted_dir!(kind, dir), Macro.escape(to_field(field))}], params_acc}
   end
 
   defp do_escape(field, params_acc, _kind, _vars, _env) when is_atom(field) do
-    {{:asc, Macro.escape(to_field(field))}, params_acc}
+    {[{:asc, Macro.escape(to_field(field))}], params_acc}
   end
 
   defp do_escape({dir, expr}, params_acc, kind, vars, env) do
     {ast, params_acc} = Builder.escape(expr, :any, params_acc, vars, env)
-    {{quoted_dir!(kind, dir), ast}, params_acc}
+    {[{quoted_dir!(kind, dir), ast}], params_acc}
   end
 
-  defp do_escape(expr, params_acc, _kind, vars, env) do
+  defp do_escape(expr, params_acc, kind, vars, env) do
     {ast, params_acc} = Builder.escape(expr, :any, params_acc, vars, env)
-    {{:asc, ast}, params_acc}
+
+    if is_list(ast),
+      do: escape(kind, ast, params_acc, vars, env),
+      else: {[{:asc, ast}], params_acc}
   end
 
   @doc """
