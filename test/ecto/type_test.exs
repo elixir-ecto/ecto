@@ -29,6 +29,7 @@ defmodule Ecto.TypeTest do
     def cast("a"), do: {:ok, "a"}
     def cast("b"), do: {:error, foo: :bar, value: "b"}
     def cast("c"), do: {:error, foo: :bar, source: [:email], value: "c"}
+    def cast("d"), do: {:error, message: "custom message"}
   end
 
   defmodule CustomParameterizedTypeWithFormat do
@@ -102,6 +103,14 @@ defmodule Ecto.TypeTest do
     assert cast(CustomWithCastError, "a") == {:ok, "a"}
     assert cast(CustomWithCastError, "b") == {:error, foo: :bar, value: "b"}
     assert cast(CustomWithCastError, "c") == {:error, foo: :bar, source: [:email], value: "c"}
+
+    assert_raise Ecto.CastError, "cannot cast \"b\" to Ecto.TypeTest.CustomWithCastError", fn ->
+      cast!(CustomWithCastError, "b")
+    end
+
+    assert_raise Ecto.CastError, "custom message", fn ->
+      cast!(CustomWithCastError, "d")
+    end
 
     assert load(Custom, nil) == {:ok, nil}
     assert dump(Custom, nil) == {:ok, nil}

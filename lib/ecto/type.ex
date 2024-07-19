@@ -911,6 +911,36 @@ defmodule Ecto.Type do
   defp cast_map(term) when is_map(term), do: {:ok, term}
   defp cast_map(_), do: :error
 
+  @doc """
+  Casts a value to the given type or raises an error.
+
+  See `cast/2` for more information.
+
+  ## Examples
+
+      iex> Ecto.Type.cast!(:integer, "1")
+      1
+      iex> Ecto.Type.cast!(:integer, 1)
+      1
+      iex> Ecto.Type.cast!(:integer, nil)
+      nil
+
+      iex> Ecto.Type.cast!(:integer, 1.0)
+      ** (Ecto.CastError) cannot cast 1.0 to :integer
+  """
+  def cast!(type, value) do
+    case Ecto.Type.cast(type, value) do
+      {:ok, value} ->
+        value
+
+      :error ->
+        raise Ecto.CastError, type: type, value: value
+
+      {:error, metadata} ->
+        raise Ecto.CastError, [type: type, value: value] ++ Keyword.take(metadata, [:message])
+    end
+  end
+
   ## Shared helpers
 
   @compile {:inline, same_integer: 1, same_boolean: 1, same_map: 1, same_decimal: 1, same_date: 1}
