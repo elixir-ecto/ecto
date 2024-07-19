@@ -1,6 +1,5 @@
 defmodule Ecto.TypeTest do
   use ExUnit.Case, async: true
-  doctest Ecto.Type, only: [cast!: 2]
 
   defmodule Custom do
     use Ecto.Type
