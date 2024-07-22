@@ -2518,7 +2518,9 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:message` - the message on failure, defaults to "can't be blank"
+    * `:message` - the message on failure, defaults to "can't be blank".
+      Can also be a `{msg, opts}` tuple, to provide additional options
+      when using `traverse_errors/2`.
 
   ## Examples
 
@@ -2614,7 +2616,8 @@ defmodule Ecto.Changeset do
   ## Options
 
     * `:message` - the message in case the constraint check fails,
-      defaults to "has already been taken".
+      defaults to "has already been taken". Can also be a `{msg, opts}` tuple,
+      to provide additional options when using `traverse_errors/2`.
 
     * `:error_key` - the key to which changeset error will be added when
       check fails, defaults to the first field name of the given list of
@@ -2843,7 +2846,9 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:message` - the message on failure, defaults to "has invalid format"
+    * `:message` - the message on failure, defaults to "has invalid format".
+      Can also be a `{msg, opts}` tuple, to provide additional options
+      when using `traverse_errors/2`.
 
   ## Examples
 
@@ -2869,7 +2874,9 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:message` - the message on failure, defaults to "is invalid"
+    * `:message` - the message on failure, defaults to "is invalid".
+      Can also be a `{msg, opts}` tuple, to provide additional options
+      when using `traverse_errors/2`.
 
   ## Examples
 
@@ -2899,7 +2906,9 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:message` - the message on failure, defaults to "has an invalid entry"
+    * `:message` - the message on failure, defaults to "has an invalid entry".
+      Can also be a `{msg, opts}` tuple, to provide additional options
+      when using `traverse_errors/2`.
 
   ## Examples
 
@@ -2936,7 +2945,9 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:message` - the message on failure, defaults to "is reserved"
+    * `:message` - the message on failure, defaults to "is reserved".
+      Can also be a `{msg, opts}` tuple, to provide additional options
+      when using `traverse_errors/2`.
 
   ## Examples
 
@@ -2982,6 +2993,8 @@ defmodule Ecto.Changeset do
         * "should have %{count} item(s)"
         * "should have at least %{count} item(s)"
         * "should have at most %{count} item(s)"
+      Can also be a `{msg, opts}` tuple, to provide additional options
+      when using `traverse_errors/2`.
 
   ## Examples
 
@@ -3172,6 +3185,8 @@ defmodule Ecto.Changeset do
       * "must be greater than or equal to %{number}"
       * "must be equal to %{number}"
       * "must be not equal to %{number}"
+      Can also be a `{msg, opts}` tuple, to provide additional options
+      when using `traverse_errors/2`.
 
   ## Examples
 
@@ -3289,7 +3304,9 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:message` - the message on failure, defaults to "does not match confirmation"
+    * `:message` - the message on failure, defaults to "does not match confirmation".
+      Can also be a `{msg, opts}` tuple, to provide additional options
+      when using `traverse_errors/2`.
     * `:required` - boolean, sets whether existence of confirmation parameter
       is required for addition of error. Defaults to false
 
@@ -3368,7 +3385,9 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:message` - the message on failure, defaults to "must be accepted"
+    * `:message` - the message on failure, defaults to "must be accepted".
+      Can also be a `{msg, opts}` tuple, to provide additional options
+      when using `traverse_errors/2`.
 
   ## Examples
 
