@@ -1235,6 +1235,16 @@ defmodule Ecto.ChangesetTest do
              body: {"is blank", [validation: :required]}
            ]
 
+    # Message with translation keys
+    changeset =
+      changeset(%{title: nil, body: "\n"})
+      |> validate_required([:title, :body], message: {"%{name} is blank", name: "x"})
+
+    assert changeset.errors == [
+             title: {"%{name} is blank", [validation: :required, name: "x"]},
+             body: {"%{name} is blank", [validation: :required, name: "x"]}
+           ]
+
     # When unknown field
     assert_raise ArgumentError, ~r/unknown field :bad in/, fn ->
       changeset(%{"title" => "hello", "body" => "something"})
@@ -1312,6 +1322,12 @@ defmodule Ecto.ChangesetTest do
 
     assert changeset.errors == [title: {"yada", [validation: :format]}]
 
+    changeset =
+      changeset(%{"title" => "foobar"})
+      |> validate_format(:title, ~r/@/, message: {"%{name} yada", name: "x"})
+
+    assert changeset.errors == [title: {"%{name} yada", [validation: :format, name: "x"]}]
+
     assert_raise ArgumentError, ~r/expects changes to be strings/, fn ->
       changeset(%{"upvotes" => 123})
       |> validate_format(:upvotes, ~r/[0-9]+/, message: "yada")
@@ -1340,6 +1356,14 @@ defmodule Ecto.ChangesetTest do
       |> validate_inclusion(:title, ~w(world), message: "yada")
 
     assert changeset.errors == [title: {"yada", [validation: :inclusion, enum: ~w(world)]}]
+
+    changeset =
+      changeset(%{"title" => "hello"})
+      |> validate_inclusion(:title, ~w(world), message: {"%{name} yada", name: "x"})
+
+    assert changeset.errors == [
+             title: {"%{name} yada", [validation: :inclusion, enum: ~w(world), name: "x"]}
+           ]
   end
 
   test "validate_inclusion/3 with decimal does semantic comparison" do
@@ -1387,6 +1411,14 @@ defmodule Ecto.ChangesetTest do
       |> validate_subset(:topics, ~w(cat dog), message: "yada")
 
     assert changeset.errors == [topics: {"yada", [validation: :subset, enum: ~w(cat dog)]}]
+
+    changeset =
+      changeset(%{"topics" => ["laptop"]})
+      |> validate_subset(:topics, ~w(cat dog), message: {"%{name} yada", name: "x"})
+
+    assert changeset.errors == [
+             topics: {"%{name} yada", [validation: :subset, enum: ~w(cat dog), name: "x"]}
+           ]
   end
 
   test "validate_subset/3 with decimal does semantic comparison" do
@@ -1430,6 +1462,14 @@ defmodule Ecto.ChangesetTest do
       |> validate_exclusion(:title, ~w(world), message: "yada")
 
     assert changeset.errors == [title: {"yada", [validation: :exclusion, enum: ~w(world)]}]
+
+    changeset =
+      changeset(%{"title" => "world"})
+      |> validate_exclusion(:title, ~w(world), message: {"%{name} yada", name: "x"})
+
+    assert changeset.errors == [
+             title: {"%{name} yada", [validation: :exclusion, enum: ~w(world), name: "x"]}
+           ]
   end
 
   test "validate_exclusion/3 with decimal does semantic comparison" do
@@ -1487,6 +1527,16 @@ defmodule Ecto.ChangesetTest do
 
     assert changeset.errors == [
              title: {"yada", count: 10, validation: :length, kind: :is, type: :string}
+           ]
+
+    changeset =
+      changeset(%{"title" => "world"})
+      |> validate_length(:title, is: 10, message: {"%{name} yada", name: "x"})
+
+    assert changeset.errors == [
+             title:
+               {"%{name} yada",
+                count: 10, validation: :length, kind: :is, type: :string, name: "x"}
            ]
 
     changeset = changeset(%{"title" => "\u0065\u0301"}) |> validate_length(:title, max: 1)
@@ -1565,6 +1615,16 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == [
              body: {"yada", count: 10, validation: :length, kind: :is, type: :binary}
            ]
+
+    changeset =
+      changeset(%{"body" => <<0, 1, 2, 3, 4>>})
+      |> validate_length(:body, count: :bytes, is: 10, message: {"%{name} yada", name: "x"})
+
+    assert changeset.errors == [
+             body:
+               {"%{name} yada",
+                count: 10, validation: :length, kind: :is, type: :binary, name: "x"}
+           ]
   end
 
   test "validate_length/3 with list" do
@@ -1629,6 +1689,15 @@ defmodule Ecto.ChangesetTest do
 
     assert changeset.errors == [
              topics: {"yada", count: 10, validation: :length, kind: :is, type: :list}
+           ]
+
+    changeset =
+      changeset(%{"topics" => ["Politics", "Security"]})
+      |> validate_length(:topics, is: 10, message: {"%{name} yada", name: "x"})
+
+    assert changeset.errors == [
+             topics:
+               {"%{name} yada", count: 10, validation: :length, kind: :is, type: :list, name: "x"}
            ]
   end
 
@@ -1713,6 +1782,15 @@ defmodule Ecto.ChangesetTest do
 
     assert changeset.errors == [
              seo_metadata: {"yada", count: 10, validation: :length, kind: :is, type: :map}
+           ]
+
+    changeset =
+      changeset(%{"seo_metadata" => %{}})
+      |> validate_length(:seo_metadata, is: 10, message: {"%{name} yada", name: "x"})
+
+    assert changeset.errors == [
+             seo_metadata:
+               {"%{name} yada", count: 10, validation: :length, kind: :is, type: :map, name: "x"}
            ]
   end
 
@@ -1802,6 +1880,14 @@ defmodule Ecto.ChangesetTest do
 
     assert changeset.errors == [
              upvotes: {"yada", validation: :number, kind: :greater_than, number: 100}
+           ]
+
+    changeset =
+      changeset(%{"upvotes" => 3})
+      |> validate_number(:upvotes, less_than: 0, message: {"%{name} yada", name: "x"})
+
+    assert changeset.errors == [
+             upvotes: {"%{name} yada", validation: :number, kind: :less_than, number: 0, name: "x"}
            ]
   end
 
@@ -2013,6 +2099,23 @@ defmodule Ecto.ChangesetTest do
              password_confirmation: {"does not match confirmation", [validation: :confirmation]}
            ]
 
+    # With custom message
+    changeset =
+      changeset(%{"password_confirmation" => "password"})
+      |> validate_confirmation(:password, message: "yada")
+
+    assert changeset.errors == [
+             password_confirmation: {"yada", [validation: :confirmation]}
+           ]
+
+    changeset =
+      changeset(%{"password_confirmation" => "password"})
+      |> validate_confirmation(:password, message: {"%{name} yada", name: "x"})
+
+    assert changeset.errors == [
+             password_confirmation: {"%{name} yada", [validation: :confirmation, name: "x"]}
+           ]
+
     # invalid params
     changeset =
       changeset(:invalid)
@@ -2079,6 +2182,12 @@ defmodule Ecto.ChangesetTest do
     assert validations(changeset) == [
              terms_of_service: {:acceptance, [message: "must be abided"]}
            ]
+
+    changeset =
+      changeset(%{})
+      |> validate_acceptance(:terms_of_service, message: {"%{name} yada", name: "x"})
+
+    assert changeset.errors == [terms_of_service: {"%{name} yada", [validation: :acceptance, name: "x"]}]
   end
 
   alias Ecto.TestRepo
