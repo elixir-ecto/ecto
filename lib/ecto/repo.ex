@@ -50,7 +50,7 @@ defmodule Ecto.Repo do
       using the [Telemetry](`:telemetry`) library. By default, the telemetry prefix
       is based on the module name, so if your module is called
       `MyApp.Repo`, the prefix will be `[:my_app, :repo]`. See the
-      "Telemetry Events" section to see which events we recommend
+      ["Telemetry Events"](#module-telemetry-events) section to see which events we recommend
       adapters to publish. Note that if you have multiple databases, you
       should keep the `:telemetry_prefix` consistent for each repo and
       use the `:repo` property in the event metadata for distinguishing
@@ -822,7 +822,7 @@ defmodule Ecto.Repo do
       in Postgres or the database in MySQL). This will be applied to all `from`
       and `join`s in the query that did not have a prefix previously given
       either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
-      in the schema. For more information see the "Query Prefix" section of the
+      in the schema. For more information see the ["Query Prefix"](`m:Ecto.Query#module-query-prefix`) section of the
       `Ecto.Query` documentation.
 
   See the ["Shared options"](#module-shared-options) section at the module
@@ -848,7 +848,7 @@ defmodule Ecto.Repo do
       in Postgres or the database in MySQL). This will be applied to all `from`
       and `join`s in the query that did not have a prefix previously given
       either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
-      in the schema. For more information see the "Query Prefix" section of the
+      in the schema. For more information see the ["Query Prefix"](`m:Ecto.Query#module-query-prefix`) section of the
       `Ecto.Query` documentation.
 
   See the ["Shared options"](#module-shared-options) section at the module
@@ -876,7 +876,7 @@ defmodule Ecto.Repo do
       in Postgres or the database in MySQL). This will be applied to all `from`
       and `join`s in the query that did not have a prefix previously given
       either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
-      in the schema. For more information see the "Query Prefix" section of the
+      in the schema. For more information see the ["Query Prefix"](`m:Ecto.Query#module-query-prefix`) section of the
       `Ecto.Query` documentation.
 
   See the ["Shared options"](#module-shared-options) section at the module
@@ -907,7 +907,7 @@ defmodule Ecto.Repo do
       in Postgres or the database in MySQL). This will be applied to all `from`
       and `join`s in the query that did not have a prefix previously given
       either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
-      in the schema. For more information see the "Query Prefix" section of the
+      in the schema. For more information see the ["Query Prefix"](`m:Ecto.Query#module-query-prefix`) section of the
       `Ecto.Query` documentation.
 
   See the ["Shared options"](#module-shared-options) section at the module
@@ -986,7 +986,7 @@ defmodule Ecto.Repo do
       in Postgres or the database in MySQL). This will be applied to all `from`
       and `join`s in the query that did not have a prefix previously given
       either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
-      in the schema. For more information see the "Query Prefix" section of the
+      in the schema. For more information see the ["Query Prefix"](`m:Ecto.Query#module-query-prefix`) section of the
       `Ecto.Query` documentation.
 
   See the ["Shared options"](#module-shared-options) section at the module
@@ -1046,7 +1046,7 @@ defmodule Ecto.Repo do
       in Postgres or the database in MySQL). This will be applied to all `from`
       and `join`s in the query that did not have a prefix previously given
       either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
-      in the schema. For more information see the "Query Prefix" section of the
+      in the schema. For more information see the ["Query Prefix"](`m:Ecto.Query#module-query-prefix`) section of the
       `Ecto.Query` documentation.
 
   See the ["Shared options"](#module-shared-options) section at the module
@@ -1079,7 +1079,7 @@ defmodule Ecto.Repo do
       in Postgres or the database in MySQL). This will be applied to all `from`
       and `join`s in the query that did not have a prefix previously given
       either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
-      in the schema. For more information see the "Query Prefix" section of the
+      in the schema. For more information see the ["Query Prefix"](`m:Ecto.Query#module-query-prefix`) section of the
       `Ecto.Query` documentation.
 
   See the ["Shared options"](#module-shared-options) section at the module
@@ -1107,7 +1107,7 @@ defmodule Ecto.Repo do
       in Postgres or the database in MySQL). This will be applied to all `from`
       and `join`s in the query that did not have a prefix previously given
       either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
-      in the schema. For more information see the "Query Prefix" section of the
+      in the schema. For more information see the ["Query Prefix"](`m:Ecto.Query#module-query-prefix`) section of the
       `Ecto.Query` documentation.
 
   See the ["Shared options"](#module-shared-options) section at the module
@@ -1265,7 +1265,7 @@ defmodule Ecto.Repo do
       in Postgres or the database in MySQL). This will be applied to all `from`
       and `join`s in the query that did not have a prefix previously given
       either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
-      in the schema. For more information see the "Query Prefix" section of the
+      in the schema. For more information see the ["Query Prefix"](`m:Ecto.Query#module-query-prefix`) section of the
       `Ecto.Query` documentation.
 
   See the ["Shared options"](#module-shared-options) section at the module
@@ -1296,7 +1296,7 @@ defmodule Ecto.Repo do
       in Postgres or the database in MySQL). This will be applied to all `from`
       and `join`s in the query that did not have a prefix previously given
       either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
-      in the schema. For more information see the "Query Prefix" section of the
+      in the schema. For more information see the ["Query Prefix"](`m:Ecto.Query#module-query-prefix`) section of the
       `Ecto.Query` documentation.
 
     * `:max_rows` - The number of rows to load from the database as we stream.
@@ -1338,7 +1338,7 @@ defmodule Ecto.Repo do
       in Postgres or the database in MySQL). This will be applied to all `from`
       and `join`s in the query that did not have a prefix previously given
       either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
-      in the schema. For more information see the "Query Prefix" section of the
+      in the schema. For more information see the ["Query Prefix"](`m:Ecto.Query#module-query-prefix`) section of the
       `Ecto.Query` documentation.
 
   See the ["Shared options"](#module-shared-options) section at the module
@@ -1387,7 +1387,7 @@ defmodule Ecto.Repo do
       in Postgres or the database in MySQL). This will be applied to all `from`
       and `join`s in the query that did not have a prefix previously given
       either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
-      in the schema. For more information see the "Query Prefix" section of the
+      in the schema. For more information see the ["Query Prefix"](`m:Ecto.Query#module-query-prefix`) section of the
       `Ecto.Query` documentation.
 
   See the ["Shared options"](#module-shared-options) section at the module
@@ -1470,7 +1470,7 @@ defmodule Ecto.Repo do
     * `:on_conflict` - It may be one of `:raise` (the default), `:nothing`,
       `:replace_all`, `{:replace_all_except, fields}`, `{:replace, fields}`,
       a keyword list of update instructions or an `Ecto.Query`
-      query for updates. See the "Upserts" section for more information.
+      query for updates. See the "[Upserts](#c:insert_all/3-upserts)" section for more information.
 
     * `:conflict_target` - A list of column names to verify for conflicts.
       It is expected those columns to have unique indexes on them that may conflict.
@@ -1621,8 +1621,8 @@ defmodule Ecto.Repo do
       aware that the fields returned from the database overwrite what was
       supplied by the user. Any field not returned by the database will be
       present with the original value supplied by the user. Not all databases
-      support this option and it may not be available during upserts. See
-      the "Upserts" section for more information.
+      support this option and it may not be available during upserts.
+      See the ["Upserts"](`c:insert/2#upserts`) section for more information.
 
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL). This overrides the prefix set
@@ -1633,7 +1633,7 @@ defmodule Ecto.Repo do
     * `:on_conflict` - It may be one of `:raise` (the default), `:nothing`,
       `:replace_all`, `{:replace_all_except, fields}`, `{:replace, fields}`,
       a keyword list of update instructions or an `Ecto.Query` query for updates.
-      See the "Upserts" section for more information.
+      See the ["Upserts"](`c:insert/2#upserts`) section for more information.
 
     * `:conflict_target` - A list of column names to verify for conflicts.
       It is expected those columns to have unique indexes on them that may conflict.
@@ -2043,7 +2043,7 @@ defmodule Ecto.Repo do
           # operation will raise an exception.
         end)
 
-  See the "Aborted transactions" section for more examples of aborted
+  See the ["Aborted transactions"](`c:transaction/2#aborted-transactions`) section for more examples of aborted
   transactions and how to handle them.
 
   In practice, managing nested transactions can become complex quickly.
