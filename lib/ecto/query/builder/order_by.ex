@@ -56,9 +56,6 @@ defmodule Ecto.Query.Builder.OrderBy do
     |> Enum.map_reduce(params_acc, &do_escape(&1, &2, kind, vars, env))
   end
 
-  defp get_env({env, _}), do: env
-  defp get_env(env), do: env
-
   defp do_escape({dir, {:^, _, [expr]}}, params_acc, kind, _vars, _env) do
     {{quoted_dir!(kind, dir),
       quote(do: Ecto.Query.Builder.OrderBy.field!(unquote(kind), unquote(expr)))}, params_acc}
@@ -86,6 +83,9 @@ defmodule Ecto.Query.Builder.OrderBy do
     {ast, params_acc} = Builder.escape(expr, :any, params_acc, vars, env)
     {{:asc, ast}, params_acc}
   end
+
+  defp get_env({env, _}), do: env
+  defp get_env(env), do: env
 
   @doc """
   Checks the variable is a quoted direction at compilation time or
