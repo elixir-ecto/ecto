@@ -11,6 +11,12 @@ defmodule Ecto.Query.Builder.OrderByTest do
       quote(do: fragment("lower(?)", unquote(p).title))
     end
 
+    defmacro my_custom_order(p) do
+      quote do
+        [unquote(p).id, my_custom_field(unquote(p)), nth_value(unquote(p).links, 1)]
+      end
+    end
+
     defmacro my_complex_order(p) do
       quote(do: [desc: unquote(p).id, asc: my_custom_field(unquote(p)), asc: nth_value(unquote(p).links, 1)])
     end
@@ -46,6 +52,9 @@ defmodule Ecto.Query.Builder.OrderByTest do
 
       assert {Macro.escape(quote do [desc: &0.id(), asc: fragment({:raw, "lower("}, {:expr, &0.title()}, {:raw, ")"}), asc: nth_value(&0.links(), 1)] end), {[], %{}}} ==
              escape(:order_by, quote do my_complex_order(x) end, {[], %{}}, [x: 0], __ENV__)
+
+      assert {Macro.escape(quote do [asc: &0.id(), asc: fragment({:raw, "lower("}, {:expr, &0.title()}, {:raw, ")"}), asc: nth_value(&0.links(), 1)] end), {[], %{}}} ==
+             escape(:order_by, quote do my_custom_order(x) end, {[], %{}}, [x: 0], __ENV__)
     end
 
     test "raises on unbound variables" do
