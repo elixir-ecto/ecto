@@ -51,10 +51,13 @@ defmodule Ecto.Query.Builder.OrderBy do
           {Macro.t(), {list, term}}
   def escape(kind, expr, params_acc, vars, env) do
     expr
-    |> Macro.expand_once(env)
+    |> Macro.expand_once(get_env(env))
     |> List.wrap()
     |> Enum.map_reduce(params_acc, &do_escape(&1, &2, kind, vars, env))
   end
+
+  defp get_env({env, _}), do: env
+  defp get_env(env), do: env
 
   defp do_escape({dir, {:^, _, [expr]}}, params_acc, kind, _vars, _env) do
     {{quoted_dir!(kind, dir),

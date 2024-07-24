@@ -98,12 +98,6 @@ defmodule Ecto.Query.Builder.Select do
   end
 
   # List
-  defp escape([{dir, _} | _] = expr, params_acc, vars, env)
-       when dir in ~w(asc asc_nulls_last asc_nulls_first desc desc_nulls_last desc_nulls_first)a do
-    Builder.escape(expr, :any, params_acc, vars, {env, &escape_expansion/5})
-  end
-
-  # List
   defp escape(list, params_acc, vars, env) when is_list(list) do
     Enum.map_reduce(list, params_acc, &escape(&1, &2, vars, env))
   end
