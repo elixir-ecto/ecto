@@ -51,6 +51,7 @@ defmodule Ecto.Query.Builder.OrderBy do
           {Macro.t(), {list, term}}
   def escape(kind, expr, params_acc, vars, env) do
     expr
+    |> Macro.expand_once(env)
     |> List.wrap()
     |> Enum.flat_map_reduce(params_acc, &do_escape(&1, &2, kind, vars, env))
   end
@@ -78,12 +79,9 @@ defmodule Ecto.Query.Builder.OrderBy do
     {[{quoted_dir!(kind, dir), ast}], params_acc}
   end
 
-  defp do_escape(expr, params_acc, kind, vars, env) do
+  defp do_escape(expr, params_acc, _wtkind, vars, env) do
     {ast, params_acc} = Builder.escape(expr, :any, params_acc, vars, env)
-
-    if is_list(ast),
-      do: escape(kind, ast, params_acc, vars, env),
-      else: {[{:asc, ast}], params_acc}
+    {[{:asc, ast}], params_acc}
   end
 
   @doc """
