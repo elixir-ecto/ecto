@@ -292,11 +292,6 @@ defmodule Ecto.Query.Builder do
   end
 
   # lists
-  def escape([{dir, _} | _] = expr, _type, params_acc, _vars, _env)
-      when dir in ~w(asc asc_nulls_last asc_nulls_first desc desc_nulls_last desc_nulls_first)a do
-    {expr, params_acc}
-  end
-
   def escape(list, type, params_acc, vars, env) when is_list(list) do
     if Enum.all?(list, &(is_binary(&1) or is_number(&1) or is_boolean(&1))) do
       {literal(list, type, vars), params_acc}
