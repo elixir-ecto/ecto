@@ -1298,7 +1298,7 @@ defmodule Ecto.Changeset do
 
           {:error, {message, meta}} ->
             meta = [validation: type] ++ meta
-            error = {key, {message(opts, :invalid_message, message), meta}}
+            error = {key, message(opts, :invalid_message, message, meta)}
             %{changeset | errors: [error | changeset.errors], valid?: false}
 
           # ignore or ok with change == original
@@ -1405,7 +1405,7 @@ defmodule Ecto.Changeset do
 
     if required? and Relation.empty?(relation, current_changes) do
       errors = [
-        {name, {message(opts, :required_message, "can't be blank"), [validation: :required]}}
+        {name, message(opts, :required_message, "can't be blank", validation: :required)}
         | errors
       ]
 
@@ -2518,7 +2518,9 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:message` - the message on failure, defaults to "can't be blank"
+    * `:message` - the message on failure, defaults to "can't be blank".
+      Can also be a `{msg, opts}` tuple, to provide additional options
+      when using `traverse_errors/2`.
 
   ## Examples
 
@@ -2542,8 +2544,12 @@ defmodule Ecto.Changeset do
         %{changeset | required: fields ++ required}
 
       _ ->
-        message = message(opts, "can't be blank")
-        new_errors = Enum.map(fields_with_errors, &{&1, {message, [validation: :required]}})
+        new_errors =
+          Enum.map(
+            fields_with_errors,
+            &{&1, message(opts, "can't be blank", validation: :required)}
+          )
+
         changes = Map.drop(changes, fields_with_errors)
 
         %{
@@ -2610,7 +2616,8 @@ defmodule Ecto.Changeset do
   ## Options
 
     * `:message` - the message in case the constraint check fails,
-      defaults to "has already been taken".
+      defaults to "has already been taken". Can also be a `{msg, opts}` tuple,
+      to provide additional options when using `traverse_errors/2`.
 
     * `:error_key` - the key to which changeset error will be added when
       check fails, defaults to the first field name of the given list of
@@ -2711,10 +2718,10 @@ defmodule Ecto.Changeset do
       if repo.exists?(query, repo_opts) do
         error_key = Keyword.get(opts, :error_key, hd(fields))
 
-        add_error(changeset, error_key, message(opts, "has already been taken"),
-          validation: :unsafe_unique,
-          fields: fields
-        )
+        {error_message, keys} =
+          message(opts, "has already been taken", validation: :unsafe_unique, fields: fields)
+
+        add_error(changeset, error_key, error_message, keys)
       else
         changeset
       end
@@ -2839,7 +2846,9 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:message` - the message on failure, defaults to "has invalid format"
+    * `:message` - the message on failure, defaults to "has invalid format".
+      Can also be a `{msg, opts}` tuple, to provide additional options
+      when using `traverse_errors/2`.
 
   ## Examples
 
@@ -2856,7 +2865,7 @@ defmodule Ecto.Changeset do
 
       if value =~ format,
         do: [],
-        else: [{field, {message(opts, "has invalid format"), [validation: :format]}}]
+        else: [{field, message(opts, "has invalid format", validation: :format)}]
     end)
   end
 
@@ -2865,7 +2874,9 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:message` - the message on failure, defaults to "is invalid"
+    * `:message` - the message on failure, defaults to "is invalid".
+      Can also be a `{msg, opts}` tuple, to provide additional options
+      when using `traverse_errors/2`.
 
   ## Examples
 
@@ -2880,7 +2891,7 @@ defmodule Ecto.Changeset do
 
       if Ecto.Type.include?(type, value, data),
         do: [],
-        else: [{field, {message(opts, "is invalid"), [validation: :inclusion, enum: data]}}]
+        else: [{field, message(opts, "is invalid", validation: :inclusion, enum: data)}]
     end)
   end
 
@@ -2895,7 +2906,9 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:message` - the message on failure, defaults to "has an invalid entry"
+    * `:message` - the message on failure, defaults to "has an invalid entry".
+      Can also be a `{msg, opts}` tuple, to provide additional options
+      when using `traverse_errors/2`.
 
   ## Examples
 
@@ -2919,7 +2932,7 @@ defmodule Ecto.Changeset do
 
       case Enum.any?(value, fn element -> not Ecto.Type.include?(element_type, element, data) end) do
         true ->
-          [{field, {message(opts, "has an invalid entry"), [validation: :subset, enum: data]}}]
+          [{field, message(opts, "has an invalid entry", validation: :subset, enum: data)}]
 
         false ->
           []
@@ -2932,7 +2945,9 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:message` - the message on failure, defaults to "is reserved"
+    * `:message` - the message on failure, defaults to "is reserved".
+      Can also be a `{msg, opts}` tuple, to provide additional options
+      when using `traverse_errors/2`.
 
   ## Examples
 
@@ -2945,7 +2960,7 @@ defmodule Ecto.Changeset do
       type = Map.fetch!(changeset.types, field)
 
       if Ecto.Type.include?(type, value, data),
-        do: [{field, {message(opts, "is reserved"), [validation: :exclusion, enum: data]}}],
+        do: [{field, message(opts, "is reserved", validation: :exclusion, enum: data)}],
         else: []
     end)
   end
@@ -2978,6 +2993,8 @@ defmodule Ecto.Changeset do
         * "should have %{count} item(s)"
         * "should have at least %{count} item(s)"
         * "should have at most %{count} item(s)"
+      Can also be a `{msg, opts}` tuple, to provide additional options
+      when using `traverse_errors/2`.
 
   ## Examples
 
@@ -3040,66 +3057,114 @@ defmodule Ecto.Changeset do
 
   defp wrong_length(:string, _length, value, opts),
     do:
-      {message(opts, "should be %{count} character(s)"),
-       count: value, validation: :length, kind: :is, type: :string}
+      message(opts, "should be %{count} character(s)",
+        count: value,
+        validation: :length,
+        kind: :is,
+        type: :string
+      )
 
   defp wrong_length(:binary, _length, value, opts),
     do:
-      {message(opts, "should be %{count} byte(s)"),
-       count: value, validation: :length, kind: :is, type: :binary}
+      message(opts, "should be %{count} byte(s)",
+        count: value,
+        validation: :length,
+        kind: :is,
+        type: :binary
+      )
 
   defp wrong_length(:list, _length, value, opts),
     do:
-      {message(opts, "should have %{count} item(s)"),
-       count: value, validation: :length, kind: :is, type: :list}
+      message(opts, "should have %{count} item(s)",
+        count: value,
+        validation: :length,
+        kind: :is,
+        type: :list
+      )
 
   defp wrong_length(:map, _length, value, opts),
     do:
-      {message(opts, "should have %{count} item(s)"),
-       count: value, validation: :length, kind: :is, type: :map}
+      message(opts, "should have %{count} item(s)",
+        count: value,
+        validation: :length,
+        kind: :is,
+        type: :map
+      )
 
   defp too_short(_type, length, value, _opts) when length >= value, do: nil
 
   defp too_short(:string, _length, value, opts) do
-    {message(opts, "should be at least %{count} character(s)"),
-     count: value, validation: :length, kind: :min, type: :string}
+    message(opts, "should be at least %{count} character(s)",
+      count: value,
+      validation: :length,
+      kind: :min,
+      type: :string
+    )
   end
 
   defp too_short(:binary, _length, value, opts) do
-    {message(opts, "should be at least %{count} byte(s)"),
-     count: value, validation: :length, kind: :min, type: :binary}
+    message(opts, "should be at least %{count} byte(s)",
+      count: value,
+      validation: :length,
+      kind: :min,
+      type: :binary
+    )
   end
 
   defp too_short(:list, _length, value, opts) do
-    {message(opts, "should have at least %{count} item(s)"),
-     count: value, validation: :length, kind: :min, type: :list}
+    message(opts, "should have at least %{count} item(s)",
+      count: value,
+      validation: :length,
+      kind: :min,
+      type: :list
+    )
   end
 
   defp too_short(:map, _length, value, opts) do
-    {message(opts, "should have at least %{count} item(s)"),
-     count: value, validation: :length, kind: :min, type: :map}
+    message(opts, "should have at least %{count} item(s)",
+      count: value,
+      validation: :length,
+      kind: :min,
+      type: :map
+    )
   end
 
   defp too_long(_type, length, value, _opts) when length <= value, do: nil
 
   defp too_long(:string, _length, value, opts) do
-    {message(opts, "should be at most %{count} character(s)"),
-     count: value, validation: :length, kind: :max, type: :string}
+    message(opts, "should be at most %{count} character(s)",
+      count: value,
+      validation: :length,
+      kind: :max,
+      type: :string
+    )
   end
 
   defp too_long(:binary, _length, value, opts) do
-    {message(opts, "should be at most %{count} byte(s)"),
-     count: value, validation: :length, kind: :max, type: :binary}
+    message(opts, "should be at most %{count} byte(s)",
+      count: value,
+      validation: :length,
+      kind: :max,
+      type: :binary
+    )
   end
 
   defp too_long(:list, _length, value, opts) do
-    {message(opts, "should have at most %{count} item(s)"),
-     count: value, validation: :length, kind: :max, type: :list}
+    message(opts, "should have at most %{count} item(s)",
+      count: value,
+      validation: :length,
+      kind: :max,
+      type: :list
+    )
   end
 
   defp too_long(:map, _length, value, opts) do
-    {message(opts, "should have at most %{count} item(s)"),
-     count: value, validation: :length, kind: :max, type: :map}
+    message(opts, "should have at most %{count} item(s)",
+      count: value,
+      validation: :length,
+      kind: :max,
+      type: :map
+    )
   end
 
   @doc """
@@ -3120,6 +3185,8 @@ defmodule Ecto.Changeset do
       * "must be greater than or equal to %{number}"
       * "must be equal to %{number}"
       * "must be not equal to %{number}"
+      Can also be a `{msg, opts}` tuple, to provide additional options
+      when using `traverse_errors/2`.
 
   ## Examples
 
@@ -3132,14 +3199,14 @@ defmodule Ecto.Changeset do
   def validate_number(changeset, field, opts) do
     validate_change(changeset, field, {:number, opts}, fn
       field, value ->
-        {message, opts} = Keyword.pop(opts, :message)
-
         unless valid_number?(value) do
           raise ArgumentError,
                 "expected field `#{field}` to be a decimal, integer, or float, got: #{inspect(value)}"
         end
 
-        Enum.find_value(opts, [], fn {spec_key, target_value} ->
+        opts
+        |> Keyword.drop([:message])
+        |> Enum.find_value([], fn {spec_key, target_value} ->
           case Map.fetch(@number_validators, spec_key) do
             {:ok, {spec_function, default_message}} ->
               unless valid_number?(target_value) do
@@ -3150,10 +3217,11 @@ defmodule Ecto.Changeset do
               compare_numbers(
                 field,
                 value,
-                message || default_message,
+                default_message,
                 spec_key,
                 spec_function,
-                target_value
+                target_value,
+                opts
               )
 
             :error ->
@@ -3178,31 +3246,32 @@ defmodule Ecto.Changeset do
   defp compare_numbers(
          field,
          %Decimal{} = value,
-         message,
+         default_message,
          spec_key,
          _spec_function,
-         %Decimal{} = target_value
+         %Decimal{} = target_value,
+         opts
        ) do
     result = Decimal.compare(value, target_value)
 
     case decimal_compare(result, spec_key) do
       true -> nil
-      false -> [{field, {message, validation: :number, kind: spec_key, number: target_value}}]
+      false -> [{field, message(opts, default_message, validation: :number, kind: spec_key, number: target_value)}]
     end
   end
 
-  defp compare_numbers(field, value, message, spec_key, spec_function, %Decimal{} = target_value) do
-    compare_numbers(field, decimal_new(value), message, spec_key, spec_function, target_value)
+  defp compare_numbers(field, value, default_message, spec_key, spec_function, %Decimal{} = target_value, opts) do
+    compare_numbers(field, decimal_new(value), default_message, spec_key, spec_function, target_value, opts)
   end
 
-  defp compare_numbers(field, %Decimal{} = value, message, spec_key, spec_function, target_value) do
-    compare_numbers(field, value, message, spec_key, spec_function, decimal_new(target_value))
+  defp compare_numbers(field, %Decimal{} = value, default_message, spec_key, spec_function, target_value, opts) do
+    compare_numbers(field, value, default_message, spec_key, spec_function, decimal_new(target_value), opts)
   end
 
-  defp compare_numbers(field, value, message, spec_key, spec_function, target_value) do
+  defp compare_numbers(field, value, default_message, spec_key, spec_function, target_value, opts) do
     case apply(spec_function, [value, target_value]) do
       true -> nil
-      false -> [{field, {message, validation: :number, kind: spec_key, number: target_value}}]
+      false -> [{field, message(opts, default_message, validation: :number, kind: spec_key, number: target_value)}]
     end
   end
 
@@ -3235,7 +3304,9 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:message` - the message on failure, defaults to "does not match confirmation"
+    * `:message` - the message on failure, defaults to "does not match confirmation".
+      Can also be a `{msg, opts}` tuple, to provide additional options
+      when using `traverse_errors/2`.
     * `:required` - boolean, sets whether existence of confirmation parameter
       is required for addition of error. Defaults to false
 
@@ -3264,8 +3335,7 @@ defmodule Ecto.Changeset do
 
         %{^error_param => _} ->
           [
-            {error_field,
-             {message(opts, "does not match confirmation"), [validation: :confirmation]}}
+            {error_field, message(opts, "does not match confirmation", validation: :confirmation)}
           ]
 
         %{} ->
@@ -3288,11 +3358,21 @@ defmodule Ecto.Changeset do
     required = Keyword.get(opts, :required, false)
 
     if required,
-      do: [{error_field, {message(opts, "can't be blank"), [validation: :required]}}],
+      do: [{error_field, message(opts, "can't be blank", validation: :required)}],
       else: []
   end
 
-  defp message(opts, key \\ :message, default) do
+  defp message(opts, key \\ :message, default, message_opts) do
+    case Keyword.get(opts, key, default) do
+      {message, extra_opts} when is_binary(message) and is_list(extra_opts) ->
+        {message, Keyword.merge(message_opts, extra_opts)}
+
+      message when is_binary(message) ->
+        {message, message_opts}
+    end
+  end
+
+  defp constraint_message(opts, key \\ :message, default) do
     Keyword.get(opts, key, default)
   end
 
@@ -3305,7 +3385,9 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:message` - the message on failure, defaults to "must be accepted"
+    * `:message` - the message on failure, defaults to "must be accepted".
+      Can also be a `{msg, opts}` tuple, to provide additional options
+      when using `traverse_errors/2`.
 
   ## Examples
 
@@ -3335,7 +3417,7 @@ defmodule Ecto.Changeset do
 
     case Ecto.Type.cast(:boolean, value) do
       {:ok, true} -> []
-      _ -> [{field, {message(opts, "must be accepted"), validation: :acceptance}}]
+      _ -> [{field, message(opts, "must be accepted", validation: :acceptance)}]
     end
   end
 
@@ -3566,7 +3648,7 @@ defmodule Ecto.Changeset do
   @spec check_constraint(t, atom, Keyword.t()) :: t
   def check_constraint(changeset, field, opts \\ []) do
     name = opts[:name] || raise ArgumentError, "must supply the name of the constraint"
-    message = message(opts, "is invalid")
+    message = constraint_message(opts, "is invalid")
     match_type = Keyword.get(opts, :match, :exact)
 
     add_constraint(changeset, :check, name, match_type, field, message, :check)
@@ -3711,7 +3793,7 @@ defmodule Ecto.Changeset do
 
   def unique_constraint(changeset, [first_field | _] = fields, opts) do
     name = opts[:name] || unique_index_name(changeset, fields)
-    message = message(opts, "has already been taken")
+    message = constraint_message(opts, "has already been taken")
     match_type = Keyword.get(opts, :match, :exact)
     error_key = Keyword.get(opts, :error_key, first_field)
 
@@ -3777,7 +3859,7 @@ defmodule Ecto.Changeset do
   def foreign_key_constraint(changeset, field, opts \\ []) do
     name = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_fkey"
     match_type = Keyword.get(opts, :match, :exact)
-    message = message(opts, "does not exist")
+    message = constraint_message(opts, "does not exist")
 
     add_constraint(changeset, :foreign_key, name, match_type, field, message, :foreign)
   end
@@ -3835,7 +3917,7 @@ defmodule Ecto.Changeset do
         end
 
     match_type = Keyword.get(opts, :match, :exact)
-    message = message(opts, "does not exist")
+    message = constraint_message(opts, "does not exist")
 
     add_constraint(changeset, :foreign_key, name, match_type, assoc, message, :assoc)
   end
@@ -3891,7 +3973,7 @@ defmodule Ecto.Changeset do
           related: related
         } ->
           {opts[:name] || "#{related.__schema__(:source)}_#{related_key}_fkey",
-           message(opts, no_assoc_message(cardinality))}
+           constraint_message(opts, no_assoc_message(cardinality))}
 
         other ->
           raise ArgumentError,
@@ -3929,7 +4011,7 @@ defmodule Ecto.Changeset do
     name =
       opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_exclusion"
 
-    message = message(opts, "violates an exclusion constraint")
+    message = constraint_message(opts, "violates an exclusion constraint")
     match_type = Keyword.get(opts, :match, :exact)
 
     add_constraint(changeset, :exclusion, name, match_type, field, message, :exclusion)
