@@ -134,6 +134,17 @@ defmodule Ecto.Repo.Schema do
           end
         end)
 
+      %Ecto.Query.SelectExpr{expr: {:merge, _, _}} ->
+        raise ArgumentError, """
+        the source query given to `insert_all` has selected both `map/2` and
+        a literal map:
+
+          #{inspect query}
+
+        when using `select_merge` with `insert_all`, you must always use literal
+        maps or always use `map/2`. The two cannot be combined.
+        """
+
       _ ->
         raise ArgumentError, """
         cannot generate a fields list for insert_all from the given source query
