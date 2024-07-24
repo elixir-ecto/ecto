@@ -79,7 +79,7 @@ defmodule Ecto.Query.Builder.OrderBy do
     {{quoted_dir!(kind, dir), ast}, params_acc}
   end
 
-  defp do_escape(expr, params_acc, _wtkind, vars, env) do
+  defp do_escape(expr, params_acc, _kind, vars, env) do
     {ast, params_acc} = Builder.escape(expr, :any, params_acc, vars, env)
     {{:asc, ast}, params_acc}
   end
