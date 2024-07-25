@@ -245,7 +245,7 @@ defimpl Inspect, for: Ecto.Query do
   @doc false
   def expr(expr, names, part) do
     expr
-    |> Macro.traverse(:ok, &{prewalk(&1), &2}, &{postwalk(&1, names, part), &2})
+    |> Macro.traverse(:ok, &{prewalk(&1, names), &2}, &{postwalk(&1, names, part), &2})
     |> elem(0)
     |> macro_to_string()
   end
@@ -253,15 +253,19 @@ defimpl Inspect, for: Ecto.Query do
   defp macro_to_string(expr), do: Macro.to_string(expr)
 
   # Tagged values
-  defp prewalk(%Ecto.Query.Tagged{value: value, tag: nil}) do
+  defp prewalk(%Ecto.Query.Tagged{value: value, tag: nil}, _) do
     value
   end
 
-  defp prewalk(%Ecto.Query.Tagged{value: value, tag: tag}) do
+  defp prewalk(%Ecto.Query.Tagged{value: value, tag: tag}, _) do
     {:type, [], [value, tag]}
   end
 
-  defp prewalk(node) do
+  defp prewalk({{:., dot_meta, [{:&, _, [ix]}, field]}, meta, []}, names) do
+    {{:., dot_meta, [binding(names, ix), field]}, meta, []}
+  end
+
+  defp prewalk(node, _) do
     node
   end
 

@@ -477,6 +477,9 @@ defmodule Ecto.Query.InspectTest do
 
     assert i(from(p in Post, select: merge(p, %{foo: p.foo}))) ==
              ~s"from p0 in Inspect.Post, select: merge(p0, %{foo: p0.foo})"
+
+    assert i(from(p in Post, select: %{title: p.title}, select_merge: map(p, [:visits]))) ==
+             ~s"from p0 in Inspect.Post, select: merge(%{title: p0.title}, map(p0, [:visits]))"
   end
 
   test "select after planner" do
