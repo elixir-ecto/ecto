@@ -50,7 +50,7 @@ defmodule Ecto.Adapter.Queryable do
   Commands invoked to prepare a query.
 
   It is used on `c:Ecto.Repo.all/2`, `c:Ecto.Repo.update_all/3`,
-  and `c:Ecto.Repo.delete_all/2`. If returns a tuple, saying if
+  and `c:Ecto.Repo.delete_all/2`. It returns a tuple, indicating if
   this query can be cached or not, and the `prepared` query.
   The `prepared` query is any term that will be passed to the
   adapter's `c:execute/5`.

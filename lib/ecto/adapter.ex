@@ -45,7 +45,7 @@ defmodule Ecto.Adapter do
   calls to the datastore to share cache information:
 
       Repo.checkout(fn ->
-        for _ <- 100 do
+        for _ <- 1..100 do
           Repo.insert!(%Post{})
         end
       end)

@@ -24,7 +24,7 @@ defmodule Ecto.Schema.Loader do
   @doc """
   Loads data coming from the user/embeds into schema.
 
-  Assumes data does not all belongs to schema/struct
+  Assumes data does not all belong to schema/struct
   and that it may also require source-based renaming.
   """
   def unsafe_load(schema, data, loader) do
@@ -36,7 +36,7 @@ defmodule Ecto.Schema.Loader do
   @doc """
   Loads data coming from the user/embeds into struct and types.
 
-  Assumes data does not all belongs to schema/struct
+  Assumes data does not all belong to schema/struct
   and that it may also require source-based renaming.
   """
   def unsafe_load(struct, types, map, loader) when is_map(map) do

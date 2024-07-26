@@ -196,7 +196,7 @@ defmodule Ecto.Repo.SupervisorTest do
 
       for key <- ["timeout", "pool_size", "idle_interval"] do
         assert_raise Ecto.InvalidURLError,
-                     ~r"can not parse value `not_an_int` for parameter `#{key}` as an integer",
+                     ~r"cannot parse value `not_an_int` for parameter `#{key}` as an integer",
                      fn ->
                        parse_url("ecto://eric:it+й@host:12345/mydb?#{key}=not_an_int")
                      end
