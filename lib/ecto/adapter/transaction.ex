@@ -9,7 +9,7 @@ defmodule Ecto.Adapter.Transaction do
   Runs the given function inside a transaction.
 
   Returns `{:ok, value}` if the transaction was successful where `value`
-  is the value return by the function or `{:error, value}` if the transaction
+  is the value returned by the function or `{:error, value}` if the transaction
   was rolled back where `value` is the value given to `rollback/1`.
   """
   @callback transaction(adapter_meta, options :: Keyword.t(), function :: fun) ::

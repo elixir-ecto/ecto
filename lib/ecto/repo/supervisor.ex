@@ -153,7 +153,7 @@ defmodule Ecto.Repo.Supervisor do
       _ ->
         raise Ecto.InvalidURLError,
           url: url,
-          message: "can not parse value `#{value}` for parameter `#{key}` as an integer"
+          message: "cannot parse value `#{value}` for parameter `#{key}` as an integer"
     end
   end
 

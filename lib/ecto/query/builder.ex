@@ -1089,7 +1089,7 @@ defmodule Ecto.Query.Builder do
 
   @doc """
   Checks if the field is an atom at compilation time or
-  delegate the check to runtime for interpolation.
+  delegates the check to runtime for interpolation.
   """
   def quoted_atom!({:^, _, [expr]}, used_ref),
     do: quote(do: Ecto.Query.Builder.atom!(unquote(expr), unquote(used_ref)))

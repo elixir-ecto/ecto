@@ -29,7 +29,7 @@ if Code.ensure_loaded?(Jason.Encoder) do
       exposed externally.
 
       You can either map the schemas to remove the :__meta__ field before \
-      encoding to JSON, or explicit list the JSON fields in your schema:
+      encoding to JSON, or explicitly list the JSON fields in your schema:
 
           defmodule #{inspect(schema)} do
             # ...

@@ -105,7 +105,7 @@ defmodule Ecto.Query.Builder.OrderBy do
   end
 
   @doc """
-  Called by at runtime to verify the direction.
+  Called at runtime to verify the direction.
   """
   def dir!(_kind, dir) when dir in @directions,
     do: dir

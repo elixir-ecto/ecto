@@ -24,7 +24,7 @@ defmodule Ecto.UUID do
 
   If `uuid` is neither of these, `:error` will be returned.
 
-  Since both binaries and strings are represent as binaries, this means some
+  Since both binaries and strings are represented as binaries, this means some
   strings you may not expect are actually also valid UUIDs in their binary form
   and so will be casted into their string form.
 

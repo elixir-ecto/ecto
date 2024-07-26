@@ -159,7 +159,7 @@ defmodule Ecto.InvalidURLError do
   def exception(opts) do
     url = Keyword.fetch!(opts, :url)
     msg = Keyword.fetch!(opts, :message)
-    msg = "invalid url #{url}, #{msg}. The parsed URL is: #{inspect(URI.parse(url))}"
+    msg = "invalid URL #{url}, #{msg}. The parsed URL is: #{inspect(URI.parse(url))}"
     %__MODULE__{message: msg, url: url}
   end
 end
