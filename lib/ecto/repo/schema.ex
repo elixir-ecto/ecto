@@ -116,6 +116,19 @@ defmodule Ecto.Repo.Schema do
     end
 
     header = case query.select do
+      %Ecto.Query.SelectExpr{expr: {:%{}, [], [{:|, _, [{:&, _, [_]}, args]}]}, fields: fields} ->
+        select_fields = for {{:., _, [{:&, _, [_ix]}, field]}, [], []} <- fields, do: field
+        update_fields = Keyword.keys(args)
+
+        select_fields ++ update_fields
+        |> Enum.map(fn field ->
+          case dumper do
+            %{^field => {source, _, false}} -> source
+            %{} -> raise ArgumentError, "cannot select unwritable field `#{field}` for insert_all"
+            nil -> field
+          end
+        end)
+
       %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}} ->
         Enum.map(args, fn {field, _} ->
           case dumper do
@@ -127,6 +140,15 @@ defmodule Ecto.Repo.Schema do
 
       %Ecto.Query.SelectExpr{take: %{^ix => {_fun, fields}}} ->
         Enum.map(fields, fn field ->
+          case dumper do
+            %{^field => {source, _, false}} -> source
+            %{} -> raise ArgumentError, "cannot select unwritable field `#{field}` for insert_all"
+            nil -> field
+          end
+        end)
+
+      %Ecto.Query.SelectExpr{expr: {:&, _, [_ix]}, fields: fields} ->
+        Enum.map(fields, fn {{:., _, [{:&, _, [_ix]}, field]}, [], []} ->
           case dumper do
             %{^field => {source, _, false}} -> source
             %{} -> raise ArgumentError, "cannot select unwritable field `#{field}` for insert_all"
