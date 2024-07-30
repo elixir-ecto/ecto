@@ -1767,6 +1767,32 @@ defmodule Ecto.Repo do
   inserting a struct with associations and using the `:on_conflict` option
   at the same time is not recommended, as Ecto will be unable to actually
   track the proper status of the association.
+
+  ## Advanced Upserts
+
+  Using an `Ecto.Query` for `:on_conflict` can allow us to use more advanced
+  database features. For example, PostgreSQL supports conditional upserts like
+  `DO UPDATE SET title = EXCLUDED.title, version = EXCLUDED.version
+  WHERE EXCLUDED.version > post.version`.
+  This means that the title and version will be updated only if the proposed
+  row has a greater version value than the existing row.
+
+  Ecto can support this as follows:
+
+      conflict_query =
+        from(p in Post,
+          update: [set: [
+            title: fragment("EXCLUDED.title"),
+            version: fragment("EXCLUDED.version")
+            ]],
+          where: fragment("EXCLUDED.version > ?", p.version)
+        )
+
+      MyRepo.insert(
+        %Post{id: 1, title: "Ecto Upserts (Dance Remix)", version: 2},
+        conflict_target: [:id],
+        on_conflict: conflict_query
+      )
   """
   @doc group: "Schema API"
   @callback insert(
