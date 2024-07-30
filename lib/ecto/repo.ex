@@ -1550,12 +1550,15 @@ defmodule Ecto.Repo do
 
       conflict_query =
         from(p in Post,
-          update: [set: [title: fragment("EXCLUDED.title")]],
+          update: [set: [
+            title: fragment("EXCLUDED.title"),
+            version: fragment("EXCLUDED.version")
+            ]],
           where: fragment("EXCLUDED.version > ?", p.version)
         )
 
       MyRepo.insert(
-        %Post{id: 1, title: "Hi", version: 2},
+        %Post{id: 1, title: "Ecto Upserts (Dance Remix)", version: 2},
         conflict_target: [:id],
         on_conflict: conflict_query
       )
