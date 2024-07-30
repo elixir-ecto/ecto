@@ -1540,7 +1540,7 @@ defmodule Ecto.Repo do
 
   ## Advanced Upserts
 
-  Using an `Ecto.Query` for `on_conflict` can allow us to use more advanced
+  Using an `Ecto.Query` for `:on_conflict` can allow us to use more advanced
   database features. For example, PostgreSQL supports conditional upserts like
   `DO UPDATE SET title = EXCLUDED.title, version = EXCLUDED.version
   WHERE EXCLUDED.version > post.version`.
