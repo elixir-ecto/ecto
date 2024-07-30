@@ -1542,9 +1542,10 @@ defmodule Ecto.Repo do
 
   Using an `Ecto.Query` for `on_conflict` can allow us to use more advanced
   database features. For example, PostgreSQL supports conditional upserts like
-  `DO UPDATE SET title = EXCLUDED.title WHERE EXCLUDED.version > post.version`.
-  This means that the title will be updated only if the proposed row has a
-  greater version value than the existing row.
+  `DO UPDATE SET title = EXCLUDED.title, version = EXCLUDED.version
+  WHERE EXCLUDED.version > post.version`.
+  This means that the title and version will be updated only if the proposed
+  row has a greater version value than the existing row.
 
   Ecto can support this as follows:
 
