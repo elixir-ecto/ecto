@@ -106,31 +106,6 @@ defmodule Ecto.Integration.Comment do
   end
 end
 
-defmodule Ecto.Integration.Comment2 do
-  @moduledoc """
-  This module is used to test:
-
-    * Optimistic lock
-    * Relationships
-    * Dependent callbacks
-
-  """
-  use Ecto.Integration.Schema
-
-  schema "comments2" do
-    field :text, :string, source: :text2
-    field :lock_version, :integer, default: 1
-    belongs_to :post, Ecto.Integration.Post
-    belongs_to :author, Ecto.Integration.User
-    has_one :post_permalink, through: [:post, :permalink]
-    has_one :author_permalink, through: [:author, :permalink]
-  end
-
-  def changeset(schema, params) do
-    Ecto.Changeset.cast(schema, params, [:text])
-  end
-end
-
 defmodule Ecto.Integration.Permalink do
   @moduledoc """
   This module is used to test:
