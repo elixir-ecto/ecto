@@ -74,9 +74,9 @@ defmodule Ecto.Query.Builder.Select do
 
   # Map
   defp escape({:%{}, _, [{:|, _, [data, pairs]}]}, params_acc, vars, env) do
-    {data, params_acc} = escape(data, params_acc, vars, env)
-    {pairs, params_acc} = escape_pairs(pairs, params_acc, vars, env)
-    {{:{}, [], [:%{}, [], [{:{}, [], [:|, [], [data, pairs]]}]]}, params_acc}
+    {escaped_data, params_acc} = escape(data, params_acc, vars, env)
+    {pairs, params_acc} = escape_pairs(pairs, data, params_acc, vars, env)
+    {{:{}, [], [:%{}, [], [{:{}, [], [:|, [], [escaped_data, pairs]]}]]}, params_acc}
   end
 
   # Merge
@@ -93,7 +93,7 @@ defmodule Ecto.Query.Builder.Select do
 
   # Map
   defp escape({:%{}, _, pairs}, params_acc, vars, env) do
-    {pairs, params_acc} = escape_pairs(pairs, params_acc, vars, env)
+    {pairs, params_acc} = escape_pairs(pairs, nil, params_acc, vars, env)
     {{:{}, [], [:%{}, [], pairs]}, params_acc}
   end
 
@@ -128,13 +128,20 @@ defmodule Ecto.Query.Builder.Select do
     escape(expr, params_acc, vars, env)
   end
 
-  defp escape_pairs(pairs, params_acc, vars, env) do
+  defp escape_pairs(pairs, update_data, params_acc, vars, env) do
     Enum.map_reduce(pairs, params_acc, fn {k, v}, acc ->
+      v = tag_update_param(update_data, k, v)
       {k, acc} = escape_key(k, acc, vars, env)
       {v, acc} = escape(v, acc, vars, env)
       {{k, v}, acc}
     end)
   end
+
+  defp tag_update_param({var, _, context}, field, {:^, _,[_]} = param) when is_atom(var) and is_atom(context) do
+    {:type, [], [param, {{:., [], [{var, [], context}, field]}, [], []}]}
+  end
+
+  defp tag_update_param(_, _, value), do: value
 
   defp escape_key(k, params_acc, _vars, _env) when is_atom(k) do
     {k, params_acc}

@@ -1461,6 +1461,12 @@ defmodule Ecto.Integration.RepoTest do
       assert [%Post{title: "new title", visits: 13}] =
         TestRepo.all(from p in Post, select: %Post{p | title: "new title"})
 
+      assert [%Post{:title => "1", visits: -1}] =
+             TestRepo.all(from p in Post, select: %{p | visits: ^"-1"})
+
+      assert [%Post{title: "1", visits: -1}] =
+        TestRepo.all(from p in Post, select: %Post{p | visits: ^"-1"})
+
       assert_raise KeyError, fn ->
         TestRepo.all(from p in Post, select: %{p | unknown: "new title"})
       end
