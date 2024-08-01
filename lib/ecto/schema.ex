@@ -863,8 +863,6 @@ defmodule Ecto.Schema do
       whenever the `:comments` associations is preloaded,
       the comments will be ordered by the `:content` field.
       See `Ecto.Query.order_by/3` to learn more about ordering expressions.
-      See [many_to_many/3 preload order](#many_to_many/3-preload-order) to learn how
-      this option can be utilized.
 
   ## Examples
 
