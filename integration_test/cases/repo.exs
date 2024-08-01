@@ -969,6 +969,52 @@ defmodule Ecto.Integration.RepoTest do
       source = from p in Permalink, select: %{url: p.title, post_id: ^post_id}
       assert {1, _} = TestRepo.insert_all(Permalink, source)
     end
+
+    @tag :upsert_all
+    @tag :with_conflict_target
+    @tag :returning
+    test "insert_all with query and source" do
+      {:ok, %Comment{id: id, text: text}} = TestRepo.insert(%Comment{text: "comment1_text"})
+      source = from c in Comment, select: c, where: c.id == ^id
+
+      assert {1, [%Comment{id: ^id, text: ^text}]} =
+               TestRepo.insert_all(Comment, source,
+                 conflict_target: [:id],
+                 on_conflict: :replace_all,
+                 returning: true
+               )
+    end
+
+    @tag :upsert_all
+    @tag :with_conflict_target
+    @tag :returning
+    test "insert_all with query and source with update syntax" do
+      {:ok, %Comment{id: id, text: text, lock_version: version}} =
+        TestRepo.insert(%Comment{text: "comment1_text", lock_version: 1})
+
+      # select param
+      new_lock_version = version + 1
+
+      source =
+        from c in Comment, select: %{c | lock_version: ^new_lock_version}, where: c.id == ^id
+
+      assert {1, [%Comment{lock_version: ^new_lock_version, text: ^text}]} =
+               TestRepo.insert_all(Comment, source,
+                 conflict_target: [:id],
+                 on_conflict: :replace_all,
+                 returning: true
+               )
+
+      # select literal
+      source = from c in Comment, select: %{c | lock_version: 2}, where: c.id == ^id
+
+      assert {1, [%Comment{lock_version: 2, text: ^text}]} =
+               TestRepo.insert_all(Comment, source,
+                 conflict_target: [:id],
+                 on_conflict: :replace_all,
+                 returning: true
+               )
+    end
   end
 
   @tag :invalid_prefix
