@@ -856,12 +856,15 @@ defmodule Ecto.Schema do
     * `:where` - A filter for the association. See "Filtering associations" below.
       It does not apply to `:through` associations.
 
-    * `:preload_order` - Sets the default `order_by` of the association.
-      It is used when the association is preloaded.
+    * `:preload_order` - Sets the default `order_by` when preloading the association.
+      It may be a keyword list/list of fields or an MFA tuple, such as `{Mod, fun, []}`.
+      Both cases must resolve to a valid `order_by` expression.
       For example, if you set `Post.has_many :comments, preload_order: [asc: :content]`,
       whenever the `:comments` associations is preloaded,
       the comments will be ordered by the `:content` field.
-      See `Ecto.Query.order_by/3` for more examples.
+      See `Ecto.Query.order_by/3` to learn more about ordering expressions.
+      See the [many_to_many/3 preload order](#many_to_many/3-preload-order) section below to learn how
+      this option can be utilized.
 
   ## Examples
 
