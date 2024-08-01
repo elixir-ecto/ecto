@@ -1035,6 +1035,7 @@ defmodule Ecto.Schema do
   """
   defmacro has_many(name, schema, opts \\ []) do
     schema = expand_literals(schema, __CALLER__)
+    opts = expand_literals(opts, __CALLER__)
 
     quote do
       Ecto.Schema.__has_many__(__MODULE__, unquote(name), unquote(schema), unquote(opts))
