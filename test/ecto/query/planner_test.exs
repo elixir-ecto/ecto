@@ -166,7 +166,7 @@ defmodule Ecto.Query.PlannerTest do
 
   defp select_fields(fields, ix) do
     for field <- fields do
-      {{:., [], [{:&, [], [ix]}, field]}, [], []}
+      {{:., [read_only: false], [{:&, [], [ix]}, field]}, [], []}
     end
   end
 
@@ -1863,7 +1863,7 @@ defmodule Ecto.Query.PlannerTest do
     start_param_ix = 0
     native_types = %{bid: :uuid, num: :integer}
     types_kw = Enum.map(types, fn {field, _} -> {field, native_types[field]} end)
-    field_ast = Enum.map(types, fn {field, _} -> {{:., [], [{:&, [], [0]}, field]}, [], []} end)
+    field_ast = Enum.map(types, fn {field, _} -> {{:., [read_only: false], [{:&, [], [0]}, field]}, [], []} end)
 
     assert q.from.source == {:values, [], [types_kw, start_param_ix, length(values)]}
     assert q.select.fields == field_ast
@@ -1881,7 +1881,7 @@ defmodule Ecto.Query.PlannerTest do
     start_param_ix = 1
     native_types = %{bid: :uuid, num: :integer}
     types_kw = Enum.map(types, fn {field, _} -> {field, native_types[field]} end)
-    field_ast = Enum.map(types, fn {field, _} -> {{:., [], [{:&, [], [1]}, field]}, [], []} end)
+    field_ast = Enum.map(types, fn {field, _} -> {{:., [read_only: false], [{:&, [], [1]}, field]}, [], []} end)
     [join] = q.joins
 
     assert join.source == {:values, [], [types_kw, start_param_ix, length(values)]}
@@ -2672,8 +2672,8 @@ defmodule Ecto.Query.PlannerTest do
       query = "schema" |> select([s], %{x1: selected_as(s.x, :integer), x2: s.x})
       %{select: select} = from(q in subquery(query)) |> normalize()
 
-      field1 = {{:., [], [{:&, [], [0]}, :integer]}, [], []}
-      field2 = {{:., [], [{:&, [], [0]}, :x2]}, [], []}
+      field1 = {{:., [read_only: false], [{:&, [], [0]}, :integer]}, [], []}
+      field2 = {{:., [read_only: false], [{:&, [], [0]}, :x2]}, [], []}
       assert [^field1, ^field2] = select.fields
     end
 
@@ -2682,8 +2682,8 @@ defmodule Ecto.Query.PlannerTest do
       s2 = from s in subquery(s1), select: %{y1: selected_as(s.integer, :integer2), y2: s.x2}
       %{select: select} = from(q in subquery(s2)) |> normalize()
 
-      field1 = {{:., [], [{:&, [], [0]}, :integer2]}, [], []}
-      field2 = {{:., [], [{:&, [], [0]}, :y2]}, [], []}
+      field1 = {{:., [read_only: false], [{:&, [], [0]}, :integer2]}, [], []}
+      field2 = {{:., [read_only: false], [{:&, [], [0]}, :y2]}, [], []}
       assert [^field1, ^field2] = select.fields
     end
 

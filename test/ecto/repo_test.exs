@@ -160,6 +160,14 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  defmodule MySchemaReadOnly do
+    use Ecto.Schema
+
+    schema "my_schema" do
+      field :x, :string, read_only: true
+    end
+  end
+
   test "defines child_spec/1" do
     assert TestRepo.child_spec([]) == %{
              id: TestRepo,
@@ -621,7 +629,7 @@ defmodule Ecto.RepoTest do
       end)
     end
 
-    test "takes query as datasource" do
+    test "takes query selecting on map" do
       import Ecto.Query
 
       threshold = "ten"
@@ -641,7 +649,7 @@ defmodule Ecto.RepoTest do
       assert ["one", "two", "ten"] = params
     end
 
-    test "takes query as datasource with literals" do
+    test "takes query selecting on map with literals" do
       threshold = "ten"
 
       query =
@@ -660,7 +668,7 @@ defmodule Ecto.RepoTest do
       assert ["ten"] = params
     end
 
-    test "takes query selecting on struct" do
+    test "takes query selecting on struct/2" do
       query =
         from s in MySchema,
           select: struct(s, [:x, :y])
@@ -670,7 +678,7 @@ defmodule Ecto.RepoTest do
       assert_received {:insert_all, %{source: "my_schema"}, {%Ecto.Query{}, _params}}
     end
 
-    test "takes query selecting on map" do
+    test "takes query selecting on map/2" do
       query =
         from s in MySchema,
           select: map(s, [:x, :y])
@@ -678,6 +686,86 @@ defmodule Ecto.RepoTest do
       TestRepo.insert_all(MySchema, query)
 
       assert_received {:insert_all, %{source: "my_schema"}, {%Ecto.Query{}, _params}}
+    end
+
+    test "takes query selecting on source" do
+      query = from s in MySchema, select: s
+      TestRepo.insert_all(MySchema, query)
+
+      assert_received {:insert_all, %{source: "my_schema", header: header}, {%Ecto.Query{}, _params}}
+      assert header == [:id, :x, :yyy, :z, :array, :map]
+    end
+
+    test "takes query selecting on source with join" do
+      query = from p in MyParent, join: a in MySchemaWithAssoc, on: true, select: a
+      TestRepo.insert_all(MySchemaWithAssoc, query)
+
+      assert_received {:insert_all, %{source: "my_schema", header: header}, {%Ecto.Query{}, _params}}
+      assert header == [:id, :n, :parent_id]
+    end
+
+    test "takes query selecting on source with literal update" do
+      query = from s in MySchema, select: %{s | x: "x"}
+      TestRepo.insert_all(MySchema, query)
+
+      assert_received {:insert_all, %{source: "my_schema", header: header}, {%Ecto.Query{} = query, _params}}
+
+      source_fields = [:id, :yyy, :z, :array, :map]
+      update_fields = [:x]
+      update_values = ["x"]
+
+      assert header == source_fields ++ update_fields
+      assert query.select.fields == select_fields(source_fields, 0) ++ update_values
+    end
+
+    test "takes query selecting on source with dynamic update" do
+      query = from s in MySchema, select: %{s | x: ^"x"}
+      TestRepo.insert_all(MySchema, query)
+
+      assert_received {:insert_all, %{source: "my_schema", header: header}, {%Ecto.Query{} = query, _params}}
+
+      source_fields = [:id, :yyy, :z, :array, :map]
+      update_fields = [:x]
+      update_values = [%Ecto.Query.Tagged{tag: :string, type: :string, value: {:^, [], [0]}}]
+
+      assert header == source_fields ++ update_fields
+      assert query.select.fields == select_fields(source_fields, 0) ++ update_values
+    end
+
+    test "takes query selecting on source with join column update" do
+      query = from p in MyParent, join: a in MySchemaWithAssoc, on: true, select: %{p | id: a.parent_id}
+      TestRepo.insert_all(MySchemaWithAssoc, query)
+
+      assert_received {:insert_all, %{source: "my_schema", header: header}, {%Ecto.Query{} = query, _params}}
+
+      source_fields = [:n]
+      update_fields = [:id]
+      update_values = [{{:., [type: :id], [{:&, [], [1]}, :parent_id]}, [], []}]
+
+      assert header == source_fields ++ update_fields
+      assert query.select.fields == select_fields(source_fields, 0) ++ update_values
+    end
+
+    test "takes query selecting on map/2 with update" do
+      query = from s in MySchema, select: %{map(s, [:id, :x, :z]) | x: "x"}
+      TestRepo.insert_all(MySchema, query)
+
+      assert_received {:insert_all, %{source: "my_schema", header: header}, {%Ecto.Query{} = query, _params}}
+
+      source_fields = [:id, :z]
+      update_fields = [:x]
+      update_values = ["x"]
+
+      assert header == source_fields ++ update_fields
+      assert query.select.fields == select_fields(source_fields, 0) ++ update_values
+    end
+
+    test "raises with query selecting read only fields" do
+      msg = ~r"cannot select unwritable field"
+
+      assert_raise ArgumentError, msg, fn ->
+        TestRepo.insert_all(MySchemaReadOnly, from(r in MySchemaReadOnly, select: r))
+      end
     end
 
     test "raises when a bad query is given as source" do
@@ -1999,6 +2087,12 @@ defmodule Ecto.RepoTest do
       assert Ecto.TestRepo in Ecto.Repo.all_running()
       pid = start_supervised!({Ecto.TestRepo, name: nil})
       assert pid in Ecto.Repo.all_running()
+    end
+  end
+
+  defp select_fields(fields, ix) do
+    for field <- fields do
+      {{:., [read_only: false], [{:&, [], [ix]}, field]}, [], []}
     end
   end
 end
