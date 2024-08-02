@@ -969,6 +969,7 @@ defmodule Ecto.Integration.RepoTest do
       source = from p in Permalink, select: %{url: p.title, post_id: ^post_id}
       assert {1, _} = TestRepo.insert_all(Permalink, source)
     end
+  end
 
   @tag :invalid_prefix
   @tag :insert_cell_wise_defaults
