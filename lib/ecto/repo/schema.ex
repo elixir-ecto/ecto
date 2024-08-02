@@ -116,8 +116,8 @@ defmodule Ecto.Repo.Schema do
     end
 
     header = case query.select do
-      %Ecto.Query.SelectExpr{expr: {:%{}, [], [{:|, _, [{:&, _, [_]}, args]}]}, fields: fields} ->
-        select_fields = for {{:., _, [{:&, _, [_ix]}, field]}, [], []} <- fields, do: field
+      %Ecto.Query.SelectExpr{expr: {:%{}, [], [{:|, _, [{:&, _, [ix]}, args]}]}, fields: fields} ->
+        select_fields = for {{:., _, [{:&, _, [^ix]}, field]}, [], []} <- fields, do: field
         update_fields = Keyword.keys(args)
 
         select_fields ++ update_fields

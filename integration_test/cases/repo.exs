@@ -974,11 +974,22 @@ defmodule Ecto.Integration.RepoTest do
     @tag :with_conflict_target
     @tag :returning
     test "insert_all with query and source" do
-      {:ok, %Comment{id: id, text: text}} = TestRepo.insert(%Comment{text: "comment1_text"})
-      source = from c in Comment, select: c, where: c.id == ^id
+      {:ok, %User{id: u_id}} = TestRepo.insert(%User{})
+      {:ok, %Comment{id: c_id}} = TestRepo.insert(%Comment{author_id: u_id})
+      source = from c in Comment, select: c, where: c.id == ^c_id
 
-      assert {1, [%Comment{id: ^id, text: ^text}]} =
+      assert {1, [%Comment{id: ^c_id}]} =
                TestRepo.insert_all(Comment, source,
+                 conflict_target: [:id],
+                 on_conflict: :replace_all,
+                 returning: true
+               )
+
+      source =
+        from c in Comment, join: u in User, on: c.author_id == u.id, select: u, where: c.id == ^c_id
+
+      assert {1, [%User{id: ^u_id}]} =
+               TestRepo.insert_all(User, source,
                  conflict_target: [:id],
                  on_conflict: :replace_all,
                  returning: true
@@ -989,14 +1000,16 @@ defmodule Ecto.Integration.RepoTest do
     @tag :with_conflict_target
     @tag :returning
     test "insert_all with query and source with update syntax" do
-      {:ok, %Comment{id: id, text: text, lock_version: version}} =
-        TestRepo.insert(%Comment{text: "comment1_text", lock_version: 1})
+      {:ok, %Post{id: p_id, visits: visits}} = TestRepo.insert(%Post{visits: 10})
+
+      {:ok, %Comment{id: c_id, text: text, lock_version: version}} =
+        TestRepo.insert(%Comment{text: "comment1_text", lock_version: 1, post_id: p_id})
 
       # select param
       new_lock_version = version + 1
 
       source =
-        from c in Comment, select: %{c | lock_version: ^new_lock_version}, where: c.id == ^id
+        from c in Comment, select: %{c | lock_version: ^new_lock_version}, where: c.id == ^c_id
 
       assert {1, [%Comment{lock_version: ^new_lock_version, text: ^text}]} =
                TestRepo.insert_all(Comment, source,
@@ -1006,9 +1019,24 @@ defmodule Ecto.Integration.RepoTest do
                )
 
       # select literal
-      source = from c in Comment, select: %{c | lock_version: 2}, where: c.id == ^id
+      source = from c in Comment, select: %{c | lock_version: 2}, where: c.id == ^c_id
 
       assert {1, [%Comment{lock_version: 2, text: ^text}]} =
+               TestRepo.insert_all(Comment, source,
+                 conflict_target: [:id],
+                 on_conflict: :replace_all,
+                 returning: true
+               )
+
+      # select another field
+      source =
+        from c in Comment,
+          join: p in Post,
+          on: c.post_id == p.id,
+          select: %{c | lock_version: p.visits},
+          where: c.id == ^c_id
+
+      assert {1, [%Comment{lock_version: ^visits, text: ^text}]} =
                TestRepo.insert_all(Comment, source,
                  conflict_target: [:id],
                  on_conflict: :replace_all,
