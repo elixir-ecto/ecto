@@ -56,7 +56,7 @@ defmodule Ecto.Query.SubqueryTest do
 
   defp select_fields(fields, ix) do
     for field <- fields do
-      {{:., [], [{:&, [], [ix]}, field]}, [], []}
+      {{:., [read_only: false], [{:&, [], [ix]}, field]}, [], []}
     end
   end
 
@@ -386,7 +386,7 @@ defmodule Ecto.Query.SubqueryTest do
     test "keeps field with nil values" do
       query = from p in subquery(from p in Post, select: %{title: nil})
       assert normalize(query).from.source.query.select.fields == [title: nil]
-      assert normalize(query).select.fields == [{{:., [], [{:&, [], [0]}, :title]}, [], []}]
+      assert [{{:., _, [{:&, [], [0]}, :title]}, [], []}] = normalize(query).select.fields
     end
 
     test "with params in from" do
@@ -442,11 +442,11 @@ defmodule Ecto.Query.SubqueryTest do
 
       subquery = from p in Post, select: %{id: p.id, title: p.title}
       query = normalize(from(p in subquery(subquery), select: [:title]))
-      assert query.select.fields == [{{:., [], [{:&, [], [0]}, :title]}, [], []}]
+      assert [{{:., _, [{:&, [], [0]}, :title]}, [], []}] = query.select.fields
 
       subquery = from p in Post, select: %{id: p.id, title: p.title}
       query = normalize(from(p in subquery(subquery), select: map(p, [:title])))
-      assert query.select.fields == [{{:., [], [{:&, [], [0]}, :title]}, [], []}]
+      assert [{{:., _, [{:&, [], [0]}, :title]}, [], []}] = query.select.fields
 
       assert_raise Ecto.QueryError, ~r/it is not possible to return a struct subset of a subquery/, fn ->
         subquery = from p in Post, select: %{id: p.id, title: p.title}
