@@ -521,6 +521,8 @@ defmodule Ecto.Query.API do
   Each field must be given a type or an error is raised. Any type that can be specified in
   a schema may be used.
 
+  Queries using a values list are not cacheable by Ecto.
+
   ## Select example
 
       values = [%{id: 1, text: "abc"}, %{id: 2, text: "xyz"}]

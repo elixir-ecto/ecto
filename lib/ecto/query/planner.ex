@@ -1095,9 +1095,11 @@ defmodule Ecto.Query.Planner do
   defp source_cache(%{source: {bin, schema}, prefix: prefix}, params),
     do: {{bin, schema, schema.__schema__(:hash), prefix}, params}
 
-  defp source_cache(%{source: {kind, _, _} = source, prefix: prefix}, params)
-       when kind in [:fragment, :values],
-       do: {{source, prefix}, params}
+  defp source_cache(%{source: {:fragment, _, _} = source, prefix: prefix}, params),
+    do: {{source, prefix}, params}
+
+  defp source_cache(%{source: {:values, _, _}}, params),
+    do: {:nocache, params}
 
   defp source_cache(%{source: %Ecto.SubQuery{params: inner, cache: key}}, params),
     do: {key, Enum.reverse(inner, params)}

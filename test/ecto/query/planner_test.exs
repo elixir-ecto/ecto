@@ -612,8 +612,6 @@ defmodule Ecto.Query.PlannerTest do
         lock: "foo",
         where: is_nil(nil),
         or_where: is_nil(nil),
-        join: v in values([%{num: 1}, %{num: 10}], %{num: :integer}),
-        on: true,
         join: c in Comment,
         on: true,
         hints: ["join hint"],
@@ -633,7 +631,6 @@ defmodule Ecto.Query.PlannerTest do
              {:where, [{:and, {:is_nil, [], [nil]}}, {:or, {:is_nil, [], [nil]}}]},
              {:join,
               [
-                {:inner, {{:values, [], [[num: :integer], 2]}, nil}, true, []},
                 {:inner, {"comments", Comment, 38_292_156, "world"}, true, ["join hint"]}
               ]},
              {:from, {"posts", Post, 50_009_106, "hello"}, ["hint"]},
@@ -660,6 +657,12 @@ defmodule Ecto.Query.PlannerTest do
       |> distinct(true)
 
     {_, _, key} = query1 |> union_all(^query2) |> Planner.plan(:all, Ecto.TestAdapter)
+    assert key == :nocache
+  end
+
+  test "plan: values lists are uncacheable" do
+    query = from(v in values([%{id: 1}], %{id: :integer}))
+    {_query, _params, key} = Planner.plan(query, :all, Ecto.TestAdapter)
     assert key == :nocache
   end
 
