@@ -120,12 +120,12 @@ defmodule Ecto.Repo.Schema do
     header =
       case query.select do
         %Ecto.Query.SelectExpr{expr: {:%{}, [], [{:|, _, [{:&, _, [ix]}, args]}]}, fields: fields} ->
-          select_fields =
+          unchanged_fields =
             for {{:., _, [{:&, _, [^ix]}, _]}, [], []} = expr <- fields,
                 do: insert_all_select_dump!(expr)
 
-          update_fields = args |> Keyword.keys() |> Enum.map(&insert_all_select_dump!(&1, dumper))
-          select_fields ++ update_fields
+          updated_fields = args |> Keyword.keys() |> Enum.map(&insert_all_select_dump!(&1, dumper))
+          unchanged_fields ++ updated_fields
 
         %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}} ->
           Enum.map(args, fn {field, _} -> insert_all_select_dump!(field, dumper) end)
