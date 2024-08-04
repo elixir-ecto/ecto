@@ -710,12 +710,12 @@ defmodule Ecto.RepoTest do
 
       assert_received {:insert_all, %{source: "my_schema", header: header}, {%Ecto.Query{} = query, _params}}
 
-      source_fields = [:id, :yyy, :z, :array, :map]
-      update_fields = [:x]
-      update_values = ["x"]
+      unchanged_fields = [:id, :yyy, :z, :array, :map]
+      updated_fields = [:x]
+      updated_values = ["x"]
 
-      assert header == source_fields ++ update_fields
-      assert query.select.fields == select_fields(source_fields, 0) ++ update_values
+      assert header == unchanged_fields ++ updated_fields
+      assert query.select.fields == select_fields(unchanged_fields, 0) ++ updated_values
     end
 
     test "takes query selecting on source with dynamic update" do
@@ -724,12 +724,12 @@ defmodule Ecto.RepoTest do
 
       assert_received {:insert_all, %{source: "my_schema", header: header}, {%Ecto.Query{} = query, _params}}
 
-      source_fields = [:id, :yyy, :z, :array, :map]
-      update_fields = [:x]
-      update_values = [%Ecto.Query.Tagged{tag: :string, type: :string, value: {:^, [], [0]}}]
+      unchanged_fields = [:id, :yyy, :z, :array, :map]
+      updated_fields = [:x]
+      updated_values = [%Ecto.Query.Tagged{tag: :string, type: :string, value: {:^, [], [0]}}]
 
-      assert header == source_fields ++ update_fields
-      assert query.select.fields == select_fields(source_fields, 0) ++ update_values
+      assert header == unchanged_fields ++ updated_fields
+      assert query.select.fields == select_fields(unchanged_fields, 0) ++ updated_values
     end
 
     test "takes query selecting on source with join column update" do
@@ -738,12 +738,12 @@ defmodule Ecto.RepoTest do
 
       assert_received {:insert_all, %{source: "my_schema", header: header}, {%Ecto.Query{} = query, _params}}
 
-      source_fields = [:n]
-      update_fields = [:id]
-      update_values = [{{:., [type: :id], [{:&, [], [1]}, :parent_id]}, [], []}]
+      unchanged_fields = [:n]
+      updated_fields = [:id]
+      updated_values = [{{:., [type: :id], [{:&, [], [1]}, :parent_id]}, [], []}]
 
-      assert header == source_fields ++ update_fields
-      assert query.select.fields == select_fields(source_fields, 0) ++ update_values
+      assert header == unchanged_fields ++ updated_fields
+      assert query.select.fields == select_fields(unchanged_fields, 0) ++ updated_values
     end
 
     test "takes query selecting on map/2 with update" do
@@ -752,12 +752,12 @@ defmodule Ecto.RepoTest do
 
       assert_received {:insert_all, %{source: "my_schema", header: header}, {%Ecto.Query{} = query, _params}}
 
-      source_fields = [:id, :z]
-      update_fields = [:x]
-      update_values = ["x"]
+      unchanged_fields = [:id, :z]
+      updated_fields = [:x]
+      updated_values = ["x"]
 
-      assert header == source_fields ++ update_fields
-      assert query.select.fields == select_fields(source_fields, 0) ++ update_values
+      assert header == unchanged_fields ++ updated_fields
+      assert query.select.fields == select_fields(unchanged_fields, 0) ++ updated_values
     end
 
     test "raises with query selecting read only fields" do
