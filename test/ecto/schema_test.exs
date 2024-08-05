@@ -32,6 +32,9 @@ defmodule Ecto.SchemaTest do
     assert Schema.__schema__(:insertable_fields) ==
              [:id, :name, :email, :password, :count, :array, :uuid, :no_query_load, :non_updatable, :comment_id]
 
+    assert Schema.__schema__(:updatable_fields) ==
+             [:id, :name, :email, :password, :count, :array, :uuid, :no_query_load, :comment_id]
+
     assert Schema.__schema__(:virtual_fields) == [:temp]
 
     assert Schema.__schema__(:query_fields) ==
