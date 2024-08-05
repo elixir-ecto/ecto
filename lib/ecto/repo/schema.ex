@@ -120,14 +120,17 @@ defmodule Ecto.Repo.Schema do
     header =
       case query.select do
         %Ecto.Query.SelectExpr{expr: {:%{}, [], [{:|, _, [{:&, _, [ix]}, args]}]}, fields: fields} ->
-          updated_fields =
-            args |> Keyword.keys() |> Enum.map(&insert_all_select_dump!(&1, dumper))
-
-          updated_fields_set = MapSet.new(updated_fields)
+          {updated_fields, updated_set} =
+            args
+            |> Keyword.keys()
+            |> Enum.map_reduce(MapSet.new(), fn field, set ->
+              dumped_field = insert_all_select_dump!(field, dumper)
+              {dumped_field, MapSet.put(set, dumped_field)}
+            end)
 
           unchanged_fields =
             for {{:., _, [{:&, _, [^ix]}, field]}, [], []} = expr <- fields,
-                not MapSet.member?(updated_fields_set, field),
+                not MapSet.member?(updated_set, field),
                 do: insert_all_select_dump!(expr)
 
           unchanged_fields ++ updated_fields
