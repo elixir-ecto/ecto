@@ -748,6 +748,49 @@ defmodule Ecto.RepoTest do
       assert query.select.fields == select_fields(unchanged_fields, 0) ++ updated_values
     end
 
+    test "takes query selecting on source with update from same source" do
+      # no join
+      query = from s in MySchema, select: %{s | x: s.y, y: s.x}
+      TestRepo.insert_all(MySchema, query)
+
+      assert_received {:insert_all, %{source: "my_schema", header: header},
+                       {%Ecto.Query{} = query, _params}}
+
+      unchanged_fields = [:id, :z, :array, :map]
+      updated_fields = [:x, :yyy]
+
+      updated_values = [
+        {{:., [type: :binary], [{:&, [], [0]}, :yyy]}, [], []},
+        {{:., [type: :string], [{:&, [], [0]}, :x]}, [], []}
+      ]
+
+      assert header == unchanged_fields ++ updated_fields
+      assert query.select.fields == select_fields(unchanged_fields, 0) ++ updated_values
+
+      # join
+      query =
+        from s in MySchema,
+          join: a in MySchemaWithAssoc,
+          on: true,
+          select: %{a | n: a.parent_id, parent_id: a.n}
+
+      TestRepo.insert_all(MySchemaWithAssoc, query)
+
+      assert_received {:insert_all, %{source: "my_schema", header: header},
+                       {%Ecto.Query{} = query, _params}}
+
+      unchanged_fields = [:id]
+      updated_fields = [:n, :parent_id]
+
+      updated_values = [
+        {{:., [type: :id], [{:&, [], [1]}, :parent_id]}, [], []},
+        {{:., [type: :integer], [{:&, [], [1]}, :n]}, [], []}
+      ]
+
+      assert header == unchanged_fields ++ updated_fields
+      assert query.select.fields == select_fields(unchanged_fields, 1) ++ updated_values
+    end
+
     test "takes query selecting on map/2 with update" do
       query = from s in MySchema, select: %{map(s, [:id, :x, :z]) | x: "x"}
       TestRepo.insert_all(MySchema, query)
