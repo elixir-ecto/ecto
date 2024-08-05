@@ -2127,7 +2127,8 @@ defmodule Ecto.RepoTest do
       |> Ecto.Changeset.change(%{always: 10, never: 11, insert: 12})
       |> TestRepo.update(returning: true)
 
-      assert_received {:update, %{returning: [:insert, :always, :never, :id]}}
+      assert_received {:update, %{returning: returning}}
+      assert Enum.sort(returning) == [:always, :id, :insert, :never]
     end
 
     test "update_all raises if non-updatable field is set" do
@@ -2149,7 +2150,8 @@ defmodule Ecto.RepoTest do
       |> Ecto.Changeset.change(%{always: 10, never: 11, insert: 12})
       |> TestRepo.insert()
 
-      assert_received {:insert, %{fields: [always: 10, id: 1, insert: 12]}}
+      assert_received {:insert, %{fields: inserted_fields}}
+      assert Enum.sort(inserted_fields) == [always: 10, id: 1, insert: 12]
     end
 
     test "insert with returning" do
@@ -2157,11 +2159,9 @@ defmodule Ecto.RepoTest do
       |> Ecto.Changeset.change(%{always: 10, never: 11, insert: 12})
       |> TestRepo.insert(returning: true)
 
-      assert_received {:insert,
-                       %{
-                         fields: [always: 10, id: 1, insert: 12],
-                         returning: [:insert, :always, :never, :id]
-                       }}
+      assert_received {:insert, %{fields: inserted_fields, returning: returning}}
+      assert Enum.sort(inserted_fields) == [always: 10, id: 1, insert: 12]
+      assert Enum.sort(returning) == [:always, :id, :insert, :never]
     end
 
     test "insert with on_conflict" do
@@ -2189,11 +2189,9 @@ defmodule Ecto.RepoTest do
         returning: true
       )
 
-      assert_received {:insert,
-                       %{
-                         fields: [always: 1, insert: 3],
-                         returning: [:id, :insert, :always, :never]
-                       }}
+      assert_received {:insert, %{fields: inserted_fields, returning: returning}}
+      assert Enum.sort(inserted_fields) == [always: 1, insert: 3]
+      assert Enum.sort(returning) == [:always, :id, :insert, :never]
     end
 
     test "insert_all" do
