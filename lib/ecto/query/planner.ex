@@ -2197,7 +2197,7 @@ defmodule Ecto.Query.Planner do
         {{:source, {source, schema}, prefix || query.prefix, types}, fields}
 
       {{:ok, {_, fields}}, _} ->
-        {{:map, Enum.map(fields, &{&1, {:value, :any}})}, Enum.map(fields, &select_field(&1, ix, false))}
+        {{:map, Enum.map(fields, &{&1, {:value, :any}})}, Enum.map(fields, &select_field(&1, ix, :always))}
 
       {:error, {:fragment, _, _}} ->
         {{:value, :map}, [{:&, [], [ix]}]}
@@ -2207,7 +2207,7 @@ defmodule Ecto.Query.Planner do
 
         dumper =
           types
-          |> Enum.map(fn {field, type} -> {field, {field, type, false}} end)
+          |> Enum.map(fn {field, type} -> {field, {field, type, :always}} end)
           |> Enum.into(%{})
 
         {types, fields} = select_dump(fields, dumper, ix, drop)
@@ -2224,7 +2224,7 @@ defmodule Ecto.Query.Planner do
 
       {:error, %Ecto.SubQuery{select: select}} ->
         fields = subquery_source_fields(select)
-        {select, Enum.map(fields, &select_field(&1, ix, false))}
+        {select, Enum.map(fields, &select_field(&1, ix, :always))}
     end
   end
 
@@ -2233,16 +2233,16 @@ defmodule Ecto.Query.Planner do
     |> Enum.reverse()
     |> Enum.reduce({[], []}, fn
       field, {types, exprs} when is_atom(field) and not is_map_key(drop, field) ->
-        {source, type, read_only?} = Map.get(dumper, field, {field, :any, false})
-        {[{field, type} | types], [select_field(source, ix, read_only?) | exprs]}
+        {source, type, writable} = Map.get(dumper, field, {field, :any, :always})
+        {[{field, type} | types], [select_field(source, ix, writable) | exprs]}
 
       _field, acc ->
         acc
     end)
   end
 
-  defp select_field(field, ix, read_only?) do
-    {{:., [read_only: read_only?], [{:&, [], [ix]}, field]}, [], []}
+  defp select_field(field, ix, writable) do
+    {{:., [writable: writable], [{:&, [], [ix]}, field]}, [], []}
   end
 
   defp get_ix!({:&, _, [ix]} = expr, _kind, query) do
@@ -2609,8 +2609,8 @@ defmodule Ecto.Query.Planner do
             end
 
             case dumper do
-              %{^k => {_, _, false}} -> :ok
-              %{} -> error!(query, "cannot update unwritable field `#{k}`")
+              %{^k => {_, _, :always}} -> :ok
+              %{} -> error!(query, "cannot update non-updatable field `#{inspect(k)}`")
               nil -> :ok
             end
 

@@ -97,7 +97,7 @@ defmodule Ecto.ChangesetTest do
       field :topics, {:array, :string}
       field :seo_metadata, :map
       field :virtual, :string, virtual: true
-      field :read_only, :string, read_only: true
+      field :unwritable, :string, writable: :never
       field :published_at, :naive_datetime
       field :source, :map
       field :permalink, :string, source: :url
@@ -124,7 +124,7 @@ defmodule Ecto.ChangesetTest do
     cast(
       schema,
       params,
-      ~w(id token title author_email body upvotes decimal color topics seo_metadata virtual read_only)a
+      ~w(id token title author_email body upvotes decimal color topics seo_metadata virtual unwritable)a
     )
   end
 
@@ -1173,10 +1173,10 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
     assert changeset.errors == []
 
-    # When read only
+    # When writable is set to non-default value
     changeset =
-      changeset(%{"read_only" => "hello"})
-      |> validate_change(:read_only, fn :read_only, "hello" -> [] end)
+      changeset(%{"unwritable" => "hello"})
+      |> validate_change(:unwritable, fn :unwritable, "hello" -> [] end)
 
     assert changeset.valid?
     assert changeset.errors == []
@@ -3586,7 +3586,7 @@ defmodule Ecto.ChangesetTest do
       field :username, :string
       field :display_name, :string, redact: false
       field :virtual_pass, :string, redact: true, virtual: true
-      field :read_only_pass, :string, redact: true, read_only: true
+      field :unwritable_pass, :string, redact: true, writable: :never
     end
   end
 
@@ -3645,9 +3645,9 @@ defmodule Ecto.ChangesetTest do
       assert inspect(changeset) =~ "**redacted**"
     end
 
-    test "redacts read only fields marked redact: true" do
+    test "redacts unwritable fields marked redact: true" do
       changeset =
-        Ecto.Changeset.cast(%RedactedSchema{}, %{read_only_pass: "hunter2"}, [:read_only_pass])
+        Ecto.Changeset.cast(%RedactedSchema{}, %{unwritable_pass: "hunter2"}, [:unwritable_pass])
 
       refute inspect(changeset) =~ "hunter2"
       assert inspect(changeset) =~ "**redacted**"

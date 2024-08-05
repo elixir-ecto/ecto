@@ -56,7 +56,7 @@ defmodule Ecto.Query.SubqueryTest do
 
   defp select_fields(fields, ix) do
     for field <- fields do
-      {{:., [read_only: false], [{:&, [], [ix]}, field]}, [], []}
+      {{:., [writable: :always], [{:&, [], [ix]}, field]}, [], []}
     end
   end
 
