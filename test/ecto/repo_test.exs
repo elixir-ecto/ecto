@@ -160,11 +160,13 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  defmodule MySchemaReadOnly do
+  defmodule MySchemaWritable do
     use Ecto.Schema
 
     schema "my_schema" do
-      field :x, :string, read_only: true
+      field :never, :integer, writable: :never
+      field :always, :integer, writable: :always
+      field :insert, :integer, writable: :insert
     end
   end
 
@@ -764,7 +766,7 @@ defmodule Ecto.RepoTest do
       msg = ~r"cannot select unwritable field"
 
       assert_raise ArgumentError, msg, fn ->
-        TestRepo.insert_all(MySchemaReadOnly, from(r in MySchemaReadOnly, select: r))
+        TestRepo.insert_all(MySchemaWritable, from(w in MySchemaWritable, select: w))
       end
     end
 
@@ -1746,7 +1748,7 @@ defmodule Ecto.RepoTest do
     end
 
     test "raises on non-existent fields on replace" do
-      msg = "cannot replace unwritable field `:unknown` in :on_conflict option"
+      msg = "cannot replace non-updatable field `:unknown` in :on_conflict option"
 
       assert_raise ArgumentError, msg, fn ->
         TestRepo.insert(
@@ -2090,9 +2092,137 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  describe "writable field option" do
+    test "select" do
+      TestRepo.all(from(w in MySchemaWritable, select: w))
+      assert_receive {:all, query}
+
+      assert query.select.fields == [
+               {{:., [writable: :always], [{:&, [], [0]}, :id]}, [], []},
+               {{:., [writable: :never], [{:&, [], [0]}, :never]}, [], []},
+               {{:., [writable: :always], [{:&, [], [0]}, :always]}, [], []},
+               {{:., [writable: :insert], [{:&, [], [0]}, :insert]}, [], []}
+             ]
+    end
+
+
+    test "update only saves changes for writable: :always" do
+      %MySchemaWritable{id: 1}
+      |> Ecto.Changeset.change(%{always: 10, never: 11, insert: 12})
+      |> TestRepo.update()
+
+      assert_received {:update, %{changes: [always: 10]}}
+    end
+
+    test "update is a no-op when updatable fields are not changed" do
+      %MySchemaWritable{id: 1}
+      |> Ecto.Changeset.change(%{never: "can't update", insert: "can't update either"})
+      |> TestRepo.update()
+
+      refute_received {:update, _meta}
+    end
+
+    test "update with returning" do
+      %MySchemaWritable{id: 1}
+      |> Ecto.Changeset.change(%{always: 10, never: 11, insert: 12})
+      |> TestRepo.update(returning: true)
+
+      assert_received {:update, %{returning: returning}}
+      assert Enum.sort(returning) == [:always, :id, :insert, :never]
+    end
+
+    test "update_all raises if non-updatable field is set" do
+      update_query = from w in MySchemaWritable, update: [set: [never: 10]]
+
+      assert_raise Ecto.QueryError, ~r/cannot update non-updatable field `:never` in query/, fn ->
+        TestRepo.update_all(update_query, [])
+      end
+
+      update_query = from w in MySchemaWritable, update: [set: [insert: 10]]
+
+      assert_raise Ecto.QueryError,  ~r/cannot update non-updatable field `:insert` in query/, fn ->
+        TestRepo.update_all(update_query, [])
+      end
+    end
+
+    test "insert only saves changes for writable: :always/:insert" do
+      %MySchemaWritable{id: 1}
+      |> Ecto.Changeset.change(%{always: 10, never: 11, insert: 12})
+      |> TestRepo.insert()
+
+      assert_received {:insert, %{fields: inserted_fields}}
+      assert Enum.sort(inserted_fields) == [always: 10, id: 1, insert: 12]
+    end
+
+    test "insert with returning" do
+      %MySchemaWritable{id: 1}
+      |> Ecto.Changeset.change(%{always: 10, never: 11, insert: 12})
+      |> TestRepo.insert(returning: true)
+
+      assert_received {:insert, %{fields: inserted_fields, returning: returning}}
+      assert Enum.sort(inserted_fields) == [always: 10, id: 1, insert: 12]
+      assert Enum.sort(returning) == [:always, :id, :insert, :never]
+    end
+
+    test "insert with on_conflict" do
+      # conflict query
+      on_conflict = from w in MySchemaWritable, update: [set: [insert: 10]]
+
+      assert_raise Ecto.QueryError, ~r/cannot update non-updatable field `:insert` in query/, fn ->
+        TestRepo.insert(%MySchemaWritable{}, on_conflict: on_conflict)
+      end
+
+      # conflict keyword
+      assert_raise Ecto.QueryError, ~r/cannot update non-updatable field `:never` in query/, fn ->
+        TestRepo.insert(%MySchemaWritable{}, on_conflict: [set: [never: 10]])
+      end
+
+      # conflict replace
+      assert_raise ArgumentError, ~r/cannot replace non-updatable field `:never` in :on_conflict option/, fn ->
+        TestRepo.insert(%MySchemaWritable{}, on_conflict: {:replace, [:always, :never]})
+      end
+    end
+
+    test "insert with on_conflict = replace_all and returning" do
+      TestRepo.insert!(%MySchemaWritable{always: 1, never: 2, insert: 3},
+        on_conflict: :replace_all,
+        returning: true
+      )
+
+      assert_received {:insert, %{fields: inserted_fields, returning: returning}}
+      assert Enum.sort(inserted_fields) == [always: 1, insert: 3]
+      assert Enum.sort(returning) == [:always, :id, :insert, :never]
+    end
+
+    test "insert_all" do
+      # selecting maps
+      msg = ~r/Unwritable fields, such as virtual and read only fields are not supported./
+
+      assert_raise ArgumentError, msg, fn ->
+        TestRepo.insert_all(MySchemaWritable, [%{always: 1, insert: 3, never: 2}])
+      end
+
+      # selecting individual fields
+      msg = "cannot select unwritable field `:never` for insert_all"
+
+      assert_raise ArgumentError, msg, fn ->
+        query = from w in MySchemaWritable, select: %{always: w.always, insert: w.insert, never: w.insert}
+        TestRepo.insert_all(MySchemaWritable, query)
+      end
+
+      # selecting sources
+      msg = "cannot select unwritable field `:never` for insert_all"
+
+      assert_raise ArgumentError, msg, fn ->
+        query = from w in MySchemaWritable, select: w
+        TestRepo.insert_all(MySchemaWritable, query)
+      end
+    end
+  end
+
   defp select_fields(fields, ix) do
     for field <- fields do
-      {{:., [read_only: false], [{:&, [], [ix]}, field]}, [], []}
+      {{:., [writable: :always], [{:&, [], [ix]}, field]}, [], []}
     end
   end
 end
