@@ -121,9 +121,7 @@ defmodule Ecto.Repo.Schema do
       case query.select do
         %Ecto.Query.SelectExpr{expr: {:%{}, [], [{:|, _, [{:&, _, [ix]}, args]}]}, fields: fields} ->
           {updated_fields, updated_set} =
-            args
-            |> Keyword.keys()
-            |> Enum.map_reduce(MapSet.new(), fn field, set ->
+            Enum.map_reduce(args, MapSet.new(), fn {field, _}, set ->
               dumped_field = insert_all_select_dump!(field, dumper)
               {dumped_field, MapSet.put(set, dumped_field)}
             end)
