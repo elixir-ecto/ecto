@@ -125,7 +125,10 @@ defmodule Ecto.Repo.Schema do
                 do: insert_all_select_dump!(expr)
 
           updated_fields = args |> Keyword.keys() |> Enum.map(&insert_all_select_dump!(&1, dumper))
-          unchanged_fields ++ updated_fields
+          # If the user updates a field with another field from the same source, it will get
+          # moved to the end of `select.fields` but still have the same select expression.
+          # To maintain the order of the fields, we have to de-duplicate and keep the last one.
+          (unchanged_fields ++ updated_fields) |> Enum.reverse() |> Enum.uniq() |> Enum.reverse()
 
         %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}} ->
           Enum.map(args, fn {field, _} -> insert_all_select_dump!(field, dumper) end)
