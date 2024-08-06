@@ -155,7 +155,7 @@ defmodule Ecto.Repo.Schema do
             * A source such as `p` in the query `from p in Post`
             * A single literal map or several literal maps combined with `select_merge`. If
               combining several literal maps, there cannot be any query interpolations
-              except in the last `select_merge`. Consider using `Ecto.Query.exclude(:select)`
+              except in the last `select_merge`. Consider using `Ecto.Query.exclude/2`
               to rebuild the select expression from scratch if you need multiple `select_merge`
               statements with interpolations
 
