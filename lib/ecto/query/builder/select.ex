@@ -489,20 +489,22 @@ defmodule Ecto.Query.Builder.Select do
   end
 
   defp merge_keywords(old_fields, new_fields, true) when is_list(old_fields) do
-    filtered_old_fields =
-      if Keyword.keyword?(new_fields) do
-        Enum.reduce_while(old_fields, [], fn
-          {k, v}, fields when is_atom(k) ->
+    if Keyword.keyword?(new_fields) do
+      valid? =
+        Enum.reduce_while(old_fields, true, fn
+          {k, _v}, _ when is_atom(k) ->
             if Keyword.has_key?(new_fields, k),
-              do: {:halt, nil},
-              else: {:cont, [{k, v} | fields]}
+              do: {:halt, false},
+              else: {:cont, true}
 
           _, _ ->
-            {:halt, nil}
+            {:halt, false}
         end)
-      end
 
-    if filtered_old_fields, do: filtered_old_fields ++ new_fields, else: :error
+      if valid?, do: old_fields ++ new_fields, else: :error
+    else
+      :error
+    end
   end
 
   defp merge_keywords(_, _, true), do: :error
