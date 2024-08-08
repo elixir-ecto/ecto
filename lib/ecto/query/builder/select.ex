@@ -387,19 +387,24 @@ defmodule Ecto.Query.Builder.Select do
         {{:source, meta, ix}, {:source, _, ix}} ->
           {:&, meta, [ix]}
 
-        {{:struct, meta, name, old_fields}, {:map, _, new_fields}} when old_params == [] ->
-          cond do
-            new_fields == [] ->
+        {{:struct, meta, name, old_fields}, {:map, _, new_fields}} ->
+          case new_fields do
+            [] ->
               old_expr
 
-            Keyword.keyword?(old_fields) and Keyword.keyword?(new_fields) ->
-              {:%, meta, [name, {:%{}, meta, Keyword.merge(old_fields, new_fields)}]}
+            _ ->
+              require_distinct_keys? = old_params != []
 
-            true ->
-              {:merge, [], [old_expr, new_expr]}
+              case merge_keywords(old_fields, new_fields, require_distinct_keys?) do
+                fields when is_list(fields) ->
+                  {:%, meta, [name, {:%{}, meta, fields}]}
+
+                :error ->
+                  {:merge, [], [old_expr, new_expr]}
+              end
           end
 
-        {{:map, meta, old_fields}, {:map, _, new_fields}} when old_params == [] ->
+        {{:map, meta, old_fields}, {:map, _, new_fields}} ->
           cond do
             old_fields == [] ->
               new_expr
@@ -407,11 +412,16 @@ defmodule Ecto.Query.Builder.Select do
             new_fields == [] ->
               old_expr
 
-            Keyword.keyword?(old_fields) and Keyword.keyword?(new_fields) ->
-              {:%{}, meta, Keyword.merge(old_fields, new_fields)}
-
             true ->
-              {:merge, [], [old_expr, new_expr]}
+              require_distinct_keys? = old_params != []
+
+              case merge_keywords(old_fields, new_fields, require_distinct_keys?) do
+                fields when is_list(fields) ->
+                  {:%{}, meta, fields}
+
+                :error ->
+                  {:merge, [], [old_expr, new_expr]}
+              end
           end
 
         {_, {:map, _, _}} ->
@@ -469,6 +479,33 @@ defmodule Ecto.Query.Builder.Select do
   defp classify_merge(_, _take) do
     :error
   end
+
+  defp merge_keywords(old_fields, new_fields, false) do
+    if Keyword.keyword?(old_fields) and Keyword.keyword?(new_fields) do
+      Keyword.merge(old_fields, new_fields)
+    else
+      :error
+    end
+  end
+
+  defp merge_keywords(old_fields, new_fields, true) when is_list(old_fields) do
+    filtered_old_fields =
+      if Keyword.keyword?(new_fields) do
+        Enum.reduce_while(old_fields, [], fn
+          {k, v}, fields when is_atom(k) ->
+            if Keyword.has_key?(new_fields, k),
+              do: {:halt, nil},
+              else: {:cont, [{k, v} | fields]}
+
+          _, _ ->
+            {:halt, nil}
+        end)
+      end
+
+    if filtered_old_fields, do: filtered_old_fields ++ new_fields, else: :error
+  end
+
+  defp merge_keywords(_, _, true), do: :error
 
   defp merge_argument_to_error({:&, _, [0]}, %{from: %{source: {source, alias}}}) do
     "source #{inspect(source || alias)}"
