@@ -2,32 +2,81 @@ defprotocol Ecto.Queryable do
   @moduledoc """
   Converts a data structure into an `Ecto.Query`.
 
+  This is used by `Ecto.Repo` and also `from` macro. For example, `Repo.all`
+  expects any queryable as argument, which is why you can do `Repo.all(MySchema)`
+  or `Repo.all(query)`. Furthermore, when you write `from ALIAS in QUERYABLE`,
+  `QUERYABLE` accepts any data structure that implements `Ecto.Queryable`.
+
   This module defines a few default implementations so let us go over each and
-  how to use them!
+  how to use them.
+
+  ## Atom
+
+  The most common use case for this protocol is to convert atoms representing
+  an `Ecto.Schema` module into a query. This is what happens when you write:
+
+      query = from(p in Person)
+
+  Or when you directly pass a schema to a repository:
+
+      Repo.all(Person)
+
+  In case you did not know, Elixir modules are just atoms. This implementation
+  takes the provided module name and then tries to load the associated schema.
+  If no schema exists, it will raise `Protocol.UndefinedError`.
+
+  ## BitString
+
+  This implementation allows you to directly specify a table that you would like
+  to query from:
+
+      from(
+        p in "people",
+        select: {p.first_name, p.last_name}
+      )
+
+  Or:
+
+      Repo.delete_all("people")
+
+  While this is quite simple to use, some repository operations, such as
+  `Repo.all`, require a `select` clause. When you query a schema, the
+  select is automatically defined for you based on the schema fields,
+  but when you pass a table directly, you need to explicitly list them.
+  This limitation now brings us to our next implementation!
+
+  ## Tuple
+
+  Similar to the `BitString` implementation, this allows you to specify the
+  underlying table that you would like to query; however, this additionally
+  allows you to specify the schema you would like to use:
+
+      from(p in {"filtered_people", Person})
+
+  This can be particularly useful if you have database views that filter or
+  aggregate the underlying data of a table but share the same schema. This means
+  that you can reuse the same schema while specifying a separate "source" for
+  the data.
 
   ## Ecto.Query
 
-  This is a simple pass through. If you are already using Ecto's query
-  functions, this will simply return the already constructed `Ecto.Query`. Let's
-  look at an example:
+  This is a simple pass through. After all, all `Ecto.Query` instances
+  can be converted into `Ecto.Query`:
 
-      User
-      |> Ecto.Query.first()
-      |> from()
-      |> Repo.all()
+      Repo.all(from u in User, where: u.active)
 
-  In this case, the `Ecto.Query.from/2` is actually unnecessary as it will
-  simply return the query, in this case `Ecto.Query.first(User)`, unchanged.
+  This also enables Ecto queries to compose, since we can pass one query
+  as the source of another:
+
+      active_users = from u in User, where: u.active
+      ordered_active_users = from u in active_users, order_by: u.created_at
 
   ## Ecto.SubQuery
 
-  This implementation allows you to perform subqueries.
-
-  ### Example
-
-  This example is a bit contrived but imagine that you have a table of "people".
-  Now imagine that you want to do something with people with the most common
-  last names. To get that list, you could write something like:
+  Ecto also allows you to compose queries using subqueries.  Imagine you
+  have a table of "people". Now imagine that you want to do something with
+  people with the most common last names. To get that list, you could write
+  something like:
 
       sub = from(
         p in Person,
@@ -45,56 +94,9 @@ defprotocol Ecto.Queryable do
       )
 
   Please note that the `Ecto.Query.subquery/2` is needed here to convert the
-  `Ecto.Query`
-  into an instance of `Ecto.SubQuery`. This will ensure that the resulting
-  query will use the provided subquery in the resulting FROM clause. Please see
-  `Ecto.Query.subquery/2` for more information.
-
-  ## BitString
-
-  This implementation allows you to directly specify a table that you would like
-  to query from:
-
-      from(
-        p in "people",
-        select: {p.first_name, p.last_name}
-      )
-
-  While this is quite simple to use, it must be noted that `select/3` is
-  required in this case. In the other implementations we have looked at so far,
-  the query was always associated with an `Ecto.Schema` (`Person` above);
-  however, when providing a `BitString`, Ecto uses this as a way to specify the
-  underlying table to query, but does not try to infer any schema. This
-  limitation now brings us to our next implementation!
-
-  ## Tuple
-
-  Similar to the `BitString` implementation, this allows you to specify the
-  underlying table that you would like to query; however, this additionally
-  allows you to specify the schema you would like to use:
-
-      from(
-        p in {"filtered_people", Person}
-      )
-
-  This can be particularly useful if you have database views that filter or
-  aggregate the underlying data of a table but share the same schema. This means
-  that you can reuse the same schema while specifying a separate "source" for
-  the data.
-
-  ## Atom
-
-  This brings us to our final implementation which is also one of the most
-  commonly used implementations. In fact, we have already seen this in use:
-
-      from(
-        p in Person
-      )
-
-  There it is! In case you did not know, Elixir modules are just atoms! This
-  implementation takes the provided module name and then tries to load the
-  associated schema. If no schema exists, it will raise
-  `Protocol.UndefinedError`.
+  `Ecto.Query` into an instance of `Ecto.SubQuery`. This protocol then wraps
+  it into an `Ecto.Query`, but using the provided subquery in the FROM clause.
+  Please see `Ecto.Query.subquery/2` for more information.
   """
 
   @doc """
