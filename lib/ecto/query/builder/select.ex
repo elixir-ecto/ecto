@@ -387,21 +387,16 @@ defmodule Ecto.Query.Builder.Select do
         {{:source, meta, ix}, {:source, _, ix}} ->
           {:&, meta, [ix]}
 
-        {{:struct, meta, name, old_fields}, {:map, _, new_fields}} ->
-          case new_fields do
-            [] ->
+        {{:struct, meta, name, old_fields}, {:map, _, new_fields}} when old_params == [] ->
+          cond do
+            new_fields == [] ->
               old_expr
 
-            _ ->
-              require_distinct_keys? = old_params != []
+            Keyword.keyword?(old_fields) and Keyword.keyword?(new_fields) ->
+              {:%, meta, [name, {:%{}, meta, Keyword.merge(old_fields, new_fields)}]}
 
-              case merge_keywords(old_fields, new_fields, require_distinct_keys?) do
-                fields when is_list(fields) ->
-                  {:%, meta, [name, {:%{}, meta, fields}]}
-
-                :error ->
-                  {:merge, [], [old_expr, new_expr]}
-              end
+            true ->
+              {:merge, [], [old_expr, new_expr]}
           end
 
         {{:map, meta, old_fields}, {:map, _, new_fields}} ->
@@ -415,7 +410,7 @@ defmodule Ecto.Query.Builder.Select do
             true ->
               require_distinct_keys? = old_params != []
 
-              case merge_keywords(old_fields, new_fields, require_distinct_keys?) do
+              case merge_map_fields(old_fields, new_fields, require_distinct_keys?) do
                 fields when is_list(fields) ->
                   {:%{}, meta, fields}
 
@@ -480,7 +475,7 @@ defmodule Ecto.Query.Builder.Select do
     :error
   end
 
-  defp merge_keywords(old_fields, new_fields, false) do
+  defp merge_map_fields(old_fields, new_fields, false) do
     if Keyword.keyword?(old_fields) and Keyword.keyword?(new_fields) do
       Keyword.merge(old_fields, new_fields)
     else
@@ -488,7 +483,7 @@ defmodule Ecto.Query.Builder.Select do
     end
   end
 
-  defp merge_keywords(old_fields, new_fields, true) when is_list(old_fields) do
+  defp merge_map_fields(old_fields, new_fields, true) when is_list(old_fields) do
     if Keyword.keyword?(new_fields) do
       valid? =
         Enum.reduce_while(old_fields, true, fn
@@ -507,7 +502,7 @@ defmodule Ecto.Query.Builder.Select do
     end
   end
 
-  defp merge_keywords(_, _, true), do: :error
+  defp merge_map_fields(_, _, true), do: :error
 
   defp merge_argument_to_error({:&, _, [0]}, %{from: %{source: {source, alias}}}) do
     "source #{inspect(source || alias)}"
