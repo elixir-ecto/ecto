@@ -399,7 +399,7 @@ defmodule Ecto.Query.Builder.Select do
               {:merge, [], [old_expr, new_expr]}
           end
 
-        {{:map, meta, old_fields}, {:map, _, new_fields}} when old_params == [] ->
+        {{:map, meta, old_fields}, {:map, _, new_fields}} ->
           cond do
             old_fields == [] ->
               new_expr
@@ -407,11 +407,16 @@ defmodule Ecto.Query.Builder.Select do
             new_fields == [] ->
               old_expr
 
-            Keyword.keyword?(old_fields) and Keyword.keyword?(new_fields) ->
-              {:%{}, meta, Keyword.merge(old_fields, new_fields)}
-
             true ->
-              {:merge, [], [old_expr, new_expr]}
+              require_distinct_keys? = old_params != []
+
+              case merge_map_fields(old_fields, new_fields, require_distinct_keys?) do
+                fields when is_list(fields) ->
+                  {:%{}, meta, fields}
+
+                :error ->
+                  {:merge, [], [old_expr, new_expr]}
+              end
           end
 
         {_, {:map, _, _}} ->
@@ -469,6 +474,35 @@ defmodule Ecto.Query.Builder.Select do
   defp classify_merge(_, _take) do
     :error
   end
+
+  defp merge_map_fields(old_fields, new_fields, false) do
+    if Keyword.keyword?(old_fields) and Keyword.keyword?(new_fields) do
+      Keyword.merge(old_fields, new_fields)
+    else
+      :error
+    end
+  end
+
+  defp merge_map_fields(old_fields, new_fields, true) when is_list(old_fields) do
+    if Keyword.keyword?(new_fields) do
+      valid? =
+        Enum.reduce_while(old_fields, true, fn
+          {k, _v}, _ when is_atom(k) ->
+            if Keyword.has_key?(new_fields, k),
+              do: {:halt, false},
+              else: {:cont, true}
+
+          _, _ ->
+            {:halt, false}
+        end)
+
+      if valid?, do: old_fields ++ new_fields, else: :error
+    else
+      :error
+    end
+  end
+
+  defp merge_map_fields(_, _, true), do: :error
 
   defp merge_argument_to_error({:&, _, [0]}, %{from: %{source: {source, alias}}}) do
     "source #{inspect(source || alias)}"

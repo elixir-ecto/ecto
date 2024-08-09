@@ -337,11 +337,10 @@ defmodule Ecto.Query.Builder.SelectTest do
           )
 
         assert Macro.to_string(query.select.expr) == """
-              merge(%{\
-              title: &0.archived_at(), \
-              maxdue: {:subquery, 0}, \
-              user_email: {:subquery, 1}\
-              }, %{\n\
+              %{\n\
+                title: &0.archived_at(),\n\
+                maxdue: {:subquery, 0},\n\
+                user_email: {:subquery, 1},\n\
                 template_name:\n\
                   fragment(\n\
                     {:raw, "CASE WHEN "},\n\
@@ -352,7 +351,7 @@ defmodule Ecto.Query.Builder.SelectTest do
                     {:expr, {:subquery, 2}},\n\
                     {:raw, " END"}\n\
                   )\n\
-              })\
+              }\
               """
 
         assert length(query.select.subqueries) == 3
@@ -398,18 +397,17 @@ defmodule Ecto.Query.Builder.SelectTest do
           )
 
         assert Macro.to_string(query.select.expr) == """
-              merge(%{\
+              %{\
               title: &0.archived_at(), \
               maxdue: {:subquery, 0}, \
-              user_email: {:subquery, 1}\
-              }, %{\
+              user_email: {:subquery, 1}, \
               template_name:\
                fragment({:raw, "CASE WHEN "},\
                {:expr, &0.from_template_id() == ^2},\
                {:raw, " THEN "}, {:expr, ""},\
                {:raw, " ELSE "}, {:expr, {:subquery, 2}},\
                {:raw, " END"})\
-              })\
+              }\
               """
 
         assert length(query.select.subqueries) == 3
@@ -506,7 +504,7 @@ defmodule Ecto.Query.Builder.SelectTest do
           select_merge: %{a: map(p, [:title]), b: ^0},
           select_merge: %{c: map(p, [:title, :body]), d: ^1}
 
-      assert Macro.to_string(query.select.expr) == "merge(%{a: &0, b: ^0}, %{c: &0, d: ^1})"
+      assert Macro.to_string(query.select.expr) == "%{a: &0, b: ^0, c: &0, d: ^1}"
       assert query.select.params == [{0, :any}, {1, :any}]
       assert query.select.take == %{0 => {:map, [:title, :body]}}
     end
@@ -518,7 +516,7 @@ defmodule Ecto.Query.Builder.SelectTest do
         |> select_merge([p], %{a: map(p, [:title]), b: ^0})
         |> select_merge([p], %{c: map(p, [:title, :body]), d: ^1})
 
-      assert Macro.to_string(query.select.expr) == "merge(%{a: &0, b: ^0}, %{c: &0, d: ^1})"
+      assert Macro.to_string(query.select.expr) == "%{a: &0, b: ^0, c: &0, d: ^1}"
       assert query.select.params == [{0, :any}, {1, :any}]
       assert query.select.take == %{0 => {:map, [:title, :body]}}
     end
@@ -700,6 +698,36 @@ defmodule Ecto.Query.Builder.SelectTest do
           select_merge: %{^:shared => :new, ^:merge => :merge}
 
       assert {:%{}, [], [shared: :new, merge: :merge]} = q.select.expr
+    end
+
+    test "merge map literals with no conflicting keys" do
+      # without inner interpolations/subqueries
+      query = from p in "posts", select: %{id: 1, title: "hi"}, select_merge: %{visits: ^2}
+      assert Macro.to_string(query.select.expr) == "%{id: 1, title: \"hi\", visits: ^0}"
+
+      # with inner interpolation
+      query = from p in "posts", select: %{id: ^1, title: "hi"}, select_merge: %{visits: ^2}
+      assert Macro.to_string(query.select.expr) == "%{id: ^0, title: \"hi\", visits: ^1}"
+
+      # with inner subquery
+      s = from p in "posts", select: p.title, limit: 1
+      query = from p in "posts", select: %{id: 1, title: subquery(s)}, select_merge: %{visits: ^2}
+      assert Macro.to_string(query.select.expr) == "%{id: 1, title: {:subquery, 0}, visits: ^1}"
+    end
+
+    test "merge map literals with conflicting keys" do
+      # without inner params
+      query = from p in "posts", select: %{id: 1, title: "hi"}, select_merge: %{id: ^2}
+      assert Macro.to_string(query.select.expr) == "%{title: \"hi\", id: ^0}"
+
+      # with inner params
+      query = from p in "posts", select: %{id: ^1, title: "hi"}, select_merge: %{id: ^2}
+      assert Macro.to_string(query.select.expr) == "merge(%{id: ^0, title: \"hi\"}, %{id: ^1})"
+
+      # with inner subqueries
+      s = from p in "posts", select: p.title, limit: 1
+      query = from p in "posts", select: %{id: 1, title: subquery(s)}, select_merge: %{id: ^2}
+      assert Macro.to_string(query.select.expr) == "merge(%{id: 1, title: {:subquery, 0}}, %{id: ^1})"
     end
   end
 end
