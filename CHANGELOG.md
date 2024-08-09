@@ -4,20 +4,34 @@
 
 ### Enhancements
 
+  * [Ecto.Changeset] Allow `{message, opts}` to be given as message for several validation APIs
   * [Ecto.Query] Introduce `is_named_binding` guard
   * [Ecto.Query] Subqueries are now supported in `distinct`, `group_by`, `order_by` and `window` expressions
+  * [Ecto.Query] Allow `select_merge` to be used in more `insert_all` and subquery operations by merging distinct fields
+  * [Ecto.Query] Support macro expansion at the root level of `order_by`
+  * [Ecto.Query] Support preloading subquery sources in `from` and `join`
+  * [Ecto.Query] Allow map updates with dynamic values in `select`
+  * [Ecto.Query] Allow any data structure that implements the Enumerable protocol on the right side of `in`
+  * [Ecto.Repo] Support 2-arity preload functions that receive ids and the association metadata
   * [Ecto.Repo] Allow Hot Updates on upsert queries in Postgres by removing duplicate fields during replace_all
-  * [Ecto.Schema] Allow schema fields to be read-only
-  * [Ecto.Schema] Add `:defaults_to_struct` option to embeds_one
+  * [Ecto.Repo] `insert_all` supports queries with only source
+  * [Ecto.Repo] `insert_all` supports queries with the update syntax
+  * [Ecto.Schema] Allow schema fields to be read-only via `:writeable` option
+  * [Ecto.Schema] Add `:defaults_to_struct` option to `embeds_one`
   * [Ecto.Type] Bubble up custom cast errors of the inner type for `{:map, type}` and `{:array, type}`
+  * [Ecto.Type] Add `Ecto.Type.cast!/2`
 
 ### Bug fixes
 
   * [Ecto.Query] Ignore query prefix in CTE sources
   * [Ecto.Query] Fix a bug of `preload` when a through association is used in a join and has a nested separate query preload. Now the association chain is no longer preloaded and we simply preload directly onto the loaded through association.
   * [Ecto.Query] Validate `:prefix` is a string/binary, warn otherwise
+  * [Ecto.Query] Fix inspection when select has `map/struct` modifiers
+  * [Ecto.Query] Disable query cache for `values` lists
+  * [Ecto.Repo] Convert fields to their sources in `insert_all`
   * [Ecto.Repo] Raise if empty list is given to `{:replace, fields}`
   * [Ecto.Repo] Validate `:prefix` is a string/binary, warn otherwise
+  * [Ecto.Repo] Remove compile dependency on `:preload_order` MFA in `has_many`
 
 ### Adapter changes
 
