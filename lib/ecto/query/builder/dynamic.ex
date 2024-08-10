@@ -31,6 +31,10 @@ defmodule Ecto.Query.Builder.Dynamic do
     Select.escape(expr, vars, env)
   end
 
+  defp escape({:%{}, _, _} = expr, _params_acc, vars, env) do
+    Select.escape(expr, vars, env)
+  end
+
   defp escape(expr, params_acc, vars, env) do
     Builder.escape(expr, :any, params_acc, vars, {env, &escape_expansion/5})
   end
