@@ -8,7 +8,7 @@ all:
 
 integration-test-base:
     ARG ELIXIR_BASE=1.15.6-erlang-25.3.2.6-alpine-3.18.4
-    ARG TARGETARCH 
+    ARG TARGETARCH
     FROM hexpm/elixir:$ELIXIR_BASE
     RUN apk add --no-progress --update git build-base
     RUN mix local.rebar --force
@@ -24,7 +24,7 @@ integration-test-base:
         apk del .build-dependencies && rm -f msodbcsql*.sig mssql-tools*.apk
     ENV PATH="/opt/mssql-tools18/bin:${PATH}"
 
-    GIT CLONE https://github.com/elixir-ecto/ecto_sql.git /src/ecto_sql
+    GIT CLONE https://github.com/greg-rychlewski/ecto_sql.git --branch duration_type --single-branch /src/ecto_sql
     WORKDIR /src/ecto_sql
     RUN mix deps.get
 
