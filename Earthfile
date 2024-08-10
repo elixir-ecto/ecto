@@ -24,7 +24,7 @@ integration-test-base:
         apk del .build-dependencies && rm -f msodbcsql*.sig mssql-tools*.apk
     ENV PATH="/opt/mssql-tools18/bin:${PATH}"
 
-    GIT CLONE --branch duration_type https://github.com/greg-rychlewski/ecto_sql.git /src/ecto_sql
+    GIT CLONE https://github.com/greg-rychlewski/ecto_sql.git /src/ecto_sql
     WORKDIR /src/ecto_sql
     RUN mix deps.get
 
