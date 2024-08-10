@@ -403,3 +403,21 @@ defmodule Ecto.Integration.Bitstring do
     field :bs_with_size, :bitstring
   end
 end
+
+if Code.ensure_loaded?(Duration) do
+  defmodule Ecto.Integration.Duration do
+    @moduledoc """
+    This module is used to test:
+      * Duration type
+    """
+    use Ecto.Integration.Schema
+
+    schema "durations" do
+      field :dur, :duration
+      field :dur_with_fields, :duration
+      field :dur_with_precision, :duration
+      field :dur_with_fields_and_precision, :duration
+      field :dur_with_default, :duration
+    end
+  end
+end
