@@ -494,6 +494,13 @@ defmodule Ecto.Query.Builder.SelectTest do
       q = from p in "posts", select: %{^:test_key => 1}
       assert {:%{}, [], [test_key: 1]} = q.select.expr
     end
+
+    test "supports literal maps inside dynamic" do
+      map = dynamic([p], %{id: p.id, title: p.title})
+      q = from p in "posts", select: ^map
+
+      assert Macro.to_string(q.select.expr) == "%{id: &0.id(), title: &0.title()}"
+    end
   end
 
   describe "select_merge" do
