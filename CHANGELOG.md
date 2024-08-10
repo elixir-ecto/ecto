@@ -16,7 +16,7 @@
   * [Ecto.Repo] Allow Hot Updates on upsert queries in Postgres by removing duplicate fields during replace_all
   * [Ecto.Repo] `insert_all` supports queries with only source
   * [Ecto.Repo] `insert_all` supports queries with the update syntax
-  * [Ecto.Schema] Allow schema fields to be read-only via `:writeable` option
+  * [Ecto.Schema] Allow schema fields to be read-only via `:writable` option
   * [Ecto.Schema] Add `:defaults_to_struct` option to `embeds_one`
   * [Ecto.Type] Bubble up custom cast errors of the inner type for `{:map, type}` and `{:array, type}`
   * [Ecto.Type] Add `Ecto.Type.cast!/2`
