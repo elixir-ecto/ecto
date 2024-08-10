@@ -222,6 +222,7 @@ defmodule Ecto.Type do
           | :utc_datetime_usec
           | :naive_datetime_usec
           | :time_usec
+          | :duration
 
   @type composite :: {:array, t} | {:map, t} | private_composite
 
@@ -231,6 +232,7 @@ defmodule Ecto.Type do
     integer float decimal boolean string bitstring map binary id binary_id any
     utc_datetime naive_datetime date time
     utc_datetime_usec naive_datetime_usec time_usec
+    duration
   )a
   @composite ~w(array map try in param)a
   @variadic ~w(in splice)a
@@ -564,6 +566,7 @@ defmodule Ecto.Type do
   def dump(:naive_datetime_usec, value, _dumper), do: dump_naive_datetime_usec(value)
   def dump(:utc_datetime, value, _dumper), do: dump_utc_datetime(value)
   def dump(:utc_datetime_usec, value, _dumper), do: dump_utc_datetime_usec(value)
+  def dump(:duration, value, _dumper), do: same_duration(value)
   def dump({:supertype, :datetime}, value, _dumper), do: dump_any_datetime(value)
   def dump(mod, value, _dumper) when is_atom(mod), do: mod.dump(value)
 
@@ -661,6 +664,7 @@ defmodule Ecto.Type do
   def load(:naive_datetime_usec, value, _loader), do: load_naive_datetime_usec(value)
   def load(:utc_datetime, value, _loader), do: load_utc_datetime(value)
   def load(:utc_datetime_usec, value, _loader), do: load_utc_datetime_usec(value)
+  def load(:duration, value, _loader), do: same_duration(value)
   def load(mod, value, _loader), do: mod.load(value)
 
   defp load_float(term) when is_float(term), do: {:ok, term}
@@ -833,6 +837,7 @@ defmodule Ecto.Type do
   defp cast_fun(:naive_datetime_usec), do: &maybe_pad_usec(cast_naive_datetime(&1))
   defp cast_fun(:utc_datetime), do: &maybe_truncate_usec(cast_utc_datetime(&1))
   defp cast_fun(:utc_datetime_usec), do: &maybe_pad_usec(cast_utc_datetime(&1))
+  defp cast_fun(:duration), do: &cast_duration/1
   defp cast_fun({:supertype, :datetime}), do: &cast_any_datetime(&1)
   defp cast_fun({:parameterized, {mod, params}}), do: &mod.cast(&1, params)
   defp cast_fun({qual, type}) when qual in @variadic, do: cast_fun({:array, type})
@@ -911,6 +916,12 @@ defmodule Ecto.Type do
   defp cast_map(term) when is_map(term), do: {:ok, term}
   defp cast_map(_), do: :error
 
+  if Code.ensure_loaded?(Duration) do
+    defp cast_duration(%Duration{} = term), do: {:ok, term}
+  end
+
+  defp cast_duration(_), do: :error
+
   @doc """
   Casts a value to the given type or raises an error.
 
@@ -966,6 +977,12 @@ defmodule Ecto.Type do
 
   defp same_date(%Date{} = term), do: {:ok, term}
   defp same_date(_), do: :error
+
+  if Code.ensure_loaded?(Duration) do
+    defp same_duration(%Duration{} = term), do: {:ok, term}
+  end
+
+  defp same_duration(_), do: :error
 
   @doc false
   def empty_trimmed_string?(value) do

@@ -8,7 +8,7 @@ all:
 
 integration-test-base:
     ARG ELIXIR_BASE=1.15.6-erlang-25.3.2.6-alpine-3.18.4
-    ARG TARGETARCH 
+    ARG TARGETARCH
     FROM hexpm/elixir:$ELIXIR_BASE
     RUN apk add --no-progress --update git build-base
     RUN mix local.rebar --force
