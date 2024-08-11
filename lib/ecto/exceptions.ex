@@ -268,6 +268,12 @@ defmodule Ecto.StaleEntryError do
     attempted to #{action} a stale struct:
 
     #{inspect(changeset.data)}
+
+    This typically happens when the struct no longer exists in the database \
+    or a database trigger/rule has forbidden the action. If stale entries are \
+    expected, you may use `:stale_error_field` to convert this into a changeset \
+    error, or set `:allow_stale` to true if you would like stale operations to \
+    be considered a success (such as a stale deletion)
     """
 
     %__MODULE__{message: msg, changeset: changeset}
