@@ -444,7 +444,7 @@ defmodule Ecto.Schema do
   * `__schema__(:embed, embed)` - Returns the embedding reflection of the given embed;
 
   * `__schema__(:read_after_writes)` - Non-virtual fields that must be read back
-    from the database after every write (insert or update);
+    from the database after every write (insert, update, and delete);
 
   * `__schema__(:autogenerate_id)` - Primary key that is auto generated on insert;
   * `__schema__(:autogenerate_fields)` - Returns a list of fields names that are auto
@@ -675,8 +675,12 @@ defmodule Ecto.Schema do
         def __schema__(:loaded), do: unquote(Macro.escape(loaded))
         def __schema__(:redact_fields), do: unquote(redacted_fields)
         def __schema__(:virtual_fields), do: unquote(Enum.map(virtual_fields, &elem(&1, 0)))
-        def __schema__(:updatable_fields), do: unquote(for {name, {_, :always}}  <- fields, do: name)
-        def __schema__(:insertable_fields), do: unquote(for {name, {_, writable}} when writable != :never <- fields, do: name)
+
+        def __schema__(:updatable_fields),
+          do: unquote(for {name, {_, :always}} <- fields, do: name)
+
+        def __schema__(:insertable_fields),
+          do: unquote(for {name, {_, writable}} when writable != :never <- fields, do: name)
 
         def __schema__(:autogenerate_fields),
           do: unquote(Enum.flat_map(autogenerate, &elem(&1, 0)))
@@ -751,7 +755,7 @@ defmodule Ecto.Schema do
       A shorthand value of `true` is equivalent to `{type, :autogenerate, []}`.
 
     * `:read_after_writes` - When true, the field is always read back
-      from the database after insert and updates.
+      from the database after inserts, updates, and deletes.
 
       For relational databases, this means the RETURNING option of those
       statements is used. For this reason, MySQL does not support this
@@ -2513,7 +2517,9 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :ecto_autogenerate, {[name], mfa})
   end
 
-  defp store_type_autogenerate!(mod, name, source, {:parameterized, {typemod, params}} = type, pk?) do
+  defp store_type_autogenerate!(mod, name, source, {:parameterized, typemod_params} = type, pk?) do
+    {typemod, params} = typemod_params
+
     cond do
       store_autogenerate_id!(mod, name, source, type, pk?) ->
         :ok
