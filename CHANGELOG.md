@@ -8,6 +8,7 @@
   * [Ecto.Query] Introduce `is_named_binding` guard
   * [Ecto.Query] Subqueries are now supported in `distinct`, `group_by`, `order_by` and `window` expressions
   * [Ecto.Query] Allow `select_merge` to be used in more `insert_all` and subquery operations by merging distinct fields
+  * [Ecto.Query] Allow literal maps inside `dynamic/2`
   * [Ecto.Query] Support macro expansion at the root level of `order_by`
   * [Ecto.Query] Support preloading subquery sources in `from` and `join`
   * [Ecto.Query] Allow map updates with dynamic values in `select`
@@ -16,8 +17,10 @@
   * [Ecto.Repo] Allow Hot Updates on upsert queries in Postgres by removing duplicate fields during replace_all
   * [Ecto.Repo] `insert_all` supports queries with only source
   * [Ecto.Repo] `insert_all` supports queries with the update syntax
+  * [Ecto.Repo] Support `:allow_stale` on Repo struct/changeset operations
   * [Ecto.Schema] Allow schema fields to be read-only via `:writable` option
   * [Ecto.Schema] Add `:defaults_to_struct` option to `embeds_one`
+  * [Ecto.Schema] Support `:duration` type which maps to Elixir v1.17 duration
   * [Ecto.Type] Bubble up custom cast errors of the inner type for `{:map, type}` and `{:array, type}`
   * [Ecto.Type] Add `Ecto.Type.cast!/2`
 
