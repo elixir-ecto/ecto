@@ -1651,6 +1651,8 @@ defmodule Ecto.Repo do
     * `:stale_error_message` - The message to add to the configured
       `:stale_error_field` when stale errors happen, defaults to "is stale".
 
+    * `:allow_stale` - Doesn't error if delete is stale. Defaults to `false`.
+
   See the ["Shared options"](#module-shared-options) section at the module
   documentation for more options.
 
@@ -1847,6 +1849,8 @@ defmodule Ecto.Repo do
     * `:stale_error_message` - The message to add to the configured
       `:stale_error_field` when stale errors happen, defaults to "is stale".
 
+    * `:allow_stale` - Doesn't error if delete is stale. Defaults to `false`.
+
   See the ["Shared options"](#module-shared-options) section at the module
   documentation for more options.
 
@@ -1890,6 +1894,8 @@ defmodule Ecto.Repo do
       `Ecto.StaleEntryError`. Only applies to updates.
     * `:stale_error_message` - The message to add to the configured
       `:stale_error_field` when stale errors happen, defaults to "is stale".
+      Only applies to updates.
+    * `:allow_stale` - Doesn't error if delete is stale. Defaults to `false`.
       Only applies to updates.
 
   See the ["Shared options"](#module-shared-options) section at the module
@@ -1950,6 +1956,8 @@ defmodule Ecto.Repo do
 
     * `:stale_error_message` - The message to add to the configured
       `:stale_error_field` when stale errors happen, defaults to "is stale".
+
+    * `:allow_stale` - Doesn't error if delete is stale. Defaults to `false`.
 
   See the ["Shared options"](#module-shared-options) section at the module
   documentation for more options.
