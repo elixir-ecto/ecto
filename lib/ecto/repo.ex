@@ -1651,7 +1651,9 @@ defmodule Ecto.Repo do
     * `:stale_error_message` - The message to add to the configured
       `:stale_error_field` when stale errors happen, defaults to "is stale".
 
-    * `:allow_stale` - Doesn't error if delete is stale. Defaults to `false`.
+    * `:allow_stale` - Doesn't error if insert is stale. Defaults to `false`.
+      This may happen if there are rules or triggers in the database that
+      rejects the insert operation.
 
   See the ["Shared options"](#module-shared-options) section at the module
   documentation for more options.
