@@ -1651,6 +1651,10 @@ defmodule Ecto.Repo do
     * `:stale_error_message` - The message to add to the configured
       `:stale_error_field` when stale errors happen, defaults to "is stale".
 
+    * `:allow_stale` - Doesn't error if insert is stale. Defaults to `false`.
+      This may happen if there are rules or triggers in the database that
+      rejects the insert operation.
+
   See the ["Shared options"](#module-shared-options) section at the module
   documentation for more options.
 
@@ -1847,6 +1851,11 @@ defmodule Ecto.Repo do
     * `:stale_error_message` - The message to add to the configured
       `:stale_error_field` when stale errors happen, defaults to "is stale".
 
+    * `:allow_stale` - Doesn't error if update is stale. Defaults to `false`.
+      This may happen if the struct has been deleted from the database before
+      the update or if there is a rule or a trigger on the database that rejects
+      the update operation.
+
   See the ["Shared options"](#module-shared-options) section at the module
   documentation for more options.
 
@@ -1890,6 +1899,8 @@ defmodule Ecto.Repo do
       `Ecto.StaleEntryError`. Only applies to updates.
     * `:stale_error_message` - The message to add to the configured
       `:stale_error_field` when stale errors happen, defaults to "is stale".
+      Only applies to updates.
+    * `:allow_stale` - Doesn't error if delete is stale. Defaults to `false`.
       Only applies to updates.
 
   See the ["Shared options"](#module-shared-options) section at the module
@@ -1950,6 +1961,11 @@ defmodule Ecto.Repo do
 
     * `:stale_error_message` - The message to add to the configured
       `:stale_error_field` when stale errors happen, defaults to "is stale".
+
+    * `:allow_stale` - Doesn't error if delete is stale. Defaults to `false`.
+      This may happen if the struct has been deleted from the database before
+      this deletion or if there is a rule or a trigger on the database that rejects
+      the delete operation.
 
   See the ["Shared options"](#module-shared-options) section at the module
   documentation for more options.

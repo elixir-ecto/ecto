@@ -841,14 +841,18 @@ defmodule Ecto.Repo.Schema do
       {:error, :stale} ->
         opts = List.last(args)
 
-        case Keyword.fetch(opts, :stale_error_field) do
-          {:ok, stale_error_field} when is_atom(stale_error_field) ->
-            stale_message = Keyword.get(opts, :stale_error_message, "is stale")
-            user_changeset = Changeset.add_error(user_changeset, stale_error_field, stale_message, [stale: true])
-            {:error, user_changeset}
+        if Keyword.get(opts, :allow_stale, false) do
+          {:ok, []}
+        else
+          case Keyword.fetch(opts, :stale_error_field) do
+            {:ok, stale_error_field} when is_atom(stale_error_field) ->
+              stale_message = Keyword.get(opts, :stale_error_message, "is stale")
+              user_changeset = Changeset.add_error(user_changeset, stale_error_field, stale_message, [stale: true])
+              {:error, user_changeset}
 
-          _other ->
-            raise Ecto.StaleEntryError, changeset: user_changeset, action: action
+            _other ->
+              raise Ecto.StaleEntryError, changeset: user_changeset, action: action
+          end
         end
     end
   end

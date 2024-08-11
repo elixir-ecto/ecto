@@ -1097,6 +1097,17 @@ defmodule Ecto.RepoTest do
       assert changeset.errors == [id: {"is old", [stale: true]}]
     end
 
+    test "insert, update, and delete allows stale with :allow_stale option" do
+      my_schema = %MySchema{id: 1}
+      my_schema = put_in(my_schema.__meta__.context, {:error, :stale})
+
+      stale = Ecto.Changeset.cast(my_schema, %{x: "foo"}, [:x])
+
+      assert {:ok, _} = TestRepo.insert(stale, allow_stale: true)
+      assert {:ok, _} = TestRepo.update(stale, allow_stale: true)
+      assert {:ok, _} = TestRepo.delete(stale, allow_stale: true)
+    end
+
     test "insert and delete sets schema prefix with struct" do
       valid = %MySchema{id: 1}
 
