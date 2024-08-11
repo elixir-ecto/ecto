@@ -1963,6 +1963,9 @@ defmodule Ecto.Repo do
       `:stale_error_field` when stale errors happen, defaults to "is stale".
 
     * `:allow_stale` - Doesn't error if delete is stale. Defaults to `false`.
+      This may happen if the struct has been deleted from the database before
+      this deletion or if there is a rule or a trigger on the database that rejects
+      the delete operation.
 
   See the ["Shared options"](#module-shared-options) section at the module
   documentation for more options.
