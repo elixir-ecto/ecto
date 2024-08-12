@@ -346,9 +346,9 @@ defmodule Ecto.Type do
   @doc """
   Checks if the given type is parameterized by the given module.
 
-    iex> type = Ecto.ParameterizedType.init(Ecto.Enum, values: [a: 1])
-    iex> Ecto.Type.parameterized?(type, Ecto.Enum)
-    true
+      iex> type = Ecto.ParameterizedType.init(Ecto.Enum, values: [a: 1])
+      iex> Ecto.Type.parameterized?(type, Ecto.Enum)
+      true
 
   """
   @spec parameterized?(t, module) :: boolean
