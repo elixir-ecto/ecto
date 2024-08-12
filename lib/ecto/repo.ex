@@ -1490,14 +1490,13 @@ defmodule Ecto.Repo do
   ## Source query
 
   A query can be given instead of a list with entries. This query needs to select
-  into a map containing only keys that are available as writeable columns in the
-  schema. This will query and insert the values all inside one query, without
-  another round trip to the application.
+  into a map, struct or source containing only keys that are available as writeable
+  columns in the schema. This will query and insert the values all inside one query,
+  without another round trip to the application.
 
   ## Examples
 
       MyRepo.insert_all(Post, [[title: "My first post"], [title: "My second post"]])
-
       MyRepo.insert_all(Post, [%{title: "My first post"}, %{title: "My second post"}])
 
       query = from p in Post,
