@@ -235,7 +235,7 @@ defmodule Ecto.Enum do
       #=> [:foo, :bar, :baz]
 
   """
-  @spec values(map | Ecto.Schema.t(), atom) :: [atom()]
+  @spec values(module | map, atom) :: [atom()]
   def values(schema_or_types, field) do
     schema_or_types
     |> mappings(field)
@@ -272,7 +272,7 @@ defmodule Ecto.Enum do
 
   `schema_or_types` can also be a types map. See `mappings/2` for more information.
   """
-  @spec dump_values(map | Ecto.Schema.t(), atom) :: [String.t()] | [integer()]
+  @spec dump_values(module | map, atom) :: [String.t()] | [integer()]
   def dump_values(schema_or_types, field) do
     schema_or_types
     |> mappings(field)
@@ -316,7 +316,7 @@ defmodule Ecto.Enum do
       #=> [foo: 1, bar: 2, baz: 5]
 
   """
-  @spec mappings(map | Ecto.Schema.t(), atom) :: keyword(String.t() | integer())
+  @spec mappings(module | map, atom) :: keyword(String.t() | integer())
   def mappings(schema_or_types, field)
 
   def mappings(types, field) when is_map(types) do
