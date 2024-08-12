@@ -1490,16 +1490,19 @@ defmodule Ecto.Repo do
   ## Source query
 
   A query can be given instead of a list with entries. This query needs to select
-  into a map containing only keys that are available as writeable columns in the
-  schema. This will query and insert the values all inside one query, without
-  another round trip to the application.
+  into a map, struct or source containing only keys that are available as writeable
+  columns in the schema. This will query and insert the values all inside one query,
+  without another round trip to the application.
 
   ## Examples
 
+      # List of keyword lists
       MyRepo.insert_all(Post, [[title: "My first post"], [title: "My second post"]])
 
+      # List of maps
       MyRepo.insert_all(Post, [%{title: "My first post"}, %{title: "My second post"}])
 
+      # Query selecting into a map
       query = from p in Post,
         join: c in assoc(p, :comments),
         select: %{
@@ -1508,7 +1511,28 @@ defmodule Ecto.Repo do
           interactions: sum(p.likes) + count(c.id)
         },
         group_by: p.author_id
+
       MyRepo.insert_all(AuthorStats, query)
+
+      query = from p in Post, select: map(p, [:author_id, :title])
+      MyRepo.insert_all(PostAuthors, query)
+
+      # Query selecting into a struct
+      query = from p in Post, select: %Post{author_id: p.author_id, title: p.title}
+      MyRepo.insert_all(PostAuthors, query)
+
+      query = from p in Post, select: struct(p, [:author_id, :title])
+      MyRepo.insert_all(PostAuthors, query)
+
+      # Query selecting into a source
+      query = from p in Post, select: p
+      MyRepo.insert_all(PostBackup, query)
+
+      query = from p in Post, select: %{p | public: false}
+      MyRepo.insert_all(PostBackup, query)
+
+      query = from p in Post, join: c in assoc(p, :comments), where: p.public, select: c
+      MyRepo.insert_all(PublicCommentBackup, query)
 
   ## Upserts
 
