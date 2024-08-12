@@ -129,12 +129,12 @@ defmodule MyApp.Repo do
 
 | Branch            | Support                  |
 | ----------------- | ------------------------ |
-| v3.11             | Bug fixes                |
+| v3.12             | Bug fixes                |
+| v3.11             | Security patches only    |
 | v3.10             | Security patches only    |
 | v3.9              | Security patches only    |
 | v3.8              | Security patches only    |
-| v3.7              | Security patches only    |
-| v3.6 and earlier  | Unsupported              |
+| v3.7 and earlier  | Unsupported              |
 
 With version 3.0, Ecto API has become stable. Our main focus is on providing
 bug fixes and incremental changes.

@@ -1,6 +1,6 @@
 # Changelog for v3.x
 
-## v3.12.0-dev
+## v3.12.0 (2024-08-12)
 
 ### Enhancements
 
