@@ -295,7 +295,7 @@ defmodule Ecto.Schema do
       where casting has to be done explicitly and is never performed
       implicitly when loading from or dumping to the database.
 
-    * For `the `:duration` type, you may need to enable `Duration` support in
+    * For the `:duration` type, you may need to enable `Duration` support in
       your adapter. For information on how to enable it in Postgrex, see their
       [HexDocs page](https://hexdocs.pm/postgrex/readme.html#data-representation).
 
