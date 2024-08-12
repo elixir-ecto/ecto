@@ -349,6 +349,8 @@ defmodule Ecto.Type do
       iex> type = Ecto.ParameterizedType.init(Ecto.Enum, values: [a: 1])
       iex> Ecto.Type.parameterized?(type, Ecto.Enum)
       true
+      iex> Ecto.Type.parameterized?(type, MyEnum)
+      false
 
   """
   @spec parameterized?(t, module) :: boolean
