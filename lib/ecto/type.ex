@@ -344,6 +344,18 @@ defmodule Ecto.Type do
   def primitive?(_), do: false
 
   @doc """
+  Checks if the given type is parameterized by the given module.
+
+    iex> type = Ecto.ParameterizedType.init(Ecto.Enum, values: [a: 1])
+    iex> Ecto.Type.parameterized?(type, Ecto.Enum)
+    true
+
+  """
+  @spec parameterized?(t, module) :: boolean
+  def parameterized?({:parameterized, {module, _}}, module), do: true
+  def parameterized?(_, _), do: false
+
+  @doc """
   Checks if the given atom can be used as composite type.
 
       iex> composite?(:array)
