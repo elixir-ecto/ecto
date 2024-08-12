@@ -370,11 +370,7 @@ defmodule Ecto.Query.Planner do
     {schema_or_source, expr, %{select: select} = query} =
       rewrite_subquery_select_expr(query, source?)
 
-    {expr, counter} = prewalk(expr, :select, query, select, 0, adapter)
-
-    if counter != length(select.params) do
-      error!(query, "subqueries cannot select_merge onto an existing field that has an interpolation")
-    end
+    {expr, _} = prewalk(expr, :select, query, select, 0, adapter)
 
     {{:map, types}, fields, _from} =
       collect_fields(expr, [], :none, query, select.take, true, %{})

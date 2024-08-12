@@ -563,14 +563,5 @@ defmodule Ecto.Query.SubqueryTest do
 
       assert Macro.to_string(planned_q.from.source.query.select.expr) == "%{id: ^0, text: ^1}"
     end
-
-    test "overlapping interpolations are allowed" do
-      msg = ~r"subqueries cannot select_merge onto an existing field that has an interpolation"
-
-      assert_raise Ecto.SubQueryError, msg, fn ->
-        q = from c in Comment, select: %{id: ^1}, select_merge: %{id: ^2}
-        from(s in subquery(q)) |> plan()
-      end
-    end
   end
 end
