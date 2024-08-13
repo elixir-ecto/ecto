@@ -1,5 +1,16 @@
 # Changelog for v3.x
 
+## v3.12.1 (2024-08-13)
+
+### Enhancements
+
+  * [Ecto.Type] Add `Ecto.Type.parameterized?/2`
+
+### Bug fixes
+
+  * [Ecto.Enum] Fix dialyzer specification
+  * [Ecto.Query] Remove incorrect subquery parameter check
+
 ## v3.12.0 (2024-08-12)
 
 ### Enhancements
