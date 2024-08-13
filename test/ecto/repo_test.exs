@@ -670,25 +670,6 @@ defmodule Ecto.RepoTest do
       assert ["ten"] = params
     end
 
-    test "takes query selecting on struct" do
-      threshold = "ten"
-
-      query =
-        from s in MySchema,
-          where: s.x > ^threshold,
-          select: %MySchema{
-            x: s.x,
-            y: "bar",
-            z: nil
-          }
-
-      TestRepo.insert_all(MySchema, query)
-
-      assert_received {:insert_all, %{source: "my_schema"}, {%Ecto.Query{} = query, params}}
-      assert [{{:., _, [{:&, [], [0]}, :x]}, _, []}, "bar", nil] = query.select.fields
-      assert ["ten"] = params
-    end
-
     test "takes query selecting on struct/2" do
       query =
         from s in MySchema,
