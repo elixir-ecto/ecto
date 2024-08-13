@@ -142,9 +142,6 @@ defmodule Ecto.Repo.Schema do
         %Ecto.Query.SelectExpr{expr: {:&, _, [_ix]}, fields: fields} ->
           Enum.map(fields, &insert_all_select_dump!(&1))
 
-        %Ecto.Query.SelectExpr{expr: {:%, _, [_, {:%{}, _, args}]}} ->
-          Enum.map(args, fn {field, _} -> insert_all_select_dump!(field, dumper) end)
-
         _ ->
           raise ArgumentError, """
           cannot generate a fields list for insert_all from the given source query:
@@ -157,8 +154,10 @@ defmodule Ecto.Repo.Schema do
             * A single `struct/2` or several `struct/2` expressions combined with `select_merge`
             * A source such as `p` in the query `from p in Post`
             * A single literal map or several literal maps combined with `select_merge`. If
-              combining several literal maps, there cannot be any overwrites to keys containing
-              query interpolations.
+              combining several literal maps, there cannot be any query interpolations
+              except in the last `select_merge`. Consider using `Ecto.Query.exclude/2`
+              to rebuild the select expression from scratch if you need multiple `select_merge`
+              statements with interpolations
 
           All keys must exist in the schema that is being inserted into
           """
