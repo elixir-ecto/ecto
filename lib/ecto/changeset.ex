@@ -1926,7 +1926,7 @@ defmodule Ecto.Changeset do
   if a Post has many Comments, it allows you to add, remove or change all
   comments at once. If your goal is to simply add a new comment to a post,
   then it is preferred to do so manually, as we will describe later in the
-  "Example: Adding a comment to a post" section.
+  ["Example: Adding a comment to a post" section](#put_assoc/4-example-adding-a-comment-to-a-post).
 
   This function requires the associated data to have been preloaded, except
   when the parent changeset has been newly built and not yet persisted.
@@ -1991,7 +1991,7 @@ defmodule Ecto.Changeset do
       persisted. You must use changesets, keyword lists, or maps instead. `put_assoc/4` with structs
       only takes care of guaranteeing that the comments and the parent data
       are associated. This is extremely useful when associating existing data,
-      as we will see in the "Example: Adding tags to a post" section.
+      as we will see in the ["Example: Adding tags to a post" section](#put_assoc/4-example-adding-tags-to-a-post).
 
   Once the parent changeset is given to an `Ecto.Repo` function, all entries
   will be inserted/updated/deleted within the same transaction.
