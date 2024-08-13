@@ -1482,7 +1482,7 @@ defmodule Ecto.Repo do
       `ON CONFLICT (coalesce(firstname, ''), coalesce(lastname, '')) WHERE middlename IS NULL` SQL query.
 
     * `:placeholders` - A map with placeholders. This feature is not supported
-      by all databases. See the "Placeholders" section for more information.
+      by all databases. See the ["Placeholders" section](#c:insert_all/3-placeholders) for more information.
 
   See the ["Shared options"](#module-shared-options) section at the module
   documentation for remaining options.
