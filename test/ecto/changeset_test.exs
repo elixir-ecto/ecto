@@ -930,6 +930,23 @@ defmodule Ecto.ChangesetTest do
            ]
 
     assert get_assoc(base_changesset, :comments, :struct) == [%Comment{id: 123}]
+
+    # for a "belongs to" assoc, get_assoc returns the changeset directly
+    comment_with_post_changeset = change(%Comment{post: %Post{}})
+    assert get_assoc(comment_with_post_changeset, :post, :changeset) == change(%Post{})
+    assert get_assoc(comment_with_post_changeset, :post, :struct) == %Post{}
+
+    # empty/nil assoc behavior:
+
+    # for a "has many" assoc, get_assoc returns an empty list
+    has_many_changeset = change(%Post{})
+    assert get_assoc(has_many_changeset, :comments, :changeset) == []
+    assert get_assoc(has_many_changeset, :comments, :struct) == []
+
+    # for a "belongs to" assoc, get_assoc returns nil
+    belongs_to_changeset = change(%Comment{})
+    assert get_assoc(belongs_to_changeset, :post, :changeset) == nil
+    assert get_assoc(belongs_to_changeset, :post, :struct) == nil
   end
 
   test "fetch_change/2" do

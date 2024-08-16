@@ -1689,7 +1689,8 @@ defmodule Ecto.Changeset do
       [%Post{id: 1, title: "world"}]
 
   """
-  @spec get_assoc(t, atom, :changeset | :struct) :: [t | Ecto.Schema.t()]
+  @spec get_assoc(t, atom, :changeset | :struct) ::
+          [t | Ecto.Schema.t()] | t | Ecto.Schema.t() | nil
   def get_assoc(changeset, name, as \\ :changeset)
 
   def get_assoc(%Changeset{} = changeset, name, :struct) do
