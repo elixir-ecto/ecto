@@ -69,8 +69,8 @@ defmodule Ecto.Repo.Schema do
     for row <- rows, do: Map.new(Enum.zip(fields, row))
   end
 
-  defp postprocess(rows, types, adapter, schema, %{prefix: prefix, source: source}) do
-    struct = Ecto.Schema.Loader.load_struct(schema, prefix, source)
+  defp postprocess(rows, types, adapter, schema, schema_meta) do
+    struct = Ecto.Schema.Loader.load_struct(schema, schema_meta)
 
     for row <- rows do
       {loaded, _} = Ecto.Repo.Queryable.struct_load!(types, row, [], false, struct, adapter)
@@ -705,7 +705,7 @@ defmodule Ecto.Repo.Schema do
   defp metadata(schema, prefix, source, autogen_id, context, opts) do
     %{
       autogenerate_id: autogen_id,
-      context: context,
+      context: Keyword.get(opts, :context, context),
       schema: schema,
       source: source,
       prefix: Keyword.get(opts, :prefix, prefix)
@@ -910,8 +910,8 @@ defmodule Ecto.Repo.Schema do
     Enum.reduce(autogen, data, fn {k, v}, acc -> %{acc | k => v} end)
   end
 
-  defp apply_metadata(%{__meta__: meta} = data, state, %{source: source, prefix: prefix}) do
-    %{data | __meta__: %{meta | state: state, source: source, prefix: prefix}}
+  defp apply_metadata(%{__meta__: meta} = data, state, %{source: source, prefix: prefix, context: context}) do
+    %{data | __meta__: %{meta | state: state, source: source, prefix: prefix, context: context}}
   end
 
   defp load_each(struct, [{_, value} | kv], [{key, type} | types], adapter) do

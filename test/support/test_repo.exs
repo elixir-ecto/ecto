@@ -96,8 +96,23 @@ defmodule Ecto.TestAdapter do
     {1, nil}
   end
 
-  def insert(_, %{context: nil, prefix: prefix} = meta, fields, on_conflict, returning, _opts) do
-    meta = Map.merge(meta, %{fields: fields, on_conflict: on_conflict, returning: returning, prefix: prefix})
+  def insert(
+        _,
+        %{context: nil_or_ref, prefix: prefix} = meta,
+        fields,
+        on_conflict,
+        returning,
+        _opts
+      )
+      when is_nil(nil_or_ref) or is_reference(nil_or_ref) do
+    meta =
+      Map.merge(meta, %{
+        fields: fields,
+        on_conflict: on_conflict,
+        returning: returning,
+        prefix: prefix
+      })
+
     send(self(), {:insert, meta})
     {:ok, Enum.zip(returning, 1..length(returning))}
   end
@@ -107,7 +122,8 @@ defmodule Ecto.TestAdapter do
   end
 
   # Notice the list of changes is never empty.
-  def update(_, %{context: nil} = meta, [_ | _] = changes, filters, returning, _opts) do
+  def update(_, %{context: nil_or_ref} = meta, [_ | _] = changes, filters, returning, _opts)
+      when is_nil(nil_or_ref) or is_reference(nil_or_ref) do
     meta = Map.merge(meta, %{changes: changes, filters: filters, returning: returning})
     send(self(), {:update, meta})
     {:ok, Enum.zip(returning, 1..length(returning))}
@@ -117,7 +133,8 @@ defmodule Ecto.TestAdapter do
     context
   end
 
-  def delete(_, %{context: nil} = meta, filters, returning, _opts) do
+  def delete(_, %{context: nil_or_ref} = meta, filters, returning, _opts)
+      when is_nil(nil_or_ref) or is_reference(nil_or_ref) do
     meta = Map.merge(meta, %{filters: filters, returning: returning})
     send(self(), {:delete, meta})
     {:ok, Enum.zip(returning, 1..length(returning))}

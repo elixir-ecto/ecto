@@ -1322,6 +1322,18 @@ defmodule Ecto.RepoTest do
                    end
     end
 
+    test "insert and delete sets schema context with struct" do
+      valid = %MySchema{id: 1}
+
+      ref = make_ref()
+
+      assert {:ok, schema} = TestRepo.insert(valid, context: ref)
+      assert schema.__meta__.context == ref
+
+      assert {:ok, schema} = TestRepo.delete(valid, context: ref)
+      assert schema.__meta__.context == ref
+    end
+
     test "insert!, update!, insert_or_update! and delete!" do
       valid = Ecto.Changeset.cast(%MySchema{id: 1}, %{}, [])
       assert %MySchema{} = TestRepo.insert!(valid)
@@ -1488,6 +1500,22 @@ defmodule Ecto.RepoTest do
 
     assert [schema] = TestRepo.all(MySchemaWithPrefix, prefix: "public")
     assert schema.__meta__.prefix == "private"
+  end
+
+  test "get, get_by, one and all sets schema context" do
+    ref = make_ref()
+
+    assert schema = TestRepo.get(MySchema, 123, context: ref)
+    assert schema.__meta__.context == ref
+
+    assert schema = TestRepo.get_by(MySchema, [id: 123], context: ref)
+    assert schema.__meta__.context == ref
+
+    assert schema = TestRepo.one(MySchema, context: ref)
+    assert schema.__meta__.context == ref
+
+    assert [schema] = TestRepo.all(MySchema, context: ref)
+    assert schema.__meta__.context == ref
   end
 
   describe "changeset prepare" do

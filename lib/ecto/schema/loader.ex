@@ -6,15 +6,19 @@ defmodule Ecto.Schema.Loader do
   @doc """
   Loads a struct to be used as a template in further operations.
   """
-  def load_struct(nil, _prefix, _source), do: %{}
+  def load_struct(nil, _schema_meta), do: %{}
 
-  def load_struct(schema, prefix, source) do
+  def load_struct(schema, schema_meta) do
+    source = schema_meta[:source]
+    prefix = schema_meta[:prefix]
+    context = schema_meta[:context]
+
     case schema.__schema__(:loaded) do
-      %{__meta__: %Metadata{prefix: ^prefix, source: ^source}} = struct ->
+      %{__meta__: %Metadata{prefix: ^prefix, source: ^source, context: ^context}} = struct ->
         struct
 
       %{__meta__: %Metadata{} = metadata} = struct ->
-        Map.put(struct, :__meta__, %{metadata | source: source, prefix: prefix})
+        Map.put(struct, :__meta__, %{metadata | source: source, prefix: prefix, context: context})
 
       %{} = struct ->
         struct
