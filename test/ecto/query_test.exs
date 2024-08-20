@@ -242,6 +242,11 @@ defmodule Ecto.QueryTest do
       assert put_query_prefix(from("posts"), "hello").prefix == "hello"
       assert put_query_prefix(Schema, "hello").prefix == "hello"
     end
+
+    test "stores non-string prefix in query" do
+      assert put_query_prefix(from("posts"), %{key: :hello}).prefix == %{key: :hello}
+      assert put_query_prefix(Schema, %{key: :hello}).prefix == %{key: :hello}
+    end
   end
 
   describe "trailing bindings (...)" do
@@ -500,24 +505,15 @@ defmodule Ecto.QueryTest do
       assert hd(query.joins).prefix == join_prefix
     end
 
-    test "variables are validated at runtime" do
-      prefix = 123
-
-      assert_raise RuntimeError, ~r/`prefix` must be a string/, fn ->
-        from p in "posts", prefix: ^prefix
-      end
-
-      assert_raise RuntimeError, ~r/`prefix` must be a string/, fn ->
-        from p in "posts", join: "comments", on: true, prefix: ^prefix
-      end
-    end
-
     test "are supported and overridden from schemas" do
       query = from(Post)
       assert query.from.prefix == "another"
 
       query = from(Post, prefix: "hello")
       assert query.from.prefix == "hello"
+
+      query = from(Post, prefix: ^123)
+      assert query.from.prefix == 123
 
       query = from(Post, prefix: nil)
       assert query.from.prefix == nil
