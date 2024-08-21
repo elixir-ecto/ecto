@@ -83,6 +83,7 @@ defmodule Ecto.Repo.SupervisorTest do
     assert normalize(config) == [database: "mydb", extra: "extra", otp_app: :ecto, scheme: "ecto"]
   end
 
+  @capture_log true
   test "URL options do not overwrite SSL cacertfile from config" do
     put_env(database: "hello", url: "ecto:///mydb?ssl=true", ssl: [cacertfile: "/path/to/file"])
     {:ok, config} = init_config(:runtime, __MODULE__, :ecto, extra: "extra")
