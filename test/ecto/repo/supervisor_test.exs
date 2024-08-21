@@ -83,6 +83,19 @@ defmodule Ecto.Repo.SupervisorTest do
     assert normalize(config) == [database: "mydb", extra: "extra", otp_app: :ecto, scheme: "ecto"]
   end
 
+  test "does not overwrite SSL cacertfile" do
+    put_env(database: "hello", url: "ecto:///mydb?ssl=true", ssl: [cacertfile: "/path/to/file"])
+    {:ok, config} = init_config(:runtime, __MODULE__, :ecto, extra: "extra")
+
+    assert normalize(config) == [
+             database: "mydb",
+             extra: "extra",
+             otp_app: :ecto,
+             scheme: "ecto",
+             ssl: [cacertfile: "/path/to/file"]
+           ]
+  end
+
   test "is no-op for nil or empty URL" do
     put_env(database: "hello", url: nil)
     {:ok, config} = init_config(:runtime, __MODULE__, :ecto, [])
