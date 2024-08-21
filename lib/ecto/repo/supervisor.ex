@@ -25,7 +25,15 @@ defmodule Ecto.Repo.Supervisor do
     case repo_init(type, repo, config) do
       {:ok, config} ->
         {url, config} = Keyword.pop(config, :url)
-        {:ok, Keyword.merge(config, parse_url(url || ""))}
+        url_config = parse_url(url || "")
+
+        url_config =
+          cond do
+            is_list(config[:ssl]) and url_config[:ssl] == true -> Keyword.delete(url_config, :ssl)
+            true -> url_config
+          end
+
+        {:ok, Keyword.merge(config, url_config)}
 
       :ignore ->
         :ignore
