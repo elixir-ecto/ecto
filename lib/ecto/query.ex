@@ -914,7 +914,8 @@ defmodule Ecto.Query do
   end
 
   def put_query_prefix(other, prefix) do
-    other |> Ecto.Queryable.to_query() |> put_query_prefix(prefix)
+    query = %Ecto.Query{} = Ecto.Queryable.to_query(other)
+    put_query_prefix(query, prefix)
   end
 
   @doc """
