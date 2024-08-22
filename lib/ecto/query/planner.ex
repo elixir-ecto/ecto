@@ -2197,7 +2197,8 @@ defmodule Ecto.Query.Planner do
         {{:source, {source, schema}, prefix || query.prefix, types}, fields}
 
       {{:ok, {_, fields}}, _} ->
-        {{:map, Enum.map(fields, &{&1, {:value, :any}})}, Enum.map(fields, &select_field(&1, ix, :always))}
+        {{:map, Enum.map(fields, &{&1, {:value, :any}})},
+         Enum.map(fields, &select_field(&1, ix, :always))}
 
       {:error, {:fragment, _, _}} ->
         {{:value, :map}, [{:&, [], [ix]}]}
@@ -2299,8 +2300,8 @@ defmodule Ecto.Query.Planner do
       _ ->
         error!(
           query,
-          "can only preload sources with a schema" <>
-            "(fragments, binaries and subqueries that do not select a schema are not supported)"
+          "can only preload sources with a schema " <>
+            "(fragments, binaries, and subqueries that do not select a from/join schema are not supported)"
         )
     end
   end
