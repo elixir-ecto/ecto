@@ -478,7 +478,7 @@ defmodule Ecto.Schema do
   alias Ecto.Schema.Metadata
 
   @type source :: String.t()
-  @type prefix :: String.t() | nil
+  @type prefix :: any()
   @type schema :: %{optional(atom) => any, __struct__: atom, __meta__: Metadata.t()}
   @type embedded_schema :: %{optional(atom) => any, __struct__: atom}
   @type t :: schema | embedded_schema
@@ -662,7 +662,7 @@ defmodule Ecto.Schema do
           %{unquote_splicing(Macro.escape(@ecto_changeset_fields))}
         end
 
-        def __schema__(:prefix), do: unquote(prefix)
+        def __schema__(:prefix), do: unquote(Macro.escape(prefix))
         def __schema__(:source), do: unquote(source)
         def __schema__(:fields), do: unquote(Enum.map(fields, &elem(&1, 0)))
         def __schema__(:query_fields), do: unquote(Enum.map(query_fields, &elem(&1, 0)))
@@ -690,7 +690,7 @@ defmodule Ecto.Schema do
             %Ecto.Query{
               from: %Ecto.Query.FromExpr{
                 source: {unquote(source), __MODULE__},
-                prefix: unquote(prefix)
+                prefix: unquote(Macro.escape(prefix))
               }
             }
           end

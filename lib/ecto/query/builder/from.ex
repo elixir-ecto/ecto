@@ -77,7 +77,7 @@ defmodule Ecto.Query.Builder.From do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t(), Macro.Env.t(), atom, {:ok, String.t | nil} | nil, hints) ::
+  @spec build(Macro.t(), Macro.Env.t(), atom, {:ok, Ecto.Schema.prefix | nil} | nil, hints) ::
           {Macro.t(), Keyword.t(), non_neg_integer | nil}
   def build(query, env, as, prefix, hints) do
     hints = Enum.map(hints, &hint!(&1))
@@ -85,7 +85,7 @@ defmodule Ecto.Query.Builder.From do
     prefix = case prefix do
       nil -> nil
       {:ok, prefix} when is_binary(prefix) or is_nil(prefix) -> {:ok, prefix}
-      {:ok, {:^, _, [prefix]}} -> {:ok, quote(do: Ecto.Query.Builder.From.prefix!(unquote(prefix)))}
+      {:ok, {:^, _, [prefix]}} -> {:ok, prefix}
       {:ok, prefix} -> Builder.error!("`prefix` must be a compile time string or an interpolated value using ^, got: #{Macro.to_string(prefix)}")
     end
 
@@ -153,13 +153,6 @@ defmodule Ecto.Query.Builder.From do
   end
 
   @doc """
-  Validates a prefix at runtime.
-  """
-  @spec prefix!(any) :: nil | String.t()
-  def prefix!(prefix) when is_binary(prefix) or is_nil(prefix), do: prefix
-  def prefix!(prefix), do: raise("`prefix` must be a string, got: #{inspect(prefix)}")
-
-  @doc """
   Validates hints at compile time and runtime
   """
   def hint!(hint) when is_binary(hint), do: hint
@@ -187,7 +180,7 @@ defmodule Ecto.Query.Builder.From do
   @doc """
   The callback applied by `build/2` to build the query.
   """
-  @spec apply(Ecto.Queryable.t(), non_neg_integer, Macro.t(), {:ok, String.t} | nil, hints) :: Ecto.Query.t()
+  @spec apply(Ecto.Queryable.t(), non_neg_integer, Macro.t(), {:ok, Ecto.Schema.prefix} | nil, hints) :: Ecto.Query.t()
   def apply(query, binds, as, prefix, hints) do
     query =
       query

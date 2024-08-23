@@ -882,7 +882,7 @@ defmodule Ecto.Query do
     subquery = wrap_in_subquery(query)
 
     case Keyword.fetch(opts, :prefix) do
-      {:ok, prefix} when is_binary(prefix) or is_nil(prefix) ->
+      {:ok, prefix} ->
         put_in(subquery.query.prefix, prefix)
 
       :error ->
@@ -909,12 +909,13 @@ defmodule Ecto.Query do
   @doc """
   Puts the given prefix in a query.
   """
-  def put_query_prefix(%Ecto.Query{} = query, prefix) when is_binary(prefix) do
+  def put_query_prefix(%Ecto.Query{} = query, prefix) do
     %{query | prefix: prefix}
   end
 
-  def put_query_prefix(other, prefix) when is_binary(prefix) do
-    other |> Ecto.Queryable.to_query() |> put_query_prefix(prefix)
+  def put_query_prefix(other, prefix) do
+    query = %Ecto.Query{} = Ecto.Queryable.to_query(other)
+    put_query_prefix(query, prefix)
   end
 
   @doc """

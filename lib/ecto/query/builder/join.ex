@@ -128,7 +128,7 @@ defmodule Ecto.Query.Builder.Join do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t, atom, [Macro.t], Macro.t, Macro.t, Macro.t, atom, nil | {:ok, String.t | nil}, nil | String.t | [String.t], Macro.Env.t) ::
+  @spec build(Macro.t, atom, [Macro.t], Macro.t, Macro.t, Macro.t, atom, nil | {:ok, Ecto.Schema.prefix}, nil | String.t | [String.t], Macro.Env.t) ::
               {Macro.t, Keyword.t, non_neg_integer | nil}
   def build(query, qual, binding, expr, count_bind, on, as, prefix, maybe_hints, env) do
     {:ok, prefix} = prefix || {:ok, nil}
@@ -144,7 +144,7 @@ defmodule Ecto.Query.Builder.Join do
     prefix = case prefix do
       nil -> nil
       prefix when is_binary(prefix) -> prefix
-      {:^, _, [prefix]} -> quote(do: Ecto.Query.Builder.From.prefix!(unquote(prefix)))
+      {:^, _, [prefix]} -> prefix
       prefix -> Builder.error!("`prefix` must be a compile time string or an interpolated value using ^, got: #{Macro.to_string(prefix)}")
     end
 

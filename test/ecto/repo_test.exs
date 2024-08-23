@@ -81,6 +81,16 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  defmodule MySchemaWithNonStringPrefix do
+    use Ecto.Schema
+
+    @schema_prefix %{key: :private}
+
+    schema "my_schema" do
+      field :x, :string
+    end
+  end
+
   defmodule MySchemaWithAssoc do
     use Ecto.Schema
 
@@ -317,6 +327,12 @@ defmodule Ecto.RepoTest do
       struct_with_prefix = put_meta(%MySchema{id: 2}, prefix: "another")
       TestRepo.reload(struct_with_prefix)
       assert_received {:all, %{prefix: "another"}}
+    end
+
+    test "supports non-string prefix" do
+      struct_with_prefix = put_meta(%MySchema{id: 2}, prefix: %{key: :another})
+      TestRepo.reload(struct_with_prefix)
+      assert_received {:all, %{prefix: %{key: :another}}}
     end
   end
 
@@ -1116,6 +1132,12 @@ defmodule Ecto.RepoTest do
 
       assert {:ok, schema} = TestRepo.delete(valid, prefix: "public")
       assert schema.__meta__.prefix == "public"
+
+      assert {:ok, schema} = TestRepo.insert(valid, prefix: %{key: :public})
+      assert schema.__meta__.prefix == %{key: :public}
+
+      assert {:ok, schema} = TestRepo.delete(valid, prefix: %{key: :public})
+      assert schema.__meta__.prefix == %{key: :public}
     end
 
     test "insert and delete prefix overrides schema_prefix with struct" do
@@ -1126,6 +1148,16 @@ defmodule Ecto.RepoTest do
 
       assert {:ok, schema} = TestRepo.delete(valid, prefix: "public")
       assert schema.__meta__.prefix == "public"
+    end
+
+    test "insert and delete prefix overrides schema_prefix with struct when prefix is not a string" do
+      valid = %MySchemaWithNonStringPrefix{id: 1}
+
+      assert {:ok, schema} = TestRepo.insert(valid, prefix: %{key: :public})
+      assert schema.__meta__.prefix == %{key: :public}
+
+      assert {:ok, schema} = TestRepo.delete(valid, prefix: %{key: :public})
+      assert schema.__meta__.prefix == %{key: :public}
     end
 
     test "insert, update, insert_or_update and delete sets schema prefix with changeset" do
@@ -1474,6 +1506,18 @@ defmodule Ecto.RepoTest do
 
     assert [schema] = TestRepo.all(MySchema, prefix: "public")
     assert schema.__meta__.prefix == "public"
+
+    assert schema = TestRepo.get(MySchema, 123, prefix: %{key: :public})
+    assert schema.__meta__.prefix == %{key: :public}
+
+    assert schema = TestRepo.get_by(MySchema, [id: 123], prefix: %{key: :public})
+    assert schema.__meta__.prefix == %{key: :public}
+
+    assert schema = TestRepo.one(MySchema, prefix: %{key: :public})
+    assert schema.__meta__.prefix == %{key: :public}
+
+    assert [schema] = TestRepo.all(MySchema, prefix: %{key: :public})
+    assert schema.__meta__.prefix == %{key: :public}
   end
 
   test "get, get_by, one and all ignores prefix if schema_prefix set" do
@@ -1488,6 +1532,18 @@ defmodule Ecto.RepoTest do
 
     assert [schema] = TestRepo.all(MySchemaWithPrefix, prefix: "public")
     assert schema.__meta__.prefix == "private"
+
+    assert schema = TestRepo.get(MySchemaWithNonStringPrefix, 123, prefix: %{key: :public})
+    assert schema.__meta__.prefix == %{key: :private}
+
+    assert schema = TestRepo.get_by(MySchemaWithNonStringPrefix, [id: 123], prefix: %{key: :public})
+    assert schema.__meta__.prefix == %{key: :private}
+
+    assert schema = TestRepo.one(MySchemaWithNonStringPrefix, prefix: %{key: :public})
+    assert schema.__meta__.prefix == %{key: :private}
+
+    assert [schema] = TestRepo.all(MySchemaWithNonStringPrefix, prefix: %{key: :public})
+    assert schema.__meta__.prefix == %{key: :private}
   end
 
   describe "changeset prepare" do

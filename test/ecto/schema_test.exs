@@ -341,6 +341,15 @@ defmodule Ecto.SchemaTest do
     end
   end
 
+  defmodule SchemaWithNonStringPrefix do
+    use Ecto.Schema
+
+    @schema_prefix %{key: :tenant}
+    schema "company" do
+      field :name
+    end
+  end
+
   test "schema prefix metadata" do
     assert SchemaWithPrefix.__schema__(:source) == "company"
     assert SchemaWithPrefix.__schema__(:prefix) == "tenant"
@@ -364,6 +373,31 @@ defmodule Ecto.SchemaTest do
     from = {"another_company", SchemaWithPrefix}
     query = from(from, select: 1)
     assert query.from.prefix == "tenant"
+  end
+
+  test "schema non-string prefix metadata" do
+    assert SchemaWithNonStringPrefix.__schema__(:source) == "company"
+    assert SchemaWithNonStringPrefix.__schema__(:prefix) == %{key: :tenant}
+    assert %SchemaWithNonStringPrefix{}.__meta__.source == "company"
+    assert %SchemaWithNonStringPrefix{}.__meta__.prefix == %{key: :tenant}
+  end
+
+  test "schema non-string prefix in queries from" do
+    import Ecto.Query
+
+    query = from(SchemaWithNonStringPrefix, select: 1)
+    assert query.from.prefix == %{key: :tenant}
+
+    query = from({"another_company", SchemaWithNonStringPrefix}, select: 1)
+    assert query.from.prefix == %{key: :tenant}
+
+    from = SchemaWithNonStringPrefix
+    query = from(from, select: 1)
+    assert query.from.prefix == %{key: :tenant}
+
+    from = {"another_company", SchemaWithNonStringPrefix}
+    query = from(from, select: 1)
+    assert query.from.prefix == %{key: :tenant}
   end
 
   ## Schema context

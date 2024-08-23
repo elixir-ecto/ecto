@@ -2311,11 +2311,7 @@ defmodule Ecto.Query.Planner do
   """
   def attach_prefix(%{prefix: nil} = query, opts) when is_list(opts) do
     case Keyword.fetch(opts, :prefix) do
-      {:ok, prefix} when is_binary(prefix) or is_nil(prefix) ->
-        %{query | prefix: prefix}
-
-      {:ok, prefix} when is_atom(prefix) ->
-        IO.warn("atom prefixes are deprecated. Please use a string instead.")
+      {:ok, prefix} ->
         %{query | prefix: prefix}
 
       :error ->

@@ -817,6 +817,12 @@ defmodule Ecto.Query.PlannerTest do
       |> plan()
 
     assert query.sources == {{"comments", Comment, "global"}, {"comments", Comment, "local"}}
+
+    # Non-string schema prefix is supported
+    {query, _, _, _} =
+      from(c in Comment, join: Post, on: true) |> Map.put(:prefix, %{key: :global}) |> plan()
+
+    assert query.sources == {{"comments", Comment, %{key: :global}}, {"posts", Post, "my_prefix"}}
   end
 
   test "plan: combination queries" do
