@@ -1,6 +1,7 @@
 defmodule Ecto.Repo.Supervisor do
   @moduledoc false
   use Supervisor
+  require Logger
 
   @defaults [timeout: 15000, pool_size: 10]
   @integer_url_query_params ["timeout", "pool_size", "idle_interval"]
@@ -25,7 +26,20 @@ defmodule Ecto.Repo.Supervisor do
     case repo_init(type, repo, config) do
       {:ok, config} ->
         {url, config} = Keyword.pop(config, :url)
-        {:ok, Keyword.merge(config, parse_url(url || ""))}
+        url_config = parse_url(url || "")
+
+        url_config =
+          if is_list(config[:ssl]) and url_config[:ssl] == true do
+            Logger.warning(
+              "ignoring `ssl=true` parameter in URL because `ssl` is already set in the configuration: #{inspect(config[:ssl])}"
+            )
+
+            Keyword.delete(url_config, :ssl)
+          else
+            url_config
+          end
+
+        {:ok, Keyword.merge(config, url_config)}
 
       :ignore ->
         :ignore
