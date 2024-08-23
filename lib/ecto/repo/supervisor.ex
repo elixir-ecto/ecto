@@ -28,12 +28,10 @@ defmodule Ecto.Repo.Supervisor do
         {url, config} = Keyword.pop(config, :url)
         url_config = parse_url(url || "")
 
-        # if config already has `ssl` set, e.g.: `ssl: [cacertfile: "/path/to/file"]`
-        # the URL's `ssl=true` parameter is dropped
         url_config =
           if is_list(config[:ssl]) and url_config[:ssl] == true do
             Logger.warning(
-              "Ignoring `ssl=true` parameter in URL because `ssl` is already set in the configuration: #{inspect(config[:ssl])}"
+              "ignoring `ssl=true` parameter in URL because `ssl` is already set in the configuration: #{inspect(config[:ssl])}"
             )
 
             Keyword.delete(url_config, :ssl)
