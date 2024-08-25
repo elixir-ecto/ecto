@@ -1,5 +1,12 @@
 # Changelog for v3.x
 
+## v3.12.2 (2024-08-25)
+
+### Bug fixes
+
+  * [Ecto.Query] Allow `:prefix` to be set to any term
+  * [Ecto.Repo] Avoid overwriting ssl opts from url if already set in config
+
 ## v3.12.1 (2024-08-13)
 
 ### Enhancements
@@ -39,7 +46,6 @@
 
   * [Ecto.Query] Ignore query prefix in CTE sources
   * [Ecto.Query] Fix a bug of `preload` when a through association is used in a join and has a nested separate query preload. Now the association chain is no longer preloaded and we simply preload directly onto the loaded through association.
-  * [Ecto.Query] Validate `:prefix` is a string/binary, warn otherwise
   * [Ecto.Query] Fix inspection when select has `map/struct` modifiers
   * [Ecto.Query] Disable query cache for `values` lists
   * [Ecto.Repo] Convert fields to their sources in `insert_all`
@@ -54,8 +60,10 @@
 
 ### Potential incompatibilities
 
+  * [Ecto.Changeset] Associations inside embeds have always been read-only. We now raise if you try to cast them inside a changeset
   * [Ecto.ParameterizedType] Parameterized types are now represented internally as `{:parameterized, {mod, state}}`. While this representation is private, projects may have been relying on it, and therefore they need to adapt accordingly. Use `Ecto.ParameterizedType.init/2` to instantiate parameterized types.
   * [Ecto.Query] Drop `:array_join` join type. It was added for Clickhouse support but it is no longer used
+  * [Ecto.Query] Validate `:prefix` is a string/binary (this was reverted in v3.12.2)
 
 ## v3.11.2 (2024-03-07)
 

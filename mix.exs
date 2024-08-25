@@ -2,7 +2,7 @@ defmodule Ecto.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/elixir-ecto/ecto"
-  @version "3.12.1"
+  @version "3.12.2"
 
   def project do
     [
