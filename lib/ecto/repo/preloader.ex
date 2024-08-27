@@ -50,7 +50,15 @@ defmodule Ecto.Repo.Preloader do
     normalize_and_preload_each([struct], repo_name, preloads, opts[:take], %{}, tuplet) |> hd()
   end
 
-  defp normalize_and_preload_each(structs, repo_name, preloads, take, query_assocs, tuplet) do
+  defp normalize_and_preload_each(
+         structs,
+         repo_name,
+         preloads,
+         take,
+         query_assocs,
+         {adapter_meta, opts}
+       ) do
+    tuplet = {adapter_meta, Keyword.put(opts, :ecto_query, :preload)}
     preloads = normalize(preloads, take, preloads)
     preload_each(structs, repo_name, preloads, query_assocs, tuplet)
   rescue

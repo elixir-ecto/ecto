@@ -2162,7 +2162,7 @@ defmodule Ecto.RepoTest do
 
     test "preload" do
       PrepareRepo.preload(%MySchemaWithAssoc{parent_id: 1}, :parent, hello: :world)
-      assert_received {:all, query, _}
+      assert_received {:all, query, [ecto_query: :preload, hello: :world]}
       assert query.from.source == {"my_parent", Ecto.RepoTest.MyParent}
     end
 
