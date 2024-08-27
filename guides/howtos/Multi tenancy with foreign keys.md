@@ -27,7 +27,7 @@ defmodule MyApp.Repo do
   @impl true
   def prepare_query(_operation, query, opts) do
     cond do
-      opts[:skip_org_id] || opts[:schema_migration] ->
+      opts[:skip_org_id] || opts[:ecto_query] in [:schema_migrations, :preload] ->
         {query, opts}
 
       org_id = opts[:org_id] ->
@@ -44,7 +44,7 @@ Now we can pass `:org_id` to all READ operations, such as `get`, `get_by`, `prel
 
   * if you explicitly set `:skip_org_id` to true, it won't require an `:org_id`. This reduces the odds of a developer forgetting to scope their queries, which can accidentally expose private data to other users
 
-  * if the `:schema_migration` option is set. This means the repository operation was issued by Ecto itself when migrating our database and we don't want to apply an `org_id` to them
+  * if the `:ecto_query` option is set. This means the repository operation was issued by Ecto itself, with value `:schema_migration` when migrating our database, or `:preload` when issuing a preload query, and we don't want to apply an `org_id` to them
 
 Still, setting the `org_id` for every operation is cumbersome and error prone. We will be better served if all operations attempt to set an `org_id`.
 
