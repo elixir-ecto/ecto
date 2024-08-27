@@ -27,7 +27,7 @@ defmodule MyApp.Repo do
   @impl true
   def prepare_query(_operation, query, opts) do
     cond do
-      opts[:skip_org_id] || opts[:ecto_query] in [:schema_migrations, :preload] ->
+      opts[:skip_org_id] || opts[:ecto_query] in [:schema_migration, :preload] ->
         {query, opts}
 
       org_id = opts[:org_id] ->
