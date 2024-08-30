@@ -1197,16 +1197,7 @@ defmodule Ecto.Changeset do
 
   """
   @spec cast_assoc(t, atom, Keyword.t()) :: t
-  def cast_assoc(changeset, name, opts \\ [])
-
-  def cast_assoc(%Changeset{data: %{} = data}, _name, _opts)
-      when not is_map_key(data, :__meta__) do
-    raise ArgumentError,
-          "cast_assoc/3 cannot be used to cast associations into embedded schemas or schemaless changesets. " <>
-            "Please modify the association independently."
-  end
-
-  def cast_assoc(changeset, name, opts) when is_atom(name) do
+  def cast_assoc(changeset, name, opts \\ []) when is_atom(name) do
     cast_relation(:assoc, changeset, name, opts)
   end
 
@@ -2104,16 +2095,7 @@ defmodule Ecto.Changeset do
 
   """
   @spec put_assoc(t, atom, term, Keyword.t()) :: t
-  def put_assoc(changeset, name, value, opts \\ [])
-
-  def put_assoc(%Changeset{data: %{} = data}, _name, _value, _opts)
-      when not is_map_key(data, :__meta__) do
-    raise ArgumentError,
-          "put_assoc/4 cannot be used to put associations into embedded schemas or schemaless changesets. " <>
-            "Please modify the association independently."
-  end
-
-  def put_assoc(%Changeset{} = changeset, name, value, opts) do
+  def put_assoc(%Changeset{} = changeset, name, value, opts \\ []) do
     put_relation(:assoc, changeset, name, value, opts)
   end
 

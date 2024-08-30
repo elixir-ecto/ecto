@@ -549,13 +549,8 @@ defmodule Ecto.Schema do
   `@primary_key` attribute.
 
   `belongs_to/3` associations may be defined inside of
-  embedded schemas. However, they are essentially read-only.
-  This means you may preload the associations but you may
-  not modify them by using `Ecto.Changeset.cast_assoc/3`
-  or `Ecto.Changeset.put_assoc/4`. If you would like to
-  modify the associations of an embedded schema, you must
-  change them independently. Associations nested inside of
-  embedded schemas will also not be persisted to the database
+  embedded schemas. However, any association nested inside
+  of an embedded schema won't be persisted to the database
   when calling `c:Ecto.Repo.insert/2` or `c:Ecto.Repo.update/2`.
   """
   defmacro embedded_schema(do: block) do
