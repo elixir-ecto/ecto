@@ -549,9 +549,9 @@ defmodule Ecto.Schema do
   `@primary_key` attribute.
 
   `belongs_to/3` associations may be defined inside of
-  embedded schemas. However, they will not be persisted
-  to the database when calling `c:Ecto.Repo.insert/2` or
-  `c:Ecto.Repo.update/2`.
+  embedded schemas. However, any association nested inside
+  of an embedded schema won't be persisted to the database
+  when calling `c:Ecto.Repo.insert/2` or `c:Ecto.Repo.update/2`.
   """
   defmacro embedded_schema(do: block) do
     schema(__CALLER__, nil, false, :binary_id, block)
