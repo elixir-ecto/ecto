@@ -2994,7 +2994,7 @@ defmodule Ecto.Query do
   ## Examples
 
       query |> reverse_order() |> Repo.one()
-      Post |> order(asc: :id) |> reverse_order() == Post |> order(desc: :id)
+      Post |> order_by(asc: :id) |> reverse_order() == Post |> order_by(desc: :id)
   """
   def reverse_order(%Ecto.Query{} = query) do
     update_in(query.order_bys, fn
