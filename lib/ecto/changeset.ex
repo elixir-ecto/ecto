@@ -2827,6 +2827,9 @@ defmodule Ecto.Changeset do
 
   The format has to be expressed as a regular expression.
 
+  The validation only runs if a change for the given `field` exists and the
+  change value is not `nil`.
+
   ## Options
 
     * `:message` - the message on failure, defaults to "has invalid format".
@@ -2854,6 +2857,9 @@ defmodule Ecto.Changeset do
 
   @doc """
   Validates a change is included in the given enumerable.
+
+  The validation only runs if a change for the given `field` exists and the
+  change value is not `nil`.
 
   ## Options
 
@@ -2886,6 +2892,9 @@ defmodule Ecto.Changeset do
   you should use `validate_inclusion/4` instead.
 
   Type of the field must be array.
+
+  The validation only runs if a change for the given `field` exists and the
+  change value is not `nil`.
 
   ## Options
 
@@ -2926,6 +2935,9 @@ defmodule Ecto.Changeset do
   @doc """
   Validates a change is not included in the given enumerable.
 
+  The validation only runs if a change for the given `field` exists and the
+  change value is not `nil`.
+
   ## Options
 
     * `:message` - the message on failure, defaults to "is reserved".
@@ -2956,6 +2968,9 @@ defmodule Ecto.Changeset do
   it's likely that the limit ignores graphemes and limits the number
   of unicode characters. Then consider using the `:count` option to
   limit the number of codepoints (`:codepoints`), or limit the number of bytes (`:bytes`).
+
+  The validation only runs if a change for the given `field` exists and the
+  change value is not `nil`.
 
   ## Options
 
@@ -3152,6 +3167,9 @@ defmodule Ecto.Changeset do
 
   @doc """
   Validates the properties of a number.
+
+  The validation only runs if a change for the given `field` exists and the
+  change value is not `nil`.
 
   ## Options
 
