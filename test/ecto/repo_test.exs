@@ -334,6 +334,12 @@ defmodule Ecto.RepoTest do
       TestRepo.reload(struct_with_prefix)
       assert_received {:all, %{prefix: %{key: :another}}}
     end
+
+    test "respects source" do
+      struct_with_custom_source = put_meta(%MySchema{id: 2}, source: "custom_schema")
+      TestRepo.reload(struct_with_custom_source)
+      assert_received {:all, %{from: %{source: {"custom_schema", MySchema}}}}
+    end
   end
 
   defmodule DefaultOptionRepo do
