@@ -491,8 +491,7 @@ defmodule Ecto.Repo.Queryable do
     assert_structs!(structs)
 
     schema = head.__struct__
-    prefix = head.__meta__.prefix
-    source = head.__meta__.source
+    %{prefix: prefix, source: source} = head.__meta__
 
     case schema.__schema__(:primary_key) do
       [pk] ->
