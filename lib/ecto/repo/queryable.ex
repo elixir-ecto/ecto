@@ -491,12 +491,12 @@ defmodule Ecto.Repo.Queryable do
     assert_structs!(structs)
 
     schema = head.__struct__
-    prefix = head.__meta__.prefix
+    %{prefix: prefix, source: source} = head.__meta__
 
     case schema.__schema__(:primary_key) do
       [pk] ->
         keys = Enum.map(structs, &get_pk!(&1, pk))
-        query = Query.from(x in schema, where: field(x, ^pk) in ^keys)
+        query = Query.from(x in {source, schema}, where: field(x, ^pk) in ^keys)
         %{query | prefix: prefix}
 
       pks ->
