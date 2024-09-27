@@ -387,7 +387,7 @@ defmodule Ecto.Schema do
 
   Or if using MySQL:
 
-      config :mariaex, :json_library, YourLibraryOfChoice
+      config :myxql, :json_library, YourLibraryOfChoice
 
   If changing the JSON library, remember to recompile the adapter afterwards
   by cleaning the current build:
