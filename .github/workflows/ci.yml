@@ -59,7 +59,7 @@ jobs:
 
   integration-test:
     name: integration test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       FORCE_COLOR: 1
     strategy:
