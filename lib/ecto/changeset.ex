@@ -2208,6 +2208,9 @@ defmodule Ecto.Changeset do
         {:ok, {tag, relation}} when tag in @relations ->
           apply_relation_changes(acc, key, relation, value)
 
+        {:ok, :map} when is_struct(value, Changeset) ->
+          Map.put(acc, key, apply_changes(value))
+
         {:ok, _} ->
           Map.put(acc, key, value)
 
