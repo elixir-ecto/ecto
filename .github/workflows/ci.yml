@@ -66,8 +66,8 @@ jobs:
       fail-fast: false
       matrix:
         elixirbase:
-          - "1.17.3-erlang-27.1-alpine-3.17.8"
-          - "1.17.3-erlang-25.0.4-alpine-3.17.8"
+          - "1.17.3-erlang-27.1-alpine-3.20.3"
+          - "1.17.3-erlang-25.0.4-alpine-3.20.3"
           - "1.11.4-erlang-21.3.8.24-alpine-3.13.3"
     steps:
       - uses: earthly/actions-setup@v1
