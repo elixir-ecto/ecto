@@ -1073,6 +1073,23 @@ defmodule Ecto.ChangesetTest do
     assert changed_post.category == nil
   end
 
+  test "apply_changes/1 with nested schemaless validation" do
+    params = %{"seo_metadata" => %{"keywords" => ["foo", "bar"], "slug" => "my-post-1"}}
+
+    changeset =
+      %Post{}
+      |> changeset(params)
+      |> update_change(:seo_metadata, fn seo_metadata ->
+        {%{}, %{keywords: {:array, :string}, slug: :string}}
+        |> cast(seo_metadata || %{}, [:keywords, :slug])
+        |> validate_required([:keywords, :slug])
+      end)
+
+    changed_post = apply_changes(changeset)
+
+    assert changed_post.seo_metadata == %{keywords: ["foo", "bar"], slug: "my-post-1"}
+  end
+
   describe "apply_action/2" do
     test "valid changeset" do
       post = %Post{}

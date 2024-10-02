@@ -2190,6 +2190,9 @@ defmodule Ecto.Changeset do
   regardless if the changeset is valid or not. See `apply_action/2`
   for a similar function that ensures the changeset is valid.
 
+  If a field of type `:map` contains a schemaless changeset,
+  its changes too will be applied and returned as a map with atom keys.
+
   ## Examples
 
       iex> changeset = change(%Post{author: "bar"}, %{title: "foo"})
@@ -2207,6 +2210,9 @@ defmodule Ecto.Changeset do
       case Map.fetch(types, key) do
         {:ok, {tag, relation}} when tag in @relations ->
           apply_relation_changes(acc, key, relation, value)
+
+        {:ok, :map} when is_struct(value, Changeset) ->
+          Map.put(acc, key, apply_changes(value))
 
         {:ok, _} ->
           Map.put(acc, key, value)
