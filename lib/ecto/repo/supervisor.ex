@@ -187,9 +187,6 @@ defmodule Ecto.Repo.Supervisor do
 
   @doc false
   def init({name, repo, otp_app, adapter, opts}) do
-    # Normalize name to atom, ignore via/global names
-    name = if is_atom(name), do: name, else: nil
-
     case init_config(:supervisor, repo, otp_app, opts) do
       {:ok, opts} ->
         :telemetry.execute(
@@ -199,6 +196,9 @@ defmodule Ecto.Repo.Supervisor do
         )
 
         {:ok, child, meta} = adapter.init([repo: repo] ++ opts)
+
+        # Normalize name to atom, ignore via/global names
+        name = if is_atom(name), do: name, else: nil
         cache = Ecto.Query.Planner.new_query_cache(name)
         meta = Map.merge(meta, %{repo: repo, cache: cache})
         child_spec = wrap_child_spec(child, [name, adapter, meta])
@@ -219,10 +219,6 @@ defmodule Ecto.Repo.Supervisor do
       other ->
         other
     end
-  end
-
-  defp wrap_child_spec({id, start, restart, shutdown, type, mods}, args) do
-    {id, {__MODULE__, :start_child, [start | args]}, restart, shutdown, type, mods}
   end
 
   defp wrap_child_spec(%{start: start} = spec, args) do

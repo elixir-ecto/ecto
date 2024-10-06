@@ -18,9 +18,8 @@ defmodule Ecto.Repo.Registry do
   end
 
   def lookup(repo) when is_atom(repo) do
-    GenServer.whereis(repo)
-    |> Kernel.||(raise "could not lookup Ecto repo #{inspect repo} because it was not started or it does not exist")
-    |> lookup()
+    :persistent_term.get(repo, nil) ||
+      raise "could not lookup Ecto repo #{inspect(repo)} because it was not started or it does not exist"
   end
 
   def lookup(pid) when is_pid(pid) do
@@ -38,13 +37,15 @@ defmodule Ecto.Repo.Registry do
   @impl true
   def handle_call({:associate, pid, name, value}, _from, table) do
     ref = Process.monitor(pid)
+    name && :persistent_term.put(name, value)
     true = :ets.insert(table, {pid, ref, name, value})
     {:reply, :ok, table}
   end
 
   @impl true
   def handle_info({:DOWN, ref, _type, pid, _reason}, table) do
-    [{^pid, ^ref, _, _}] = :ets.lookup(table, pid)
+    [{^pid, ^ref, name, _}] = :ets.lookup(table, pid)
+    name && :persistent_term.erase(name)
     :ets.delete(table, pid)
     {:noreply, table}
   end
