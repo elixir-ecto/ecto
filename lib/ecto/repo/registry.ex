@@ -18,7 +18,7 @@ defmodule Ecto.Repo.Registry do
   end
 
   def lookup(repo) when is_atom(repo) do
-    :persistent_term.get(repo) ||
+    :persistent_term.get(repo, nil) ||
       raise "could not lookup Ecto repo #{inspect(repo)} because it was not started or it does not exist"
   end
 
