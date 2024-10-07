@@ -1,5 +1,16 @@
 # Changelog for v3.x
 
+## v3.12.4 (2024-10-07)
+
+### Enhancements
+
+  * [Ecto.Repo] Use `persistent_term` for faster repository lookup
+  * [Ecto.Repo] Document new `:pool_count` option
+
+### Bug fixes
+
+  * [Ecto.Repo] Make `Ecto.Repo.reload` respect `source`
+
 ## v3.12.3 (2024-09-06)
 
 ### Bug fixes
