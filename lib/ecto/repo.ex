@@ -28,7 +28,7 @@ defmodule Ecto.Repo do
   to the adapter. For this particular example, you can check
   [`Ecto.Adapters.Postgres`](https://hexdocs.pm/ecto_sql/Ecto.Adapters.Postgres.html)
   for more information. In spite of this, the following configuration values
-  are shared across all adapters:
+  are common across all adapters:
 
     * `:name`- The name of the Repo supervisor process
 
@@ -45,6 +45,14 @@ defmodule Ecto.Repo do
 
     * `:pool_size` - the size of the pool used by the connection module.
       Defaults to `10`
+
+    * `:pool_count` - the number of pools to run concurrently,
+      increase this option when the pool itself may be under contention.
+      When running multiple pools, queries are randomly routed to different
+      pools, without taking into account how many connections are available
+      in each. So in some circumstances, you may be routed to a fully busy
+      pool while others have connections available. The overall number of
+      connections used will be `pool_size * pool_count`. Defaults to `1`
 
     * `:telemetry_prefix` - we recommend adapters to publish events
       using the [Telemetry](`:telemetry`) library. By default, the telemetry prefix
@@ -1591,7 +1599,8 @@ defmodule Ecto.Repo do
   @doc group: "Schema API"
   @callback insert_all(
               schema_or_source :: binary() | {binary(), module()} | module(),
-              entries_or_query :: [%{(atom() | String.t()) => value} | Keyword.t(value)] | Ecto.Query.t(),
+              entries_or_query ::
+                [%{(atom() | String.t()) => value} | Keyword.t(value)] | Ecto.Query.t(),
               opts :: Keyword.t()
             ) :: {non_neg_integer(), nil | [term()]}
             when value: term() | Ecto.Query.t()
