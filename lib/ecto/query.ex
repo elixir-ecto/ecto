@@ -2667,6 +2667,30 @@ defmodule Ecto.Query do
                  where: l.inserted_at > c.updated_at,
                  preload: [:author, comments: {c, likes: l}]
 
+  ## Choosing between preloading with joins vs. separate queries
+
+  Deciding between preloading associations via joins, a single large
+  query, (`preload: [comments: c]`) or separate smaller queries
+  (`preload: [:comments]`) depends on the specific use case.
+  Here are some factors to guide your decision:
+
+  * **Joins reduce database round trips:** By fetching data in a single
+  query, joins can minimize database round trips, potentially reducing
+  overall latency.
+  * **Potential for data duplication:** Joins may lead to duplicated
+  data in the result set, which requires more processing by Ecto
+  and consumes more bandwidth when transmitting the results.
+  * **Parallelism with separate queries:** When using separate queries
+  outside of a transaction, Ecto can parallelize the preload queries,
+  which can speed up the overall operation.
+
+  In general, a good default is to only use joins in preloads if you're
+  already joining the associations in the main query. For example,
+  in the last query in the section above, comments and likes are already
+  joined, so they are included in the preload.
+  However, the author is not joined in the main query, so it is preloaded
+  via a separate query.
+
   ## Preload queries
 
   Preload also allows queries to be given, allowing you to filter or
