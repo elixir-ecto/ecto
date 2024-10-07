@@ -2667,7 +2667,7 @@ defmodule Ecto.Query do
                  where: l.inserted_at > c.updated_at,
                  preload: [:author, comments: {c, likes: l}]
 
-  ## Choosing Between Preloading with Joins vs. Separate Queries
+  ## Choosing between preloading with joins vs. separate queries
 
   Deciding between preloading associations via joins, a single large
   query, (`preload: [comments: c]`) or separate smaller queries
