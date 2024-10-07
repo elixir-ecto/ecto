@@ -2680,10 +2680,6 @@ defmodule Ecto.Query do
   * **Potential for data duplication:** Joins may lead to duplicated
   data in the result set, which requires more processing by Ecto
   and consumes more bandwidth when transmitting the results.
-  * **Increased database load:** Joins can be taxing on the database,
-  increasing the demand on working memory. In some cases, the database
-  may need to write intermediate results to disk, which can slow down
-  query performance.
   * **Parallelism with separate queries:** When using separate queries
   outside of a transaction, Ecto can parallelize the preload queries,
   which can speed up the overall operation.
