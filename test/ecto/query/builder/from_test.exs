@@ -27,6 +27,14 @@ defmodule Ecto.Query.Builder.FromTest do
     types_kw = Enum.map(types, & &1)
     assert query.from.source == {:values, [], [types_kw, length(values)]}
 
+    # Empty values
+    msg = "must provide a non-empty list to values/2"
+
+    assert_raise ArgumentError, msg, fn ->
+      from v in values([], %{})
+    end
+
+
     # Missing type
     msg = "values/2 must declare the type for every field. The type was not given for field `text`"
 
