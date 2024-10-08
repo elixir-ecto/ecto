@@ -515,7 +515,8 @@ defmodule Ecto.Query.API do
   and `Ecto.Query.join/5`.
 
   The first argument is a list of maps representing the values of the constant table.
-  Each entry in the list must have exactly the same fields or an error is raised.
+  An error is raised if the list is empty or if every map does not have exactly the
+  same fields.
 
   The second argument is a map of types corresponding to the fields in the first argument.
   Each field must be given a type or an error is raised. Any type that can be specified in
