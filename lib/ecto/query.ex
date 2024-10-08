@@ -485,6 +485,10 @@ defmodule Ecto.Query do
     @moduledoc false
     defstruct [:types, :num_rows, :params]
 
+    def new([], _types) do
+      raise ArgumentError, "must provide a non-empty list to values/2"
+    end
+
     def new(values_list, types) do
       fields = fields(values_list)
       types = types!(fields, types)
