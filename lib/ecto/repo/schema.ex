@@ -381,7 +381,7 @@ defmodule Ecto.Repo.Schema do
     # changeset as changes, except the primary key if it is nil.
     changeset = put_repo_and_action(changeset, :insert, repo, tuplet)
     changeset = Relation.surface_changes(changeset, struct, insertable_fields ++ assocs)
-    changeset = update_in(changeset.changes, &Map.take(&1, insertable_fields ++ virtuals ++ assocs))
+    changeset = update_in(changeset.changes, &Map.take(&1, virtuals ++ assocs ++ insertable_fields))
 
 
     wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
@@ -475,7 +475,7 @@ defmodule Ecto.Repo.Schema do
     # fields into the changeset. All changes must be in the
     # changeset before hand.
     changeset = put_repo_and_action(changeset, :update, repo, tuplet)
-    changeset = update_in(changeset.changes, &Map.take(&1, updatable_fields ++ virtuals ++ assocs))
+    changeset = update_in(changeset.changes, &Map.take(&1, virtuals ++ assocs ++ updatable_fields))
 
     if changeset.changes != %{} or force? do
       wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
