@@ -671,11 +671,29 @@ defmodule Ecto.Schema do
         def __schema__(:redact_fields), do: unquote(redacted_fields)
         def __schema__(:virtual_fields), do: unquote(Enum.map(virtual_fields, &elem(&1, 0)))
 
-        def __schema__(:updatable_fields),
-          do: unquote(for {name, {_, :always}} <- fields, do: name)
+        def __schema__(:updatable_fields) do
+          unquote(
+            for {name, {_, writable}} <- fields, reduce: {[], []} do
+              {keep, drop} ->
+                case writable do
+                  :always -> {[name | keep], drop}
+                  _ -> {keep, [name | drop]}
+                end
+            end
+          )
+        end
 
-        def __schema__(:insertable_fields),
-          do: unquote(for {name, {_, writable}} when writable != :never <- fields, do: name)
+        def __schema__(:insertable_fields) do
+          unquote(
+            for {name, {_, writable}} <- fields, reduce: {[], []} do
+              {keep, drop} ->
+                case writable do
+                  :never -> {keep, [name | drop]}
+                  _ -> {[name | keep], drop}
+                end
+            end
+          )
+        end
 
         def __schema__(:autogenerate_fields),
           do: unquote(Enum.flat_map(autogenerate, &elem(&1, 0)))

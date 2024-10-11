@@ -362,7 +362,7 @@ defmodule Ecto.Repo.Schema do
     struct = struct_from_changeset!(:insert, changeset)
     schema = struct.__struct__
     dumper = schema.__schema__(:dump)
-    insertable_fields = schema.__schema__(:insertable_fields)
+    {keep_fields, drop_fields} = schema.__schema__(:insertable_fields)
     assocs = schema.__schema__(:associations)
     embeds = schema.__schema__(:embeds)
 
@@ -379,7 +379,8 @@ defmodule Ecto.Repo.Schema do
     # On insert, we always merge the whole struct into the
     # changeset as changes, except the primary key if it is nil.
     changeset = put_repo_and_action(changeset, :insert, repo, tuplet)
-    changeset = Relation.surface_changes(changeset, struct, insertable_fields ++ assocs)
+    changeset = Relation.surface_changes(changeset, struct, keep_fields ++ assocs)
+    changeset = update_in(changeset.changes, &Map.drop(&1, drop_fields))
 
     wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
       assoc_opts = assoc_opts(assocs, opts)
@@ -398,7 +399,7 @@ defmodule Ecto.Repo.Schema do
         {changes, cast_extra, dump_extra, return_types, return_sources} =
           autogenerate_id(autogen_id, changes, return_types, return_sources, adapter)
 
-        changes = Map.take(changes, insertable_fields)
+        changes = Map.take(changes, keep_fields)
         autogen = autogenerate_changes(schema, :insert, changes)
 
         dump_changes =
@@ -454,7 +455,7 @@ defmodule Ecto.Repo.Schema do
     struct = struct_from_changeset!(:update, changeset)
     schema = struct.__struct__
     dumper = schema.__schema__(:dump)
-    updatable_fields = schema.__schema__(:updatable_fields)
+    {keep_fields, drop_fields} = schema.__schema__(:updatable_fields)
     assocs = schema.__schema__(:associations)
     embeds = schema.__schema__(:embeds)
 
@@ -471,6 +472,7 @@ defmodule Ecto.Repo.Schema do
     # fields into the changeset. All changes must be in the
     # changeset before hand.
     changeset = put_repo_and_action(changeset, :update, repo, tuplet)
+    changeset = update_in(changeset.changes, &Map.drop(&1, drop_fields))
 
     if changeset.changes != %{} or force? do
       wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
@@ -483,7 +485,7 @@ defmodule Ecto.Repo.Schema do
         if changeset.valid? do
           embeds = Ecto.Embedded.prepare(changeset, embeds, adapter, :update)
 
-          changes = changeset.changes |> Map.merge(embeds) |> Map.take(updatable_fields)
+          changes = changeset.changes |> Map.merge(embeds) |> Map.take(keep_fields)
           autogen = autogenerate_changes(schema, :update, changes)
           dump_changes = dump_changes!(:update, changes, autogen, schema, [], dumper, adapter)
 
@@ -797,7 +799,8 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp replace_all_fields!(_kind, schema, to_remove) do
-    Enum.map(schema.__schema__(:updatable_fields) -- to_remove, &field_source!(schema, &1))
+    {updatable_fields, _} = schema.__schema__(:updatable_fields)
+    Enum.map(updatable_fields -- to_remove, &field_source!(schema, &1))
   end
 
   defp field_source!(nil, field) do

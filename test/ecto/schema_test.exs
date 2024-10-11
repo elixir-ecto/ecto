@@ -30,10 +30,10 @@ defmodule Ecto.SchemaTest do
              [:id, :name, :email, :password, :count, :array, :uuid, :no_query_load, :unwritable, :non_updatable, :comment_id]
 
     assert Schema.__schema__(:insertable_fields) ==
-             [:id, :name, :email, :password, :count, :array, :uuid, :no_query_load, :non_updatable, :comment_id]
+             {[:comment_id, :non_updatable, :no_query_load, :uuid, :array, :count, :password, :email, :name, :id], [:unwritable]}
 
     assert Schema.__schema__(:updatable_fields) ==
-             [:id, :name, :email, :password, :count, :array, :uuid, :no_query_load, :comment_id]
+             {[:comment_id, :no_query_load, :uuid, :array, :count, :password, :email, :name, :id], [:non_updatable, :unwritable]}
 
     assert Schema.__schema__(:virtual_fields) == [:temp]
 
