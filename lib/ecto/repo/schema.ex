@@ -366,6 +366,7 @@ defmodule Ecto.Repo.Schema do
     assocs = schema.__schema__(:associations)
     embeds = schema.__schema__(:embeds)
     virtuals = schema.__schema__(:virtual_fields)
+    surfaceables = assocs ++ insertable_fields
 
     {return_types, return_sources} =
       schema
@@ -380,8 +381,8 @@ defmodule Ecto.Repo.Schema do
     # On insert, we always merge the whole struct into the
     # changeset as changes, except the primary key if it is nil.
     changeset = put_repo_and_action(changeset, :insert, repo, tuplet)
-    changeset = Relation.surface_changes(changeset, struct, insertable_fields ++ assocs)
-    changeset = update_in(changeset.changes, &Map.take(&1, virtuals ++ assocs ++ insertable_fields))
+    changeset = Relation.surface_changes(changeset, struct, surfaceables)
+    changeset = update_in(changeset.changes, &Map.take(&1, virtuals ++ surfaceables))
 
 
     wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
