@@ -365,6 +365,7 @@ defmodule Ecto.Repo.Schema do
     insertable_fields = schema.__schema__(:insertable_fields)
     assocs = schema.__schema__(:associations)
     embeds = schema.__schema__(:embeds)
+    virtuals = schema.__schema__(:virtual_fields)
 
     {return_types, return_sources} =
       schema
@@ -380,6 +381,8 @@ defmodule Ecto.Repo.Schema do
     # changeset as changes, except the primary key if it is nil.
     changeset = put_repo_and_action(changeset, :insert, repo, tuplet)
     changeset = Relation.surface_changes(changeset, struct, insertable_fields ++ assocs)
+    changeset = update_in(changeset.changes, &Map.take(&1, insertable_fields ++ virtuals ++ assocs))
+
 
     wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
       assoc_opts = assoc_opts(assocs, opts)
@@ -457,6 +460,7 @@ defmodule Ecto.Repo.Schema do
     updatable_fields = schema.__schema__(:updatable_fields)
     assocs = schema.__schema__(:associations)
     embeds = schema.__schema__(:embeds)
+    virtuals = schema.__schema__(:virtual_fields)
 
     force? = !!opts[:force]
     filters = add_pk_filter!(changeset.filters, struct)
@@ -471,6 +475,7 @@ defmodule Ecto.Repo.Schema do
     # fields into the changeset. All changes must be in the
     # changeset before hand.
     changeset = put_repo_and_action(changeset, :update, repo, tuplet)
+    changeset = update_in(changeset.changes, &Map.take(&1, updatable_fields ++ virtuals ++ assocs))
 
     if changeset.changes != %{} or force? do
       wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
