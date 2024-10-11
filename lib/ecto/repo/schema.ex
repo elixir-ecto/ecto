@@ -382,7 +382,6 @@ defmodule Ecto.Repo.Schema do
     changeset = Relation.surface_changes(changeset, struct, keep_fields ++ assocs)
     changeset = update_in(changeset.changes, &Map.drop(&1, drop_fields))
 
-
     wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
       assoc_opts = assoc_opts(assocs, opts)
       user_changeset = run_prepare(changeset, prepare)
