@@ -49,7 +49,8 @@ defmodule Ecto.RepoTest do
 
     schema "my_schema_child" do
       field :a, :string
-      belongs_to :my_schema, MySchemaNoPK, references: :n, foreign_key: :n
+      belongs_to :my_schema, MySchema
+      belongs_to :my_schema_no_pk, MySchemaNoPK, references: :n, foreign_key: :n
     end
 
     def changeset(struct, params) do
@@ -1128,6 +1129,23 @@ defmodule Ecto.RepoTest do
       assert {:ok, _} = TestRepo.insert(stale, allow_stale: true)
       assert {:ok, _} = TestRepo.update(stale, allow_stale: true)
       assert {:ok, _} = TestRepo.delete(stale, allow_stale: true)
+    end
+
+    test "insert, update allows stale children with :allow_stale option" do
+      child_schema =
+        %MySchemaChild{a: "one"}
+
+      stale =
+        put_in(child_schema.__meta__.context, {:error, :stale})
+        |> Ecto.Changeset.change()
+
+      changeset =
+        %MySchema{id: 1}
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.put_assoc(:children, [stale])
+
+      assert {:ok, _} = TestRepo.insert(changeset, allow_stale: true)
+      assert {:ok, _} = TestRepo.update(changeset, allow_stale: true)
     end
 
     test "insert and delete sets schema prefix with struct" do
