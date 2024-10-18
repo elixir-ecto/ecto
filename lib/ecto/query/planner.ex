@@ -5,6 +5,7 @@ defmodule Ecto.Query.Planner do
   alias Ecto.Query.{
     BooleanExpr,
     ByExpr,
+    CommentExpr,
     DynamicExpr,
     FromExpr,
     JoinExpr,
@@ -13,7 +14,7 @@ defmodule Ecto.Query.Planner do
     LimitExpr
   }
 
-  if map_size(%Ecto.Query{}) != 21 do
+  if map_size(%Ecto.Query{}) != 22 do
     raise "Ecto.Query match out of date in builder"
   end
 
@@ -977,6 +978,19 @@ defmodule Ecto.Query.Planner do
     end)
   end
 
+  defp merge_cache(:comment, _query, [], cache_and_params, _operation, _adapter) do
+    cache_and_params
+  end
+
+  defp merge_cache(:comment, _query, comments, cache_and_params, _operation, _adapter) do
+    # binary comments can be cached, expression comments are dynamic so we don't cache the query
+    Enum.reduce_while(comments, cache_and_params, fn
+      comment, {cache, params} when is_binary(comment) -> {:cont, {merge_cache({:comment, comment}, cache, true), params}}
+      %CommentExpr{}, {_cache, params} -> {:halt, {:nocache, params}}
+    end)
+  end
+
+
   defp merge_cache(:with_cte, _query, nil, cache_and_params, _operation, _adapter) do
     cache_and_params
   end
@@ -1348,10 +1362,23 @@ defmodule Ecto.Query.Planner do
     else
       {nil, counter}
     end
+
+  end
+
+  defp validate_and_increment(:comment, query, exprs, counter, _operation, adapter) do
+    {exprs, counter} =
+    Enum.reduce(exprs, {[], counter}, fn
+      comment, {list, acc} when is_binary(comment) -> {[comment | list], acc + 1}
+      %CommentExpr{} = expr, {list, acc} ->
+        {expr, acc} = prewalk(:comment, query, expr, acc, adapter)
+        {[expr | list], acc}
+    end)
+
+    {Enum.reverse(exprs), counter}
   end
 
   defp validate_and_increment(kind, query, exprs, counter, _operation, adapter)
-       when kind in ~w(where group_by having order_by update)a do
+       when kind in ~w(where group_by having order_by update comment)a do
     {exprs, counter} =
       Enum.reduce(exprs, {[], counter}, fn
         %{expr: []}, {list, acc} ->
@@ -2328,6 +2355,7 @@ defmodule Ecto.Query.Planner do
   ## Helpers
 
   @all_exprs [
+    comment: :comments,
     with_cte: :with_ctes,
     distinct: :distinct,
     select: :select,
@@ -2350,6 +2378,7 @@ defmodule Ecto.Query.Planner do
   # The only way to address it is by splitting how join
   # and their on expressions are processed.
   @update_all_exprs [
+    comment: :comments,
     with_cte: :with_ctes,
     from: :from,
     update: :updates,
@@ -2359,6 +2388,7 @@ defmodule Ecto.Query.Planner do
   ]
 
   @delete_all_exprs [
+    comment: :comments,
     with_cte: :with_ctes,
     from: :from,
     join: :joins,
@@ -2380,6 +2410,7 @@ defmodule Ecto.Query.Planner do
     Enum.reduce(exprs, {query, acc}, fn {kind, key}, {query, acc} ->
       {traversed, acc} = fun.(kind, query, Map.fetch!(query, key), acc)
       {%{query | key => traversed}, acc}
+
     end)
   end
 

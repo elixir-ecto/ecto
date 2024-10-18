@@ -666,6 +666,26 @@ defmodule Ecto.Query.PlannerTest do
     assert key == :nocache
   end
 
+  test "plan: dynamic comments are uncacheable" do
+    {_query, _params, key} =
+      Post
+      |> select([p], p.id)
+      |> comment(^"uncache#{"able"}")
+      |> Planner.plan(:all, Ecto.TestAdapter)
+
+    assert key == :nocache
+  end
+
+  test "plan: static comments are cacheable" do
+    {_query, _params, key} =
+      Post
+      |> select([p], p.id)
+      |> comment("cacheable")
+      |> Planner.plan(:all, Ecto.TestAdapter)
+
+    assert key != :nocache
+  end
+
   test "plan: normalizes prefixes" do
     # No schema prefix in from
     {query, _, _, _} = from(Comment, select: 1) |> plan()

@@ -571,6 +571,61 @@ defmodule Ecto.Query.InspectTest do
     assert i(plan(query)) == "from v0 in values (#{fields})"
   end
 
+  test "with static comments" do
+    query = from(p in "posts") |> comment("foo") |> comment("bar")
+    i = inspect(query, safe: false)
+
+    assert i == """
+           # foo
+           # bar
+           #Ecto.Query<from p0 in "posts">\
+           """
+
+    i = inspect(plan(query), safe: false)
+
+    assert i == """
+           # foo
+           # bar
+           #Ecto.Query<from p0 in "posts">\
+           """
+  end
+
+  test "with dynamic comments" do
+    query = from(p in "posts") |> comment(^"foo #{"bar"}")
+    i = inspect(query, safe: false)
+
+    assert i == """
+           # foo bar
+           #Ecto.Query<from p0 in "posts">\
+           """
+
+    i = inspect(plan(query), safe: false)
+
+    assert i == """
+           # foo bar
+           #Ecto.Query<from p0 in "posts">\
+           """
+  end
+
+  test "comments in keyword query" do
+    query = from(p in "posts", comment: "foo", comment: ^"bar #{"baz"}")
+    i = inspect(query, safe: false)
+
+    assert i == """
+           # foo
+           # bar baz
+           #Ecto.Query<from p0 in "posts">\
+           """
+
+    i = inspect(plan(query), safe: false)
+
+    assert i == """
+           # foo
+           # bar baz
+           #Ecto.Query<from p0 in "posts">\
+           """
+  end
+
   def plan(query) do
     {query, _, _} = Ecto.Adapter.Queryable.plan_query(:all, Ecto.TestAdapter, query)
     query

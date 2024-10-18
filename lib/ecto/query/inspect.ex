@@ -1,7 +1,7 @@
 import Inspect.Algebra
 import Kernel, except: [to_string: 1]
 
-alias Ecto.Query.{DynamicExpr, JoinExpr, QueryExpr, WithExpr, LimitExpr}
+alias Ecto.Query.{DynamicExpr, JoinExpr, QueryExpr, WithExpr, LimitExpr, CommentExpr}
 
 defimpl Inspect, for: Ecto.Query.DynamicExpr do
   def inspect(%DynamicExpr{binding: binding} = dynamic, opts) do
@@ -49,6 +49,11 @@ defimpl Inspect, for: Ecto.Query do
       end)
 
     result = container_doc("#Ecto.Query<", list, ">", opts, fn str, _ -> str end)
+
+    result =
+      if query.comments == [],
+        do: result,
+        else: concat([comment(query.comments), "\n", result])
 
     case query.with_ctes do
       %WithExpr{recursive: recursive, queries: [_ | _] = queries} ->
@@ -159,6 +164,13 @@ defimpl Inspect, for: Ecto.Query do
 
   defp inspect_source(%{source: {source, schema}}, _names) do
     inspect(if source == schema.__schema__(:source), do: schema, else: {source, schema})
+  end
+
+  defp comment(comments) do
+    Enum.map_join(comments, "\n", fn
+      comment when is_binary(comment) -> "# #{comment}"
+      %CommentExpr{expr: comment} -> "# #{comment}"
+    end)
   end
 
   defp joins(joins, names) do
