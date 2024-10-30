@@ -10,15 +10,16 @@ if Code.ensure_loaded?(Jason.Encoder) do
           Repo.preload(#{inspect(owner)}, #{inspect(field)})
 
       Or choose to not encode the association when converting the struct \
-      to JSON by explicitly listing the JSON fields in your schema, or by \
-      excluding it (commented out):
+      to JSON by explicitly listing the JSON fields in your schema:
 
           defmodule #{inspect(owner)} do
             # ...
 
             @derive {Jason.Encoder, only: [:name, :title, ...]}
-            # @derive {Jason.Encoder, except: [#{inspect(field)}]}
             schema ... do
+
+      You can also use the :except option instead of :only if you would \
+      prefer to skip some fields.
       """
     end
   end
@@ -31,15 +32,16 @@ if Code.ensure_loaded?(Jason.Encoder) do
       exposed externally.
 
       You can either map the schemas to remove the :__meta__ field before \
-      encoding to JSON (commented out), or explicitly list the JSON fields in \
-      your schema:
+      encoding or explicitly list the JSON fields in your schema:
 
           defmodule #{inspect(schema)} do
             # ...
 
             @derive {Jason.Encoder, only: [:name, :title, ...]}
-            # @derive {Jason.Encoder, except: [:__meta__]}
             schema ... do
+
+      You can also use the :except option instead of :only if you would \
+      prefer to skip some fields.
       """
     end
   end
