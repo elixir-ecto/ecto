@@ -1044,7 +1044,7 @@ defmodule Ecto.Repo do
             ) :: term | nil
 
   @doc """
-  Checks if there exists an entry that matches the given query.
+  Checks if there exists an entry that matches the given queryable.
 
   Returns a boolean.
 
@@ -1059,6 +1059,13 @@ defmodule Ecto.Repo do
 
   See the ["Shared options"](#module-shared-options) section at the module
   documentation for more options.
+
+  > #### Generated Query {: .info}
+  >
+  > Ecto will take the provided queryable and modify it to reduce its footprint
+  > as much as possible. For example, by forcing `SELECT 1` and `LIMIT 1`. Any
+  > additional filtering must be provided directly on the queryable using expressions
+  > such as `where` and `having`.
 
   ## Examples
 
