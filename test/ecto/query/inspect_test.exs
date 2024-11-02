@@ -42,7 +42,7 @@ defmodule Ecto.Query.InspectTest do
              "dynamic([comments: c], c.bar == ^1)"
 
     assert inspect(dynamic([{^:comments, c}], c.bar == ^1)) ==
-             "dynamic([{^:comments, c}], c.bar == ^1)"
+             "dynamic([comments: c], c.bar == ^1)"
 
     dynamic = dynamic([p], p.bar == ^1)
 
