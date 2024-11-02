@@ -12,7 +12,11 @@ defimpl Inspect, for: Ecto.Query.DynamicExpr do
       |> Enum.map(&%JoinExpr{ix: &1})
 
     aliases =
-      for({as, _} when is_atom(as) <- binding, do: as)
+      Enum.flat_map(binding, fn
+        {as, _} when is_atom(as) -> [as]
+        {{:^, _, [as]}, _} when is_atom(as) -> [as]
+        _ -> []
+      end)
       |> Enum.with_index()
       |> Map.new()
 
