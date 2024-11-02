@@ -595,7 +595,7 @@ defmodule Ecto.Query do
       conditions = dynamic([q], q.some_condition and ^conditions)
       from query, where: ^conditions
 
-  > ### Dynamic boundaries {: .warning}
+  > #### Dynamic boundaries {: .warning}
   >
   > Type casting does not cross dynamic boundaries. When you write
   > a dynamic expression, such as `dynamic([p], p.visits > ^param)`,
@@ -1031,7 +1031,7 @@ defmodule Ecto.Query do
       from p in Post,
         hints: ["TABLESAMPLE", unsafe_fragment(^sample)]
 
-  > ### Unsafe Fragments {: .warning}
+  > #### Unsafe Fragments {: .warning}
   >
   > The output of `unsafe_fragment/1` will be injected directly into the
   > resulting SQL statement without being escaped. For this reason, input
@@ -1283,7 +1283,7 @@ defmodule Ecto.Query do
   after the join. In the expression syntax, the options are given as
   the fifth argument.
 
-  > ### Unspecified join condition {: .warning}
+  > #### Unspecified join condition {: .warning}
   >
   > Leaving the `:on` option unspecified while performing a join
   > that is not a cross join will trigger a warning. This is to
