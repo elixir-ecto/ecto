@@ -707,7 +707,7 @@ defmodule Ecto.Query.Builder do
 
   defp escape_field!(expr, field, _vars) do
     error!("""
-    cannot fetch field `#{field}` from `#{Macro.to_string(expr)}`. Can only fetch fields from:
+    cannot fetch field `#{Macro.to_string(field)}` from `#{Macro.to_string(expr)}`. Can only fetch fields from:
 
       * sources, such as `p` in `from p in Post`
       * named bindings, such as `as(:post)` in `from Post, as: :post`
