@@ -101,7 +101,7 @@ end
 
 In the example above, by breaking apart the mapping between the database and Elixir and between Elixir and the UI, our code becomes clearer and our data structures simpler.
 
-Note we have used `MyApp.Repo.insert_all/2` to add data to both "accounts" and "profiles" tables directly. We have chosen to bypass schemas altogether. However, there is nothing stopping you from also defining both `Account` and `Profile` schemas and changing `to_account/1` and `to_profile/1` to respectively return `%Account{}` and `%Profile{}` structs. Once structs are returned, they could be inserted through the usual `MyApp.Repo.insert/2` operation. Doing so can be especially useful if there are uniqueness or other constraints that you want to check during insertion.
+Note we have used `MyApp.Repo.insert_all/2` to add data to both "accounts" and "profiles" tables directly. We have chosen to bypass schemas altogether. However, there is nothing stopping you from also defining both `Account` and `Profile` schemas and changing `to_account/1` and `to_profile/1` to respectively return `%Account{}` and `%Profile{}` structs. Once structs are returned, they could be inserted through the usual `MyApp.Repo.insert/2` operation. One can also check for uniqueness or other constraints during insertion by wrapping the structs in a changeset.
 
 ## Schemaless changesets
 
