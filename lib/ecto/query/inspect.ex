@@ -5,6 +5,14 @@ alias Ecto.Query.{DynamicExpr, JoinExpr, QueryExpr, WithExpr, LimitExpr}
 
 defimpl Inspect, for: Ecto.Query.DynamicExpr do
   def inspect(%DynamicExpr{binding: binding} = dynamic, opts) do
+    binding =
+      Enum.map(binding, fn
+        {{:^, _, [as]}, bind} when is_atom(as) -> {as, bind}
+        other -> other
+      end)
+
+    dynamic = %{dynamic | binding: binding}
+
     joins =
       binding
       |> Enum.drop(1)
