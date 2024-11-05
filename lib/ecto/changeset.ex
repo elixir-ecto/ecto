@@ -538,12 +538,12 @@ defmodule Ecto.Changeset do
         case fetch_change(changeset, field) do
           {:ok, new_value} ->
             case type do
-              {tag, relation} when tag in @relations ->
+              {tag, _relation} when tag in @relations ->
                 if opts != [] do
                   raise ArgumentError, "invalid options for #{tag} field"
                 end
 
-                relation_changed?(relation.cardinality, new_value)
+                true
 
               _ ->
                 Enum.all?(opts, fn
@@ -565,14 +565,6 @@ defmodule Ecto.Changeset do
       :error ->
         raise ArgumentError, "field #{inspect(field)} doesn't exist"
     end
-  end
-
-  defp relation_changed?(:one, changeset) do
-    changeset.action != :update or changeset.changes != %{}
-  end
-
-  defp relation_changed?(:many, changesets) do
-    Enum.any?(changesets, &relation_changed?(:one, &1))
   end
 
   @doc """
