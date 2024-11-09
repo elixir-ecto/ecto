@@ -18,8 +18,13 @@ defmodule Ecto.Repo.Registry do
   end
 
   def lookup(repo) when is_atom(repo) do
-    :persistent_term.get(repo, nil) ||
-      raise "could not lookup Ecto repo #{inspect(repo)} because it was not started or it does not exist"
+    case Process.whereis(repo) do
+      nil ->
+        raise "could not lookup Ecto repo #{inspect(repo)} because it was not started or it does not exist"
+
+      _ ->
+        :persistent_term.get(repo, nil)
+    end
   end
 
   def lookup(pid) when is_pid(pid) do
@@ -45,7 +50,11 @@ defmodule Ecto.Repo.Registry do
   @impl true
   def handle_info({:DOWN, ref, _type, pid, _reason}, table) do
     [{^pid, ^ref, name, _}] = :ets.lookup(table, pid)
-    name && :persistent_term.erase(name)
+    # We don't delete from persistent term on purpose. Since the process is
+    # named, we can assume it does not start dynamically, so it will either
+    # restart or the amount of memory it uses is negligibla to justify the
+    # process purging done by persistent_term. If the repo is restarted and
+    # stores the same metadata, then no purging happens either.
     :ets.delete(table, pid)
     {:noreply, table}
   end
