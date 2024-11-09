@@ -45,7 +45,10 @@ defmodule Ecto.Repo.Registry do
   @impl true
   def handle_info({:DOWN, ref, _type, pid, _reason}, table) do
     [{^pid, ^ref, name, _}] = :ets.lookup(table, pid)
-    name && :persistent_term.erase(name)
+    # we call :persistent_term.erase inside a new process to prevent
+    # the possibly slow erase call from blocking us from processing
+    # other messages
+    name && spawn(:persistent_term, :erase, [name])
     :ets.delete(table, pid)
     {:noreply, table}
   end
