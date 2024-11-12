@@ -481,6 +481,12 @@ defmodule Ecto.Query.SubqueryTest do
       assert dump_params == ["foo"]
     end
 
+    test "in query with exists" do
+      c = from(c in "comments", where: ^"title" == parent_as(:p).title, select: 1)
+      s = from(p in "posts", as: :p, where: exists(c), select: count())
+      normalize(s)
+    end
+
     test "in dynamic" do
       c = from(c in Comment, where: c.text == ^"foo", select: c.post_id)
       d = dynamic([p], p.id in subquery(c))
