@@ -221,10 +221,10 @@ defmodule Ecto.Query.Planner do
           {planned_query :: Ecto.Query.t(), parameters :: list(), cache_key :: any()}
   def plan(query, operation, adapter, cte_names \\ %{}) do
     {query, cte_names} = plan_ctes(query, adapter, cte_names)
+    query = plan_sources(query, adapter, cte_names)
     plan_subquery = &plan_subquery(&1, query, nil, adapter, false, cte_names)
 
     query
-    |> plan_sources(adapter, cte_names)
     |> plan_assocs()
     |> plan_combinations(adapter, cte_names)
     |> plan_expr_subqueries(:wheres, plan_subquery)
