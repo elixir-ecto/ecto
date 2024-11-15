@@ -664,21 +664,21 @@ defmodule Ecto.Changeset do
 
       # Using default
       iex> params = %{title: "", topics: []}
-      iex> changeset = cast(post, params, [:title, :topics])
-      iex> changeset.params
+      iex> changeset = cast(%Post{}, params, [:title, :topics])
+      iex> changeset.changes
       %{topics: []}
 
       # Changing default
       iex> params = %{title: "", topics: []}
-      iex> changeset = cast(post, params, [:topics], empty_values: [[], nil])
-      iex> changeset.params
+      iex> changeset = cast(%Post{}, params, [:title, :topics], empty_values: [[], nil])
+      iex> changeset.changes
       %{title: ""}
 
       # Augmenting default
       iex> params = %{title: "", topics: []}
       iex> changeset =
-      ...>   cast(post, params, [:topics], empty_values: [[], nil] ++ Ecto.Changeset.empty_values())
-      iex> changeset.params
+      ...>   cast(%Post{}, params, [:title, :topics], empty_values: [[], nil] ++ Ecto.Changeset.empty_values())
+      iex> changeset.changes
       %{}
 
   You can define a custom error message function.
