@@ -124,7 +124,7 @@ defmodule Ecto.Schema do
   A field marked with `redact: true` will display a value of `**redacted**`
   when inspected in changes inside a `Ecto.Changeset` and be excluded from
   inspect on the schema unless the schema module is tagged with
-  the option `@ecto_derive_inspect_for_redacted_fields false`.
+  the option `@derive_inspect_for_redacted_fields false`.
 
   ## Schema attributes
 
@@ -160,6 +160,10 @@ defmodule Ecto.Schema do
 
     * `@derive` - the same as `@derive` available in `Kernel.defstruct/1`
       as the schema defines a struct behind the scenes;
+
+    * `@derive_inspect_for_redacted_fields false` - Ecto will automatically
+      derive the `Inspect` protocol if any redacted fields are set. This option
+      sets it to false;
 
     * `@field_source_mapper` - a function that receives the current field name
       and returns the mapping of this field name in the underlying source.
@@ -512,8 +516,6 @@ defmodule Ecto.Schema do
       Module.register_attribute(__MODULE__, :ecto_autogenerate, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_autoupdate, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_redact_fields, accumulate: true)
-      Module.put_attribute(__MODULE__, :ecto_derive_inspect_for_redacted_fields, true)
-      Module.put_attribute(__MODULE__, :ecto_autogenerate_id, nil)
     end
   end
 
@@ -573,7 +575,7 @@ defmodule Ecto.Schema do
       quote do
         meta? = unquote(meta?)
         source = unquote(source)
-        Ecto.Schema.__schema__(__MODULE__, __ENV__.line, source, meta?, unquote(type))
+        prefix = Ecto.Schema.__schema__(__MODULE__, __ENV__.line, source, meta?, unquote(type))
 
         try do
           import Ecto.Schema
@@ -585,46 +587,21 @@ defmodule Ecto.Schema do
 
     postlude =
       quote unquote: false do
-        prefix = @schema_prefix
-        primary_key_fields = @ecto_primary_keys |> Enum.reverse()
-        autogenerate = @ecto_autogenerate |> Enum.reverse()
-        autoupdate = @ecto_autoupdate |> Enum.reverse()
-        fields = @ecto_fields |> Enum.reverse()
-        query_fields = @ecto_query_fields |> Enum.reverse()
-        virtual_fields = @ecto_virtual_fields |> Enum.reverse()
-        field_sources = @ecto_field_sources |> Enum.reverse()
-        assocs = @ecto_assocs |> Enum.reverse()
-        embeds = @ecto_embeds |> Enum.reverse()
-        redacted_fields = @ecto_redact_fields
-        loaded = Ecto.Schema.__loaded__(__MODULE__, @ecto_struct_fields)
-
-        if redacted_fields != [] and not List.keymember?(@derive, Inspect, 0) and
-             @ecto_derive_inspect_for_redacted_fields do
-          @derive {Inspect, except: @ecto_redact_fields}
+        for clauses <- Ecto.Schema.__schema__(__MODULE__),
+            {args, body} <- clauses do
+          def __schema__(unquote_splicing(args)), do: unquote(body)
         end
 
+        loaded = Ecto.Schema.__loaded__(__MODULE__, @ecto_struct_fields)
         defstruct Enum.reverse(@ecto_struct_fields)
 
         def __changeset__ do
           %{unquote_splicing(Macro.escape(@ecto_changeset_fields))}
         end
 
-        def __schema__(:prefix), do: unquote(Macro.escape(prefix))
         def __schema__(:source), do: unquote(source)
-        def __schema__(:fields), do: unquote(Enum.map(fields, &elem(&1, 0)))
-        def __schema__(:query_fields), do: unquote(Enum.map(query_fields, &elem(&1, 0)))
-        def __schema__(:primary_key), do: unquote(primary_key_fields)
-        def __schema__(:hash), do: unquote(:erlang.phash2({primary_key_fields, query_fields}))
-        def __schema__(:read_after_writes), do: unquote(Enum.reverse(@ecto_raw))
-        def __schema__(:autogenerate_id), do: unquote(Macro.escape(@ecto_autogenerate_id))
-        def __schema__(:autogenerate), do: unquote(Macro.escape(autogenerate))
-        def __schema__(:autoupdate), do: unquote(Macro.escape(autoupdate))
+        def __schema__(:prefix), do: unquote(Macro.escape(prefix))
         def __schema__(:loaded), do: unquote(Macro.escape(loaded))
-        def __schema__(:redact_fields), do: unquote(redacted_fields)
-        def __schema__(:virtual_fields), do: unquote(Enum.map(virtual_fields, &elem(&1, 0)))
-
-        def __schema__(:autogenerate_fields),
-          do: unquote(Enum.flat_map(autogenerate, &elem(&1, 0)))
 
         if meta? do
           def __schema__(:query) do
@@ -635,18 +612,6 @@ defmodule Ecto.Schema do
               }
             }
           end
-        end
-
-        for clauses <-
-              Ecto.Schema.__clauses__(
-                fields,
-                field_sources,
-                assocs,
-                embeds,
-                virtual_fields
-              ),
-            {args, body} <- clauses do
-          def __schema__(unquote_splicing(args)), do: unquote(body)
         end
 
         :ok
@@ -2324,10 +2289,31 @@ defmodule Ecto.Schema do
       _other ->
         raise ArgumentError, "@primary_key must be false or {name, type, opts}"
     end
+
+    prefix
   end
 
   @doc false
-  def __clauses__(fields, field_sources, assocs, embeds, virtual_fields) do
+  def __schema__(module) do
+    fields = Module.get_attribute(module, :ecto_fields) |> Enum.reverse()
+    field_sources = Module.get_attribute(module, :ecto_field_sources) |> Enum.reverse()
+    assocs = Module.get_attribute(module, :ecto_assocs) |> Enum.reverse()
+    embeds = Module.get_attribute(module, :ecto_embeds) |> Enum.reverse()
+    virtual_fields = Module.get_attribute(module, :ecto_virtual_fields) |> Enum.reverse()
+    redacted_fields = Module.get_attribute(module, :ecto_redact_fields)
+    primary_key_fields = Module.get_attribute(module, :ecto_primary_keys) |> Enum.reverse()
+    query_fields = Module.get_attribute(module, :ecto_query_fields) |> Enum.reverse()
+    autogenerate = Module.get_attribute(module, :ecto_autogenerate) |> Enum.reverse()
+    autoupdate = Module.get_attribute(module, :ecto_autoupdate) |> Enum.reverse()
+    read_after_writes = Module.get_attribute(module, :ecto_raw) |> Enum.reverse()
+    autogenerate_id = Module.get_attribute(module, :ecto_autogenerate_id)
+    derive = Module.get_attribute(module, :derive)
+
+    if redacted_fields != [] and not List.keymember?(derive, Inspect, 0) and
+         derive_inspect?(module) do
+      Module.put_attribute(module, :derive, {Inspect, except: redacted_fields})
+    end
+
     load =
       for {name, {type, _writable}} <- fields do
         if alias = field_sources[name] do
@@ -2395,7 +2381,18 @@ defmodule Ecto.Schema do
       {[:associations], assoc_names},
       {[:embeds], embed_names},
       {[:updatable_fields], updatable},
-      {[:insertable_fields], insertable}
+      {[:insertable_fields], insertable},
+      {[:redact_fields], redacted_fields},
+      {[:autogenerate_fields], Enum.flat_map(autogenerate, &elem(&1, 0))},
+      {[:virtual_fields], Enum.map(virtual_fields, &elem(&1, 0))},
+      {[:fields], Enum.map(fields, &elem(&1, 0))},
+      {[:query_fields], Enum.map(query_fields, &elem(&1, 0))},
+      {[:primary_key], primary_key_fields},
+      {[:hash], :erlang.phash2({primary_key_fields, query_fields})},
+      {[:read_after_writes], read_after_writes},
+      {[:autogenerate_id], Macro.escape(autogenerate_id)},
+      {[:autogenerate], Macro.escape(autogenerate)},
+      {[:autoupdate], Macro.escape(autoupdate)}
     ]
 
     catch_all = [
@@ -2415,6 +2412,20 @@ defmodule Ecto.Schema do
       embed_quoted,
       catch_all
     ]
+  end
+
+  defp derive_inspect?(module) do
+    case Module.get_attribute(module, :ecto_derive_inspect_for_redacted_fields) do
+      false ->
+        IO.warn(
+          "@ecto_derive_inspect_for_redacted_fields is deprecated, set @derive_inspect_for_redacted_fields instead"
+        )
+
+        false
+
+      _ ->
+        Module.get_attribute(module, :derive_inspect_for_redacted_fields, true)
+    end
   end
 
   ## Private
