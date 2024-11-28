@@ -45,20 +45,6 @@ defmodule Ecto.Association do
   alias Ecto.Query.Builder.OrderBy
 
   @doc """
-  Helper to check if a queryable is compiled.
-  """
-  def ensure_loaded(queryable) do
-    if not is_atom(queryable) do
-      :skip
-    else
-      case Code.ensure_loaded(queryable) do
-        {:module, _} -> :compiled
-        {:error, _} -> :not_found
-      end
-    end
-  end
-
-  @doc """
   Builds the association struct.
 
   The struct must be defined in the module that implements the
