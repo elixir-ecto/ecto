@@ -1,5 +1,9 @@
 # Changelog for v3.x
 
+## v3.13.0-dev
+
+Requires Elixir v1.14+.
+
 ## v3.12.5 (2024-11-28)
 
 ### Enhancements

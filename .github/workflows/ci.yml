@@ -1,9 +1,9 @@
 name: CI
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 permissions:
   contents: read
@@ -19,13 +19,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - elixir: '1.17.3'
-            otp: '27.1'
+          - elixir: "1.17.3"
+            otp: "27.1"
             lint: lint
-          - elixir: '1.17.3'
-            otp: '25.0.4'
-          - elixir: '1.11.4'
-            otp: '21.3.8.24'
+          - elixir: "1.17.3"
+            otp: "25.0.4"
+          - elixir: "1.14.5"
+            otp: "23.3.4.20"
 
     steps:
       - name: Checkout
@@ -68,7 +68,7 @@ jobs:
         elixirbase:
           - "1.17.3-erlang-27.1-alpine-3.17.9"
           - "1.17.3-erlang-25.0.4-alpine-3.17.9"
-          - "1.11.4-erlang-21.3.8.24-alpine-3.13.3"
+          - "1.14.5-erlang-23.3.4.20-alpine-3.16.9"
     steps:
       - uses: earthly/actions-setup@v1
       - uses: actions/checkout@v3
