@@ -1,10 +1,24 @@
 # Changelog for v3.x
 
-## v3.12.4 (2024-10-07)
+## v3.12.5 (2024-11-28)
 
 ### Enhancements
 
   * [Ecto.Repo] Use `persistent_term` for faster repository lookup
+  * [Ecto.Repo] Document new `:pool_count` option
+
+### Bug fixes
+
+  * [Ecto.Query] Raise when empty list is given to `values/2`
+  * [Ecto.Query] Fix inspecting `dynamic/2` with interpolated named bindings
+  * [Ecto.Query] Plan sources before creating plan_subquery closure
+  * [Ecto.Repo] Remove read-only changes from returned record during insert/update
+  * [Ecto.Repo] Cascade `:allow_stale` options to assocs
+
+## v3.12.4 (2024-10-07)
+
+### Enhancements
+
   * [Ecto.Repo] Document new `:pool_count` option
 
 ### Bug fixes
