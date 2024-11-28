@@ -498,13 +498,6 @@ defmodule Ecto.Schema do
     quote do
       import Ecto.Schema, only: [schema: 2, embedded_schema: 1]
 
-      @primary_key nil
-      @timestamps_opts []
-      @foreign_key_type :id
-      @schema_prefix nil
-      @schema_context nil
-      @field_source_mapper fn x -> x end
-
       Module.register_attribute(__MODULE__, :ecto_primary_keys, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_virtual_fields, accumulate: true)
@@ -719,7 +712,7 @@ defmodule Ecto.Schema do
   """
   defmacro timestamps(opts \\ []) do
     quote bind_quoted: binding() do
-      Ecto.Schema.__define_timestamps__(__MODULE__, Keyword.merge(@timestamps_opts, opts))
+      Ecto.Schema.__define_timestamps__(__MODULE__, opts)
     end
   end
 
@@ -1988,7 +1981,9 @@ defmodule Ecto.Schema do
     if virtual? do
       Module.put_attribute(mod, :ecto_virtual_fields, {name, type})
     else
-      source = opts[:source] || Module.get_attribute(mod, :field_source_mapper).(name)
+      source =
+        opts[:source] ||
+          Module.get_attribute(mod, :field_source_mapper, &Function.identity/1).(name)
 
       if not is_atom(source) do
         raise ArgumentError,
@@ -2035,7 +2030,8 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __define_timestamps__(mod, timestamps) do
+  def __define_timestamps__(mod, opts) do
+    timestamps = Keyword.merge(Module.get_attribute(mod, :timestamps_opts, []), opts)
     type = Keyword.get(timestamps, :type, :naive_datetime)
     autogen = timestamps[:autogenerate] || {Ecto.Schema, :__timestamps__, [type]}
 
@@ -2114,7 +2110,7 @@ defmodule Ecto.Schema do
     opts = Keyword.put_new(opts, :foreign_key, :"#{name}_id")
 
     foreign_key_name = opts[:foreign_key]
-    foreign_key_type = opts[:type] || Module.get_attribute(mod, :foreign_key_type)
+    foreign_key_type = opts[:type] || Module.get_attribute(mod, :foreign_key_type, :id)
     foreign_key_type = check_field_type!(mod, name, foreign_key_type, opts)
     check_options!(foreign_key_type, opts, @valid_belongs_to_options, "belongs_to/3")
 
