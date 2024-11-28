@@ -6,11 +6,6 @@ Requires Elixir v1.14+.
 
 ## v3.12.5 (2024-11-28)
 
-### Enhancements
-
-  * [Ecto.Repo] Use `persistent_term` for faster repository lookup
-  * [Ecto.Repo] Document new `:pool_count` option
-
 ### Bug fixes
 
   * [Ecto.Query] Raise when empty list is given to `values/2`
