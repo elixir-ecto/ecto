@@ -554,7 +554,7 @@ defmodule Ecto.Schema do
   when calling `c:Ecto.Repo.insert/2` or `c:Ecto.Repo.update/2`.
   """
   defmacro embedded_schema(do: block) do
-    schema(__CALLER__, nil, false, :binary_id, block)
+    schema(nil, false, :binary_id, block)
   end
 
   @doc """
@@ -565,64 +565,15 @@ defmodule Ecto.Schema do
   as value and can be manipulated with the `Ecto.put_meta/2` function.
   """
   defmacro schema(source, do: block) do
-    schema(__CALLER__, source, true, :id, block)
+    schema(source, true, :id, block)
   end
 
-  defp schema(caller, source, meta?, type, block) do
+  defp schema(source, meta?, type, block) do
     prelude =
       quote do
-        if line = Module.get_attribute(__MODULE__, :ecto_schema_defined) do
-          raise "schema already defined for #{inspect(__MODULE__)} on line #{line}"
-        end
-
-        @ecto_schema_defined unquote(caller.line)
-
-        @after_compile Ecto.Schema
-        Module.register_attribute(__MODULE__, :ecto_changeset_fields, accumulate: true)
-        Module.register_attribute(__MODULE__, :ecto_struct_fields, accumulate: true)
-
         meta? = unquote(meta?)
         source = unquote(source)
-        prefix = @schema_prefix
-        context = @schema_context
-
-        # Those module attributes are accessed only dynamically
-        # so we explicitly reference them here to avoid warnings.
-        _ = @foreign_key_type
-        _ = @timestamps_opts
-
-        if meta? do
-          unless is_binary(source) do
-            raise ArgumentError, "schema source must be a string, got: #{inspect(source)}"
-          end
-
-          meta = %Metadata{
-            state: :built,
-            source: source,
-            prefix: prefix,
-            context: context,
-            schema: __MODULE__
-          }
-
-          Module.put_attribute(__MODULE__, :ecto_struct_fields, {:__meta__, meta})
-        end
-
-        if @primary_key == nil do
-          @primary_key {:id, unquote(type), autogenerate: true}
-        end
-
-        primary_key_fields =
-          case @primary_key do
-            false ->
-              []
-
-            {name, type, opts} ->
-              Ecto.Schema.__field__(__MODULE__, name, type, [primary_key: true] ++ opts)
-              [name]
-
-            other ->
-              raise ArgumentError, "@primary_key must be false or {name, type, opts}"
-          end
+        Ecto.Schema.__schema__(__MODULE__, __ENV__.line, source, meta?, unquote(type))
 
         try do
           import Ecto.Schema
@@ -634,6 +585,7 @@ defmodule Ecto.Schema do
 
     postlude =
       quote unquote: false do
+        prefix = @schema_prefix
         primary_key_fields = @ecto_primary_keys |> Enum.reverse()
         autogenerate = @ecto_autogenerate |> Enum.reverse()
         autoupdate = @ecto_autoupdate |> Enum.reverse()
@@ -710,7 +662,7 @@ defmodule Ecto.Schema do
         end
 
         for clauses <-
-              Ecto.Schema.__schema__(
+              Ecto.Schema.__clauses__(
                 fields,
                 field_sources,
                 assocs,
@@ -2320,23 +2272,22 @@ defmodule Ecto.Schema do
   ## Quoted callbacks
 
   @doc false
-  def __after_compile__(%{module: module} = env, _) do
+  def __after_verify__(module) do
     # If we are compiling code, we can validate associations now,
     # as the Elixir compiler will solve dependencies.
-    if Code.can_await_module_compilation?() do
-      for name <- module.__schema__(:associations) do
-        assoc = module.__schema__(:association, name)
+    for name <- module.__schema__(:associations) do
+      assoc = module.__schema__(:association, name)
 
-        case assoc.__struct__.after_compile_validation(assoc, env) do
-          :ok ->
-            :ok
+      case assoc.__struct__.after_verify_validation(assoc) do
+        :ok ->
+          :ok
 
-          {:error, message} ->
-            IO.warn(
-              "invalid association `#{assoc.field}` in schema #{inspect(module)}: #{message}",
-              Macro.Env.stacktrace(env)
-            )
-        end
+        {:error, message} ->
+          IO.warn(
+            "invalid association `#{assoc.field}` in schema #{inspect(module)}: #{message}",
+            module: module,
+            file: to_string(module.__info__(:compile)[:source] || "nofile")
+          )
       end
     end
 
@@ -2344,7 +2295,63 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __schema__(fields, field_sources, assocs, embeds, virtual_fields) do
+  def __schema__(module, line, source, meta?, type) do
+    if previous_line = Module.get_attribute(module, :ecto_schema_defined) do
+      raise "schema already defined for #{inspect(module)} on line #{previous_line}"
+    end
+
+    Module.put_attribute(module, :ecto_schema_defined, line)
+
+    if Code.can_await_module_compilation?() do
+      Module.put_attribute(module, :after_verify, Ecto.Schema)
+    end
+
+    Module.register_attribute(module, :ecto_changeset_fields, accumulate: true)
+    Module.register_attribute(module, :ecto_struct_fields, accumulate: true)
+
+    # Those module attributes are accessed only dynamically
+    # so we explicitly reference them here to avoid warnings.
+    Module.get_attribute(module, :foreign_key_type)
+    Module.get_attribute(module, :timestamps_opts)
+
+    prefix = Module.get_attribute(module, :schema_prefix)
+    context = Module.get_attribute(module, :schema_context)
+
+    if meta? do
+      unless is_binary(source) do
+        raise ArgumentError, "schema source must be a string, got: #{inspect(source)}"
+      end
+
+      meta = %Metadata{
+        state: :built,
+        source: source,
+        prefix: prefix,
+        context: context,
+        schema: module
+      }
+
+      Module.put_attribute(module, :ecto_struct_fields, {:__meta__, meta})
+    end
+
+    if Module.get_attribute(module, :primary_key) == nil do
+      Module.put_attribute(module, :primary_key, {:id, type, autogenerate: true})
+    end
+
+    case Module.get_attribute(module, :primary_key) do
+      false ->
+        []
+
+      {name, type, opts} ->
+        Ecto.Schema.__field__(module, name, type, [primary_key: true] ++ opts)
+        [name]
+
+      _other ->
+        raise ArgumentError, "@primary_key must be false or {name, type, opts}"
+    end
+  end
+
+  @doc false
+  def __clauses__(fields, field_sources, assocs, embeds, virtual_fields) do
     load =
       for {name, {type, _writable}} <- fields do
         if alias = field_sources[name] do
