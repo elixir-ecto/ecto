@@ -580,21 +580,12 @@ defmodule Ecto.Schema do
 
     postlude =
       quote unquote: false do
-        for clauses <- Ecto.Schema.__schema__(__MODULE__),
-            {args, body} <- clauses do
-          def __schema__(unquote_splicing(args)), do: unquote(body)
-        end
-
-        loaded = Ecto.Schema.__loaded__(__MODULE__, @ecto_struct_fields)
-        defstruct Enum.reverse(@ecto_struct_fields)
+        {struct_fields, bags_of_clauses} = Ecto.Schema.__schema__(__MODULE__)
+        defstruct struct_fields
 
         def __changeset__ do
           %{unquote_splicing(Macro.escape(@ecto_changeset_fields))}
         end
-
-        def __schema__(:source), do: unquote(source)
-        def __schema__(:prefix), do: unquote(Macro.escape(prefix))
-        def __schema__(:loaded), do: unquote(Macro.escape(loaded))
 
         if meta? do
           def __schema__(:query) do
@@ -605,6 +596,13 @@ defmodule Ecto.Schema do
               }
             }
           end
+        end
+
+        def __schema__(:source), do: unquote(source)
+        def __schema__(:prefix), do: unquote(Macro.escape(prefix))
+
+        for clauses <- bags_of_clauses, {args, body} <- clauses do
+          def __schema__(unquote_splicing(args)), do: unquote(body)
         end
 
         :ok
@@ -1943,14 +1941,6 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __loaded__(module, struct_fields) do
-    case Map.new([{:__struct__, module} | struct_fields]) do
-      %{__meta__: meta} = struct -> %{struct | __meta__: Map.put(meta, :state, :loaded)}
-      struct -> struct
-    end
-  end
-
-  @doc false
   def __field__(mod, name, type, opts) do
     # Check the field type before we check options because it is
     # better to raise unknown type first than unsupported option.
@@ -2303,12 +2293,20 @@ defmodule Ecto.Schema do
     autoupdate = Module.get_attribute(module, :ecto_autoupdate) |> Enum.reverse()
     read_after_writes = Module.get_attribute(module, :ecto_raw) |> Enum.reverse()
     autogenerate_id = Module.get_attribute(module, :ecto_autogenerate_id)
+
+    struct_fields = Module.get_attribute(module, :ecto_struct_fields) |> Enum.reverse()
     derive = Module.get_attribute(module, :derive)
 
     if redacted_fields != [] and not List.keymember?(derive, Inspect, 0) and
          derive_inspect?(module) do
       Module.put_attribute(module, :derive, {Inspect, except: redacted_fields})
     end
+
+    loaded =
+      case Map.new([{:__struct__, module} | struct_fields]) do
+        %{__meta__: meta} = struct -> %{struct | __meta__: Map.put(meta, :state, :loaded)}
+        struct -> struct
+      end
 
     load =
       for {name, {type, _writable}} <- fields do
@@ -2388,7 +2386,8 @@ defmodule Ecto.Schema do
       {[:read_after_writes], read_after_writes},
       {[:autogenerate_id], Macro.escape(autogenerate_id)},
       {[:autogenerate], Macro.escape(autogenerate)},
-      {[:autoupdate], Macro.escape(autoupdate)}
+      {[:autoupdate], Macro.escape(autoupdate)},
+      {[:loaded], Macro.escape(loaded)}
     ]
 
     catch_all = [
@@ -2399,15 +2398,18 @@ defmodule Ecto.Schema do
       {[:embed, quote(do: _)], nil}
     ]
 
-    [
-      single_arg,
-      field_sources_quoted,
-      types_quoted,
-      virtual_types_quoted,
-      assoc_quoted,
-      embed_quoted,
-      catch_all
-    ]
+    bags_of_clauses =
+      [
+        single_arg,
+        field_sources_quoted,
+        types_quoted,
+        virtual_types_quoted,
+        assoc_quoted,
+        embed_quoted,
+        catch_all
+      ]
+
+    {struct_fields, bags_of_clauses}
   end
 
   defp derive_inspect?(module) do
