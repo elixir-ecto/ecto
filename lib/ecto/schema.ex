@@ -623,30 +623,6 @@ defmodule Ecto.Schema do
         def __schema__(:redact_fields), do: unquote(redacted_fields)
         def __schema__(:virtual_fields), do: unquote(Enum.map(virtual_fields, &elem(&1, 0)))
 
-        def __schema__(:updatable_fields) do
-          unquote(
-            for {name, {_, writable}} <- fields, reduce: {[], []} do
-              {keep, drop} ->
-                case writable do
-                  :always -> {[name | keep], drop}
-                  _ -> {keep, [name | drop]}
-                end
-            end
-          )
-        end
-
-        def __schema__(:insertable_fields) do
-          unquote(
-            for {name, {_, writable}} <- fields, reduce: {[], []} do
-              {keep, drop} ->
-                case writable do
-                  :never -> {keep, [name | drop]}
-                  _ -> {[name | keep], drop}
-                end
-            end
-          )
-        end
-
         def __schema__(:autogenerate_fields),
           do: unquote(Enum.flat_map(autogenerate, &elem(&1, 0)))
 
@@ -2395,11 +2371,31 @@ defmodule Ecto.Schema do
 
     embed_names = Enum.map(embeds, &elem(&1, 0))
 
+    updatable =
+      for {name, {_, writable}} <- fields, reduce: {[], []} do
+        {keep, drop} ->
+          case writable do
+            :always -> {[name | keep], drop}
+            _ -> {keep, [name | drop]}
+          end
+      end
+
+    insertable =
+      for {name, {_, writable}} <- fields, reduce: {[], []} do
+        {keep, drop} ->
+          case writable do
+            :never -> {keep, [name | drop]}
+            _ -> {[name | keep], drop}
+          end
+      end
+
     single_arg = [
       {[:dump], dump |> Map.new() |> Macro.escape()},
       {[:load], load |> Macro.escape()},
       {[:associations], assoc_names},
-      {[:embeds], embed_names}
+      {[:embeds], embed_names},
+      {[:updatable_fields], updatable},
+      {[:insertable_fields], insertable}
     ]
 
     catch_all = [
