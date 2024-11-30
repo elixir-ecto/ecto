@@ -40,10 +40,10 @@ defmodule Ecto.Query.Builder.FromTest do
   test "values list source with types defined by schema" do
     values = [%{num: 1, text: "one"}, %{num: 2, text: "two"}]
     type_schema = Schema
-    types = Enum.map([:num, :text], &{&1, Schema.__schema__(:type, &1)})
+    types_kw = Enum.map(%{num: :integer, text: :string}, & &1)
     query = from v in values(values, type_schema)
 
-    assert query.from.source == {:values, [], [types, length(values)]}
+    assert query.from.source == {:values, [], [types_kw, length(values)]}
   end
 
   test "values list source with empty values" do
