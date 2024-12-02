@@ -519,7 +519,7 @@ defmodule Ecto.Query.API do
   same fields.
 
   The second argument is either a map of types or an Ecto schema containing all the
-  fields in the first argument
+  fields in the first argument.
 
   Each field must be given a type or an error is raised. Any type that can be specified in
   a schema may be used.
