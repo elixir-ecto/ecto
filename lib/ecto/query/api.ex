@@ -518,16 +518,30 @@ defmodule Ecto.Query.API do
   An error is raised if the list is empty or if every map does not have exactly the
   same fields.
 
-  The second argument is a map of types corresponding to the fields in the first argument.
+  The second argument is either a map of types or an Ecto schema containing all the
+  fields in the first argument.
+
   Each field must be given a type or an error is raised. Any type that can be specified in
   a schema may be used.
 
   Queries using a values list are not cacheable by Ecto.
 
-  ## Select example
+  ## Select with map types example
 
       values = [%{id: 1, text: "abc"}, %{id: 2, text: "xyz"}]
       types = %{id: :integer, text: :string}
+
+      query =
+        from v1 in values(values, types),
+          join: v2 in values(values, types),
+          on: v1.id == v2.id
+
+      Repo.all(query)
+
+  ## Select with schema types example
+
+      values = [%{id: 1, text: "abc"}, %{id: 2, text: "xyz"}]
+      types = ValuesSchema
 
       query =
         from v1 in values(values, types),

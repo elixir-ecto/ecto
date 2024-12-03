@@ -507,7 +507,7 @@ defmodule Ecto.Query do
       MapSet.to_list(fields)
     end
 
-    defp types!(fields, types) do
+    defp types!(fields, types) when is_map(types) do
       Enum.map(fields, fn field ->
         case types do
           %{^field => type} ->
@@ -517,6 +517,18 @@ defmodule Ecto.Query do
             raise ArgumentError,
                   "values/2 must declare the type for every field. " <>
                     "The type was not given for field `#{field}`"
+        end
+      end)
+    end
+
+    defp types!(fields, schema) when is_atom(schema) do
+      Enum.map(fields, fn field ->
+        if type = schema.__schema__(:type, field) do
+          {field, type}
+        else
+          raise ArgumentError,
+                "values/2 must declare the type for every field. " <>
+                  "The type was not given for field `#{field}`"
         end
       end)
     end

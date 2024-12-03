@@ -2207,6 +2207,17 @@ defmodule Ecto.Integration.RepoTest do
       assert TestRepo.all(query) == Enum.map(values, &{&1, &1.bid})
     end
 
+    test "all with schema types" do
+      uuid_module = uuid_module(TestRepo.__adapter__())
+      uuid = uuid_module.generate()
+
+      raw_values = [%{bid: uuid, visits: "1"}, %{bid: uuid, visits: "2"}]
+      casted_values = [%{bid: uuid, visits: 1}, %{bid: uuid, visits: 2}]
+      types = Post
+      query = from v in values(raw_values, types)
+      assert TestRepo.all(query) == casted_values
+    end
+
     test "all with join" do
       uuid_module = uuid_module(TestRepo.__adapter__())
       uuid = uuid_module.generate()
