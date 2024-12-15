@@ -1916,8 +1916,11 @@ defmodule Ecto.Changeset do
 
   This function is used to work with associations as a whole. For example,
   if a Post has many Comments, it allows you to add, remove or change all
-  comments at once. If your goal is to simply add a new comment to a post,
-  then it is preferred to do so manually, as we will describe later in the
+  comments at once, automatically computing inserts/updates/deletes by
+  comparing the data that you gave with the one already in the database.
+  If your goal is to manage individual resources, such as adding a new
+  comment to a post, or update post linked to a comment, tnen it is not
+  necessary to use this function. We will explore this later in the
   ["Example: Adding a comment to a post" section](#put_assoc/4-example-adding-a-comment-to-a-post).
 
   This function requires the associated data to have been preloaded, except
@@ -3256,23 +3259,75 @@ defmodule Ecto.Changeset do
     result = Decimal.compare(value, target_value)
 
     case decimal_compare(result, spec_key) do
-      true -> nil
-      false -> [{field, message(opts, default_message, validation: :number, kind: spec_key, number: target_value)}]
+      true ->
+        nil
+
+      false ->
+        [
+          {field,
+           message(opts, default_message,
+             validation: :number,
+             kind: spec_key,
+             number: target_value
+           )}
+        ]
     end
   end
 
-  defp compare_numbers(field, value, default_message, spec_key, spec_function, %Decimal{} = target_value, opts) do
-    compare_numbers(field, decimal_new(value), default_message, spec_key, spec_function, target_value, opts)
+  defp compare_numbers(
+         field,
+         value,
+         default_message,
+         spec_key,
+         spec_function,
+         %Decimal{} = target_value,
+         opts
+       ) do
+    compare_numbers(
+      field,
+      decimal_new(value),
+      default_message,
+      spec_key,
+      spec_function,
+      target_value,
+      opts
+    )
   end
 
-  defp compare_numbers(field, %Decimal{} = value, default_message, spec_key, spec_function, target_value, opts) do
-    compare_numbers(field, value, default_message, spec_key, spec_function, decimal_new(target_value), opts)
+  defp compare_numbers(
+         field,
+         %Decimal{} = value,
+         default_message,
+         spec_key,
+         spec_function,
+         target_value,
+         opts
+       ) do
+    compare_numbers(
+      field,
+      value,
+      default_message,
+      spec_key,
+      spec_function,
+      decimal_new(target_value),
+      opts
+    )
   end
 
   defp compare_numbers(field, value, default_message, spec_key, spec_function, target_value, opts) do
     case apply(spec_function, [value, target_value]) do
-      true -> nil
-      false -> [{field, message(opts, default_message, validation: :number, kind: spec_key, number: target_value)}]
+      true ->
+        nil
+
+      false ->
+        [
+          {field,
+           message(opts, default_message,
+             validation: :number,
+             kind: spec_key,
+             number: target_value
+           )}
+        ]
     end
   end
 
