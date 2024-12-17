@@ -326,8 +326,11 @@ defmodule Ecto.Repo.Preloader do
           end
 
         {:one, _} ->
-          query
-      end
+          case assoc.relationship do
+            :parent -> query
+            _ -> add_preload_order(assoc.preload_order, query)
+          end
+        end
 
     unzip_ids Ecto.Repo.Queryable.all(repo_name, query, tuplet), [], []
   end
