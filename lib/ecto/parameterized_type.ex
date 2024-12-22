@@ -64,6 +64,13 @@ defmodule Ecto.ParameterizedType do
         field :bar, MyApp.MyType, opt1: :baz, opt2: :boo
       end
 
+  To use this type in a schema field with a composite type, specify the type in a tuple
+  and opts afterwards.
+
+      schema "foo" do
+        field :bars, {:array, MyApp.MyType}, opt1: :baz, opt2: :boo
+      end
+
   To use this type in places where you need it to be initialized (for example,
   schemaless changesets), you can use `init/2`.
 
