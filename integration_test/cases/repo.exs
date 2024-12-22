@@ -13,6 +13,8 @@ defmodule Ecto.Integration.RepoTest do
   alias Ecto.Integration.Barebone
   alias Ecto.Integration.CompositePk
   alias Ecto.Integration.PostUserCompositePk
+  alias Ecto.Integration.Item
+  alias Ecto.Integration.ItemColor
 
   test "returns already started for started repos" do
     assert {:error, {:already_started, _}} = TestRepo.start_link()
@@ -1421,6 +1423,31 @@ defmodule Ecto.Integration.RepoTest do
       assert p1 == %{id: pid1}
       assert p2 == %{id: pid2}
       assert p3 == %{id: pid3}
+    end
+
+    test "take with embed" do
+      today = Date.utc_today()
+
+      TestRepo.insert!(%Order{
+        metadata: %{test: "test"},
+        item: %Item{price: 1, valid_at: today, primary_color: %ItemColor{name: "1"}}
+      })
+
+      TestRepo.insert!(%Order{
+        item: %Item{price: 2, valid_at: today}
+      })
+
+      TestRepo.insert!(%Order{metadata: %{test3: "test3"}})
+
+      [o1, o2, o3] =
+        Order
+        |> select([o], map(o, [:metadata, item: [:price, primary_color: [:name]]]))
+        |> order_by([o], o.item["price"])
+        |> TestRepo.all()
+
+      assert o1 == %{metadata: %{"test" => "test"}, item: %Item{price: 1, primary_color: %ItemColor{name: "1"}}}
+      assert o2 == %{metadata: nil, item: %Item{price: 2, primary_color: nil}}
+      assert o3 == %{metadata: %{"test3" => "test3"}, item: nil}
     end
 
     test "take with preload assocs" do

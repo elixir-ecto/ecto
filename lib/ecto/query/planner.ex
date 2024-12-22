@@ -2237,6 +2237,14 @@ defmodule Ecto.Query.Planner do
         {source, type, writable} = Map.get(dumper, field, {field, :any, :always})
         {[{field, type} | types], [select_field(source, ix, writable) | exprs]}
 
+      {embed_field, sub_fields}, {types, exprs}
+      when is_map_key(dumper, embed_field) and is_list(sub_fields) and
+             not is_map_key(drop, embed_field) ->
+        {source, type, writable} = Map.get(dumper, embed_field)
+        embed_field_expr = select_field(source, ix, writable)
+        embed_path_exprs = embed_paths(sub_fields, embed_field_expr, [], [])
+        {[{embed_field, {type, sub_fields}} | types], Enum.reverse(embed_path_exprs, exprs)}
+
       _field, acc ->
         acc
     end)
@@ -2244,6 +2252,20 @@ defmodule Ecto.Query.Planner do
 
   defp select_field(field, ix, writable) do
     {{:., [writable: writable], [{:&, [], [ix]}, field]}, [], []}
+  end
+
+  defp embed_paths([], _embed_expr, _curr_path, acc), do: acc
+
+  defp embed_paths([field | rest], embed_expr, curr_path, acc)
+       when is_atom(field) do
+    path = Enum.reverse([Atom.to_string(field) | curr_path])
+    expr = {:json_extract_path, [], [embed_expr, path]}
+    embed_paths(rest, embed_expr, curr_path, [expr | acc])
+  end
+
+  defp embed_paths([{field, sub_fields} | rest], embed_expr, curr_path, acc) do
+    acc = embed_paths(sub_fields, embed_expr, [Atom.to_string(field) | curr_path], acc)
+    embed_paths(rest, embed_expr, curr_path, acc)
   end
 
   defp get_ix!({:&, _, [ix]} = expr, _kind, query) do

@@ -188,6 +188,19 @@ defmodule Ecto.Repo.Queryable do
   @doc """
   Load structs from query.
   """
+  def struct_load!(
+        [{field, {type, sub_fields}} | types],
+        values,
+        acc,
+        all_nil?,
+        struct,
+        adapter
+      )
+      when is_list(sub_fields) do
+    values = combine_embed_values(sub_fields, values, true, %{})
+    struct_load!([{field, type} | types], values, acc, all_nil?, struct, adapter)
+  end
+
   def struct_load!([{field, type} | types], [value | values], acc, all_nil?, struct, adapter) do
     all_nil? = all_nil? and value == nil
     value = load!(type, value, field, struct, adapter)
@@ -200,6 +213,22 @@ defmodule Ecto.Repo.Queryable do
 
   def struct_load!([], values, acc, false, struct, _adapter) do
     {Map.merge(struct, Map.new(acc)), values}
+  end
+
+  defp combine_embed_values([], values, true, _acc), do: [nil | values]
+  defp combine_embed_values([], values, false, acc), do: [acc | values]
+
+  defp combine_embed_values([field | fields], [value | values], all_nil?, acc)
+       when is_atom(field) do
+    all_nil? = all_nil? and value == nil
+    combine_embed_values(fields, values, all_nil?, Map.put(acc, field, value))
+  end
+
+  defp combine_embed_values([{field, sub_fields} | fields], values, all_nil?, acc)
+       when is_atom(field) and is_list(sub_fields) do
+    [sub_map | values] = combine_embed_values(sub_fields, values, true, %{})
+    all_nil? = all_nil? and sub_map == nil
+    combine_embed_values(fields, values, all_nil?, Map.put(acc, field, sub_map))
   end
 
   ## Helpers

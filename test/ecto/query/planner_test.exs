@@ -170,6 +170,11 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  defp select_embed_field(embed_field, path, ix) do
+    embed_expr = {{:., [writable: :always], [{:&, [], [ix]}, embed_field]}, [], []}
+    {:json_extract_path, [], [embed_expr, path]}
+  end
+
   test "plan: merges all parameters" do
     uuid = Ecto.UUID.generate()
     {:ok, dump_uuid} = Ecto.UUID.dump(uuid)
@@ -2315,6 +2320,20 @@ defmodule Ecto.Query.PlannerTest do
     assert query.select.fields ==
              select_fields([:a], 1) ++
                select_fields([:b], 1)
+  end
+
+  test "normalize: select with map/2 on embed" do
+    query = Post |> select([p], map(p, [:title, meta: [:slug, author: [:name]]])) |> normalize()
+
+    expected_fields = select_fields([:post_title], 0)
+
+    expected_embed_fields =
+      Enum.map([["slug"], ["author", "name"]], fn path ->
+        select_embed_field(:meta, path, 0)
+      end)
+
+    assert query.select.expr == {:&, [], [0]}
+    assert query.select.fields == expected_fields ++ expected_embed_fields
   end
 
   test "normalize: select_merge with map/2 does not duplicate fields" do
