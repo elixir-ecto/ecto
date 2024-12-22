@@ -1443,7 +1443,7 @@ defmodule Ecto.Integration.RepoTest do
       [o1, o2, o3] =
         Order
         |> select([o], map(o, [:metadata, item: [:price, primary_color: [:name]]]))
-        |> order_by([o], o.item["price"])
+        |> order_by([o], o.id)
         |> TestRepo.all()
 
       assert o1 == %{metadata: %{"test" => "test"}, item: %Item{price: 1, primary_color: %ItemColor{name: "1"}}}
