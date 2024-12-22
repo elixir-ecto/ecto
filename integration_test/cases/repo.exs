@@ -1425,6 +1425,7 @@ defmodule Ecto.Integration.RepoTest do
       assert p3 == %{id: pid3}
     end
 
+    @tag :json_extract_path
     test "take with embed" do
       today = Date.utc_today()
 
