@@ -598,16 +598,11 @@ defmodule Ecto.Schema do
           end
         end
 
-        for clauses <-
-              Ecto.Schema.__schema__(fields, field_sources, assocs, embeds, virtual_fields, read_only),
-            clause <- clauses do
-          case clause do
-            {args, body} ->
-              def __schema__(unquote_splicing(args)), do: unquote(body)
+        def __schema__(:source), do: unquote(source)
+        def __schema__(:prefix), do: unquote(Macro.escape(prefix))
 
-            {args, when_expr, body} ->
-              def __schema__(unquote_splicing(args)) when(unquote(when_expr)), do: unquote(body)
-          end
+        for clauses <- bags_of_clauses, {args, body} <- clauses do
+          def __schema__(unquote_splicing(args)), do: unquote(body)
         end
 
         :ok

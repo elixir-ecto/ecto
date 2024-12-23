@@ -2563,11 +2563,7 @@ defmodule Ecto.Query.Planner do
   defp field_source({source, schema, _}, field) when is_binary(source) and schema != nil do
     # If the field is not found we return the field itself
     # which will be checked and raise later.
-
-    case schema.__schema__(:field_source, field) do
-      nil -> if is_binary(field), do: String.to_existing_atom(field), else: field
-      field_source -> field_source
-    end
+    schema.__schema__(:field_source, field) || field
   end
 
   defp field_source(_, field) do
