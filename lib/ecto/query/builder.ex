@@ -690,18 +690,18 @@ defmodule Ecto.Query.Builder do
 
   defp escape_field!({var, _, context}, field, vars)
        when is_atom(var) and is_atom(context) do
-    var   = escape_var!(var, vars)
+    var = escape_var!(var, vars)
     field = quoted_atom_or_string!(field, "field/2")
-    dot   = {:{}, [], [:., [], [var, field]]}
+    dot = {:{}, [], [:., [], [var, field]]}
     {:{}, [], [dot, [], []]}
   end
 
   defp escape_field!({kind, _, [value]}, field, _vars)
        when kind in [:as, :parent_as] do
     value = late_binding!(kind, value)
-    as    = {:{}, [], [kind, [], [value]]}
+    as = {:{}, [], [kind, [], [value]]}
     field = quoted_atom_or_string!(field, "field/2")
-    dot   = {:{}, [], [:., [], [as, field]]}
+    dot = {:{}, [], [:., [], [as, field]]}
     {:{}, [], [dot, [], []]}
   end
 
