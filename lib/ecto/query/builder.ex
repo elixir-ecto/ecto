@@ -1119,7 +1119,7 @@ defmodule Ecto.Query.Builder do
   def quoted_atom_or_string!(other, used_ref),
     do:
       error!(
-        "expected literal atom or string or interpolated value in #{used_ref}, got: " <>
+        "expected literal atom/string or interpolated value in #{used_ref}, got: " <>
         "`#{Macro.to_string(other)}`"
       )
 
