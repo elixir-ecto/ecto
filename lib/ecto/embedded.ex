@@ -170,8 +170,8 @@ defmodule Ecto.Embedded do
 
         {:embed, %{virtual: true}} ->
           acc
-      end)
-    end
+      end
+    end)
   end
 
   defp prepare_each(%{cardinality: :one}, nil, _adapter, _repo, _repo_action) do
