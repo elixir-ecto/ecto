@@ -1193,7 +1193,10 @@ defmodule Ecto.Repo do
       query = from c in Comment, order_by: c.published_at
       posts = Repo.preload posts, [comments: {query, [:replies, :likes]}]
 
-  The query given to preload may also preload its own associations.
+      # Use a function for custom preloading 
+      posts = Repo.preload posts, [comments: fn post_ids -> fetch_comments_by_post_ids(post_ids) end]
+
+  The query given to preload may also preload its own associations. See the ["preload queries"](Ecto.Query.html#preload/3-preload-queries) and ["preload functions"](Ecto.Query.html#preload/3-preload-functions) section of the `Ecto.Query.preload/3` for details on those.
   """
   @doc group: "Schema API"
   @callback preload(structs_or_struct_or_nil, preloads :: term, opts :: Keyword.t()) ::
