@@ -150,8 +150,6 @@ defmodule Ecto.Embedded do
   @doc false
   def prepare(changeset, embeds, adapter, repo_action) do
     %{changes: changes, types: types, repo: repo} = changeset
-    #non_virtual_embeds = Enum.reject(embeds, & &1.virtual)
-
     changes
     |> Map.take(embeds)
     |> prepare(types, adapter, repo, repo_action)
