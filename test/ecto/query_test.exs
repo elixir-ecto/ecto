@@ -56,16 +56,22 @@ defmodule Ecto.QueryTest do
 
     test "does not allow nils in comparison at compile time" do
       assert_raise Ecto.Query.CompileError,
-                   ~r"comparison with nil is forbidden as it is unsafe", fn ->
+                   ~r"comparison with nil in `p.id == nil` is forbidden as it is unsafe", fn ->
         quote_and_eval from p in "posts", where: p.id == nil
       end
     end
 
     test "does not allow interpolated nils at runtime" do
+      id = nil
+
       assert_raise ArgumentError,
-                   ~r"comparison with nil is forbidden as it is unsafe", fn ->
-        id = nil
+                   ~r"nil given for `id`. comparison with nil is forbidden as it is unsafe", fn ->
         from p in "posts", where: [id: ^id]
+      end
+
+      assert_raise ArgumentError,
+                   ~r"comparing `p.id` with `nil` is forbidden as it is unsafe", fn ->
+        from p in "posts", where: p.id == ^id
       end
     end
 
