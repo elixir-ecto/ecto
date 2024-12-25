@@ -357,10 +357,11 @@ defmodule Ecto.Query.Builder do
   def escape({comp_op, _, [left, right]} = expr, type, params_acc, vars, env)
       when comp_op in ~w(== != < > <= >=)a do
     assert_type!(expr, type, :boolean)
+    compare_str = Macro.to_string(expr)
 
     if is_nil(left) or is_nil(right) do
       error!(
-        "comparison with nil is forbidden as it is unsafe. " <>
+        "comparison with nil in `#{compare_str}` is forbidden as it is unsafe. " <>
           "If you want to check if a value is nil, use is_nil/1 instead"
       )
     end
@@ -372,7 +373,8 @@ defmodule Ecto.Query.Builder do
     {right, params_acc} = escape(right, rtype, params_acc, vars, env)
 
     {params, acc} = params_acc
-    {{:{}, [], [comp_op, [], [left, right]]}, {params |> wrap_nil(left) |> wrap_nil(right), acc}}
+    params = params |> wrap_nil(left, compare_str) |> wrap_nil(right, compare_str)
+    {{:{}, [], [comp_op, [], [left, right]]}, {params, acc}}
   end
 
   # mathematical operators
@@ -585,18 +587,18 @@ defmodule Ecto.Query.Builder do
   defp validate_json_field!(unsupported_field),
     do: error!("`#{Macro.to_string(unsupported_field)}` is not a valid json field")
 
-  defp wrap_nil(params, {:{}, _, [:^, _, [ix]]}),
-    do: wrap_nil(params, length(params) - ix - 1, [])
+  defp wrap_nil(params, {:{}, _, [:^, _, [ix]]}, compare_str),
+    do: wrap_nil(params, length(params) - ix - 1, compare_str, [])
 
-  defp wrap_nil(params, _other), do: params
+  defp wrap_nil(params, _other, _compare_str), do: params
 
-  defp wrap_nil([{val, type} | params], 0, acc) do
-    val = quote do: Ecto.Query.Builder.not_nil!(unquote(val))
+  defp wrap_nil([{val, type} | params], 0, compare_str, acc) do
+    val = quote do: Ecto.Query.Builder.not_nil!(unquote(val), unquote(compare_str))
     Enum.reverse(acc, [{val, type} | params])
   end
 
-  defp wrap_nil([pair | params], i, acc) do
-    wrap_nil(params, i - 1, [pair | acc])
+  defp wrap_nil([pair | params], i, compare_str, acc) do
+    wrap_nil(params, i - 1, compare_str, [pair | acc])
   end
 
   defp expand_and_split_fragment(query, env) do
@@ -1184,13 +1186,14 @@ defmodule Ecto.Query.Builder do
   @doc """
   Called by escaper at runtime to verify that a value is not nil.
   """
-  def not_nil!(nil) do
+  def not_nil!(nil, compare_str) do
     raise ArgumentError,
-          "comparison with nil is forbidden as it is unsafe. " <>
+          "comparison with nil in `#{compare_str}` is forbidden as it is unsafe. " <>
             "If you want to check if a value is nil, use is_nil/1 instead"
+
   end
 
-  def not_nil!(not_nil) do
+  def not_nil!(not_nil, _compare_str) do
     not_nil
   end
 
