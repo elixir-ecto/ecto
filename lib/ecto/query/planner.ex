@@ -2420,6 +2420,8 @@ defmodule Ecto.Query.Planner do
 
   defp type!(_kind, _query, _expr, nil, _field, _allow_virtuals?), do: :any
 
+  defp type!(_kind, _query, _expr, _ix, field, _allow_virtuals?) when is_binary(field), do: :any
+
   defp type!(kind, query, expr, ix, field, allow_virtuals?) when is_integer(ix) do
     case get_source!(kind, query, ix) do
       {:fragment, _, _} ->

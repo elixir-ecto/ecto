@@ -44,6 +44,12 @@ defmodule Ecto.Query.BuilderTest do
            |> Code.eval_quoted([], __ENV__)
            |> elem(0)
 
+    assert {{:., [], [{:&, [], [0]}, "z"]}, [], []} ==
+           escape(quote do field(x, "z") end, [x: 0], __ENV__)
+           |> elem(0)
+           |> Code.eval_quoted([], __ENV__)
+           |> elem(0)
+
     assert {Macro.escape(quote do -&0.y() end), []} ==
            escape(quote do -x.y() end, [x: 0], __ENV__)
   end
@@ -266,7 +272,7 @@ defmodule Ecto.Query.BuilderTest do
       escape(quote(do: x.y == 1), [], __ENV__)
     end
 
-    assert_raise Ecto.Query.CompileError, ~r"expected literal atom or interpolated value.*got: `var`", fn ->
+    assert_raise Ecto.Query.CompileError, ~r"expected literal atom or string or interpolated value.*got: `var`", fn ->
       escape(quote(do: field(x, var)), [x: 0], __ENV__) |> elem(0) |> Code.eval_quoted([], __ENV__)
     end
 
@@ -360,6 +366,8 @@ defmodule Ecto.Query.BuilderTest do
     assert validate_type!(quote do x.title end, [x: 0], env) == {0, :title}
     assert validate_type!(quote do field(x, :title) end, [x: 0], env) == {0, :title}
     assert validate_type!(quote do field(x, ^:title) end, [x: 0], env) == {0, :title}
+    assert validate_type!(quote do field(x, "title") end, [x: 0], env) == {0, "title"}
+    assert validate_type!(quote do field(x, ^"title") end, [x: 0], env) == {0, "title"}
 
     assert_raise Ecto.Query.CompileError, ~r"^type/2 expects an alias, atom", fn ->
       validate_type!(quote do "string" end, [x: 0], env)

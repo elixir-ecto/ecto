@@ -579,13 +579,42 @@ defmodule Ecto.Query.API do
   @doc """
   Allows a field to be dynamically accessed.
 
+  The field name can be given as either an atom or a string. In a schemaless
+  query, the two types of names behave the same. However, when referencing
+  a field from a schema the behaviours are different.
+
+  Using an atom to reference a schema field will inherit all the properties from
+  the schema. For example, the field name will be changed to the value of `:source`
+  before generating the final query and its type behaviour will be dictated by the
+  one specified in the schema.
+
+  Using a string to reference a schema field is equivalent to bypassing all of the
+  above and accessing the field directly from the source (i.e. the underlying table).
+  This means the name will not be changed to the value of `:source` and the type
+  behaviour will be dictated by the underlying driver (e.g. Postgrex or MyXQL).
+
+  Take the following schema and query:
+
+      defmodule Car do
+        use Ecto.Schema
+
+        schema "cars" do
+          field :doors, source: :num_doors
+          field :tires, source: :num_tires
+        end
+      end
+
       def at_least_four(doors_or_tires) do
         from c in Car,
           where: field(c, ^doors_or_tires) >= 4
       end
 
-  In the example above, both `at_least_four(:doors)` and `at_least_four(:tires)`
-  would be valid calls as the field is dynamically generated.
+  In the example above, `at_least_four(:doors)` and `at_least_four("num_doors")`
+  would be valid ways to return the set of cars having at least 4 doors.
+
+  String names can be particularly useful when your application is dynamically
+  generating many schemaless queries at runtime and you want to avoid creating
+  a large number of atoms.
   """
   def field(source, field), do: doc!([source, field])
 

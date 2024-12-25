@@ -697,7 +697,7 @@ defmodule Ecto.Query.Builder do
   defp escape_field!({var, _, context}, field, vars)
        when is_atom(var) and is_atom(context) do
     var = escape_var!(var, vars)
-    field = quoted_atom!(field, "field/2")
+    field = quoted_atom_or_string!(field, "field/2")
     dot = {:{}, [], [:., [], [var, field]]}
     {:{}, [], [dot, [], []]}
   end
@@ -706,7 +706,7 @@ defmodule Ecto.Query.Builder do
        when kind in [:as, :parent_as] do
     value = late_binding!(kind, value)
     as = {:{}, [], [kind, [], [value]]}
-    field = quoted_atom!(field, "field/2")
+    field = quoted_atom_or_string!(field, "field/2")
     dot = {:{}, [], [:., [], [as, field]]}
     {:{}, [], [dot, [], []]}
   end
@@ -850,9 +850,8 @@ defmodule Ecto.Query.Builder do
       do: {find_var!(var, vars), field}
 
   def validate_type!({:field, _, [{var, _, context}, field]}, vars, _env)
-      when is_atom(var) and is_atom(context) and is_atom(field),
-      do: {find_var!(var, vars), field}
-
+    when is_atom(var) and is_atom(context) and (is_atom(field) or is_binary(field)),
+    do: {find_var!(var, vars), field}
   def validate_type!({:field, _, [{var, _, context}, {:^, _, [field]}]}, vars, _env)
       when is_atom(var) and is_atom(context),
       do: {find_var!(var, vars), field}
@@ -1111,6 +1110,27 @@ defmodule Ecto.Query.Builder do
       )
 
   @doc """
+  Checks if the field is an atom or string at compilation time or
+  delegate the check to runtime for interpolation.
+  """
+  def quoted_atom_or_string!({:^, _, [expr]}, used_ref),
+    do: quote(do: Ecto.Query.Builder.atom_or_string!(unquote(expr), unquote(used_ref)))
+
+  def quoted_atom_or_string!(atom, _used_ref) when is_atom(atom),
+    do: atom
+
+  def quoted_atom_or_string!(string, _used_ref) when is_binary(string),
+    do: string
+
+  def quoted_atom_or_string!(other, used_ref),
+    do:
+      error!(
+        "expected literal atom or string or interpolated value in #{used_ref}, got: " <>
+        "`#{Macro.to_string(other)}`"
+      )
+
+
+  @doc """
   Called by escaper at runtime to verify that value is an atom.
   """
   def atom!(atom, _used_ref) when is_atom(atom),
@@ -1118,6 +1138,18 @@ defmodule Ecto.Query.Builder do
 
   def atom!(other, used_ref),
     do: error!("expected atom in #{used_ref}, got: `#{inspect(other)}`")
+
+  @doc """
+  Called by escaper at runtime to verify that value is an atom or string.
+  """
+  def atom_or_string!(atom, _used_ref) when is_atom(atom),
+    do: atom
+
+  def atom_or_string!(string, _used_ref) when is_binary(string),
+    do: string
+
+  def atom_or_string!(other, used_ref),
+    do: error!("expected atom or string in #{used_ref}, got: `#{inspect other}`")
 
   @doc """
   Checks if the value of a late binding is an interpolation or
@@ -1284,11 +1316,11 @@ defmodule Ecto.Query.Builder do
   end
 
   def quoted_type({:field, _, [{var, _, context}, field]}, vars)
-      when is_atom(var) and is_atom(context) and is_atom(field),
-      do: {find_var!(var, vars), field}
+    when is_atom(var) and is_atom(context) and (is_atom(field) or is_binary(field)),
+    do: {find_var!(var, vars), field}
 
   def quoted_type({:field, _, [{kind, _, [value]}, field]}, _vars)
-      when kind in [:as, :parent_as] and is_atom(field) do
+      when kind in [:as, :parent_as] and (is_atom(field) or is_binary(field)) do
     value = late_binding!(kind, value)
     {{:{}, [], [kind, [], [value]]}, field}
   end

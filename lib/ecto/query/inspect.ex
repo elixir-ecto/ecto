@@ -282,6 +282,12 @@ defimpl Inspect, for: Ecto.Query do
     binding_to_expr(ix, names, part)
   end
 
+  # Format field/2 with string name
+  defp postwalk({{:., _, [{_, _, _} = binding, field]}, meta, []}, _names, _part)
+       when is_binary(field) do
+    {:field, meta, [binding, field]}
+  end
+
   # Remove parens from field calls
   defp postwalk({{:., _, [_, _]} = dot, meta, []}, _names, _part) do
     {dot, [no_parens: true] ++ meta, []}

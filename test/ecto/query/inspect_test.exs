@@ -574,6 +574,11 @@ defmodule Ecto.Query.InspectTest do
     assert i(plan(query)) == "from v0 in values (#{fields})"
   end
 
+  test "field/2 with string name" do
+    query = from p in Post, select: field(p, "visit")
+    assert i(query) == ~s<from p0 in Inspect.Post, select: field(p0, "visit")>
+  end
+
   def plan(query) do
     {query, _, _} = Ecto.Adapter.Queryable.plan_query(:all, Ecto.TestAdapter, query)
     query
