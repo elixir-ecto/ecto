@@ -70,7 +70,7 @@ defmodule Ecto.QueryTest do
       end
 
       assert_raise ArgumentError,
-                   ~r"comparison with nil in `p.id == \^id` is forbidden as it is unsafe", fn ->
+                   ~r"comparing `p.id` with `nil` is forbidden as it is unsafe", fn ->
         from p in "posts", where: p.id == ^id
       end
     end

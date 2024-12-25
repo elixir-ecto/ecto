@@ -357,11 +357,10 @@ defmodule Ecto.Query.Builder do
   def escape({comp_op, _, [left, right]} = expr, type, params_acc, vars, env)
       when comp_op in ~w(== != < > <= >=)a do
     assert_type!(expr, type, :boolean)
-    compare_str = Macro.to_string(expr)
 
     if is_nil(left) or is_nil(right) do
       error!(
-        "comparison with nil in `#{compare_str}` is forbidden as it is unsafe. " <>
+        "comparison with nil in `#{Macro.to_string(expr)}` is forbidden as it is unsafe. " <>
           "If you want to check if a value is nil, use is_nil/1 instead"
       )
     end
@@ -369,12 +368,17 @@ defmodule Ecto.Query.Builder do
     ltype = quoted_type(right, vars)
     rtype = quoted_type(left, vars)
 
-    {left, params_acc} = escape(left, ltype, params_acc, vars, env)
-    {right, params_acc} = escape(right, rtype, params_acc, vars, env)
+    {escaped_left, params_acc} = escape(left, ltype, params_acc, vars, env)
+    {escaped_right, params_acc} = escape(right, rtype, params_acc, vars, env)
 
     {params, acc} = params_acc
-    params = params |> wrap_nil(left, compare_str) |> wrap_nil(right, compare_str)
-    {{:{}, [], [comp_op, [], [left, right]]}, {params, acc}}
+
+    params =
+      params
+      |> wrap_nil(escaped_left, Macro.to_string(right))
+      |> wrap_nil(escaped_right, Macro.to_string(left))
+
+    {{:{}, [], [comp_op, [], [escaped_left, escaped_right]]}, {params, acc}}
   end
 
   # mathematical operators
@@ -1188,9 +1192,8 @@ defmodule Ecto.Query.Builder do
   """
   def not_nil!(nil, compare_str) do
     raise ArgumentError,
-          "comparison with nil in `#{compare_str}` is forbidden as it is unsafe. " <>
+          "comparing `#{compare_str}` with `nil` is forbidden as it is unsafe. " <>
             "If you want to check if a value is nil, use is_nil/1 instead"
-
   end
 
   def not_nil!(not_nil, _compare_str) do
