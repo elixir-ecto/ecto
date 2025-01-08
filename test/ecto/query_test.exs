@@ -988,9 +988,20 @@ defmodule Ecto.QueryTest do
                raw: ""
              ] = parts
 
-      assert_raise ArgumentError, "literal(^value) expects `value` to be a string, got `123`", fn ->
-        from p in "posts", select: fragment("? COLLATE ?", p.name, literal(^123))
-      end
+      query = from p in "posts", limit: fragment("?", literal(^1))
+      assert {:fragment, _, parts} = query.limit.expr
+
+      assert [
+               raw: "",
+               expr: {:literal, _, [1]},
+               raw: ""
+             ] = parts
+
+      assert_raise ArgumentError,
+                   "literal(^value) expects `value` to be a string or a number, got `%{}`",
+                   fn ->
+                     from p in "posts", select: fragment("? COLLATE ?", p.name, literal(^%{}))
+                   end
     end
 
     test "supports list splicing" do
