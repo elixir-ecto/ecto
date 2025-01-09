@@ -751,16 +751,45 @@ defmodule Ecto.Query.Builder do
     )
   end
 
-  defp escape_fragment({:literal, _meta, [expr]}, params_acc, _vars, _env) do
+  defp escape_fragment({:literal, meta, [expr]}, params_acc, vars, env) do
+    env =
+      case env do
+        {env, _fun} -> env
+        env -> env
+      end
+
+    IO.warn(
+      "`literal/1` is deprecated. Please use `identifier/1` instead.",
+      Macro.Env.stacktrace(env)
+    )
+
+    escape_fragment({:identifier, meta, [expr]}, params_acc, vars, env)
+  end
+
+  defp escape_fragment({:identifier, _meta, [expr]}, params_acc, _vars, _env) do
     case expr do
       {:^, _, [expr]} ->
-        checked = quote do: Ecto.Query.Builder.literal!(unquote(expr))
-        escaped = {:{}, [], [:literal, [], [checked]]}
+        checked = quote do: Ecto.Query.Builder.identifier!(unquote(expr))
+        escaped = {:{}, [], [:identifier, [], [checked]]}
         {escaped, params_acc}
 
       _ ->
         error!(
-          "literal/1 in fragment expects an interpolated value, such as literal(^value), got `#{Macro.to_string(expr)}`"
+          "identifier/1 in fragment expects an interpolated value, such as identifier(^value), got `#{Macro.to_string(expr)}`"
+        )
+    end
+  end
+
+  defp escape_fragment({:constant, _meta, [expr]}, params_acc, _vars, _env) do
+    case expr do
+      {:^, _, [expr]} ->
+        checked = quote do: Ecto.Query.Builder.constant!(unquote(expr))
+        escaped = {:{}, [], [:constant, [], [checked]]}
+        {escaped, params_acc}
+
+      _ ->
+        error!(
+          "constant/1 in fragment expects an interpolated value, such as constant(^value), got `#{Macro.to_string(expr)}`"
         )
     end
   end
@@ -1254,14 +1283,27 @@ defmodule Ecto.Query.Builder do
   end
 
   @doc """
-  Called by escaper at runtime to verify literal in fragments.
+  Called by escaper at runtime to verify identifier in fragments.
   """
-  def literal!(literal) when is_binary(literal), do: literal
-  def literal!(literal) when is_number(literal), do: literal
+  def identifier!(identifier) do
+    if is_binary(identifier) do
+      identifier
+    else
+      raise ArgumentError,
+            "identifier(^value) expects `value` to be a string, got `#{inspect(identifier)}`"
+    end
+  end
 
-  def literal!(literal) do
-    raise ArgumentError,
-          "literal(^value) expects `value` to be a string or a number, got `#{inspect(literal)}`"
+  @doc """
+  Called by escaper at runtime to verify constant in fragments.
+  """
+  def constant!(constant) do
+    if is_binary(constant) or is_number(constant) do
+      constant
+    else
+      raise ArgumentError,
+            "constant(^value) expects `value` to be a string or a number, got `#{inspect(constant)}`"
+    end
   end
 
   @doc """

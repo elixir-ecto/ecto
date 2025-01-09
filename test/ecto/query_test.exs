@@ -976,32 +976,41 @@ defmodule Ecto.QueryTest do
       end
     end
 
-    test "supports literals" do
-      query = from p in "posts", select: fragment("? COLLATE ?", p.name, literal(^"es_ES"))
+    test "supports identifiers" do
+      query = from p in "posts", select: fragment("? COLLATE ?", p.name, identifier(^"es_ES"))
       assert {:fragment, _, parts} = query.select.expr
 
       assert [
                raw: "",
                expr: {{:., _, [{:&, _, [0]}, :name]}, _, _},
                raw: " COLLATE ",
-               expr: {:literal, _, ["es_ES"]},
+               expr: {:identifier, _, ["es_ES"]},
                raw: ""
              ] = parts
 
-      query = from p in "posts", limit: fragment("?", literal(^1))
-      assert {:fragment, _, parts} = query.limit.expr
+      msg = "identifier(^value) expects `value` to be a string, got `123`"
 
-      assert [
-               raw: "",
-               expr: {:literal, _, [1]},
-               raw: ""
-             ] = parts
+      assert_raise ArgumentError, msg, fn ->
+        from p in "posts", select: fragment("? COLLATE ?", p.name, identifier(^123))
+      end
+    end
 
-      assert_raise ArgumentError,
-                   "literal(^value) expects `value` to be a string or a number, got `%{}`",
-                   fn ->
-                     from p in "posts", select: fragment("? COLLATE ?", p.name, literal(^%{}))
-                   end
+    test "supports constants" do
+      query =
+        from p in "posts",
+          select: fragment("?", constant(^"hi")),
+          limit: fragment("?", constant(^1))
+
+      assert {:fragment, _, select_parts} = query.select.expr
+      assert {:fragment, _, limit_parts} = query.limit.expr
+      assert [raw: "", expr: {:constant, _, ["hi"]}, raw: ""] = select_parts
+      assert [raw: "", expr: {:constant, _, [1]}, raw: ""] = limit_parts
+
+      msg = "constant(^value) expects `value` to be a string or a number, got `%{}`"
+
+      assert_raise ArgumentError, msg, fn ->
+        from p in "posts", limit: fragment("?", constant(^%{}))
+      end
     end
 
     test "supports list splicing" do
