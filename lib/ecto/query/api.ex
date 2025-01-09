@@ -480,20 +480,17 @@ defmodule Ecto.Query.API do
   def fragment(fragments), do: doc!([fragments])
 
   @doc """
-  Allows a literal identifier or number to be injected into a fragment:
+  Allows a literal identifier to be injected into a fragment:
 
       collation = "es_ES"
       fragment("? COLLATE ?", ^name, literal(^collation))
 
-      limit = 10
-      limit(query, fragment("?", literal(^limit)))
-
-  The example above will inject `collation` and `limit` into the queries as
-  literals instead of query parameters. Note that each different value passed
-  to `literal/1` will emit a different query, which will be independently prepared
-  and cached.
+  The example above will inject `collation` into the query as
+  a literal identifier instead of a query parameter. Note that
+  each different value of `collation` will emit a different query,
+  which will be independently prepared and cached.
   """
-  def literal(literal), do: doc!([literal])
+  def literal(binary), do: doc!([binary])
 
   @doc """
   Allows a list argument to be spliced into a fragment.

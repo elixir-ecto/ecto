@@ -1256,12 +1256,13 @@ defmodule Ecto.Query.Builder do
   @doc """
   Called by escaper at runtime to verify literal in fragments.
   """
-  def literal!(literal) when is_binary(literal), do: literal
-  def literal!(literal) when is_number(literal), do: literal
-
   def literal!(literal) do
-    raise ArgumentError,
-          "literal(^value) expects `value` to be a string or a number, got `#{inspect(literal)}`"
+    if is_binary(literal) do
+      literal
+    else
+      raise ArgumentError,
+            "literal(^value) expects `value` to be a string, got `#{inspect(literal)}`"
+    end
   end
 
   @doc """
