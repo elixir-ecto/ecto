@@ -976,23 +976,6 @@ defmodule Ecto.QueryTest do
       end
     end
 
-    test "supports literals" do
-      query = from p in "posts", select: fragment("? COLLATE ?", p.name, literal(^"es_ES"))
-      assert {:fragment, _, parts} = query.select.expr
-
-      assert [
-               raw: "",
-               expr: {{:., _, [{:&, _, [0]}, :name]}, _, _},
-               raw: " COLLATE ",
-               expr: {:literal, _, ["es_ES"]},
-               raw: ""
-             ] = parts
-
-      assert_raise ArgumentError, "literal(^value) expects `value` to be a string, got `123`", fn ->
-        from p in "posts", select: fragment("? COLLATE ?", p.name, literal(^123))
-      end
-    end
-
     test "supports identifiers" do
       query = from p in "posts", select: fragment("? COLLATE ?", p.name, identifier(^"es_ES"))
       assert {:fragment, _, parts} = query.select.expr

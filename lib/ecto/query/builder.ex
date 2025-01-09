@@ -751,18 +751,15 @@ defmodule Ecto.Query.Builder do
     )
   end
 
-  defp escape_fragment({:literal, _meta, [expr]}, params_acc, _vars, _env) do
-    case expr do
-      {:^, _, [expr]} ->
-        checked = quote do: Ecto.Query.Builder.literal!(unquote(expr))
-        escaped = {:{}, [], [:literal, [], [checked]]}
-        {escaped, params_acc}
+  defp escape_fragment({:literal, meta, [expr]}, params_acc, vars, env) do
+    env = if {env, _fun} = env, do: env, else: env
 
-      _ ->
-        error!(
-          "literal/1 in fragment expects an interpolated value, such as literal(^value), got `#{Macro.to_string(expr)}`"
-        )
-    end
+    IO.warn(
+      "`literal/1` is deprecated. Please use `identifier/1` instead.",
+      Macro.Env.stacktrace(env)
+    )
+
+    escape_fragment({:identifier, meta, [expr]}, params_acc, vars, env)
   end
 
   defp escape_fragment({:identifier, _meta, [expr]}, params_acc, _vars, _env) do
@@ -1278,18 +1275,6 @@ defmodule Ecto.Query.Builder do
       kw
     else
       raise ArgumentError, bad_fragment_message(inspect(kw))
-    end
-  end
-
-  @doc """
-  Called by escaper at runtime to verify literal in fragments.
-  """
-  def literal!(literal) do
-    if is_binary(literal) do
-      literal
-    else
-      raise ArgumentError,
-            "literal(^value) expects `value` to be a string, got `#{inspect(literal)}`"
     end
   end
 
