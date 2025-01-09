@@ -752,7 +752,11 @@ defmodule Ecto.Query.Builder do
   end
 
   defp escape_fragment({:literal, meta, [expr]}, params_acc, vars, env) do
-    env = if {env, _fun} = env, do: env, else: env
+    env =
+      case env do
+        {env, _fun} -> env
+        env -> env
+      end
 
     IO.warn(
       "`literal/1` is deprecated. Please use `identifier/1` instead.",
