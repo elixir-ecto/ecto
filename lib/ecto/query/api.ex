@@ -493,6 +493,38 @@ defmodule Ecto.Query.API do
   def literal(binary), do: doc!([binary])
 
   @doc """
+  Allows a dynamic identifier to be injected into a fragment:
+
+      collation = "es_ES"
+      select("posts", [p], fragment("? COLLATE ?", p.title, identifier(^"es_ES")))
+
+  The example above will inject the value of `collation` directly
+  into the query instead of treating it as a query parameter. It will
+  generate a query such as `SELECT p0.title COLLATE "es_ES" FROM "posts" AS p0`
+  as opposed to `SELECT p0.title COLLATE $1 FROM "posts" AS p0`.
+
+  Note that each different value of `collation` will emit a different query,
+  which will be independently prepared and cached.
+  """
+  def identifier(binary), do: doc!([binary])
+
+  @doc """
+  Allows a dynamic string or number to be injected into a fragment:
+
+      limit = 10
+      "posts" |> select([p], p.title) |> limit(fragment("?", constant(^limit)))
+
+  The example above will inject the value of `limit` directly
+  into the query instead of treating it as a query parameter. It will
+  generate a query such as `SELECT p0.title FROM "posts" AS p0 LIMIT 1`
+  as opposed to `SELECT p0.title FROM "posts" AS p0` LIMIT $1`.
+
+  Note that each different value of `limit` will emit a different query,
+  which will be independently prepared and cached.
+  """
+  def constant(value), do: doc!([value])
+
+  @doc """
   Allows a list argument to be spliced into a fragment.
 
       from p in Post, where: fragment("? in (?)", p.id, splice(^[1, 2, 3]))
@@ -504,7 +536,7 @@ defmodule Ecto.Query.API do
   You may only splice runtime values. For example, this would not work because
   query bindings are compile-time constructs:
 
-      from p in Post, where: fragment("concat(?)", splice(^[p.count, " ", "count"])
+      from p in Post, where: fragment("concat(?)", splice(^[p.count, " ", "count"]))
   """
   def splice(list), do: doc!([list])
 

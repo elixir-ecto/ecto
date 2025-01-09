@@ -765,6 +765,34 @@ defmodule Ecto.Query.Builder do
     end
   end
 
+  defp escape_fragment({:identifier, _meta, [expr]}, params_acc, _vars, _env) do
+    case expr do
+      {:^, _, [expr]} ->
+        checked = quote do: Ecto.Query.Builder.identifier!(unquote(expr))
+        escaped = {:{}, [], [:identifier, [], [checked]]}
+        {escaped, params_acc}
+
+      _ ->
+        error!(
+          "identifier/1 in fragment expects an interpolated value, such as identifier(^value), got `#{Macro.to_string(expr)}`"
+        )
+    end
+  end
+
+  defp escape_fragment({:constant, _meta, [expr]}, params_acc, _vars, _env) do
+    case expr do
+      {:^, _, [expr]} ->
+        checked = quote do: Ecto.Query.Builder.constant!(unquote(expr))
+        escaped = {:{}, [], [:constant, [], [checked]]}
+        {escaped, params_acc}
+
+      _ ->
+        error!(
+          "constant/1 in fragment expects an interpolated value, such as constant(^value), got `#{Macro.to_string(expr)}`"
+        )
+    end
+  end
+
   defp escape_fragment({:splice, _meta, [splice]}, params_acc, vars, env) do
     case splice do
       {:^, _, [value]} = expr ->
@@ -1262,6 +1290,30 @@ defmodule Ecto.Query.Builder do
     else
       raise ArgumentError,
             "literal(^value) expects `value` to be a string, got `#{inspect(literal)}`"
+    end
+  end
+
+  @doc """
+  Called by escaper at runtime to verify identifier in fragments.
+  """
+  def identifier!(identifier) do
+    if is_binary(identifier) do
+      identifier
+    else
+      raise ArgumentError,
+            "identifier(^value) expects `value` to be a string, got `#{inspect(identifier)}`"
+    end
+  end
+
+  @doc """
+  Called by escaper at runtime to verify constant in fragments.
+  """
+  def constant!(constant) do
+    if is_binary(constant) or is_number(constant) do
+      constant
+    else
+      raise ArgumentError,
+            "constant(^value) expects `value` to be a string or a number, got `#{inspect(constant)}`"
     end
   end
 

@@ -993,6 +993,43 @@ defmodule Ecto.QueryTest do
       end
     end
 
+    test "supports identifiers" do
+      query = from p in "posts", select: fragment("? COLLATE ?", p.name, identifier(^"es_ES"))
+      assert {:fragment, _, parts} = query.select.expr
+
+      assert [
+               raw: "",
+               expr: {{:., _, [{:&, _, [0]}, :name]}, _, _},
+               raw: " COLLATE ",
+               expr: {:identifier, _, ["es_ES"]},
+               raw: ""
+             ] = parts
+
+      msg = "identifier(^value) expects `value` to be a string, got `123`"
+
+      assert_raise ArgumentError, msg, fn ->
+        from p in "posts", select: fragment("? COLLATE ?", p.name, identifier(^123))
+      end
+    end
+
+    test "supports constants" do
+      query =
+        from p in "posts",
+          select: fragment("?", constant(^"hi")),
+          limit: fragment("?", constant(^1))
+
+      assert {:fragment, _, select_parts} = query.select.expr
+      assert {:fragment, _, limit_parts} = query.limit.expr
+      assert [raw: "", expr: {:constant, _, ["hi"]}, raw: ""] = select_parts
+      assert [raw: "", expr: {:constant, _, [1]}, raw: ""] = limit_parts
+
+      msg = "constant(^value) expects `value` to be a string or a number, got `%{}`"
+
+      assert_raise ArgumentError, msg, fn ->
+        from p in "posts", limit: fragment("?", constant(^%{}))
+      end
+    end
+
     test "supports list splicing" do
       two = 2
       three = 3
