@@ -260,7 +260,7 @@ defmodule Ecto.SchemaTest do
   end
 
   test "embedded schema does not have metadata" do
-    refute match?(%{__meta__: _}, %EmbeddedSchema{})
+    refute Map.has_key?(%EmbeddedSchema{}, :__meta__)
   end
 
   test "embedded redacted_fields" do

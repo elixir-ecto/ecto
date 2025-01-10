@@ -11,9 +11,9 @@ defmodule Ecto.TestAdapter do
   end
 
   def init(opts) do
-    :ecto   = opts[:otp_app]
-    "user"  = opts[:username]
-    "pass"  = opts[:password]
+    :ecto = opts[:otp_app]
+    "user" = opts[:username]
+    "pass" = opts[:password]
     "hello" = opts[:database]
     "local" = opts[:hostname]
 
@@ -21,7 +21,7 @@ defmodule Ecto.TestAdapter do
   end
 
   def checkout(mod, _opts, fun) do
-    send self(), {:checkout, fun}
+    send(self(), {:checkout, fun})
     Process.put({mod, :checked_out?}, true)
 
     try do
@@ -37,11 +37,11 @@ defmodule Ecto.TestAdapter do
 
   ## Types
 
-  def loaders({:map, _}, type),  do: [&Ecto.Type.embedded_load(type, &1, :json)]
+  def loaders({:map, _}, type), do: [&Ecto.Type.embedded_load(type, &1, :json)]
   def loaders(:binary_id, type), do: [Ecto.UUID, type]
   def loaders(_primitive, type), do: [type]
 
-  def dumpers({:map, _}, type),  do: [&Ecto.Type.embedded_dump(type, &1, :json)]
+  def dumpers({:map, _}, type), do: [&Ecto.Type.embedded_dump(type, &1, :json)]
   def dumpers(:binary_id, type), do: [type, Ecto.UUID]
   def dumpers(_primitive, type), do: [type]
 
@@ -54,18 +54,18 @@ defmodule Ecto.TestAdapter do
   def prepare(operation, query), do: {:nocache, {operation, query}}
 
   def execute(_, _, {:nocache, {:all, query}}, _, _) do
-    send self(), {:all, query}
+    send(self(), {:all, query})
     Process.get(:test_repo_all_results) || results_for_all_query(query)
   end
 
   def execute(_, _meta, {:nocache, {op, query}}, _params, _opts) do
-    send self(), {op, query}
+    send(self(), {op, query})
     {1, nil}
   end
 
   def stream(_, _meta, {:nocache, {:all, query}}, _params, _opts) do
     Stream.map([:execute], fn :execute ->
-      send self(), {:stream, query}
+      send(self(), {:stream, query})
       results_for_all_query(query)
     end)
   end
@@ -97,9 +97,16 @@ defmodule Ecto.TestAdapter do
   end
 
   def insert(_, %{context: nil, prefix: prefix} = meta, fields, on_conflict, returning, _opts) do
-    meta = Map.merge(meta, %{fields: fields, on_conflict: on_conflict, returning: returning, prefix: prefix})
+    meta =
+      Map.merge(meta, %{
+        fields: fields,
+        on_conflict: on_conflict,
+        returning: returning,
+        prefix: prefix
+      })
+
     send(self(), {:insert, meta})
-    {:ok, Enum.zip(returning, 1..length(returning))}
+    {:ok, Enum.zip(returning, 1..length(returning)//1)}
   end
 
   def insert(_, %{context: context}, _fields, _on_conflict, _returning, _opts) do
@@ -110,7 +117,7 @@ defmodule Ecto.TestAdapter do
   def update(_, %{context: nil} = meta, [_ | _] = changes, filters, returning, _opts) do
     meta = Map.merge(meta, %{changes: changes, filters: filters, returning: returning})
     send(self(), {:update, meta})
-    {:ok, Enum.zip(returning, 1..length(returning))}
+    {:ok, Enum.zip(returning, 1..length(returning)//1)}
   end
 
   def update(_, %{context: context}, [_ | _], _filters, _returning, _opts) do
@@ -120,7 +127,7 @@ defmodule Ecto.TestAdapter do
   def delete(_, %{context: nil} = meta, filters, returning, _opts) do
     meta = Map.merge(meta, %{filters: filters, returning: returning})
     send(self(), {:delete, meta})
-    {:ok, Enum.zip(returning, 1..length(returning))}
+    {:ok, Enum.zip(returning, 1..length(returning)//1)}
   end
 
   def delete(_, %{context: context}, _filters, _returning, _opts) do
@@ -132,7 +139,8 @@ defmodule Ecto.TestAdapter do
   def transaction(mod, _opts, fun) do
     # Makes transactions "trackable" in tests
     Process.put({mod, :in_transaction?}, true)
-    send self(), {:transaction, fun}
+    send(self(), {:transaction, fun})
+
     try do
       {:ok, fun.()}
     catch
@@ -148,12 +156,12 @@ defmodule Ecto.TestAdapter do
   end
 
   def rollback(_, value) do
-    send self(), {:rollback, value}
-    throw {:ecto_rollback, value}
+    send(self(), {:rollback, value})
+    throw({:ecto_rollback, value})
   end
 end
 
-Application.put_env(:ecto, Ecto.TestRepo, [user: "invalid"])
+Application.put_env(:ecto, Ecto.TestRepo, user: "invalid")
 
 defmodule Ecto.TestRepo do
   use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter
