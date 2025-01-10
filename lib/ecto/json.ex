@@ -64,7 +64,7 @@ if Code.ensure_loaded?(JSON.Encoder) do
           defmodule #{inspect(owner)} do
             # ...
 
-            @derive {Jason.Encoder, only: [:name, :title, ...]}
+            @derive {JSON.Encoder, only: [:name, :title, ...]}
             schema ... do
 
       You can also use the :except option instead of :only if you would \
@@ -86,7 +86,7 @@ if Code.ensure_loaded?(JSON.Encoder) do
           defmodule #{inspect(schema)} do
             # ...
 
-            @derive {Jason.Encoder, only: [:name, :title, ...]}
+            @derive {JSON.Encoder, only: [:name, :title, ...]}
             schema ... do
 
       You can also use the :except option instead of :only if you would \
