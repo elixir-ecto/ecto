@@ -11,7 +11,7 @@ defmodule Ecto.JsonTest do
   defmodule User do
     use Ecto.Schema
 
-    @derive Enum.map(loaded_implementations, fn {_lib, encoder} -> encoder end)
+    @derive Keyword.values(loaded_implementations)
     schema "users" do
       has_many :comments, Ecto.Comment
     end
