@@ -493,6 +493,17 @@ defmodule Ecto.RepoTest do
         from(MySchema, group_by: [:id]) |> TestRepo.aggregate(:count, :id)
       end
     end
+
+    test "aggregate by count with a distinct clause while selecting a map with struct value" do
+      TestRepo.insert!(%MySchema{})
+
+      query =
+        from entity in MySchema,
+          distinct: entity.id,
+          select: %{entity: entity}
+
+      assert TestRepo.aggregate(query, :count)
+    end
   end
 
   describe "exists?" do
