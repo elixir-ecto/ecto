@@ -979,12 +979,15 @@ defmodule Ecto.Repo do
   @doc """
   Calculate the given `aggregate`.
 
-  If the query has a limit, offset, distinct or combination set, it will be
-  automatically wrapped in a subquery in order to return the
-  proper result.
-
   Any preload or select in the query will be ignored in favor of
-  the column being aggregated.
+  the column being aggregated. However, if the query has a limit,
+  offset, distinct or combination set, it will be automatically
+  wrapped in a subquery in order to return the proper result,
+  which requires the select field to follows certain rules:
+  it must return a `source`, a field (such as `source.field`),
+  or a map with atom keys and scalars (integers, floats, and
+  strings) or simple expressions as values. Those rules are shared
+  across all subqueries in Ecto.
 
   The aggregation will fail if any `group_by` field is set.
 
@@ -1193,7 +1196,7 @@ defmodule Ecto.Repo do
       query = from c in Comment, order_by: c.published_at
       posts = Repo.preload posts, [comments: {query, [:replies, :likes]}]
 
-      # Use a function for custom preloading 
+      # Use a function for custom preloading
       posts = Repo.preload posts, [comments: fn post_ids -> fetch_comments_by_post_ids(post_ids) end]
 
   The query given to preload may also preload its own associations. See the ["preload queries"](Ecto.Query.html#preload/3-preload-queries) and ["preload functions"](Ecto.Query.html#preload/3-preload-functions) section of the `Ecto.Query.preload/3` for details on those.
