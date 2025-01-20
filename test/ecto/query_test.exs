@@ -941,6 +941,18 @@ defmodule Ecto.QueryTest do
       assert excluded_all_joins_query.joins == []
       assert Map.has_key?(excluded_all_joins_query.aliases, :base)
     end
+
+    test "removes windows" do
+      query =
+        from p in "posts",
+          windows: [title: [partition_by: p.title], visits: [partition_by: p.visits]]
+
+      exclude_all = exclude(query, :windows)
+      assert exclude_all.windows == []
+
+      exclude_one = exclude(query, {:windows, [:title]})
+      assert [visits: %Ecto.Query.ByExpr{}] = exclude_one.windows
+    end
   end
 
   describe "dynamic/2" do

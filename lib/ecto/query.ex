@@ -957,9 +957,9 @@ defmodule Ecto.Query do
       Ecto.Query.exclude(query, :lock)
       Ecto.Query.exclude(query, :preload)
       Ecto.Query.exclude(query, :update)
+      Ecto.Query.exclude(query, :windows)
 
-  You can also remove specific joins as well such as `left_join` and
-  `inner_join`:
+  You can remove specific joins such as `left_join` and `inner_join`:
 
       Ecto.Query.exclude(query, :inner_join)
       Ecto.Query.exclude(query, :cross_join)
@@ -973,6 +973,14 @@ defmodule Ecto.Query do
   However, keep in mind that if a join is removed and its bindings
   were referenced elsewhere, the bindings won't be removed, leading
   to a query that won't compile.
+
+  You can remove specific windows by name:
+
+    Ecto.Query.exclude(query, {:windows, [name1, name2]})
+
+  If a window was referenced elsewhere, for example in `select` or `order_by`,
+  it won't be removed. You must recreate the expressions manually.
+
   """
   def exclude(%Ecto.Query{} = query, field), do: do_exclude(query, field)
   def exclude(query, field), do: do_exclude(Ecto.Queryable.to_query(query), field)
@@ -988,6 +996,11 @@ defmodule Ecto.Query do
     %{query | joins: remaining, aliases: aliases}
   end
 
+  defp do_exclude(%Ecto.Query{} = query, {:windows, window_names}) when is_list(window_names) do
+    remaining = Enum.filter(query.windows, fn {name, _} -> name not in window_names end)
+    %{query | windows: remaining}
+  end
+
   defp do_exclude(%Ecto.Query{} = query, :where), do: %{query | wheres: []}
   defp do_exclude(%Ecto.Query{} = query, :order_by), do: %{query | order_bys: []}
   defp do_exclude(%Ecto.Query{} = query, :group_by), do: %{query | group_bys: []}
@@ -1001,6 +1014,7 @@ defmodule Ecto.Query do
   defp do_exclude(%Ecto.Query{} = query, :lock), do: %{query | lock: nil}
   defp do_exclude(%Ecto.Query{} = query, :preload), do: %{query | preloads: [], assocs: []}
   defp do_exclude(%Ecto.Query{} = query, :update), do: %{query | updates: []}
+  defp do_exclude(%Ecto.Query{} = query, :windows), do: %{query | windows: []}
 
   @doc """
   Creates a query.
