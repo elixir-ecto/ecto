@@ -997,7 +997,7 @@ defmodule Ecto.Query do
   end
 
   defp do_exclude(%Ecto.Query{} = query, {:windows, window_names}) when is_list(window_names) do
-    {_, remaining} = Enum.split_with(query.windows, fn {name, _} -> name in window_names end)
+    remaining = Enum.filter(query.windows, fn {name, _} -> name not in window_names end)
     %{query | windows: remaining}
   end
 
