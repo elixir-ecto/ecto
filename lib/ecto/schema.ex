@@ -459,6 +459,10 @@ defmodule Ecto.Schema do
   Furthermore, both `__struct__` and `__changeset__` functions are
   defined so structs and changeset functionalities are available.
 
+  The `__schema__` function may accept other values, but those values
+  are not part of the public API. Any values that are not in the list
+  above may change at any time without notice.
+
   ## Working with typespecs
 
   Generating typespecs for schemas is out of the scope of `Ecto.Schema`.
