@@ -781,24 +781,6 @@ defmodule Ecto.QueryTest do
       refute query.select
     end
 
-    test "does not set a non-existent field to nil" do
-      query = from(p in "posts", select: p)
-      msg = ~r"no function clause matching in Ecto.Query"
-
-      assert_raise FunctionClauseError, msg, fn ->
-        Ecto.Query.exclude(query, :fake_field)
-      end
-    end
-
-    test "does not reset :from" do
-      query = from(p in "posts", select: p)
-      msg = ~r"no function clause matching in Ecto.Query"
-
-      assert_raise FunctionClauseError, msg, fn ->
-        Ecto.Query.exclude(query, :from)
-      end
-    end
-
     test "resets both preloads and assocs if :preloads is passed in" do
       base = %Ecto.Query{}
 

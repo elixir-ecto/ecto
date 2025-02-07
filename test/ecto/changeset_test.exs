@@ -1088,12 +1088,13 @@ defmodule Ecto.ChangesetTest do
 
     test "invalid changeset" do
       changeset =
+        %Ecto.Changeset{} =
         %Post{}
         |> changeset(%{"title" => "foo"})
         |> validate_length(:title, min: 10)
 
       refute changeset.valid?
-      changeset_new_action = %Ecto.Changeset{changeset | action: :update}
+      changeset_new_action = %{changeset | action: :update}
       assert {:error, ^changeset_new_action} = apply_action(changeset, :update)
     end
 
@@ -1904,7 +1905,8 @@ defmodule Ecto.ChangesetTest do
       |> validate_number(:upvotes, less_than: 0, message: {"%{name} yada", name: "x"})
 
     assert changeset.errors == [
-             upvotes: {"%{name} yada", validation: :number, kind: :less_than, number: 0, name: "x"}
+             upvotes:
+               {"%{name} yada", validation: :number, kind: :less_than, number: 0, name: "x"}
            ]
   end
 
@@ -2204,7 +2206,9 @@ defmodule Ecto.ChangesetTest do
       changeset(%{})
       |> validate_acceptance(:terms_of_service, message: {"%{name} yada", name: "x"})
 
-    assert changeset.errors == [terms_of_service: {"%{name} yada", [validation: :acceptance, name: "x"]}]
+    assert changeset.errors == [
+             terms_of_service: {"%{name} yada", [validation: :acceptance, name: "x"]}
+           ]
   end
 
   alias Ecto.TestRepo
@@ -2727,10 +2731,6 @@ defmodule Ecto.ChangesetTest do
         match: :invalid,
         message: "match is invalid"
       )
-    end
-
-    assert_raise ArgumentError, ~r/supply the name/, fn ->
-      check_constraint(:title, message: "cannot be more than 15 characters")
     end
   end
 

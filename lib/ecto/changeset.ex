@@ -2244,7 +2244,7 @@ defmodule Ecto.Changeset do
     if changeset.valid? do
       {:ok, apply_changes(changeset)}
     else
-      {:error, %Changeset{changeset | action: action}}
+      {:error, %{changeset | action: action}}
     end
   end
 
