@@ -2285,9 +2285,8 @@ defmodule Ecto.Repo do
       ** (RuntimeError) oops
   """
   @doc group: "Transaction API"
-  @callback transaction_with(fun, opts :: Keyword.t()) ::
-              {:ok, any}
-              | {:error, any}
+  @callback transaction_with(fun, opts :: Keyword.t()) :: {:ok, any()} | {:error, any()}
+            when fun: (-> {:ok, any()} | {:error, any()})
 
   @doc """
   Returns true if the current process is inside a transaction.
