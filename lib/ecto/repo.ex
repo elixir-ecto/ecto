@@ -290,6 +290,16 @@ defmodule Ecto.Repo do
           )
         end
 
+        def transaction_with(fun, opts \\ []) do
+          repo = get_dynamic_repo()
+
+          Ecto.Repo.Transaction.transaction_with(
+            repo,
+            fun,
+            Ecto.Repo.Supervisor.tuplet(repo, prepare_opts(:transaction, opts))
+          )
+        end
+
         def in_transaction? do
           Ecto.Repo.Transaction.in_transaction?(get_dynamic_repo())
         end
@@ -2076,6 +2086,8 @@ defmodule Ecto.Repo do
   A successful transaction returns the value returned by the function
   wrapped in a tuple as `{:ok, value}`.
 
+  See also `c:transaction_with/2`.
+
   ### Nested transactions
 
   If `c:transaction/2` is called inside another transaction, the function
@@ -2131,6 +2143,8 @@ defmodule Ecto.Repo do
   `{:error, failed_operation, failed_value, changes_so_far}` will be returned.
 
   Explore the `Ecto.Multi` documentation to learn more and find detailed examples.
+
+  See also `c:transaction_with/2`.
 
   ## Aborted transactions
 
@@ -2199,6 +2213,81 @@ defmodule Ecto.Repo do
               {:ok, any}
               | {:error, any}
               | Ecto.Multi.failure()
+
+  @doc """
+  Runs the given function inside a transaction.
+
+  The return value is the same as of the given `fun` which must be
+  `{:ok, result}` or `{:error, reason}`.
+
+  If this function returns `{:ok, result}`, it means the transaction
+  was successfully committed. On the other hand, if it returns `{:error, reason}`,
+  it means the transaction was rolled back.
+
+  If an Elixir exception occurs the transaction will be rolled back
+  and the exception will bubble up from the transaction function.
+  If no exception occurs, the transaction is committed when the
+  function returns. A transaction can be explicitly rolled back
+  by calling `c:rollback/1`, this will immediately leave the function
+  and return the value given to `rollback` as `{:error, value}`.
+
+  See `c:transaction/2` for more information on transactions.
+
+  ## Options
+
+  See the ["Shared options"](#module-shared-options) section at the module
+  documentation for more options.
+
+  ## Examples
+
+  This function is commonly used with `with/1`:
+
+      Repo.transaction_with(fn ->
+        with {:ok, alice} <- Repo.insert(alice_changeset),
+             {:ok, bob} <- Repo.insert(bob_changeset) do
+          {:ok, [alice, bob]}
+        end
+      end)
+
+  If the transaction was successful, `{:ok, result}` is returned:
+
+      iex> Repo.transaction_with(fn ->
+      ...>   Repo.insert(changeset)
+      ...> end)
+      {:ok, %User{}}
+
+  If the transaction failed, `{:error, reason}` is returned:
+
+      iex> Repo.transaction_with(fn ->
+      ...>   Repo.insert(changeset)
+      ...> end)
+      {:error, #Ecto.Changeset<...>}
+
+  Transaction can be aborted by returning `{:error, reason}`, calling `c:rollback/1`,
+  or raising from the given `fun`:
+
+      iex> Repo.transaction_with(fn ->
+      ...>   Repo.insert!(%User{}) # will be rolled back
+      ...>   {:error, :oops}
+      ...> end)
+      {:error, :oops}
+
+      iex> Repo.transaction_with(fn ->
+      ...>   Repo.insert!(%User{}) # will be rolled back
+      ...>   Repo.rollback(:oops)
+      ...> end)
+      {:error, :oops}
+
+      iex> Repo.transaction_with(fn ->
+      ...>   Repo.insert!(%User{}) # will be rolled back
+      ...>   raise "oops"
+      ...> end)
+      ** (RuntimeError) oops
+  """
+  @doc group: "Transaction API"
+  @callback transaction_with(fun, opts :: Keyword.t()) ::
+              {:ok, any}
+              | {:error, any}
 
   @doc """
   Returns true if the current process is inside a transaction.
