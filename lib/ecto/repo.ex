@@ -2226,8 +2226,10 @@ defmodule Ecto.Repo do
 
   If an Elixir exception occurs the transaction will be rolled back
   and the exception will bubble up from the transaction function.
-  If no exception occurs, the transaction is committed when the
-  function returns. A transaction can be explicitly rolled back
+  If no exception occurs, the transaction is committed if the function 
+  returns `{:ok, result}`. Returning `{:error, result}` will rollback the transaction
+  and this function will return `{:error, result}` as well. 
+  A transaction can be explicitly rolled back
   by calling `c:rollback/1`, this will immediately leave the function
   and return the value given to `rollback` as `{:error, value}`.
 
