@@ -2304,4 +2304,94 @@ defmodule Ecto.Integration.RepoTest do
     defp uuid_module(Ecto.Adapters.Tds), do: Tds.Ecto.UUID
     defp uuid_module(_), do: Ecto.UUID
   end
+
+  describe "transact/2 with function" do
+    test "return ok" do
+      assert {:ok, [post1, post2]} =
+               TestRepo.transact(fn ->
+                 post1 = TestRepo.insert!(%Post{title: "1"})
+                 post2 = TestRepo.insert!(%Post{title: "2"})
+                 {:ok, [post1, post2]}
+               end)
+
+      assert TestRepo.all(Post) |> Enum.sort() == [post1, post2]
+    end
+
+    test "return error" do
+      assert {:error, :oops} =
+               TestRepo.transact(fn ->
+                 TestRepo.insert!(%Post{title: "1"})
+                 TestRepo.insert!(%Post{title: "2"})
+                 {:error, :oops}
+               end)
+
+      assert TestRepo.all(Post) == []
+    end
+
+    test "rollback" do
+      assert {:error, :oops} =
+               TestRepo.transact(fn ->
+                 TestRepo.insert!(%Post{title: "1"})
+                 TestRepo.insert!(%Post{title: "2"})
+                 TestRepo.rollback(:oops)
+                 raise "unreachable"
+               end)
+
+      assert TestRepo.all(Post) == []
+    end
+
+    test "raise error" do
+      assert_raise RuntimeError, "oops", fn ->
+        TestRepo.transact(fn ->
+          TestRepo.insert!(%Post{title: "1"})
+          TestRepo.insert!(%Post{title: "2"})
+          raise "oops"
+        end)
+      end
+
+      assert TestRepo.all(Post) == []
+    end
+  end
+
+  describe "transact/2 with multi" do
+    test "ok" do
+      multi = Ecto.Multi.new()
+              |> Ecto.Multi.insert(:post1, %Post{title: "1"})
+              |> Ecto.Multi.insert(:post2, %Post{title: "2"})
+
+      assert {:ok, %{post1: post1, post2: post2}} =
+               TestRepo.transact(multi)
+
+      assert TestRepo.all(Post) |> Enum.sort() == [post1, post2]
+    end
+
+    test "error" do
+      changeset =
+        Ecto.Changeset.change(%Post{})
+        |> Ecto.Changeset.add_error(:title, "invalid")
+
+      multi =
+        Ecto.Multi.new()
+        |> Ecto.Multi.insert(:post1, %Post{title: "1"})
+        |> Ecto.Multi.insert(:post2, fn _ -> changeset end)
+
+      assert {:error, :post2, changeset, %{post1: %Post{title: "1"}}} =
+               TestRepo.transact(multi)
+
+      refute changeset.valid?
+    end
+  end
+
+  describe "transaction/2 (soft-deprecated)" do
+    test "ok" do
+      assert {:ok, {:ok, [post1, post2]}} =
+               TestRepo.transaction(fn ->
+                 post1 = TestRepo.insert!(%Post{title: "1"})
+                 post2 = TestRepo.insert!(%Post{title: "2"})
+                 {:ok, [post1, post2]}
+               end)
+
+      assert TestRepo.all(Post) |> Enum.sort() == [post1, post2]
+    end
+  end
 end
