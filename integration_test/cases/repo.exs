@@ -92,7 +92,7 @@ defmodule Ecto.Integration.RepoTest do
   test "all_by" do
     post1 = TestRepo.insert!(%Post{title: "a"})
     post2 = TestRepo.insert!(%Post{title: "a"})
-    TestRepo.insert!(%Post{title: "b"})
+    post3 = TestRepo.insert!(%Post{title: "b"})
 
     assert TestRepo.all_by(Post, title: "a") |> Enum.sort() == [post1, post2]
     assert TestRepo.all_by(Post, title: "b") |> Enum.sort() == [post3]
