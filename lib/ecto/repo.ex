@@ -1347,7 +1347,7 @@ defmodule Ecto.Repo do
       MyRepo.all_by(Post, author_id: 1)
 
       query = from p in Post
-      MyRepo.all_by(Post, author_id: 1)
+      MyRepo.all_by(query, author_id: 1)
   """
   @doc group: "Query API"
   @callback all_by(
