@@ -89,6 +89,15 @@ defmodule Ecto.Integration.RepoTest do
     assert catch_error(TestRepo.all("posts", prefix: "oops"))
   end
 
+  test "all_by" do
+    post1 = TestRepo.insert!(%Post{title: "a"})
+    post2 = TestRepo.insert!(%Post{title: "a"})
+    post3 = TestRepo.insert!(%Post{title: "b"})
+
+    assert TestRepo.all_by(Post, title: "a") |> Enum.sort() == [post1, post2]
+    assert TestRepo.all_by(Post, title: "b") |> Enum.sort() == [post3]
+  end
+
   test "insert, update and delete" do
     post = %Post{title: "insert, update, delete", visits: 1}
     meta = post.__meta__

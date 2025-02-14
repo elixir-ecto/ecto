@@ -504,7 +504,7 @@ defmodule Ecto.Query.API do
   The example above will inject the value of `limit` directly
   into the query instead of treating it as a query parameter. It will
   generate a query such as `SELECT p0.title FROM "posts" AS p0 LIMIT 1`
-  as opposed to `SELECT p0.title FROM "posts" AS p0` LIMIT $1`.
+  as opposed to `SELECT p0.title FROM "posts" AS p0 LIMIT $1`.
 
   Note that each different value of `limit` will emit a different query,
   which will be independently prepared and cached.

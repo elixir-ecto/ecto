@@ -19,6 +19,15 @@ defmodule Ecto.Repo.Queryable do
     execute(:all, name, query, tuplet) |> elem(1)
   end
 
+  def all_by(name, queryable, clauses, tuplet) do
+    query =
+      queryable
+      |> Ecto.Query.where([], ^Enum.to_list(clauses))
+      |> Ecto.Query.Planner.ensure_select(true)
+
+    execute(:all, name, query, tuplet) |> elem(1)
+  end
+
   def stream(_name, queryable, {adapter_meta, opts}) do
     %{adapter: adapter, cache: cache, repo: repo} = adapter_meta
 
