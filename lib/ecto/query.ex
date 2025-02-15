@@ -1541,10 +1541,10 @@ defmodule Ecto.Query do
       |> with_cte("category_tree", as: fragment(@raw_sql_category_tree))
       |> join(:inner, [p], c in "category_tree", on: c.id == p.category_id)
 
-  You can also query over the CTE table itself. In such cases, you can pass
-  tuple with the CTE table name as the first element and an Ecto schema as the second
-  element. This will cast the result rows to Ecto structs as long as the Ecto
-  schema maps over the same fields in the CTE table:
+  You can also query over the CTE table itself. In such cases, you can pass an
+  `m:Ecto.Queryable#module-tuple` module tuple with the CTE table name as the first element
+  and an Ecto schema as the second element. This will cast the result rows to Ecto
+  structs, as long as the Ecto schema maps over the same fields in the CTE table:
 
       {"category_tree", Category}
       |> recursive_ctes(true)
@@ -1553,15 +1553,28 @@ defmodule Ecto.Query do
       |> group_by([c], c.id)
       |> select([c, p], %{c | products_count: count(p.id)})
 
-  Keep in mind that the query above will inherit all properties from the `Category` schema,
-  include a `@schema_prefix` if any is set. In such cases, you can disable those properties
-  by setting them as option:
+  Keep in mind that this will override the source table name to `"category_tree"` in the
+  resulting structs, which will also inherit all other properties from the `Category` schema,
+  including a `@schema_prefix` if any is set.
+
+  In such cases, you can disable those properties by setting them as options:
 
       from(cte in {"category_tree", Category}, prefix: nil)
       |> recursive_ctes(true)
       |> with_cte("category_tree", as: ^category_tree_query)
 
-  For Postgres built-in adapter, it is possible to define data-modifying CTE queries:
+  or join the CTE's result to the original schema:
+
+      Category
+      |> recursive_ctes(true)
+      |> with_cte("category_tree", as: ^category_tree_query)
+      |> join(:inner, [c], tree in "category_tree", on: c.id == tree.id)
+
+  While this requires an additional join, it will allow you to use the structs in further
+  data-modifying operations throughout your application without the need to manually reset
+  the source table name.
+
+  For the Postgres built-in adapter, it is possible to define data-modifying CTE queries:
 
       update_categories_query =
         Category
@@ -1575,7 +1588,7 @@ defmodule Ecto.Query do
 
   Note: In order to retrieve the updates rows from a CTE query, the parent query
   must select rows from the CTE table instead of the table referenced by the CTE query.
-  For example, `"update_categories"` will return updates rows for `"category"` table, but
+  For example, `"update_categories"` will return updated rows for `"category"` table, but
   selecting from `"category"` table directly will return unaffected rows.
   For more details see Postgres documentation on data-modifying CTEs and how these work
   with snapshots.
