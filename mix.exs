@@ -158,6 +158,7 @@ defmodule Ecto.MixProject do
       "guides/howtos/Test factories.md",
       "guides/cheatsheets/crud.cheatmd",
       "guides/cheatsheets/associations.cheatmd",
+      "guides/cheatsheets/types.cheatmd",
       "CHANGELOG.md"
     ]
   end
