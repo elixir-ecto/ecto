@@ -24,7 +24,7 @@ defmodule Movie do
 end
 ```
 
-#### Define Postgrex type module in its own file
+#### Define Postgrex type module and specify intervals should be decoded to Duration
 
 ```elixir
 # Inside lib/my_app/postgrex_types.ex
