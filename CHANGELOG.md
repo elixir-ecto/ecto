@@ -4,6 +4,20 @@
 
 Requires Elixir v1.14+.
 
+### Enhancements
+
+  * [Ecto] Support Elixir's built-in JSON
+  * [Ecto.Repo] Add `Ecto.Repo.all_by/3`
+  * [Ecto.Query] Allow schema to be used for `values` list types
+  * [Ecto.Query] Allow strings in `field/2`
+  * [Ecto.Query] Add `identifier/1` in queries
+  * [Ecto.Query] Add `constant/1` in queries
+  * [Ecto.Query] Allow `exclude/2` to remove windows
+
+### Bug fixes
+
+  * [Ecto.Schema] Fix an issue where Ecto could warn an association did not exist, when it did
+
 ## v3.12.5 (2024-11-28)
 
 ### Bug fixes
