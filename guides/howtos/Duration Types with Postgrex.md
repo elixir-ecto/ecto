@@ -25,6 +25,7 @@ end
 ```
 
 3. Define your custom Postgrex type module and specify intervals should decode to `Duration`
+
 ```elixir
 # Inside lib/my_app/postgrex_types.ex
 
