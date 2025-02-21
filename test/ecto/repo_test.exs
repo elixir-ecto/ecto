@@ -1518,7 +1518,7 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  test "get, get_by, one and all sets schema prefix" do
+  test "get, get_by, one, all and all_by sets schema prefix" do
     assert schema = TestRepo.get(MySchema, 123, prefix: "public")
     assert schema.__meta__.prefix == "public"
 
@@ -1529,6 +1529,9 @@ defmodule Ecto.RepoTest do
     assert schema.__meta__.prefix == "public"
 
     assert [schema] = TestRepo.all(MySchema, prefix: "public")
+    assert schema.__meta__.prefix == "public"
+
+    assert [schema] = TestRepo.all_by(MySchema, [id: 123], prefix: "public")
     assert schema.__meta__.prefix == "public"
 
     assert schema = TestRepo.get(MySchema, 123, prefix: %{key: :public})
@@ -1544,7 +1547,7 @@ defmodule Ecto.RepoTest do
     assert schema.__meta__.prefix == %{key: :public}
   end
 
-  test "get, get_by, one and all ignores prefix if schema_prefix set" do
+  test "get, get_by, one, all, and all_by ignores prefix if schema_prefix set" do
     assert schema = TestRepo.get(MySchemaWithPrefix, 123, prefix: "public")
     assert schema.__meta__.prefix == "private"
 
@@ -1567,6 +1570,9 @@ defmodule Ecto.RepoTest do
     assert schema.__meta__.prefix == %{key: :private}
 
     assert [schema] = TestRepo.all(MySchemaWithNonStringPrefix, prefix: %{key: :public})
+    assert schema.__meta__.prefix == %{key: :private}
+
+    assert [schema] = TestRepo.all_by(MySchemaWithNonStringPrefix, [id: 123], prefix: %{key: :public})
     assert schema.__meta__.prefix == %{key: :private}
   end
 

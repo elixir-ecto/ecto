@@ -440,6 +440,17 @@ defmodule Ecto.Repo do
           )
         end
 
+        def all_by(queryable, clauses, opts \\ []) do
+          repo = get_dynamic_repo()
+
+          Ecto.Repo.Queryable.all_by(
+            repo,
+            queryable,
+            clauses,
+            Ecto.Repo.Supervisor.tuplet(repo, prepare_opts(:all, opts))
+          )
+        end
+
         def stream(queryable, opts \\ []) do
           repo = get_dynamic_repo()
 
@@ -824,6 +835,8 @@ defmodule Ecto.Repo do
   Returns `nil` if no result was found. If the struct in the queryable
   has no or more than one primary key, it will raise an argument error.
 
+  See also `c:get!/3`, `c:one/2`, and `c:all_by/3`.
+
   ## Options
 
     * `:prefix` - The prefix to run the query on (such as the schema path
@@ -877,6 +890,8 @@ defmodule Ecto.Repo do
   Fetches a single result from the query.
 
   Returns `nil` if no result was found. Raises if more than one entry.
+
+  See also `c:get/3`, `c:one/2`, and `c:all_by/3`.
 
   ## Options
 
@@ -1091,6 +1106,8 @@ defmodule Ecto.Repo do
 
   Returns `nil` if no result was found. Raises if more than one entry.
 
+  See also `c:one!/2`, `c:get/3`, and `c:all/2`.
+
   ## Options
 
     * `:prefix` - The prefix to run the query on (such as the schema path
@@ -1280,6 +1297,8 @@ defmodule Ecto.Repo do
 
   May raise `Ecto.QueryError` if query validation fails.
 
+  See also `c:all_by/3`, `c:one/2`, and `c:get/3`.
+
   ## Options
 
     * `:prefix` - The prefix to run the query on (such as the schema path
@@ -1296,11 +1315,46 @@ defmodule Ecto.Repo do
 
       # Fetch all post titles
       query = from p in Post,
-           select: p.title
+                select: p.title
       MyRepo.all(query)
   """
   @doc group: "Query API"
   @callback all(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) :: [Ecto.Schema.t() | term]
+
+  @doc """
+  Fetches all entries from the data store matching the given query and conditions.
+
+  May raise `Ecto.QueryError` if query validation fails.
+
+  This function is a shortcut for `c:all/2` when adjusting the given query with simple conditions.
+
+  See also `c:all/2` and `c:get_by/3`.
+
+  ## Options
+
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). This will be applied to all `from`
+      and `join`s in the query that did not have a prefix previously given
+      either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
+      in the schema. For more information see the ["Query Prefix"](`m:Ecto.Query#module-query-prefix`) section of the
+      `Ecto.Query` documentation.
+
+  See the ["Shared options"](#module-shared-options) section at the module
+  documentation for more options.
+
+  ## Example
+
+      MyRepo.all_by(Post, author_id: 1)
+
+      query = from p in Post
+      MyRepo.all_by(query, author_id: 1)
+  """
+  @doc group: "Query API"
+  @callback all_by(
+              queryable :: Ecto.Queryable.t(),
+              clauses :: Keyword.t() | map,
+              opts :: Keyword.t()
+            ) :: [Ecto.Schema.t() | term]
 
   @doc """
   Returns a lazy enumerable that emits all entries from the data store
