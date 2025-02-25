@@ -147,8 +147,8 @@ defmodule Ecto.Changeset do
 
   ## Associations, embeds, and on replace
 
-  Using changesets you can work with associations as well as with embedded
-  structs. There are two primary APIs:
+  Using changesets you can work with associations as well as with
+  [embedded](embedded-schemas.html) structs. There are two primary APIs:
 
     * `cast_assoc/3` and `cast_embed/3` - those functions are used when
       working with external data. In particular, they allow you to change
