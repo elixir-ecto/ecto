@@ -1,6 +1,6 @@
 # Associations
 
-In this document, "Internal data" represents data or logic hardcoded into your Elixir code. "External data" means data that comes from the user via forms, APIs, and often need to be normalized, pruned, and validated via `Ecto.Changeset`.
+In this document, "Internal data" represents data or logic hardcoded into your Elixir code. "External data" means data that comes from the user via forms, APIs, and often need to be normalized, pruned, and validated via `Ecto.Changeset`. We also include examples of migrations, according to [`EctoSQL`](https://hexdocs.pm/ecto_sql).
 
 ## Has many / belongs to
 {: .col-2}
@@ -33,6 +33,33 @@ defmodule Character do
 end
 ```
 
+### The migration
+
+```elixir
+defmodule MyApp.Migrations.CreateMoviesAndCharacters do
+  use Ecto.Migration
+
+  def change do
+    create table("movies") do
+      add :title, :string, null: false
+      add :release_date, :date
+      timestamps()
+    end
+
+    # The foreign key is in the belongs_to schema
+    create table("characters") do
+      add :name, :string, null: false
+      add :age, :integer
+      add :movie_id,
+          references(:movies, on_delete: :delete_all),
+          null: false
+
+      timestamps()
+    end
+  end
+end
+```
+
 ## Has one / belongs to
 {: .col-2}
 
@@ -59,6 +86,32 @@ defmodule Screenplay do
   schema "screenplays" do
     field :lead_writer, :string
     belongs_to :movie, Movie
+  end
+end
+```
+
+### The migration
+
+```elixir
+defmodule MyApp.Migrations.CreateMoviesAndPlays do
+  use Ecto.Migration
+
+  def change do
+    create table("movies") do
+      add :title, :string, null: false
+      add :release_date, :date
+      timestamps()
+    end
+
+    # The foreign key is in the belongs_to schema
+    create table("screenplays") do
+      add :lead_writer, :string, null: false
+      add :movie_id,
+          references(:movies, on_delete: :delete_all),
+          null: false
+
+      timestamps()
+    end
   end
 end
 ```
@@ -140,6 +193,40 @@ defmodule UserOrganization do
 end
 ```
 {: .wrap}
+
+### The migration
+
+It applies to both join tables and schemas.
+
+```elixir
+defmodule MyApp.Migrations.CreateUsersAndOrgs do
+  use Ecto.Migration
+
+  def change do
+    create table("users") do
+      timestamps()
+    end
+
+    create table("organizations") do
+      timestamps()
+    end
+
+    create table("users_organizations", primary_key: false) do
+      add :user_id,
+          references(:users, on_delete: :delete_all),
+          null: false
+
+      add :organization_id,
+          references(:organizations, on_delete: :delete_all),
+          null: false
+
+      timestamps()
+    end
+
+    create unique_index(:users_organizations, [:user_id, :organization_id])
+  end
+end
+```
 
 ## Querying associated records
 {: .col-2}

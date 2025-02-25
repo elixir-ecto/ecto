@@ -6,21 +6,25 @@ defmodule Ecto.Schema do
   `schema/2` and `embedded_schema/1`.
 
   `schema/2` is typically used to map data from a persisted source,
-  usually a database table, into Elixir structs and vice-versa. For
-  this reason, the first argument of `schema/2` is the source (table)
-  name. Structs defined with `schema/2` also contain a `__meta__` field
-  with metadata holding the status of the struct, for example, if it
-  has been built, loaded or deleted.
+  usually a database table, into Elixir structs and vice-versa via
+  the `Ecto.Repo` module. For this reason, the first argument of `schema/2`
+  is the source (table) name. Structs defined with `schema/2` also contain
+  a `__meta__` field with metadata holding the status of the struct,
+  for example, if it has been built, loaded or deleted. Schemas also support
+  associations, through APIs such as `has_one/3` and `belongs_to/3`.
+  Check out the [Associations cheatsheet](associations.cheatmd) for a reference
+  on the different associations types and their migrations.
 
   On the other hand, `embedded_schema/1` is used for defining schemas
   that are embedded in other schemas or only exist in-memory. For example,
   you can use such schemas to receive data from a command line interface
-  and validate it, without ever persisting it elsewhere. Such structs
-  do not contain a `__meta__` field, as they are never persisted.
+  or a contact form, and validate it, without ever persisting it elsewhere.
+  Such structs do not contain a `__meta__` field, as they are never persisted.
 
-  Besides working as data mappers, `embedded_schema/1` and `schema/2` can
-  also be used together to decouple how the data is represented in your
-  applications from the database. Let's see some examples.
+  Both schemas can be used alongside changesets to filter, cast, and validate
+  data. Besides working as data mappers, `embedded_schema/1` and `schema/2`
+  can also be used together to decouple how the data is represented in your
+  applications from the database.
 
   ## Example
 
@@ -793,6 +797,11 @@ defmodule Ecto.Schema do
       [post] = Repo.all(from(p in Post, where: p.id == 42, preload: :comments))
       post.comments #=> [%Comment{...}, ...]
 
+  If using [EctoSQL](https://hexdocs.pm/ecto_sql), the foreign key should be
+  defined in the `comments` table, as shown in `belongs_to/3` examples.
+  You may also see the [Associations cheatsheet](associations.cheatmd)
+  for more examples.
+
   `has_many` can be used to define hierarchical relationships within a single
   schema, for example threaded comments.
 
@@ -1022,6 +1031,11 @@ defmodule Ecto.Schema do
       # The permalink can come preloaded on the post struct
       [post] = Repo.all(from(p in Post, where: p.id == 42, preload: :permalink))
       post.permalink #=> %Permalink{...}
+
+  If using [EctoSQL](https://hexdocs.pm/ecto_sql), a foreign key must be defined
+  in the `permalinks` and `categories` tables, as shown in `belongs_to/3`
+  examples. You may also see the [Associations cheatsheet](associations.cheatmd)
+  for more examples.
   """
   defmacro has_one(name, schema, opts \\ []) do
     schema = expand_literals(schema, __CALLER__)
@@ -1109,6 +1123,16 @@ defmodule Ecto.Schema do
           belongs_to :post, Post, define_field: false
         end
       end
+
+  If using [EctoSQL](https://hexdocs.pm/ecto_sql), the `comments` table
+  should have a `post_id` column that references the `posts` table.
+  In your migrations, this can be done as:
+
+      add :post_id,
+          references(:posts, on_delete: :delete_all),
+          null: false
+
+  See the [Associations cheatsheet](associations.cheatmd) for more examples.
 
   ## Polymorphic associations
 
@@ -1200,7 +1224,7 @@ defmodule Ecto.Schema do
 
   The third and final option is to use `many_to_many/3` to
   define the relationships between the resources. In this case,
-  the comments table won't have the foreign key, instead there
+  the `comments` table won't have the foreign key, instead there
   is an intermediary table responsible for associating the entries:
 
       defmodule Comment do
@@ -1376,8 +1400,8 @@ defmodule Ecto.Schema do
   include any further columns, as those values won't be set by Ecto:
 
       create table(:posts_tags, primary_key: false) do
-        add :post_id, references(:posts)
-        add :tag_id, references(:tags)
+        add :post_id, references(:posts, on_delete: :delete_all), null: false
+        add :tag_id, references(:tags, on_delete: :delete_all), null: false
       end
 
   However, if your `:join_through` is a schema, like `MyApp.PostTag`, your
@@ -1385,8 +1409,8 @@ defmodule Ecto.Schema do
   including timestamps:
 
       create table(:posts_tags) do
-        add :post_id, references(:posts)
-        add :tag_id, references(:tags)
+        add :post_id, references(:posts, on_delete: :delete_all), null: false
+        add :tag_id, references(:tags, on_delete: :delete_all), null: false
         timestamps()
       end
 
