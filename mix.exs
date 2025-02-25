@@ -142,14 +142,13 @@ defmodule Ecto.MixProject do
   def extras() do
     [
       "guides/introduction/Getting Started.md",
-      "guides/introduction/Embedded Schemas.md",
-      "guides/introduction/Testing with Ecto.md",
       "guides/howtos/Aggregates and subqueries.md",
       "guides/howtos/Composable transactions with Multi.md",
       "guides/howtos/Constraints and Upserts.md",
       "guides/howtos/Data mapping and validation.md",
       "guides/howtos/Duration Types with Postgrex.md",
       "guides/howtos/Dynamic queries.md",
+      "guides/howtos/Embedded Schemas.md",
       "guides/howtos/Multi tenancy with query prefixes.md",
       "guides/howtos/Multi tenancy with foreign keys.md",
       "guides/howtos/Self-referencing many to many.md",
@@ -157,6 +156,7 @@ defmodule Ecto.MixProject do
       "guides/howtos/Replicas and dynamic repositories.md",
       "guides/howtos/Schemaless queries.md",
       "guides/howtos/Test factories.md",
+      "guides/testing/Testing with Ecto.md",
       "guides/cheatsheets/crud.cheatmd",
       "guides/cheatsheets/associations.cheatmd",
       "CHANGELOG.md"
@@ -169,7 +169,8 @@ defmodule Ecto.MixProject do
     [
       Introduction: ~r/guides\/introduction\/.?/,
       Cheatsheets: ~r/cheatsheets\/.?/,
-      "How-To's": ~r/guides\/howtos\/.?/
+      "How-To's": ~r/guides\/howtos\/.?/,
+      Testing: ~r/testing\/.?/
     ]
   end
 
