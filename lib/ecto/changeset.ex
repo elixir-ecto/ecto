@@ -1,7 +1,8 @@
 defmodule Ecto.Changeset do
   @moduledoc ~S"""
-  Changesets allow filtering, casting, validation and
-  definition of constraints when manipulating structs.
+  Changesets allow filtering, type conversion, validation and
+  definition of constraints when manipulating structs, usually in
+  preparation for insertion into the database.
 
   There is an example of working with changesets in the introductory
   documentation in the `Ecto` module. The functions `cast/4` and
@@ -18,13 +19,13 @@ defmodule Ecto.Changeset do
 
   Changesets allow working with two kinds of data:
 
-    * internal to the application - for example programmatically generated,
-      or coming from other subsystems. This use case is primarily covered
-      by the `change/2` and `put_change/3` functions.
-
-    * external to the application - for example data provided by the user in
+    * external to the application - for example user input from
       a form that needs to be type-converted and properly validated. This
       use case is primarily covered by the `cast/4` function.
+
+   * internal to the application - for example programmatically generated,
+      or coming from other subsystems. This use case is primarily covered
+      by the `change/2` and `put_change/3` functions.
 
   When working with external data, the data is typically provided
   as maps with string keys (also known as parameters). On the other hand,
