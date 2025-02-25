@@ -5,13 +5,13 @@ defmodule Ecto.Changeset do
   preparation for inserting and updating entries into a database.
 
   There is an example of
-  [working with changesets](Ecto.html#module-changesets) in the
+  [working with changesets](`Ecto#module-changesets`) in the
   introductory documentation in the `Ecto` module. In a nutshell, there
   are two main functions for creating a changeset. The `cast/4` function
-  is used to receive external parameters from a form, API or command line
-  and convert them to the types defined in your `Ecto.Schema`. `change/2`
-  is used to modify data directly from your application, assuming the
-  data given is valid and matches the existing types.
+  is used to receive external parameters from a form, API or command
+  line, and convert them to the types defined in your `Ecto.Schema`.
+  `change/2` is used to modify data directly from your application,
+  assuming the data given is valid and matches the existing types.
 
   The remaining functions in this module, such as validations,
   constraints, association handling, are about manipulating
