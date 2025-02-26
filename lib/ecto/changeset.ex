@@ -1,6 +1,6 @@
 defmodule Ecto.Changeset do
   @moduledoc ~S"""
-  Changesets allow filtering, type conversion, validation and
+  Changesets allow filtering, casting, validation and
   definition of constraints when manipulating structs, usually in
   preparation for inserting and updating entries into a database.
 
