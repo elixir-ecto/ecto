@@ -1188,6 +1188,10 @@ defmodule Ecto.Repo do
     * `:on_preloader_spawn` - when preloads are done in parallel, this function
       will be called in the processes that perform the preloads. This can be useful
       for context propagation for traces.
+    * `:warn_if_nil_keys` - When set to `false`, suppresses the warning
+      when preloading associations where the parent's association key is nil.
+      Useful when working with unpersisted data (e.g., in changesets).
+      Defaults to `true`.
 
   See the ["Shared options"](#module-shared-options) section at the module
   documentation for more options.
