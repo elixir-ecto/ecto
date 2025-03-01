@@ -66,6 +66,7 @@ defmodule Ecto.RepoTest do
       field :y, :binary, source: :yyy
       field :z, :string, default: "z"
       field :w, :string, virtual: true
+      field :n, :integer, virtual: true
       field :array, {:array, :string}
       field :map, {:map, :string}
       has_many :children, MySchemaChild
@@ -229,6 +230,10 @@ defmodule Ecto.RepoTest do
     # map field with strings
     assert %MySchema{map: %{"color" => "red"}} =
              TestRepo.load(MySchema, %{map: %{"color" => "red"}})
+
+    # virtual field
+    assert %MySchema{n: 1} =
+             TestRepo.load(MySchema, %{n: 1})
 
     # nil
     assert %MySchema{x: nil} =
