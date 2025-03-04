@@ -824,6 +824,7 @@ defmodule Ecto.Repo do
                       one!: 2,
                       preload: 3,
                       all: 2,
+                      all_by: 3,
                       stream: 2,
                       update_all: 3,
                       delete_all: 2
