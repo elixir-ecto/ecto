@@ -202,4 +202,17 @@ defmodule Ecto.Query.Builder.JoinTest do
       end, [], __ENV__)
     end
   end
+
+  test "join count is incremented correctly for runtime sources" do
+    users_table = "users"
+    source_query = fn -> from p in "posts", join: c in "comments", on: true end
+
+    q =
+      from s in source_query.(),
+        join: j in subquery(from u in users_table, join: p in "profiles", on: true, select: u.id),
+        on: true,
+        select: {s.id, j.id}
+
+    assert {:{}, _, [_, {{:., [], [{:&, [], [2]}, :id]}, [], []}]} = q.select.expr
+  end
 end
