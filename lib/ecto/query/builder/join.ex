@@ -165,11 +165,9 @@ defmodule Ecto.Query.Builder.Join do
       if is_nil(count_bind) do
         query =
           quote do
-            query = Ecto.Queryable.to_query(unquote(query))
-            join_count = Builder.count_binds(query)
-            query
+            Ecto.Queryable.to_query(unquote(query))
           end
-        {quote(do: join_count), query}
+        {quote(do: Builder.count_binds(unquote(query))), query}
       else
         {count_bind, query}
       end
