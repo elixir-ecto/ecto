@@ -397,6 +397,7 @@ defmodule Ecto.Query do
   """
   defstruct prefix: nil,
             sources: nil,
+            comments: [],
             from: nil,
             joins: [],
             aliases: %{},
@@ -951,6 +952,7 @@ defmodule Ecto.Query do
       Ecto.Query.exclude(query, :distinct)
       Ecto.Query.exclude(query, :select)
       Ecto.Query.exclude(query, :combinations)
+      Ecto.Query.exclude(query, :comments)
       Ecto.Query.exclude(query, :with_ctes)
       Ecto.Query.exclude(query, :limit)
       Ecto.Query.exclude(query, :offset)
@@ -1005,6 +1007,7 @@ defmodule Ecto.Query do
   defp do_exclude(%Ecto.Query{} = query, :order_by), do: %{query | order_bys: []}
   defp do_exclude(%Ecto.Query{} = query, :group_by), do: %{query | group_bys: []}
   defp do_exclude(%Ecto.Query{} = query, :combinations), do: %{query | combinations: []}
+  defp do_exclude(%Ecto.Query{} = query, :comments), do: %{query | comments: []}
   defp do_exclude(%Ecto.Query{} = query, :with_ctes), do: %{query | with_ctes: nil}
   defp do_exclude(%Ecto.Query{} = query, :having), do: %{query | havings: []}
   defp do_exclude(%Ecto.Query{} = query, :distinct), do: %{query | distinct: nil}
@@ -1135,7 +1138,7 @@ defmodule Ecto.Query do
   end
 
   @from_join_opts [:as, :prefix, :hints]
-  @no_binds [:union, :union_all, :except, :except_all, :intersect, :intersect_all]
+  @no_binds [:union, :union_all, :except, :except_all, :intersect, :intersect_all, :comment]
   @binds [:lock, :where, :or_where, :select, :distinct, :order_by, :group_by, :windows] ++
            [:having, :or_having, :limit, :offset, :preload, :update, :select_merge, :with_ctes]
 
@@ -1771,6 +1774,106 @@ defmodule Ecto.Query do
   """
   defmacro select_merge(query, binding \\ [], expr) do
     Builder.Select.build(:merge, query, binding, expr, __CALLER__)
+  end
+
+  @doc """
+  Add comment to the generated SQL.
+
+  In SQL queries, comment parameters are unique compared to other
+  parameters. Standard parameters are represented by placeholders like ?,
+  which the database engine binds to actual values. These parameters are
+  placed in query clauses, such as WHERE or ORDER BY, and directly affect
+  query execution by impacting filtering, sorting, or joining operations.
+
+  However, unlike other parameters, dynamic comments can affect both caching
+  and prepared statements in Ecto. Each unique dynamic comment changes the
+  generated SQL, preventing caching and causing new prepared statements
+  to be created repeatedly. In these cases, caching doesn’t make sense,
+  as it could lead to cache pollution—storing many slightly different
+  versions of essentially the same query, which reduces cache efficiency.
+
+  For frequently changing dynamic comments, consider sampling or other
+  strategies to limit the variety of comments and maintain caching
+  effectiveness.
+
+  - Runtime comments from pinned variables are not cached by default since
+  inserting dynamic values into the query makes each query unique, making
+  caching ineffective. You can override this behavior if your dynamic values
+  have only a few distinct values.
+  - Compile-time comments are cached and do not add any overhead to caching.
+  - Atoms are cached, and since atoms should not be created dynamically,
+  caching should remain effective.
+  - Dynamic values where the config option cache: true is provided.
+  Use this only if you're confident in your use case. :)
+
+      dynamic_value = "not cached by default"
+      dynamic_atom = :cached
+      query =
+        Post
+        |> comment(^dynamic_value)                # this is not cached
+        |> comment("this is a cached comment")    # this is cached
+        |> comment(^dynamic_atom)                 # this is cached
+        |> comment(^dynamic_value, cache: true)   # this is cached
+
+  Comments are collected - the above will return a list containing all the comments.
+
+  Dynamic strings are validated for containing `*/` string.
+  it can be overridden by passing `validated: true` option when you are sure that it's safe.
+
+  A comment can be url escaped by passing `escape: true` option.
+  In this case the validation is skipped because it's safe in this case.
+
+  ## Sample 1% of queries
+
+  Here's an example of how you can sample 1% of queries to add a dynamic comment without heavily
+  impacting caching or prepared statements. By randomly adding comments to only a small percentage
+  of queries, you can reduce cache pollution and repeated preparation of statements while still
+  getting some traces for debugging or monitoring purposes.
+
+      defp sample_comment(query, comment_text) do
+        if :rand.uniform(100) == 1 do
+          comment(query, comment_text)
+        else
+          query
+        end
+      end
+
+      query =
+        Post
+        |> sample_comment("Sampled for monitoring")
+
+  ## Add it globally to your app
+  Modify your Repo module
+
+      defmodule MyApp.Repo do
+        require Ecto.Query
+
+        use Ecto.Repo,
+          otp_app: :sqlcomm,
+          adapter: Ecto.Adapters.Postgres
+
+        def default_options(_operation) do
+          [stacktrace: true]
+        end
+
+        def prepare_query(_operation, query, opts) do
+          if opts[:sqlcomment] do
+            {Ecto.Query.comment(query, ^opts[:sqlcomment], validated: true), opts}
+          else
+            caller = Sqlcommenter.extract_repo_caller(opts, __MODULE__)
+            sqlcommenter = [app: "sqlcomm", caller: Sqlcommenter.escape(caller), team: "team_sql"]
+            comment = generate_comment(sqlcommenter)
+            {Ecto.Query.comment(query, ^comment, cache: true, validated: true), opts}
+          end
+        end
+
+        def generate_comment(sqlcommenter) do
+          for({k, v} <- sqlcommenter, do: [Atom.to_string(k), "='", v, ?']) |> Enum.intersperse(",")
+        end
+      end
+  """
+  defmacro comment(query, comment, opts \\ []) do
+    Builder.Comment.build(query, comment, opts, __CALLER__)
   end
 
   @doc """

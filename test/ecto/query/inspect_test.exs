@@ -579,6 +579,25 @@ defmodule Ecto.Query.InspectTest do
     assert i(query) == ~s<from p0 in Inspect.Post, select: field(p0, "visit")>
   end
 
+  test "with static comments" do
+    query = from(p in "posts") |> comment("foo") |> comment("bar")
+    i = inspect(query, safe: false)
+
+    assert i == """
+           # foo
+           # bar
+           #Ecto.Query<from p0 in "posts">\
+           """
+
+    i = inspect(plan(query), safe: false)
+
+    assert i == """
+           # foo
+           # bar
+           #Ecto.Query<from p0 in "posts">\
+           """
+  end
+
   def plan(query) do
     {query, _, _} = Ecto.Adapter.Queryable.plan_query(:all, Ecto.TestAdapter, query)
     query

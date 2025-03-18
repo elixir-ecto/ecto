@@ -1261,4 +1261,22 @@ defmodule Ecto.QueryTest do
       assert inspect(reverse_order(q)) == inspect(order_by(q, desc: :id))
     end
   end
+
+  describe "query comments" do
+    test "allows compile time strings" do
+      query =
+        from(p in "posts")
+        |> comment("called from test")
+
+      assert ["called from test"] == query.comments
+    end
+
+    test "allows atoms" do
+      query =
+        from(p in "posts")
+        |> comment(:comment)
+
+      assert "comment" == hd(query.comments)
+    end
+  end
 end

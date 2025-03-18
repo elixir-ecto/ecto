@@ -196,7 +196,8 @@ defmodule Ecto.Query.PlannerTest do
         having: f.title == ^"having",
         order_by: [asc: fragment("?", ^"order_by")],
         limit: ^0,
-        offset: ^1
+        offset: ^1,
+        comment: "comment"
 
     {_query, cast_params, dump_params, _key} = plan(query)
 
@@ -664,6 +665,26 @@ defmodule Ecto.Query.PlannerTest do
     query = from(v in values([%{id: 1}], %{id: :integer}))
     {_query, _params, key} = Planner.plan(query, :all, Ecto.TestAdapter)
     assert key == :nocache
+  end
+
+  test "plan: static comments are cacheable" do
+    {_query, _params, key} =
+      Post
+      |> select([p], p.id)
+      |> comment("cacheable")
+      |> Planner.plan(:all, Ecto.TestAdapter)
+
+    assert key != :nocache
+  end
+
+  test "plan: dynamic atom comments are cacheable" do
+    {_query, _params, key} =
+      Post
+      |> select([p], p.id)
+      |> comment(:comment)
+      |> Planner.plan(:all, Ecto.TestAdapter)
+
+    assert key != :nocache
   end
 
   test "plan: normalizes prefixes" do
@@ -1428,7 +1449,9 @@ defmodule Ecto.Query.PlannerTest do
 
     child = from(c in Comment, select: %{map: field(parent_as(^as), "posted")})
     query = from(Post, as: :posts, join: c in subquery(child), on: true) |> normalize()
-    assert Macro.to_string(hd(query.joins).source.query.select.expr) == "%{map: parent_as(:posts) . \"posted\"()}"
+
+    assert Macro.to_string(hd(query.joins).source.query.select.expr) ==
+             "%{map: parent_as(:posts) . \"posted\"()}"
 
     child = from(c in Comment, where: parent_as(^as).visits == ^"123")
 
@@ -1455,7 +1478,9 @@ defmodule Ecto.Query.PlannerTest do
     {query, cast_params, _, _} =
       from(Post, as: :posts, join: c in subquery(child), on: true) |> normalize_with_params()
 
-    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) == "parent_as(:posts) . \"visits\"() == ^0"
+    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) ==
+             "parent_as(:posts) . \"visits\"() == ^0"
+
     assert cast_params == ["123"]
   end
 
@@ -1893,7 +1918,11 @@ defmodule Ecto.Query.PlannerTest do
     start_param_ix = 0
     native_types = %{bid: :uuid, num: :integer}
     types_kw = Enum.map(types, fn {field, _} -> {field, native_types[field]} end)
-    field_ast = Enum.map(types, fn {field, _} -> {{:., [writable: :always], [{:&, [], [0]}, field]}, [], []} end)
+
+    field_ast =
+      Enum.map(types, fn {field, _} ->
+        {{:., [writable: :always], [{:&, [], [0]}, field]}, [], []}
+      end)
 
     assert q.from.source == {:values, [], [types_kw, start_param_ix, length(values)]}
     assert q.select.fields == field_ast
@@ -1911,7 +1940,12 @@ defmodule Ecto.Query.PlannerTest do
     start_param_ix = 1
     native_types = %{bid: :uuid, num: :integer}
     types_kw = Enum.map(types, fn {field, _} -> {field, native_types[field]} end)
-    field_ast = Enum.map(types, fn {field, _} -> {{:., [writable: :always], [{:&, [], [1]}, field]}, [], []} end)
+
+    field_ast =
+      Enum.map(types, fn {field, _} ->
+        {{:., [writable: :always], [{:&, [], [1]}, field]}, [], []}
+      end)
+
     [join] = q.joins
 
     assert join.source == {:values, [], [types_kw, start_param_ix, length(values)]}
