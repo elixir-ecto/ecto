@@ -1090,7 +1090,7 @@ defmodule Ecto.Query do
       {"cities", Source} |> select([c], c)
 
       # Ecto.Query
-      from(c in Cities) |> select([c], c)
+      from(c in City) |> select([c], c)
 
   ## Examples
 
