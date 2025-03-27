@@ -2007,6 +2007,26 @@ defmodule Ecto.RepoTest do
         TestRepo.preload(%MySchema{id: 1}, children: intersect_all(query, ^query))
       end
     end
+
+    test "suppresses nil key warnings with warn_if_nil_keys option" do
+      parent = %MySchema{id: nil, children: [%MySchemaChild{a: "child1"}, %MySchemaChild{a: "child2"}]}
+
+      log = ExUnit.CaptureLog.capture_log(fn ->
+        TestRepo.preload(parent, :children)
+      end)
+
+      assert log =~ "association `children` for"
+      assert log =~ "its association key `id` is nil"
+
+      log = ExUnit.CaptureLog.capture_log(fn ->
+        TestRepo.preload(parent, :children, warn_if_nil_keys: false)
+      end)
+      refute log =~ "association `children` for"
+
+      result = TestRepo.preload(parent, :children, warn_if_nil_keys: false)
+      assert length(result.children) == 2
+      assert Enum.map(result.children, & &1.a) == ["child1", "child2"]
+    end
   end
 
   describe "checkout" do
