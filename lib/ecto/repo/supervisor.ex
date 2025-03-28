@@ -175,9 +175,20 @@ defmodule Ecto.Repo.Supervisor do
   def tuplet(name, opts) do
     adapter_meta = Ecto.Repo.Registry.lookup(name)
 
-    if opts[:stacktrace] || Map.get(adapter_meta, :stacktrace) do
+    if stacktrace_opt = opts[:stacktrace] || Map.get(adapter_meta, :stacktrace) do
       {:current_stacktrace, stacktrace} = :erlang.process_info(self(), :current_stacktrace)
-      {adapter_meta, Keyword.put(opts, :stacktrace, stacktrace)}
+
+      stacktrace_mfa = case stacktrace_opt do
+        {_, _, _} -> stacktrace_opt
+        _ -> nil
+      end
+
+      opts =
+        opts
+        |> Keyword.put(:stacktrace, stacktrace)
+        |> Keyword.put(:log_stacktrace_mfa, stacktrace_mfa)
+
+      {adapter_meta, opts}
     else
       {adapter_meta, opts}
     end

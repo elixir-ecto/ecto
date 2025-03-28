@@ -64,8 +64,10 @@ defmodule Ecto.Repo do
       use the `:repo` property in the event metadata for distinguishing
       between repos.
 
-    * `:stacktrace`- when true, publishes the stacktrace in telemetry events
-      and allows more advanced logging.
+    * `:stacktrace`- when truthy, publishes the stacktrace in telemetry events
+      and allows more advanced logging. Can be either a boolean or an MFA tuple,
+      such as `{Mod, :fun, []}`. The MFA can then be used by the adapter to
+      format the stacktrace in the logs,
 
   ## URLs
 
