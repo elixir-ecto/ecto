@@ -280,6 +280,57 @@ defmodule Ecto.Enum do
   end
 
   @doc """
+  Helper to cast "dump values" to their corresponding value.
+
+  Note that if `value` is already a valid casted value, it returns `{:ok, value}`.
+
+  ## Examples
+
+  Assuming this schema:
+
+      defmodule MySchema do
+        use Ecto.Schema
+
+        schema "my_schema" do
+          field :my_string_enum, Ecto.Enum, values: [:foo, :bar, :baz]
+          field :my_integer_enum, Ecto.Enum, values: [foo: 1, bar: 2, baz: 5]
+        end
+      end
+
+  Then:
+
+      Ecto.Enum.cast_value(MySchema, :my_string_enum, "foo")
+      #=> {:ok, :foo}
+
+      Ecto.Enum.cast_value(MySchema, :my_string_enum, :foo)
+      #=> {:ok, :foo}
+
+      Ecto.Enum.cast_value(MySchema, :my_string_enum, "qux")
+      #=> :error
+
+      Ecto.Enum.cast_value(MySchema, :my_integer_enum, 1)
+      #=> {:ok, :foo}
+
+      Ecto.Enum.cast_value(MySchema, :my_integer_enum, :foo)
+      #=> {:ok, :foo}
+
+      Ecto.Enum.cast_value(MySchema, :my_integer_enum, 6)
+      #=> :error
+
+  `schema_or_types` can also be a types map. See `mappings/2` for more information.
+  """
+  @spec cast_value(module | map, atom, binary | atom | integer) :: {:ok, atom} | :error
+  def cast_value(schema_or_types, field, value) do
+    schema_or_types
+    |> mappings(field)
+    |> Enum.find_value(:error, fn {cast_value, dump_value} ->
+      if dump_value == value || cast_value == value do
+        {:ok, cast_value}
+      end
+    end)
+  end
+
+  @doc """
   Returns the mappings between values and dumped values.
 
   ## Examples
