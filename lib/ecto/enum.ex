@@ -280,9 +280,7 @@ defmodule Ecto.Enum do
   end
 
   @doc """
-  Helper to cast values through `cast/2`.
-
-  Provides an ergonomic API to `cast/2`.
+  Casts a value from the given `schema` and `field`.
 
   ## Examples
 
@@ -371,7 +369,6 @@ defmodule Ecto.Enum do
     |> Map.fetch!(:mappings)
   end
 
-  @spec get_params(module | map, atom) :: map | no_return
   defp get_params(schema_or_types, field)
 
   defp get_params(schema, field) when is_atom(schema) do
