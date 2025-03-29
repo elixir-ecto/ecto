@@ -280,9 +280,9 @@ defmodule Ecto.Enum do
   end
 
   @doc """
-  Helper to cast "dump values" to their corresponding value.
+  Helper to cast values through `cast/2`.
 
-  Note that if `value` is already a valid casted value, it returns `{:ok, value}`.
+  Provides an ergonomic API to `cast/2`.
 
   ## Examples
 
@@ -321,13 +321,11 @@ defmodule Ecto.Enum do
   """
   @spec cast_value(module | map, atom, binary | atom | integer) :: {:ok, atom} | :error
   def cast_value(schema_or_types, field, value) do
-    schema_or_types
-    |> mappings(field)
-    |> Enum.find_value(:error, fn {cast_value, dump_value} ->
-      if dump_value == value || cast_value == value do
-        {:ok, cast_value}
-      end
-    end)
+    params = get_params(schema_or_types, field)
+    case cast(value, params) do
+      {:ok, casted_value} -> {:ok, casted_value}
+      {:error, _reason} -> :error
+    end
   end
 
   @doc """
@@ -368,25 +366,31 @@ defmodule Ecto.Enum do
 
   """
   @spec mappings(module | map, atom) :: keyword(String.t() | integer())
-  def mappings(schema_or_types, field)
-
-  def mappings(types, field) when is_map(types) do
-    case types do
-      %{^field => {:parameterized, {Ecto.Enum, %{mappings: mappings}}}} -> mappings
-      %{^field => {_, {:parameterized, {Ecto.Enum, %{mappings: mappings}}}}} -> mappings
-      %{^field => _} -> raise ArgumentError, "#{field} is not an Ecto.Enum field"
-      %{} -> raise ArgumentError, "#{field} does not exist"
-    end
+  def mappings(schema_or_types, field) do
+    get_params(schema_or_types, field)
+    |> Map.fetch!(:mappings)
   end
 
-  def mappings(schema, field) when is_atom(schema) do
+  @spec get_params(module | map, atom) :: map | no_return
+  defp get_params(schema_or_types, field)
+
+  defp get_params(schema, field) when is_atom(schema) do
     try do
       schema.__changeset__()
     rescue
       _ in UndefinedFunctionError ->
         raise ArgumentError, "#{inspect(schema)} is not an Ecto schema or types map"
     else
-      %{} = types -> mappings(types, field)
+      %{} = types -> get_params(types, field)
+    end
+  end
+
+  defp get_params(types, field) when is_map(types) do
+    case types do
+      %{^field => {:parameterized, {Ecto.Enum, params}}} -> params
+      %{^field => {_, {:parameterized, {Ecto.Enum, params}}}} -> params
+      %{^field => _} -> raise ArgumentError, "#{field} is not an Ecto.Enum field"
+      %{} -> raise ArgumentError, "#{field} does not exist"
     end
   end
 end
