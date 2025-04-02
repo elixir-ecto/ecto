@@ -3,7 +3,7 @@ defmodule Ecto.SubQuery do
   A struct representing subqueries.
 
   Users of Ecto must consider this struct as opaque
-  and not access its field. Authors of adapters may
+  and not access its fields. Authors of adapters may
   read its contents, but never modify them.
 
   See `Ecto.Query.subquery/2` for more information.
@@ -1981,7 +1981,7 @@ defmodule Ecto.Query do
   works with the macro-based query syntax and not the keyword-based
   query syntax.
 
-  For example, the following will generate a query that orders by `human_popluation`
+  For example, the following will generate a query that orders by `human_population`
   and then `name`:
 
       City |> order_by([c], c.name) |> prepend_order_by([c], c.human_population)
