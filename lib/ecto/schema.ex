@@ -2002,7 +2002,7 @@ defmodule Ecto.Schema do
     redact_field? = Keyword.get_lazy(opts, :redact, fn ->
       case Module.get_attribute(mod, :schema_redact) do
         :all_except_primary_keys -> not pk?
-        _ -> false
+        nil -> false
       end
     end)
 
