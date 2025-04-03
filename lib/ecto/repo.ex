@@ -64,8 +64,18 @@ defmodule Ecto.Repo do
       use the `:repo` property in the event metadata for distinguishing
       between repos.
 
-    * `:stacktrace`- when true, publishes the stacktrace in telemetry events
+    * `:stacktrace`- when `true`, publishes the stacktrace in telemetry events
       and allows more advanced logging.
+
+    * `:log_stacktrace_mfa` - A `{module, function, arguments}` tuple that customizes
+      which part of the stacktrace is included in query logs. The specified function
+      must accept at least two arguments (stacktrace and metadata) and return
+      a filtered stacktrace. The metadata is a map with keys such as `:repo` and other
+      adapter specific information. Additional arguments can be passed in the third
+      element of the tuple. For `Ecto.Adapters.SQL`, defaults to
+      `{Ecto.Adapters.SQL, :first_non_ecto_stacktrace, [1]}`, which filters the
+      stacktrace to show only the first call originating from outside
+      Ecto's internal code. Only relevant when `:stacktrace` is `true`.
 
   ## URLs
 
