@@ -3607,6 +3607,17 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
+  defmodule RedactAllExceptPrimaryKeysSchema do
+    use Ecto.Schema
+
+    @schema_redact :all_except_primary_keys
+    schema "redacted_schema" do
+      field :password, :string
+      field :username, :string
+      field :virtual_pass, :string, virtual: true
+    end
+  end
+
   defmodule RedactedEmbeddedSchema do
     use Ecto.Schema
 
@@ -3682,6 +3693,13 @@ defmodule Ecto.ChangesetTest do
 
       assert inspect(changeset) =~ "hunter2"
       refute inspect(changeset) =~ "**redacted**"
+    end
+
+    test "redacts all non-primary-key fields when schema sets @schema_redact :all_except_primary_keys" do
+      changeset = Ecto.Changeset.cast(%RedactAllExceptPrimaryKeysSchema{}, %{username: "Hunter", password: "hunter2"}, [:username, :password])
+      assert inspect(changeset) =~ "id"
+      refute inspect(changeset) =~ "hunter2"
+      assert inspect(changeset) =~ "**redacted**"
     end
   end
 end

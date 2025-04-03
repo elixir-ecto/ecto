@@ -192,6 +192,37 @@ defmodule Ecto.SchemaTest do
     refute inspect(%Schema{temp: "hunter2"}) =~ "hunter2"
   end
 
+  defmodule SchemaWithRedactAllExceptPrimaryKeys do
+    use Ecto.Schema
+
+    @schema_redact :all_except_primary_keys
+    schema "my_schema" do
+      field :password, :string
+      field :temp, :any, default: "temp", virtual: true
+    end
+  end
+
+  test "schema with @schema_redact: :all_except_primary_keys derives inspect for all non-primary-key fields" do
+    inspected_schema = inspect(%SchemaWithRedactAllExceptPrimaryKeys{password: "hunter2"})
+
+    assert inspected_schema =~ "id"
+    refute inspected_schema =~ "hunter2"
+    refute inspected_schema =~ "temp"
+  end
+
+  defmodule SchemaWithRedactFalse do
+    use Ecto.Schema
+
+    @schema_redact false
+    schema "my_schema" do
+      field :name, :string
+    end
+  end
+
+  test "schema with @schema_redact: false doesn't derive inspect" do
+    assert inspect(%SchemaWithRedactFalse{name: "Hunter"}) =~ "Hunter"
+  end
+
   defmodule SchemaWithoutDeriveInspect do
     use Ecto.Schema
 
