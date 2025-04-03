@@ -160,7 +160,8 @@ defmodule Ecto.Schema do
 
     * `@schema_redact` - If set to `:all_except_primary_keys`, Ecto will
       treat all non-primary key fields as if they were individually marked
-      as redacted.
+      as redacted. Defaults to `false`, as no fields are redacted by default.
+      The value set here can be changed per field through the `:redact` option.
 
     * `@foreign_key_type` - configures the default foreign key type
       used by `belongs_to` associations. It must be set in the same
@@ -2000,9 +2001,9 @@ defmodule Ecto.Schema do
     put_struct_field(mod, name, Keyword.get(opts, :default))
 
     redact_field? = Keyword.get_lazy(opts, :redact, fn ->
-      case Module.get_attribute(mod, :schema_redact) do
+      case Module.get_attribute(mod, :schema_redact, false) do
         :all_except_primary_keys -> not pk?
-        nil -> false
+        false -> false
       end
     end)
 
