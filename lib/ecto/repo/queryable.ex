@@ -310,7 +310,7 @@ defmodule Ecto.Repo.Queryable do
 
   defp process(row, {:merge, left, right}, from, adapter) do
     {left, row} = process(row, left, from, adapter)
-    {right, row} = process(row, right, from, adapter)
+    {right, row} = process_merge(row, right, from, adapter)
 
     data =
       case {left, right} do
@@ -425,6 +425,15 @@ defmodule Ecto.Repo.Queryable do
       {value, row} = process(row, value, from, adapter)
       {{key, value}, row}
     end)
+  end
+
+  defp process_merge(row, {:source, {source, schema}, prefix, types}, _from, adapter) do
+    struct = Ecto.Schema.Loader.load_struct(schema, prefix, source)
+    struct_load!(types, row, [], false, struct, adapter)
+  end
+
+  defp process_merge(row, process, from, adapter) do
+    process(row, process, from, adapter)
   end
 
   @compile {:inline, load!: 5}
