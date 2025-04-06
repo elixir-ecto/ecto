@@ -130,6 +130,9 @@ defmodule Ecto.Schema do
   inspect on the schema unless the schema module is tagged with
   the option `@derive_inspect_for_redacted_fields false`.
 
+  A schema module tagged with `@schema_redact :all_except_primary_keys` will
+  redact all fields except primary keys.
+
   ## Schema attributes
 
   Supported attributes for configuring the defined schema. They must
@@ -154,6 +157,11 @@ defmodule Ecto.Schema do
     * `@schema_context` - configures the schema context. Defaults to `nil`,
       which generates structs and queries without context. Context are not used
       by the built-in SQL adapters.
+
+    * `@schema_redact` - If set to `:all_except_primary_keys`, Ecto will
+      treat all non-primary key fields as if they were individually marked
+      as redacted. Defaults to `false`, as no fields are redacted by default.
+      The value set here can be changed per field through the `:redact` option.
 
     * `@foreign_key_type` - configures the default foreign key type
       used by `belongs_to` associations. It must be set in the same
@@ -1992,7 +2000,14 @@ defmodule Ecto.Schema do
     writable = opts[:writable] || :always
     put_struct_field(mod, name, Keyword.get(opts, :default))
 
-    if Keyword.get(opts, :redact, false) do
+    redact_field? = Keyword.get_lazy(opts, :redact, fn ->
+      case Module.get_attribute(mod, :schema_redact, false) do
+        :all_except_primary_keys -> not pk?
+        false -> false
+      end
+    end)
+
+    if redact_field? do
       Module.put_attribute(mod, :ecto_redact_fields, name)
     end
 
