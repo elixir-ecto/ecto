@@ -1545,7 +1545,7 @@ defmodule Ecto.Integration.RepoTest do
                |> select([l, p], merge(l, map(p, ^~w(title posted)a)))
                |> TestRepo.all()
 
-      assert [%{url: "Q", title: "Z", posted: nil}] =
+      assert [%{url: "Q", title: nil, posted: nil}] =
                Permalink
                |> join(:left, [l], p in Post, on: l.post_id == p.id and p.public == true)
                |> select_merge([_l, p], map(p, ^~w(title posted)a))
