@@ -203,11 +203,11 @@ defmodule Ecto.Repo.Queryable do
     struct_load!(types, values, [{field, value} | acc], all_nil?, struct, adapter)
   end
 
-  def struct_load!([], values, _acc, true, _struct, _adapter) do
+  def struct_load!([], values, _acc, true, struct, _adapter) when struct != %{} do
     {nil, values}
   end
 
-  def struct_load!([], values, acc, false, struct, _adapter) do
+  def struct_load!([], values, acc, _all_nil?, struct, _adapter) do
     {Map.merge(struct, Map.new(acc)), values}
   end
 
@@ -310,7 +310,7 @@ defmodule Ecto.Repo.Queryable do
 
   defp process(row, {:merge, left, right}, from, adapter) do
     {left, row} = process(row, left, from, adapter)
-    {right, row} = process_merge(row, right, from, adapter)
+    {right, row} = process(row, right, from, adapter)
 
     data =
       case {left, right} do
@@ -425,15 +425,6 @@ defmodule Ecto.Repo.Queryable do
       {value, row} = process(row, value, from, adapter)
       {{key, value}, row}
     end)
-  end
-
-  defp process_merge(row, {:source, {source, schema}, prefix, types}, _from, adapter) do
-    struct = Ecto.Schema.Loader.load_struct(schema, prefix, source)
-    struct_load!(types, row, [], false, struct, adapter)
-  end
-
-  defp process_merge(row, process, from, adapter) do
-    process(row, process, from, adapter)
   end
 
   @compile {:inline, load!: 5}
