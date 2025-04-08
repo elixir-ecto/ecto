@@ -1432,6 +1432,26 @@ defmodule Ecto.Integration.RepoTest do
       assert p3 == %{id: pid3}
     end
 
+    test "take with join nil maps" do
+      TestRepo.insert!(%Post{})
+
+      assert {%{title: nil}, %{title: nil}} ==
+               from(p1 in Post)
+               |> join(:left, [p1], p2 in Post, on: p1.id == p2.id)
+               |> select([p1, p2], {map(p1, [:title]), map(p2, [:title])})
+               |> TestRepo.one()
+    end
+
+    test "take with join nil source" do
+      TestRepo.insert!(%Post{})
+
+      assert {%{title: nil}, nil} ==
+               from(p1 in Post)
+               |> join(:left, [p1], p2 in Post, on: p2.id == -1)
+               |> select([p1, p2], {map(p1, [:title]), p2})
+               |> TestRepo.one()
+    end
+
     test "take with preload assocs" do
       %{id: pid} = TestRepo.insert!(%Post{title: "post"})
       TestRepo.insert!(%Comment{post_id: pid, text: "comment"})
