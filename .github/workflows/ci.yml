@@ -11,7 +11,7 @@ permissions:
 jobs:
   unit-test:
     name: unit test
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     env:
       FORCE_COLOR: 1
       MIX_ENV: test
@@ -27,7 +27,7 @@ jobs:
           - elixir: "1.17.3"
             otp: "25.0.4"
           - elixir: "1.14.5"
-            otp: "23.3.4.20"
+            otp: "24.3.4.17"
 
     steps:
       - name: Checkout
@@ -61,7 +61,7 @@ jobs:
 
   integration-test:
     name: integration test
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     env:
       FORCE_COLOR: 1
     strategy:
