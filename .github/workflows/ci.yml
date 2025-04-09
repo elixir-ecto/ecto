@@ -27,7 +27,7 @@ jobs:
           - elixir: "1.17.3"
             otp: "25.0.4"
           - elixir: "1.14.5"
-            otp: "23.3.4.17"
+            otp: "24.3.4.17"
 
     steps:
       - name: Checkout
@@ -70,7 +70,7 @@ jobs:
         elixirbase:
           - "1.17.3-erlang-27.1-alpine-3.17.9"
           - "1.17.3-erlang-25.0.4-alpine-3.17.9"
-          - "1.14.5-erlang-23.3.4.17-alpine-3.16.9"
+          - "1.14.5-erlang-23.3.4.20-alpine-3.16.9"
     steps:
       - uses: earthly/actions-setup@v1
       - uses: actions/checkout@v3
