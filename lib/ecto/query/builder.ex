@@ -269,7 +269,7 @@ defmodule Ecto.Query.Builder do
   def escape({:json_extract_path, _, [field, path]}, type, params_acc, vars, env) do
     validate_json_field!(field)
 
-    path = escape_json_path(path)
+    path = escape_json_path(path, vars)
     {field, params_acc} = escape(field, type, params_acc, vars, env)
     {{:{}, [], [:json_extract_path, [], [field, path]]}, params_acc}
   end
@@ -1194,36 +1194,44 @@ defmodule Ecto.Query.Builder do
     end
   end
 
-  defp escape_json_path(path) when is_list(path) do
-    Enum.map(path, &quoted_json_path_element!/1)
+  defp escape_json_path(path, vars) when is_list(path) do
+    Enum.map(path, &quoted_json_path_element!(&1, vars))
   end
 
-  defp escape_json_path({:^, _, [path]}) do
+  defp escape_json_path({:^, _, [path]}, _vars) do
     quote do
       path = Ecto.Query.Builder.json_path!(unquote(path))
       Enum.map(path, &Ecto.Query.Builder.json_path_element!/1)
     end
   end
 
-  defp escape_json_path(other) do
+  defp escape_json_path(other, _vars) do
     error!(
       "expected JSON path to be a literal list or interpolated value, got: `#{Macro.to_string(other)}`"
     )
   end
 
-  defp quoted_json_path_element!({:^, _, [expr]}),
+  defp quoted_json_path_element!({:^, _, [expr]}, _vars),
     do: quote(do: Ecto.Query.Builder.json_path_element!(unquote(expr)))
 
-  defp quoted_json_path_element!(binary) when is_binary(binary),
+  defp quoted_json_path_element!(binary, _vars) when is_binary(binary),
     do: binary
 
-  defp quoted_json_path_element!(integer) when is_integer(integer),
+  defp quoted_json_path_element!(integer, _vars) when is_integer(integer),
     do: integer
 
-  defp quoted_json_path_element!(other),
+  defp quoted_json_path_element!({{:., _, [callee, field]}, _, []}, vars) do
+    escape_field!(callee, field, vars)
+  end
+
+  defp quoted_json_path_element!({:field, _, [callee, field]}, vars) do
+    escape_field!(callee, field, vars)
+  end
+
+  defp quoted_json_path_element!(other, _vars),
     do:
       error!(
-        "expected JSON path to contain literal strings, literal integers, or interpolated values, got: " <>
+        "expected JSON path to contain literal strings, literal integers, fields, or interpolated values, got: " <>
           "`#{Macro.to_string(other)}`"
       )
 

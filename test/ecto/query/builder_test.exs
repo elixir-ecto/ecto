@@ -279,6 +279,19 @@ defmodule Ecto.Query.BuilderTest do
 
     assert actual == expected
 
+    expected = {Macro.escape(quote do: json_extract_path(&0.y(), [0, &0.z(), "a"])), []}
+
+    actual =
+      escape(
+        quote do
+          x.y[0][x.z]["a"]
+        end,
+        [x: 0],
+        __ENV__
+      )
+
+    assert actual == expected
+
     assert_raise Ecto.Query.CompileError, "`x` is not a valid json field", fn ->
       escape(
         quote do
