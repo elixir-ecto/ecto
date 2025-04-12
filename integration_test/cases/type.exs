@@ -435,9 +435,10 @@ defmodule Ecto.Integration.TypeTest do
   @tag :json_extract_path_with_field
   @tag :json_extract_path
   test "json_extract_path with fields in path" do
-    order = %Order{id: 1, metadata: %{tags: [%{name: "red"}, %{name: "green"}]}}
+    order = %Order{id: 1, label: "tags", metadata: %{tags: [%{name: "red"}, %{name: "green"}]}}
     order = TestRepo.insert!(order)
 
+    assert TestRepo.one(from o in Order, select: o.metadata[o.label][1]["name"]) == "green"
     assert TestRepo.one(from o in Order, select: o.metadata["tags"][o.id]["name"]) == "green"
 
     assert TestRepo.one(from o in Order, select: o.metadata["tags"][field(o, ^:id)]["name"]) ==
