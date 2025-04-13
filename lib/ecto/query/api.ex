@@ -765,7 +765,7 @@ defmodule Ecto.Query.API do
 
       from(post in Post, select: post.meta["tags"][0]["name"])
 
-  Path elements can be references to fields on query sources
+  Some adapters allow path elements to be references to query source fields
 
       from(post in Post, select: post.meta[p.title])
       from(p in Post, join: u in User, on: p.user_id == u.id, select: p.meta[u.name])
