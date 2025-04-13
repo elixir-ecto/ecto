@@ -765,10 +765,18 @@ defmodule Ecto.Query.API do
 
       from(post in Post, select: post.meta["tags"][0]["name"])
 
+  Some adapters allow path elements to be references to query source fields
+
+      from(post in Post, select: post.meta[p.title])
+      from(p in Post, join: u in User, on: p.user_id == u.id, select: p.meta[u.name])
+
   Any element of the path can be dynamic:
 
       field = "name"
       from(post in Post, select: post.meta["author"][^field])
+
+      source_field = :source_column
+      from(post in Post, select: post.meta["author"][field(p, ^source_field)])
 
   ## Warning: indexes on PostgreSQL
 

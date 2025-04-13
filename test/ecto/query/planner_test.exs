@@ -1663,6 +1663,18 @@ defmodule Ecto.Query.PlannerTest do
     query = from(Post, []) |> select([p], p.metas[0]["slug"])
     normalize(query)
 
+    query = from(Post, []) |> select([p], p.meta[p.title])
+    normalize(query)
+
+    query = from(Post, []) |> select([p], p.meta[p.title]["author"])
+    normalize(query)
+
+    query = from(Post, []) |> select([p], p.meta["author"][p.title])
+    normalize(query)
+
+    query = from(Post, []) |> select([p], p.metas[p.visits]["slug"])
+    normalize(query)
+
     query = from(Post, []) |> select([p], p.payload["unknown_field"])
     normalize(query)
 
@@ -1712,6 +1724,13 @@ defmodule Ecto.Query.PlannerTest do
                  "field `unknown_field` does not exist in Ecto.Query.PlannerTest.PostMeta",
                  fn ->
                    query = from(Post, []) |> select([p], p.meta["unknown_field"])
+                   normalize(query)
+                 end
+
+    assert_raise RuntimeError,
+                 "field `unknown_field` does not exist in Ecto.Query.PlannerTest.PostMeta",
+                 fn ->
+                   query = from(Post, []) |> select([p], p.metas[p.visits]["unknown_field"])
                    normalize(query)
                  end
 

@@ -432,6 +432,41 @@ defmodule Ecto.Integration.TypeTest do
   end
 
   @tag :map_type
+  @tag :json_extract_path_with_field
+  @tag :json_extract_path
+  test "json_extract_path with fields in path" do
+    order = %Order{id: 1, label: "tags", metadata: %{tags: [%{name: "red"}, %{name: "green"}]}}
+    order = TestRepo.insert!(order)
+
+    assert TestRepo.one(from o in Order, select: o.metadata[o.label][1]["name"]) == "green"
+    assert TestRepo.one(from o in Order, select: o.metadata["tags"][o.id]["name"]) == "green"
+
+    assert TestRepo.one(from o in Order, select: o.metadata["tags"][field(o, ^:id)]["name"]) ==
+             "green"
+
+    squery = from o in Order, select: o.metadata["tags"][parent_as(:o).id]["name"]
+    assert TestRepo.one(from o in Order, as: :o, where: subquery(squery) == ^"green")
+
+    squery = from o in Order, select: o.metadata["tags"][field(parent_as(:o), ^:id)]["name"]
+    assert TestRepo.one(from o in Order, as: :o, where: subquery(squery) == ^"green")
+
+    assert TestRepo.one(
+             from(o in Order,
+               where: o.metadata["tags"][o.id]["name"] == "green",
+               select: o.id)
+           ) == order.id
+
+    assert TestRepo.one(
+             from(o in Order,
+               where: o.metadata["tags"][field(o, ^:id)]["name"] == "green",
+               select: o.id)
+           ) == order.id
+
+    squery = from o in Order, where: o.metadata["tags"][parent_as(:o).id]["name"] == "green"
+    assert TestRepo.one(from o in Order, as: :o, where: exists(subquery(squery)))
+  end
+
+  @tag :map_type
   @tag :map_type_schemaless
   test "embeds one with custom type" do
     item = %Item{price: 123, reference: "PREFIX-EXAMPLE"}
