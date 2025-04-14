@@ -292,7 +292,7 @@ defmodule Ecto.MultiTest do
     assert [{:fun, {:run, _fun}}] = multi.operations
 
     assert {:ok, changes} = TestRepo.transaction(multi)
-    assert_received {:transaction, _}
+    assert_received {:transaction, _, _}
 
     assert changes[:fun] == {1, nil}
   end
@@ -319,7 +319,7 @@ defmodule Ecto.MultiTest do
     assert [{:fun, {:run, _fun}}] = multi.operations
 
     assert {:ok, changes} = TestRepo.transaction(multi)
-    assert_received {:transaction, _}
+    assert_received {:transaction, _, _}
 
     assert changes[:fun] == {1, nil}
   end
@@ -345,7 +345,7 @@ defmodule Ecto.MultiTest do
     assert [{:fun, {:run, _fun}}] = multi.operations
 
     assert {:ok, changes} = TestRepo.transaction(multi)
-    assert_received {:transaction, _}
+    assert_received {:transaction, _, _}
 
     assert changes[:fun] == {1, nil}
   end
@@ -554,7 +554,7 @@ defmodule Ecto.MultiTest do
         |> Multi.delete_all(:delete_all, Comment)
 
       assert {:ok, changes} = TestRepo.transaction(multi)
-      assert_received {:transaction, _}
+      assert_received {:transaction, _, _}
 
       assert {:messages,
               [
@@ -598,7 +598,7 @@ defmodule Ecto.MultiTest do
 
     test "with empty multi" do
       assert {:ok, changes} = TestRepo.transaction(Multi.new())
-      refute_received {:transaction, _}
+      refute_received {:transaction, _, _}
       assert changes == %{}
     end
 
@@ -613,7 +613,7 @@ defmodule Ecto.MultiTest do
         |> Multi.delete(:delete, changeset)
 
       assert {:error, :run, "error from run", changes} = TestRepo.transaction(multi)
-      assert_received {:transaction, _}
+      assert_received {:transaction, _, _}
       assert_received {:rollback, _}
       assert {:messages, [{:insert, %{source: "comments"}}]} = Process.info(self(), :messages)
       assert %Comment{} = changes.insert
@@ -636,7 +636,7 @@ defmodule Ecto.MultiTest do
         |> Multi.delete(:delete, changeset)
 
       assert {:error, :update, error, changes} = TestRepo.transaction(multi)
-      assert_received {:transaction, _}
+      assert_received {:transaction, _, _}
       assert_received {:rollback, _}
       assert {:messages, [{:insert, %{source: "comments"}}]} = Process.info(self(), :messages)
       assert %Comment{} = changes.insert
@@ -657,14 +657,14 @@ defmodule Ecto.MultiTest do
 
       assert {:error, :invalid, invalid, %{}} = TestRepo.transaction(multi)
       assert invalid.data == changeset.data
-      refute_received {:transaction, _}
+      refute_received {:transaction, _, _}
     end
 
     test "checks error operation before starting transaction" do
       multi = Multi.new() |> Multi.error(:invalid, "error")
 
       assert {:error, :invalid, "error", %{}} = TestRepo.transaction(multi)
-      refute_received {:transaction, _}
+      refute_received {:transaction, _, _}
     end
   end
 

@@ -1593,13 +1593,13 @@ defmodule Ecto.RepoTest do
 
     test "does not run transaction without prepare" do
       TestRepo.insert!(%MySchema{id: 1})
-      refute_received {:transaction, _}
+      refute_received {:transaction, _, _}
     end
 
     test "insert runs prepare callbacks in transaction" do
       changeset = prepare_changeset()
       TestRepo.insert!(changeset)
-      assert_received {:transaction, _}
+      assert_received {:transaction, _, _}
       assert Process.get(:ecto_repo) == TestRepo
       assert Process.get(:ecto_counter) == 2
     end
@@ -1652,7 +1652,7 @@ defmodule Ecto.RepoTest do
     test "update runs prepare callbacks in transaction" do
       changeset = prepare_changeset()
       TestRepo.update!(changeset)
-      assert_received {:transaction, _}
+      assert_received {:transaction, _, _}
       assert Process.get(:ecto_repo) == TestRepo
       assert Process.get(:ecto_counter) == 2
     end
@@ -1705,7 +1705,7 @@ defmodule Ecto.RepoTest do
     test "delete runs prepare callbacks in transaction" do
       changeset = prepare_changeset()
       TestRepo.delete!(changeset)
-      assert_received {:transaction, _}
+      assert_received {:transaction, _, _}
       assert Process.get(:ecto_repo) == TestRepo
       assert Process.get(:ecto_counter) == 2
     end
@@ -1760,7 +1760,7 @@ defmodule Ecto.RepoTest do
 
       %MySchemaEmbedsMany{embeds: [embed]} = TestRepo.insert!(changeset)
       assert embed.x == "ONE"
-      assert_received {:transaction, _}
+      assert_received {:transaction, _, _}
       assert Process.get(:ecto_repo) == TestRepo
       assert Process.get(:ecto_counter) == 2
     end
@@ -2209,18 +2209,42 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  describe "prepare_transaction" do
+    defmodule PrepareTransactionRepo do
+      use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter, stacktrace: true
+
+      def prepare_transaction(fun_or_multi, opts) do
+        send(self(), {:prepare_transaction, fun_or_multi, opts})
+        {fun_or_multi, Keyword.put(opts, :commit_comment, "my_comment")}
+      end
+    end
+
+    setup do
+      _ = PrepareTransactionRepo.start_link(url: "ecto://user:pass@local/hello")
+      :ok
+    end
+
+    test "transaction" do
+      fun = fn -> :ok end
+      opts = [commit_comment: "my_comment"]
+      assert {:ok, :ok} = PrepareTransactionRepo.transaction(fun)
+      assert_received {:prepare_transaction, _, _}
+      assert_received {:transaction, _fun, ^opts}
+    end
+  end
+
   describe "transaction" do
     test "an arity zero function will be executed any it's value returned" do
       fun = fn -> :ok end
       assert {:ok, :ok} = TestRepo.transaction(fun)
-      assert_received {:transaction, _}
+      assert_received {:transaction, _, _}
     end
 
     test "an arity one function will be passed the repo as first argument" do
       fun = fn repo -> repo end
 
       assert {:ok, TestRepo} = TestRepo.transaction(fun)
-      assert_received {:transaction, _}
+      assert_received {:transaction, _, _}
     end
   end
 
@@ -2244,7 +2268,6 @@ defmodule Ecto.RepoTest do
                {{:., [writable: :insert], [{:&, [], [0]}, :insert]}, [], []}
              ]
     end
-
 
     test "update only saves changes for writable: :always" do
       %MySchemaWritable{id: 1}

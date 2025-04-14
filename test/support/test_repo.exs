@@ -136,10 +136,10 @@ defmodule Ecto.TestAdapter do
 
   ## Transactions
 
-  def transaction(mod, _opts, fun) do
+  def transaction(mod, opts, fun) do
     # Makes transactions "trackable" in tests
     Process.put({mod, :in_transaction?}, true)
-    send(self(), {:transaction, fun})
+    send(self(), {:transaction, fun, opts})
 
     try do
       {:ok, fun.()}
