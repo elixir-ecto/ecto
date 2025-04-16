@@ -3,16 +3,9 @@ defmodule Ecto.ChangesetTest do
   import Ecto.Changeset
   require Ecto.Query
 
-  defmacrop assert_eq_macro_to_string(ast, post_1_13, pre_1_13) do
-    # AST is represented as string differently on versions pre 1.13
-    if Version.match?(System.version(), ">= 1.13.0-dev") do
-      quote do
-        assert Macro.to_string(unquote(ast)) == unquote(post_1_13)
-      end
-    else
-      quote do
-        assert Macro.to_string(unquote(ast)) == unquote(pre_1_13)
-      end
+  defmacrop assert_eq_macro_to_string(ast, string) do
+    quote do
+      assert Macro.to_string(unquote(ast)) == unquote(string)
     end
   end
 
@@ -2372,8 +2365,8 @@ defmodule Ecto.ChangesetTest do
       assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{wheres: wheres}, opts: []]
       assert [%{expr: pk_expr}, %{expr: check_expr}] = wheres
 
-      assert_eq_macro_to_string(pk_expr, "not (&0.id() == ^0)", "not(&0.id() == ^0)")
-      assert_eq_macro_to_string(check_expr, "&0.body() == ^0", "&0.body() == ^0")
+      assert_eq_macro_to_string(pk_expr, "not (&0.id() == ^0)")
+      assert_eq_macro_to_string(check_expr, "&0.body() == ^0")
     end
 
     test "generates correct where clause for composite primary keys without query option for loaded schema" do
@@ -2386,13 +2379,9 @@ defmodule Ecto.ChangesetTest do
       assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{wheres: wheres}, opts: []]
       assert [%{expr: pk_expr}, %{expr: check_expr}] = wheres
 
-      assert_eq_macro_to_string(
-        pk_expr,
-        "not (&0.id() == ^0 and &0.token() == ^1)",
-        "not(&0.id() == ^0 and &0.token() == ^1)"
-      )
+      assert_eq_macro_to_string(pk_expr, "not (&0.id() == ^0 and &0.token() == ^1)")
 
-      assert_eq_macro_to_string(check_expr, "&0.body() == ^0", "&0.body() == ^0")
+      assert_eq_macro_to_string(check_expr, "&0.body() == ^0")
     end
 
     test "generates correct where clause for single primary key with query option for loaded schema" do
@@ -2408,14 +2397,10 @@ defmodule Ecto.ChangesetTest do
       assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{wheres: wheres}, opts: []]
       assert [%{expr: query_expr}, %{expr: pk_expr}, %{expr: check_expr}] = wheres
 
-      assert_eq_macro_to_string(
-        query_expr,
-        "is_nil(&0.published_at())",
-        "is_nil(&0.published_at())"
-      )
+      assert_eq_macro_to_string(query_expr, "is_nil(&0.published_at())")
 
-      assert_eq_macro_to_string(pk_expr, "not (&0.id() == ^0)", "not(&0.id() == ^0)")
-      assert_eq_macro_to_string(check_expr, "&0.body() == ^0", "&0.body() == ^0")
+      assert_eq_macro_to_string(pk_expr, "not (&0.id() == ^0)")
+      assert_eq_macro_to_string(check_expr, "&0.body() == ^0")
     end
 
     test "generates correct where clause for composite primary keys with query option for loaded schema" do
@@ -2431,19 +2416,11 @@ defmodule Ecto.ChangesetTest do
       assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{wheres: wheres}, opts: []]
       assert [%{expr: query_expr}, %{expr: pk_expr}, %{expr: check_expr}] = wheres
 
-      assert_eq_macro_to_string(
-        query_expr,
-        "is_nil(&0.published_at())",
-        "is_nil(&0.published_at())"
-      )
+      assert_eq_macro_to_string(query_expr, "is_nil(&0.published_at())")
 
-      assert_eq_macro_to_string(
-        pk_expr,
-        "not (&0.id() == ^0 and &0.token() == ^1)",
-        "not(&0.id() == ^0 and &0.token() == ^1)"
-      )
+      assert_eq_macro_to_string(pk_expr, "not (&0.id() == ^0 and &0.token() == ^1)")
 
-      assert_eq_macro_to_string(check_expr, "&0.body() == ^0", "&0.body() == ^0")
+      assert_eq_macro_to_string(check_expr, "&0.body() == ^0")
     end
 
     test "generates correct where clause for single primary key without query option when schema wasn't loaded" do
@@ -2453,7 +2430,7 @@ defmodule Ecto.ChangesetTest do
       assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{wheres: wheres}, opts: []]
       assert [%{expr: check_expr}] = wheres
 
-      assert_eq_macro_to_string(check_expr, "&0.body() == ^0", "&0.body() == ^0")
+      assert_eq_macro_to_string(check_expr, "&0.body() == ^0")
     end
 
     test "generates correct where clause for composite primary keys without query option when schema wasn't loaded" do
@@ -2463,7 +2440,7 @@ defmodule Ecto.ChangesetTest do
       assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{wheres: wheres}, opts: []]
       assert [%{expr: check_expr}] = wheres
 
-      assert_eq_macro_to_string(check_expr, "&0.body() == ^0", "&0.body() == ^0")
+      assert_eq_macro_to_string(check_expr, "&0.body() == ^0")
     end
 
     test "generates correct where clause for single primary key with query option when schema wasn't loaded" do
@@ -2476,13 +2453,9 @@ defmodule Ecto.ChangesetTest do
       assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{wheres: wheres}, opts: []]
       assert [%{expr: query_expr}, %{expr: check_expr}] = wheres
 
-      assert_eq_macro_to_string(
-        query_expr,
-        "is_nil(&0.published_at())",
-        "is_nil(&0.published_at())"
-      )
+      assert_eq_macro_to_string(query_expr, "is_nil(&0.published_at())")
 
-      assert_eq_macro_to_string(check_expr, "&0.body() == ^0", "&0.body() == ^0")
+      assert_eq_macro_to_string(check_expr, "&0.body() == ^0")
     end
 
     test "generates correct where clause for composite primary keys with query option when schema wasn't loaded" do
@@ -2495,13 +2468,9 @@ defmodule Ecto.ChangesetTest do
       assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{wheres: wheres}, opts: []]
       assert [%{expr: query_expr}, %{expr: check_expr}] = wheres
 
-      assert_eq_macro_to_string(
-        query_expr,
-        "is_nil(&0.published_at())",
-        "is_nil(&0.published_at())"
-      )
+      assert_eq_macro_to_string(query_expr, "is_nil(&0.published_at())")
 
-      assert_eq_macro_to_string(check_expr, "&0.body() == ^0", "&0.body() == ^0")
+      assert_eq_macro_to_string(check_expr, "&0.body() == ^0")
     end
 
     test "only queries the db when necessary" do
@@ -2555,7 +2524,7 @@ defmodule Ecto.ChangesetTest do
       assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{wheres: wheres}, opts: []]
       assert [%{expr: check_expr}] = wheres
 
-      assert_eq_macro_to_string(check_expr, "&0.origin() == ^0", "&0.origin() == ^0")
+      assert_eq_macro_to_string(check_expr, "&0.origin() == ^0")
     end
   end
 
@@ -3696,7 +3665,13 @@ defmodule Ecto.ChangesetTest do
     end
 
     test "redacts all non-primary-key fields when schema sets @schema_redact :all_except_primary_keys" do
-      changeset = Ecto.Changeset.cast(%RedactAllExceptPrimaryKeysSchema{}, %{username: "Hunter", password: "hunter2"}, [:username, :password])
+      changeset =
+        Ecto.Changeset.cast(
+          %RedactAllExceptPrimaryKeysSchema{},
+          %{username: "Hunter", password: "hunter2"},
+          [:username, :password]
+        )
+
       assert inspect(changeset) =~ "id"
       refute inspect(changeset) =~ "hunter2"
       assert inspect(changeset) =~ "**redacted**"
