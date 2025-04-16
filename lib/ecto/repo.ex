@@ -968,6 +968,8 @@ defmodule Ecto.Repo do
   to the same schema. Ordering is guaranteed to be kept. Results not found in
   the database will be returned as `nil`.
 
+  Preloaded association will be discarded and need to be preloaded again.
+
   ## Example
 
       MyRepo.reload(post)
