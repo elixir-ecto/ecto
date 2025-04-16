@@ -310,29 +310,15 @@ defmodule Ecto.Query.InspectTest do
              ~s{from p0 in Inspect.Post, lock: "FOOBAR"}
   end
 
-  # TODO: AST is represented as string differently on versions pre 1.13
-  if Version.match?(System.version(), ">= 1.13.0-dev") do
-    test "preload" do
-      assert i(from(x in Post, preload: :comments)) ==
-               ~s"from p0 in Inspect.Post, preload: [:comments]"
+  test "preload" do
+    assert i(from(x in Post, preload: :comments)) ==
+              ~s"from p0 in Inspect.Post, preload: [:comments]"
 
-      assert i(from(x in Post, join: y in assoc(x, :comments), preload: [comments: y])) ==
-               ~s"from p0 in Inspect.Post, join: c1 in assoc(p0, :comments), preload: [comments: c1]"
+    assert i(from(x in Post, join: y in assoc(x, :comments), preload: [comments: y])) ==
+              ~s"from p0 in Inspect.Post, join: c1 in assoc(p0, :comments), preload: [comments: c1]"
 
-      assert i(from(x in Post, join: y in assoc(x, :comments), preload: [comments: {y, post: x}])) ==
-               ~s"from p0 in Inspect.Post, join: c1 in assoc(p0, :comments), preload: [comments: {c1, post: p0}]"
-    end
-  else
-    test "preload" do
-      assert i(from(x in Post, preload: :comments)) ==
-               ~s"from p0 in Inspect.Post, preload: [:comments]"
-
-      assert i(from(x in Post, join: y in assoc(x, :comments), preload: [comments: y])) ==
-               ~s"from p0 in Inspect.Post, join: c1 in assoc(p0, :comments), preload: [comments: c1]"
-
-      assert i(from(x in Post, join: y in assoc(x, :comments), preload: [comments: {y, post: x}])) ==
-               ~s"from p0 in Inspect.Post, join: c1 in assoc(p0, :comments), preload: [comments: {c1, [post: p0]}]"
-    end
+    assert i(from(x in Post, join: y in assoc(x, :comments), preload: [comments: {y, post: x}])) ==
+              ~s"from p0 in Inspect.Post, join: c1 in assoc(p0, :comments), preload: [comments: {c1, post: p0}]"
   end
 
   test "fragments" do
@@ -445,27 +431,14 @@ defmodule Ecto.Query.InspectTest do
            ) == string
   end
 
-  # TODO: AST is represented as string differently on versions pre 1.13
-  if Version.match?(System.version(), ">= 1.13.0-dev") do
-    test "container values" do
-      assert i(from(Post, select: <<1, 2, 3>>)) ==
-               "from p0 in Inspect.Post, select: \"\\x01\\x02\\x03\""
+  test "container values" do
+    assert i(from(Post, select: <<1, 2, 3>>)) ==
+              "from p0 in Inspect.Post, select: \"\\x01\\x02\\x03\""
 
-      foo = <<1, 2, 3>>
+    foo = <<1, 2, 3>>
 
-      assert i(from(p in Post, select: {p, ^foo})) ==
-               "from p0 in Inspect.Post, select: {p0, ^\"\\x01\\x02\\x03\"}"
-    end
-  else
-    test "container values" do
-      assert i(from(Post, select: <<1, 2, 3>>)) ==
-               "from p0 in Inspect.Post, select: <<1, 2, 3>>"
-
-      foo = <<1, 2, 3>>
-
-      assert i(from(p in Post, select: {p, ^foo})) ==
-               "from p0 in Inspect.Post, select: {p0, ^<<1, 2, 3>>}"
-    end
+    assert i(from(p in Post, select: {p, ^foo})) ==
+              "from p0 in Inspect.Post, select: {p0, ^\"\\x01\\x02\\x03\"}"
   end
 
   test "select" do

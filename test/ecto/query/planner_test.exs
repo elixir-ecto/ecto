@@ -482,67 +482,34 @@ defmodule Ecto.Query.PlannerTest do
              ~r"&1.post_id\(\) == &0.id\(\) and not[\s\(]is_nil\(&1.text\(\)\)\)?"
   end
 
-  # TODO: AST is represented as string differently on versions pre 1.13
-  if Version.match?(System.version(), ">= 1.13.0-dev") do
-    test "plan: nested joins associations with custom queries" do
-      query =
-        from(p in Post,
-          join: c1 in assoc(p, :special_comments),
-          join: p2 in assoc(c1, :post),
-          join: cp in assoc(c1, :comment_posts),
-          join: c2 in assoc(cp, :special_comment),
-          join: c3 in assoc(cp, :special_long_comment)
-        )
-        |> plan
-        |> elem(0)
+  test "plan: nested joins associations with custom queries" do
+    query =
+      from(p in Post,
+        join: c1 in assoc(p, :special_comments),
+        join: p2 in assoc(c1, :post),
+        join: cp in assoc(c1, :comment_posts),
+        join: c2 in assoc(cp, :special_comment),
+        join: c3 in assoc(cp, :special_long_comment)
+      )
+      |> plan
+      |> elem(0)
 
-      assert [join1, join2, join3, join4, join5] = query.joins
+    assert [join1, join2, join3, join4, join5] = query.joins
 
-      assert {{"posts", _, _}, {"comments", _, _}, {"posts", _, _}, {"comment_posts", _, _},
-              {"comments", _, _}, {"comments", _, _}} = query.sources
+    assert {{"posts", _, _}, {"comments", _, _}, {"posts", _, _}, {"comment_posts", _, _},
+            {"comments", _, _}, {"comments", _, _}} = query.sources
 
-      assert Macro.to_string(join1.on.expr) =~
-               ~r"&1.post_id\(\) == &0.id\(\) and not[\s\(]is_nil\(&1.text\(\)\)\)?"
+    assert Macro.to_string(join1.on.expr) =~
+              ~r"&1.post_id\(\) == &0.id\(\) and not[\s\(]is_nil\(&1.text\(\)\)\)?"
 
-      assert Macro.to_string(join2.on.expr) == "&2.id() == &1.post_id()"
-      assert Macro.to_string(join3.on.expr) == "&3.comment_id() == &1.id()"
+    assert Macro.to_string(join2.on.expr) == "&2.id() == &1.post_id()"
+    assert Macro.to_string(join3.on.expr) == "&3.comment_id() == &1.id()"
 
-      assert Macro.to_string(join4.on.expr) ==
-               "&4.id() == &3.special_comment_id() and is_nil(&4.text())"
+    assert Macro.to_string(join4.on.expr) ==
+              "&4.id() == &3.special_comment_id() and is_nil(&4.text())"
 
-      assert Macro.to_string(join5.on.expr) ==
-               "&5.id() == &3.special_long_comment_id() and\n  fragment({:raw, \"LEN(\"}, {:expr, &5.text()}, {:raw, \") > 100\"})"
-    end
-  else
-    test "plan: nested joins associations with custom queries" do
-      query =
-        from(p in Post,
-          join: c1 in assoc(p, :special_comments),
-          join: p2 in assoc(c1, :post),
-          join: cp in assoc(c1, :comment_posts),
-          join: c2 in assoc(cp, :special_comment),
-          join: c3 in assoc(cp, :special_long_comment)
-        )
-        |> plan
-        |> elem(0)
-
-      assert [join1, join2, join3, join4, join5] = query.joins
-
-      assert {{"posts", _, _}, {"comments", _, _}, {"posts", _, _}, {"comment_posts", _, _},
-              {"comments", _, _}, {"comments", _, _}} = query.sources
-
-      assert Macro.to_string(join1.on.expr) =~
-               ~r"&1.post_id\(\) == &0.id\(\) and not[\s\(]is_nil\(&1.text\(\)\)\)?"
-
-      assert Macro.to_string(join2.on.expr) == "&2.id() == &1.post_id()"
-      assert Macro.to_string(join3.on.expr) == "&3.comment_id() == &1.id()"
-
-      assert Macro.to_string(join4.on.expr) ==
-               "&4.id() == &3.special_comment_id() and is_nil(&4.text())"
-
-      assert Macro.to_string(join5.on.expr) ==
-               "&5.id() == &3.special_long_comment_id() and fragment({:raw, \"LEN(\"}, {:expr, &5.text()}, {:raw, \") > 100\"})"
-    end
+    assert Macro.to_string(join5.on.expr) ==
+              "&5.id() == &3.special_long_comment_id() and\n  fragment({:raw, \"LEN(\"}, {:expr, &5.text()}, {:raw, \") > 100\"})"
   end
 
   test "plan: raises on invalid binding index in join" do

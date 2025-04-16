@@ -296,123 +296,64 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert length(query.select.params) == 1
     end
 
-    # TODO: AST is represented as string differently on versions pre 1.13
-    if Version.match?(System.version(), ">= 1.13.0-dev") do
-      test "supports multiple nested partly dynamic subqueries" do
-        created_by_id = 8
-        ignore_template_id = 9
+    test "supports multiple nested partly dynamic subqueries" do
+      created_by_id = 8
+      ignore_template_id = 9
 
-        subquery0 =
-          from(t in "tasks",
-            where: t.list_id == parent_as(:list).id and t.created_by_id == ^created_by_id,
-            select: max(t.due_on)
+      subquery0 =
+        from(t in "tasks",
+          where: t.list_id == parent_as(:list).id and t.created_by_id == ^created_by_id,
+          select: max(t.due_on)
+        )
+
+      subquery1 =
+        from(t in "templates", where: parent_as(^:list).from_template_id == t.id, select: t.title)
+
+      subquery2 =
+        from(u in "users", where: parent_as(^:list).created_by_id == u.id, select: u.email)
+
+      ref =
+        dynamic(
+          [l],
+          fragment(
+            "CASE WHEN ? THEN ? ELSE ? END",
+            l.from_template_id == ^ignore_template_id,
+            "",
+            subquery(subquery1)
           )
+        )
 
-        subquery1 =
-          from(t in "templates", where: parent_as(^:list).from_template_id == t.id, select: t.title)
+      query =
+        from(l in "lists",
+          as: :list,
+          select: %{
+            title: l.archived_at,
+            maxdue: subquery(subquery0),
+            user_email: subquery(subquery2)
+          },
+          select_merge: ^%{template_name: ref}
+        )
 
-        subquery2 =
-          from(u in "users", where: parent_as(^:list).created_by_id == u.id, select: u.email)
+      assert Macro.to_string(query.select.expr) == """
+            %{\n\
+              title: &0.archived_at(),\n\
+              maxdue: {:subquery, 0},\n\
+              user_email: {:subquery, 1},\n\
+              template_name:\n\
+                fragment(\n\
+                  {:raw, "CASE WHEN "},\n\
+                  {:expr, &0.from_template_id() == ^2},\n\
+                  {:raw, " THEN "},\n\
+                  {:expr, ""},\n\
+                  {:raw, " ELSE "},\n\
+                  {:expr, {:subquery, 2}},\n\
+                  {:raw, " END"}\n\
+                )\n\
+            }\
+            """
 
-        ref =
-          dynamic(
-            [l],
-            fragment(
-              "CASE WHEN ? THEN ? ELSE ? END",
-              l.from_template_id == ^ignore_template_id,
-              "",
-              subquery(subquery1)
-            )
-          )
-
-        query =
-          from(l in "lists",
-            as: :list,
-            select: %{
-              title: l.archived_at,
-              maxdue: subquery(subquery0),
-              user_email: subquery(subquery2)
-            },
-            select_merge: ^%{template_name: ref}
-          )
-
-        assert Macro.to_string(query.select.expr) == """
-              %{\n\
-                title: &0.archived_at(),\n\
-                maxdue: {:subquery, 0},\n\
-                user_email: {:subquery, 1},\n\
-                template_name:\n\
-                  fragment(\n\
-                    {:raw, "CASE WHEN "},\n\
-                    {:expr, &0.from_template_id() == ^2},\n\
-                    {:raw, " THEN "},\n\
-                    {:expr, ""},\n\
-                    {:raw, " ELSE "},\n\
-                    {:expr, {:subquery, 2}},\n\
-                    {:raw, " END"}\n\
-                  )\n\
-              }\
-              """
-
-        assert length(query.select.subqueries) == 3
-        assert query.select.params == [{:subquery, 0}, {:subquery, 1}, {ignore_template_id, {0, :from_template_id}}, {:subquery, 2}]
-      end
-    else
-      test "supports multiple nested partly dynamic subqueries" do
-        created_by_id = 8
-        ignore_template_id = 9
-
-        subquery0 =
-          from(t in "tasks",
-            where: t.list_id == parent_as(:list).id and t.created_by_id == ^created_by_id,
-            select: max(t.due_on)
-          )
-
-        subquery1 =
-          from(t in "templates", where: parent_as(^:list).from_template_id == t.id, select: t.title)
-
-        subquery2 =
-          from(u in "users", where: parent_as(^:list).created_by_id == u.id, select: u.email)
-
-        ref =
-          dynamic(
-            [l],
-            fragment(
-              "CASE WHEN ? THEN ? ELSE ? END",
-              l.from_template_id == ^ignore_template_id,
-              "",
-              subquery(subquery1)
-            )
-          )
-
-        query =
-          from(l in "lists",
-            as: :list,
-            select: %{
-              title: l.archived_at,
-              maxdue: subquery(subquery0),
-              user_email: subquery(subquery2)
-            },
-            select_merge: ^%{template_name: ref}
-          )
-
-        assert Macro.to_string(query.select.expr) == """
-              %{\
-              title: &0.archived_at(), \
-              maxdue: {:subquery, 0}, \
-              user_email: {:subquery, 1}, \
-              template_name:\
-               fragment({:raw, "CASE WHEN "},\
-               {:expr, &0.from_template_id() == ^2},\
-               {:raw, " THEN "}, {:expr, ""},\
-               {:raw, " ELSE "}, {:expr, {:subquery, 2}},\
-               {:raw, " END"})\
-              }\
-              """
-
-        assert length(query.select.subqueries) == 3
-        assert query.select.params == [{:subquery, 0}, {:subquery, 1}, {ignore_template_id, {0, :from_template_id}}, {:subquery, 2}]
-      end
+      assert length(query.select.subqueries) == 3
+      assert query.select.params == [{:subquery, 0}, {:subquery, 1}, {ignore_template_id, {0, :from_template_id}}, {:subquery, 2}]
     end
 
     test "supports interpolated atom names in selected_as/2" do
