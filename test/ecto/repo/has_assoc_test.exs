@@ -215,9 +215,9 @@ defmodule Ecto.Repo.HasAssocTest do
     refute changeset.valid?
 
     # Just one transaction was used
-    assert_received {:transaction, _}
+    assert_received {:transaction, _, _}
     assert_received {:rollback, ^changeset}
-    refute_received {:transaction, _}
+    refute_received {:transaction, _, _}
     refute_received {:rollback, _}
   end
 
@@ -234,7 +234,7 @@ defmodule Ecto.Repo.HasAssocTest do
     assert schema.assoc.sub_assoc.id
 
     # Just one transaction was used
-    assert_received {:transaction, _}
+    assert_received {:transaction, _, _}
     refute_received {:rollback, _}
   end
 
@@ -271,9 +271,9 @@ defmodule Ecto.Repo.HasAssocTest do
     refute changeset.valid?
 
     # Just one transaction was used
-    assert_received {:transaction, _}
+    assert_received {:transaction, _, _}
     assert_received {:rollback, ^changeset}
-    refute_received {:transaction, _}
+    refute_received {:transaction, _, _}
     refute_received {:rollback, _}
   end
 
@@ -573,7 +573,7 @@ defmodule Ecto.Repo.HasAssocTest do
     assert schema.assoc.sub_assoc.id
 
     # One transaction was used
-    assert_received {:transaction, _}
+    assert_received {:transaction, _, _}
     refute_received {:rollback, _}
   end
 
@@ -598,9 +598,9 @@ defmodule Ecto.Repo.HasAssocTest do
     refute changeset.valid?
 
     # Just one transaction was used
-    assert_received {:transaction, _}
+    assert_received {:transaction, _, _}
     assert_received {:rollback, ^changeset}
-    refute_received {:transaction, _}
+    refute_received {:transaction, _, _}
     refute_received {:rollback, _}
   end
 

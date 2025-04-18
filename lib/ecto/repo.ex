@@ -292,12 +292,12 @@ defmodule Ecto.Repo do
         def transaction(fun_or_multi, opts \\ []) do
           repo = get_dynamic_repo()
 
-          Ecto.Repo.Transaction.transaction(
-            __MODULE__,
-            repo,
-            fun_or_multi,
+          {adapter_meta, opts} =
             Ecto.Repo.Supervisor.tuplet(repo, prepare_opts(:transaction, opts))
-          )
+
+          {fun_or_multi, opts} = prepare_transaction(fun_or_multi, opts)
+
+          Ecto.Repo.Transaction.transaction(__MODULE__, repo, fun_or_multi, {adapter_meta, opts})
         end
 
         def in_transaction? do
@@ -618,6 +618,9 @@ defmodule Ecto.Repo do
 
         def prepare_query(operation, query, opts), do: {query, opts}
         defoverridable prepare_query: 3
+
+        def prepare_transaction(fun_or_multi, opts), do: {fun_or_multi, opts}
+        defoverridable prepare_transaction: 2
       end
     end
   end
@@ -1277,6 +1280,31 @@ defmodule Ecto.Repo do
             when operation: :all | :update_all | :delete_all | :stream | :insert_all
 
   @doc """
+  A user-customizable callback invoked on transaction operations.
+
+  This callback can be used to further modify the given Ecto Multi and options in a transaction operation
+  before it is transformed and sent to the database.
+
+  This callback is only invoked in transactions.
+
+  ## Examples
+
+  Imagine you want to prepend a SQL comment to commit statements using the `commit_comment` option on transactions.
+
+      @impl true
+      def prepare_transaction(multi_or_fun, opts) do
+        opts = Keyword.put_new_lazy(opts, :commit_comment, fn -> extract_comment(opts) end)
+        {multi_or_fun, opts}
+      end
+
+  The callback will be invoked for every transaction operation, and it will try to extract the appropriate commit comment,
+  that will be subsequently used by the adapters if they support this option.
+  """
+  @doc group: "User callbacks"
+  @callback prepare_transaction(fun_or_multi :: fun | Ecto.Multi.t(), opts :: Keyword.t()) ::
+              {fun_or_multi :: fun | Ecto.Multi.t(), Keyword.t()}
+
+  @doc """
   A user customizable callback invoked to retrieve default options
   for operations.
 
@@ -1506,7 +1534,8 @@ defmodule Ecto.Repo do
                       delete!: 2,
                       insert_or_update: 2,
                       insert_or_update!: 2,
-                      prepare_query: 3
+                      prepare_query: 3,
+                      prepare_transaction: 2
 
   @doc """
   Inserts all entries into the repository.

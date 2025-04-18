@@ -274,9 +274,9 @@ defmodule Ecto.Repo.ManyToManyTest do
     refute changeset.valid?
 
     # Just one transaction was used
-    assert_received {:transaction, _}
+    assert_received {:transaction, _, _}
     assert_received {:rollback, ^changeset}
-    refute_received {:transaction, _}
+    refute_received {:transaction, _, _}
     refute_received {:rollback, _}
     refute_received {:insert_all, _, _}
   end
@@ -294,7 +294,7 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert hd(schema.assocs).sub_assoc.id
 
     # Just one transaction was used
-    assert_received {:transaction, _}
+    assert_received {:transaction, _, _}
     refute_received {:rollback, _}
     assert_received {:insert_all, %{source: "schemas_assocs"}, [[my_assoc_id: 1, my_schema_id: 1]]}
   end
@@ -332,9 +332,9 @@ defmodule Ecto.Repo.ManyToManyTest do
     refute Map.has_key?(assoc.changes.sub_assoc.changes, :id)
 
     # Just one transaction was used
-    assert_received {:transaction, _}
+    assert_received {:transaction, _, _}
     assert_received {:rollback, ^changeset}
-    refute_received {:transaction, _}
+    refute_received {:transaction, _, _}
     refute_received {:rollback, _}
     refute_received {:insert_all, _, _}
   end
@@ -624,7 +624,7 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert hd(schema.assocs).sub_assoc.id
 
     # One transaction was used
-    assert_received {:transaction, _}
+    assert_received {:transaction, _, _}
     refute_received {:rollback, _}
     refute_received {:insert_all, _, _}
   end
@@ -652,9 +652,9 @@ defmodule Ecto.Repo.ManyToManyTest do
     refute Map.has_key?(assoc.changes.sub_assoc.changes, :my_assoc_id)
 
     # Just one transaction was used
-    assert_received {:transaction, _}
+    assert_received {:transaction, _, _}
     assert_received {:rollback, ^changeset}
-    refute_received {:transaction, _}
+    refute_received {:transaction, _, _}
     refute_received {:rollback, _}
     refute_received {:insert_all, _, _}
   end
