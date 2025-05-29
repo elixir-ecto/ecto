@@ -288,7 +288,9 @@ defmodule Ecto.Changeset.Relation do
     If you indeed want to replace the existing #{inspect name}, you have
     to change the foreign key field directly.
 
-    Got: #{inspect new}
+    Got:
+
+    #{inspect(new, pretty: true)}
     """
   end
 
