@@ -46,9 +46,24 @@ against our database. If we didn't do this step, we wouldn't be able to do any
 querying at all.
 
 That's the first two steps taken now. We have installed Ecto and Postgrex as
-dependencies of our application. We now need to setup some configuration for
-Ecto so that we can perform actions on a database from within the
-application's code.
+dependencies of our application.
+
+Now, we can change our `.formatter.exs` file so that Ecto's custom formatter
+rules will be applied when we run `mix format`:
+
+```elixir
+[
+  # Add these lines to enable Ecto formatter rules
+  import_deps: [:ecto, :ecto_sql],
+  subdirectories: ["priv/*/migrations"],
+
+  # Default Elixir project rules
+  inputs: ["{mix,.formatter}.exs", "{config,lib,test}/**/*.{ex,exs}"]
+]
+```
+
+We now need to setup some configuration for Ecto so that we can perform actions
+on a database from within the application's code.
 
 We can set up this configuration by running this command:
 
