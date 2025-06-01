@@ -53,9 +53,8 @@ rules will be applied when we run `mix format`:
 
 ```elixir
 [
-  # Add these lines to enable Ecto formatter rules
+  # Add this line to enable Ecto formatter rules
   import_deps: [:ecto, :ecto_sql],
-  subdirectories: ["priv/*/migrations"],
 
   # Default Elixir project rules
   inputs: ["{mix,.formatter}.exs", "{config,lib,test}/**/*.{ex,exs}"]
