@@ -60,9 +60,8 @@ file so that Ecto's rules will be applied on `mix format`:
 ```
 
 We now need to setup some configuration for Ecto so that we can perform actions
-on a database from within the application's code.
-
-We can set up this configuration by running this command:
+on a database from within the application's code. We can set up this
+configuration by running this command:
 
 ```
 mix ecto.gen.repo -r Friends.Repo
