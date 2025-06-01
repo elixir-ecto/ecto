@@ -46,10 +46,8 @@ against our database. If we didn't do this step, we wouldn't be able to do any
 querying at all.
 
 That's the first two steps taken now. We have installed Ecto and Postgrex as
-dependencies of our application.
-
-Now, we can change our `.formatter.exs` file so that Ecto's custom formatter
-rules will be applied when we run `mix format`:
+dependencies of our application. Next let's update the `.formatter.exs`
+file so that Ecto's rules will be applied on `mix format`:
 
 ```elixir
 [
