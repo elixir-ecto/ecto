@@ -155,7 +155,31 @@ defmodule Friends.Repo.Migrations.CreatePeople do
 end
 ```
 
-Let's add some code to this migration to create a new table called "people", with a few columns in it:
+To enable formatter support for our migrations (i.e. when running `mix format`), we can create a new formatter config file called `priv/repo/migrations/.formatter.exs` with the following content:
+
+```elixir
+[
+  import_deps: [:ecto_sql],
+  inputs: ["*.exs"]
+]
+```
+
+We will also need to add a line or two to our application's main formatter config so that the formatter knows where to find the new config file we just created. Let's update the application's main `.formatter.exs` file:
+
+```elixir
+[
+  # Add this line to enable Ecto formatter rules
+  import_deps: [:ecto, :ecto_sql],
+
+  # Add this line to enable the formatter in our new migrations directory
+  subdirectories: ["priv/*/migrations"],
+
+  # Default Elixir project rules
+  inputs: ["{mix,.formatter}.exs", "{config,lib,test}/**/*.{ex,exs}"]
+]
+```
+
+Let's add some code to the new migration to create a new table called "people", with a few columns in it:
 
 ```elixir
 defmodule Friends.Repo.Migrations.CreatePeople do
