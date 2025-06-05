@@ -81,6 +81,23 @@ See the [getting started guide](https://hexdocs.pm/ecto/getting-started.html) an
 
   * [The Little Ecto Cookbook](https://dashbit.co/ebooks/the-little-ecto-cookbook), a free ebook by Dashbit, which is a curation of the existing Ecto guides with some extra contents
 
+### IPv6 support
+
+Does not happen automagically. If your database's host resolves to ipv6 address you should
+add `socket_options: [:inet6]` to configuration block like below:
+
+```elixir
+import Mix.Config
+
+config :your_app, :tds_conn,
+  hostname: "db12.dc0.comp.any",
+  username: "test_user",
+  password: "test_password",
+  database: "lomaster",
+  port: 1433,
+  socket_options: [:inet6] # here you may also add all the options for `gen_tcp` erlang module
+```
+
 ## Usage
 
 You need to add both Ecto and the database adapter as a dependency to your `mix.exs` file. The supported databases and their adapters are:
