@@ -119,6 +119,49 @@ This tells our application about the repo, which will allow us to run commands s
 
 We've now configured our application so that it's able to make queries to our database. Let's now create our database, add a table to it, and then perform some queries.
 
+### IPv6 support
+
+Does not happen automagically. If your database's host resolves to ipv6 address you should
+add `socket_options: [:inet6]` to configuration block like below:
+
+```elixir
+import Mix.Config
+
+config :your_app, :your_connection,
+  hostname: "db12.dc0.comp.any", # just an example
+  socket_options: [:inet6] # here you may also add all the options for `gen_tcp` erlang module
+  # ... other options
+```
+
+### Unix socket connection
+
+For faster communication, you may consider communicating with Postgres via Unix sockets.
+If your PG server was started on the same machine as your code, you could check that.
+
+```bash
+ % sudo grep unix_socket_directories /var/lib/postgres/data/postgresql.conf
+unix_socket_directories = '/run/postgresql'
+```
+
+```bash
+% ls -lah /run/postgresql
+итого 4,0K
+drwxr-xr-x  2 postgres postgres  80 июн  4 10:58 .
+drwxr-xr-x 35 root     root     840 июн  4 21:02 ..
+srwxrwxrwx  1 postgres postgres   0 июн  5 07:41 .s.PGSQL.5432
+-rw-------  1 postgres postgres  61 июн  5 07:41 .s.PGSQL.5432.lock
+```
+
+So you have postgresql started and listening on the socket.
+
+Add then this line to config block:
+
+```elixir
+config :your_app, :your_connection,
+    # ...
+    socket_dir: "/run/postgresql"
+```
+
 ## Setting up the database
 
 To be able to query a database, it first needs to exist. We can create the database with this command:
