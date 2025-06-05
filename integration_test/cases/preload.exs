@@ -605,6 +605,21 @@ defmodule Ecto.Integration.PreloadTest do
     assert [%{name: "foo"}, %{name: "bar"}] = post.ordered_users
   end
 
+  test "custom preload_order (one)" do
+    post = TestRepo.insert!(%Post{users: [%User{name: "bar"}, %User{name: "foo"}], title: "1"})
+
+    TestRepo.insert!(%Comment{text: "1", post_id: post.id})
+    TestRepo.insert!(%Comment{text: "2", post_id: post.id})
+    TestRepo.insert!(%Comment{text: "3", post_id: post.id})
+
+    post = TestRepo.preload(post, [:first_comment, :last_comment])
+
+    # asc
+    assert %{text: "1"} = post.first_comment
+    # desc
+    assert %{text: "3"} = post.last_comment
+  end
+
   test "custom preload_order with mfa" do
     post1 = TestRepo.insert!(%Post{users: [%User{name: "bar"}, %User{name: "foo"}], title: "1"})
     post2 = TestRepo.insert!(%Post{users: [%User{name: "baz"}, %User{name: "foz"}], title: "2"})
