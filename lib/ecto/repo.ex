@@ -97,6 +97,31 @@ defmodule Ecto.Repo do
       config :my_app, Repo,
         url: "ecto://postgres:postgres@localhost/ecto_simple?ssl=true&pool_size=10"
 
+  ### IPv6 support
+
+  If your database's host resolves to ipv6 address you should
+  add `socket_options: [:inet6]` to configuration block like below:
+
+      import Mix.Config
+
+      config :my_app, MyApp.Repo,
+        hostname: "db12.dc0.comp.any",
+        socket_options: [:inet6],
+        ...
+
+  ## `use` options
+
+  When you `use Ecto.Repo`, the following options are supported:
+
+    * `:otp_app` (required) - the name of the Erlang/OTP application
+      to find your repository configuration (usually your Elixir app name)
+
+    * `:adapter` (required) - the module of the database adapter you want to use
+
+    * `:read_only` - when true, marks the repository as `:read_only`.
+      In such cases, none of the functions that perform write operations, such as
+      `c:insert/2`, `c:insert_all/3`, `c:update_all/3`, and friends are defined
+
   ## Shared options
 
   Almost all of the repository functions outlined in this module accept the following
@@ -187,16 +212,6 @@ defmodule Ecto.Repo do
     * `:options` - extra options given to the repo operation under
       `:telemetry_options`
 
-  ## Read-only repositories
-
-  You can mark a repository as read-only by passing the `:read_only`
-  flag on `use`:
-
-      use Ecto.Repo, otp_app: ..., adapter: ..., read_only: true
-
-  By passing the `:read_only` option, none of the functions that perform
-  write operations, such as `c:insert/2`, `c:insert_all/3`, `c:update_all/3`,
-  and friends will be defined.
   """
 
   @type t :: module
