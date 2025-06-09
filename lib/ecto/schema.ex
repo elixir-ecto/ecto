@@ -1587,9 +1587,9 @@ defmodule Ecto.Schema do
   ## Options
 
     * `:primary_key` - The `:primary_key` option can be used with the same arguments
-      as `@primary_key` (see the [Schema attributes](https://hexdocs.pm/ecto/Ecto.Schema.html#module-schema-attributes)
+      as `@primary_key` (see the [Schema attributes](#module-schema-attributes)
       section for more info). Primary keys are automatically set up for embedded schemas as well,
-      defaulting to  `{:id,  :binary_id, autogenerate:   true}`.
+      defaulting to  `{:id,  :binary_id, autogenerate: true}`.
 
     * `:on_replace` - The action taken on associations when the embed is
       replaced when casting or manipulating parent changeset. May be
@@ -2000,12 +2000,13 @@ defmodule Ecto.Schema do
     writable = opts[:writable] || :always
     put_struct_field(mod, name, Keyword.get(opts, :default))
 
-    redact_field? = Keyword.get_lazy(opts, :redact, fn ->
-      case Module.get_attribute(mod, :schema_redact, false) do
-        :all_except_primary_keys -> not pk?
-        false -> false
-      end
-    end)
+    redact_field? =
+      Keyword.get_lazy(opts, :redact, fn ->
+        case Module.get_attribute(mod, :schema_redact, false) do
+          :all_except_primary_keys -> not pk?
+          false -> false
+        end
+      end)
 
     if redact_field? do
       Module.put_attribute(mod, :ecto_redact_fields, name)
