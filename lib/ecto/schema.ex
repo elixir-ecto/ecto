@@ -1588,8 +1588,10 @@ defmodule Ecto.Schema do
 
     * `:primary_key` - The `:primary_key` option can be used with the same arguments
       as `@primary_key` (see the [Schema attributes](#module-schema-attributes)
-      section for more info). Primary keys are automatically set up for embedded schemas as well,
-      defaulting to  `{:id,  :binary_id, autogenerate: true}`.
+      section for more info). Primary keys are automatically set up for embedded
+      schemas as well, defaulting to `{:id,  :binary_id, autogenerate: true}`.
+      Note `:primary_key`s are not automatically read back on `insert/2`,
+      unless one of `autogenerate: true` or `read_after_writes: true` is set.
 
     * `:on_replace` - The action taken on associations when the embed is
       replaced when casting or manipulating parent changeset. May be
