@@ -1904,6 +1904,25 @@ defmodule Ecto.RepoTest do
       assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], []}}}
     end
 
+    test "includes conflict target in the field list given to :replace_all_except" do
+      fields = [:map, :z, :yyy, :x]
+      TestRepo.insert(%MySchema{id: 1}, on_conflict: {:replace_all_except, [:array]}, conflict_target: [:id])
+      assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], [:id]}}}
+    end
+
+    test "excludes conflict target from the field list given to :replace" do
+      fields = [:id, :map, :z, :x]
+      TestRepo.insert(%MySchema{id: 1}, on_conflict: {:replace, fields}, conflict_target: [:id])
+      expected_fields = fields -- [:id]
+      assert_received {:insert, %{source: "my_schema", on_conflict: {^expected_fields, [], [:id]}}}
+    end
+
+    test "excludes conflict target from :replace_all" do
+      fields = [:map, :array, :z, :yyy, :x]
+      TestRepo.insert(%MySchema{id: 1}, on_conflict: :replace_all, conflict_target: [:id])
+      assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], [:id]}}}
+    end
+
     test "converts keyword list into query" do
       TestRepo.insert(%MySchema{id: 1}, on_conflict: [set: [x: "123", y: "456"]])
       assert_received {:insert, %{source: "my_schema", on_conflict: {query, ["123", "456"], []}}}

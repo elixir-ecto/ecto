@@ -754,6 +754,7 @@ defmodule Ecto.Repo.Schema do
         raise ArgumentError, ":on_conflict option with `{:replace, fields}` requires a non-empty list of fields"
 
       {:replace, keys} when is_list(keys) ->
+        keys = keys -- List.wrap(conflict_target)
         {{replace_fields!(dumper, keys), [], conflict_target}, []}
 
       :replace_all ->
@@ -764,7 +765,8 @@ defmodule Ecto.Repo.Schema do
         {{replace_all_fields!(:replace_all, schema, to_remove), [], conflict_target}, []}
 
       {:replace_all_except, fields} ->
-        {{replace_all_fields!(:replace_all_except, schema, fields), [], conflict_target}, []}
+        to_remove = List.wrap(conflict_target) ++ fields
+        {{replace_all_fields!(:replace_all_except, schema, to_remove), [], conflict_target}, []}
 
       [_ | _] = on_conflict ->
         from = if schema, do: {source, schema}, else: source
