@@ -2,27 +2,51 @@ defmodule Ecto.Repo.Transaction do
   @moduledoc false
   @dialyzer :no_opaque
 
-  def transaction(_repo, _name, fun, {adapter_meta, opts}) when is_function(fun, 0) do
-    adapter_meta.adapter.transaction(adapter_meta, opts, fun)
-  end
-  
-  def transaction(repo, _name, fun, {adapter_meta, opts}) when is_function(fun, 1) do
-    adapter_meta.adapter.transaction(adapter_meta, opts, fn -> fun.(repo) end)
+  def transact(repo, _name, fun, {adapter_meta, opts}) when is_function(fun, 0) do
+    adapter_meta.adapter.transaction(adapter_meta, opts, fn ->
+      case fun.() do
+        {:ok, result} ->
+          result
+
+        {:error, reason} ->
+          rollback(repo, reason)
+
+        other ->
+          raise ArgumentError,
+                "expected to return {:ok, _} or {:error, _}, got: #{inspect(other)}"
+      end
+    end)
   end
 
-  def transaction(repo, _name, %Ecto.Multi{} = multi, {adapter_meta, opts}) do
+  def transact(repo, _name, fun, {adapter_meta, opts}) when is_function(fun, 1) do
+    adapter_meta.adapter.transaction(adapter_meta, opts, fn ->
+      case fun.(repo) do
+        {:ok, result} ->
+          result
+
+        {:error, reason} ->
+          rollback(repo, reason)
+
+        other ->
+          raise ArgumentError,
+                "expected to return {:ok, _} or {:error, _}, got: #{inspect(other)}"
+      end
+    end)
+  end
+
+  def transact(repo, _name, %Ecto.Multi{} = multi, {adapter_meta, opts}) do
     %{adapter: adapter} = adapter_meta
     wrap = &adapter.transaction(adapter_meta, opts, &1)
     return = &adapter.rollback(adapter_meta, &1)
 
     case Ecto.Multi.__apply__(multi, repo, wrap, return) do
-      {:ok, values} -> 
+      {:ok, values} ->
         {:ok, values}
 
-      {:error, {key, error_value, values}} -> 
+      {:error, {key, error_value, values}} ->
         {:error, key, error_value, values}
 
-      {:error, operation} -> 
+      {:error, operation} ->
         raise """
         operation #{inspect operation} is rolling back unexpectedly.
 

@@ -61,7 +61,7 @@ defmodule Ecto.Multi do
 
   We can later execute it in the integration layer using Repo:
 
-      Repo.transaction(PasswordManager.reset(account, params))
+      Repo.transact(PasswordManager.reset(account, params))
 
   By pattern matching on the result we can differentiate different conditions:
 
@@ -253,7 +253,7 @@ defmodule Ecto.Multi do
         Ecto.Multi.new()
         |> Ecto.Multi.insert(:comment, Ecto.build_assoc(post, :comments))
       end)
-      |> MyApp.Repo.transaction()
+      |> MyApp.Repo.transact()
   """
   @spec merge(t, (changes -> t)) :: t
   def merge(%Multi{} = multi, merge) when is_function(merge, 1) do
@@ -286,14 +286,14 @@ defmodule Ecto.Multi do
 
       Ecto.Multi.new()
       |> Ecto.Multi.insert(:insert, %Post{title: "first"})
-      |> MyApp.Repo.transaction()
+      |> MyApp.Repo.transact()
 
       Ecto.Multi.new()
       |> Ecto.Multi.insert(:post, %Post{title: "first"})
       |> Ecto.Multi.insert(:comment, fn %{post: post} ->
         Ecto.build_assoc(post, :comments)
       end)
-      |> MyApp.Repo.transaction()
+      |> MyApp.Repo.transact()
 
   """
   @spec insert(
@@ -329,14 +329,14 @@ defmodule Ecto.Multi do
       changeset = Ecto.Changeset.change(post, title: "New title")
       Ecto.Multi.new()
       |> Ecto.Multi.update(:update, changeset)
-      |> MyApp.Repo.transaction()
+      |> MyApp.Repo.transact()
 
       Ecto.Multi.new()
       |> Ecto.Multi.insert(:post, %Post{title: "first"})
       |> Ecto.Multi.update(:fun, fn %{post: post} ->
         Ecto.Changeset.change(post, title: "New title")
       end)
-      |> MyApp.Repo.transaction()
+      |> MyApp.Repo.transact()
 
   """
   @spec update(t, name, Changeset.t() | (changes -> Changeset.t()), Keyword.t()) :: t
@@ -362,7 +362,7 @@ defmodule Ecto.Multi do
       changeset = Post.changeset(%Post{}, %{title: "New title"})
       Ecto.Multi.new()
       |> Ecto.Multi.insert_or_update(:insert_or_update, changeset)
-      |> MyApp.Repo.transaction()
+      |> MyApp.Repo.transact()
 
       Ecto.Multi.new()
       |> Ecto.Multi.run(:post, fn repo, _changes ->
@@ -371,7 +371,7 @@ defmodule Ecto.Multi do
       |> Ecto.Multi.insert_or_update(:update, fn %{post: post} ->
         Ecto.Changeset.change(post, title: "New title")
       end)
-      |> MyApp.Repo.transaction()
+      |> MyApp.Repo.transact()
 
   """
   @spec insert_or_update(t, name, Changeset.t() | (changes -> Changeset.t()), Keyword.t()) :: t
@@ -406,7 +406,7 @@ defmodule Ecto.Multi do
       post = MyApp.Repo.get!(Post, 1)
       Ecto.Multi.new()
       |> Ecto.Multi.delete(:delete, post)
-      |> MyApp.Repo.transaction()
+      |> MyApp.Repo.transact()
 
       Ecto.Multi.new()
       |> Ecto.Multi.run(:post, fn repo, _changes ->
@@ -419,7 +419,7 @@ defmodule Ecto.Multi do
         # Others validations
         post
       end)
-      |> MyApp.Repo.transaction()
+      |> MyApp.Repo.transact()
 
   """
   @spec delete(
@@ -456,7 +456,7 @@ defmodule Ecto.Multi do
       |> Ecto.Multi.one(:author, fn %{post: post} ->
         from(a in Author, where: a.id == ^post.author_id)
       end)
-      |> MyApp.Repo.transaction()
+      |> MyApp.Repo.transact()
   """
   @spec one(
           t,
@@ -485,11 +485,11 @@ defmodule Ecto.Multi do
 
       Ecto.Multi.new()
       |> Ecto.Multi.all(:all, Post)
-      |> MyApp.Repo.transaction()
+      |> MyApp.Repo.transact()
 
       Ecto.Multi.new()
       |> Ecto.Multi.all(:all, fn _changes -> Post end)
-      |> MyApp.Repo.transaction()
+      |> MyApp.Repo.transact()
   """
   @spec all(
           t,
@@ -518,11 +518,11 @@ defmodule Ecto.Multi do
 
       Ecto.Multi.new()
       |> Ecto.Multi.exists?(:post, Post)
-      |> MyApp.Repo.transaction()
+      |> MyApp.Repo.transact()
 
       Ecto.Multi.new()
       |> Ecto.Multi.exists?(:post, fn _changes -> Post end)
-      |> MyApp.Repo.transaction()
+      |> MyApp.Repo.transact()
   """
   @spec exists?(
           t,
@@ -614,7 +614,7 @@ defmodule Ecto.Multi do
       posts = [%{title: "My first post"}, %{title: "My second post"}]
       Ecto.Multi.new()
       |> Ecto.Multi.insert_all(:insert_all, Post, posts)
-      |> MyApp.Repo.transaction()
+      |> MyApp.Repo.transact()
 
       Ecto.Multi.new()
       |> Ecto.Multi.run(:post, fn repo, _changes ->
@@ -631,7 +631,7 @@ defmodule Ecto.Multi do
           Map.put(comment, :post_id, post.id)
         end)
       end)
-      |> MyApp.Repo.transaction()
+      |> MyApp.Repo.transact()
 
   """
   @spec insert_all(
@@ -662,7 +662,7 @@ defmodule Ecto.Multi do
 
       Ecto.Multi.new()
       |> Ecto.Multi.update_all(:update_all, Post, set: [title: "New title"])
-      |> MyApp.Repo.transaction()
+      |> MyApp.Repo.transact()
 
       Ecto.Multi.new()
       |> Ecto.Multi.run(:post, fn repo, _changes ->
@@ -675,7 +675,7 @@ defmodule Ecto.Multi do
         # Others validations
         from(c in Comment, where: c.post_id == ^post.id, update: [set: [title: "New title"]])
       end, [])
-      |> MyApp.Repo.transaction()
+      |> MyApp.Repo.transact()
 
   """
   @spec update_all(
@@ -707,7 +707,7 @@ defmodule Ecto.Multi do
       queryable = from(p in Post, where: p.id < 5)
       Ecto.Multi.new()
       |> Ecto.Multi.delete_all(:delete_all, queryable)
-      |> MyApp.Repo.transaction()
+      |> MyApp.Repo.transact()
 
       Ecto.Multi.new()
       |> Ecto.Multi.run(:post, fn repo, _changes ->
@@ -720,7 +720,7 @@ defmodule Ecto.Multi do
         # Others validations
         from(c in Comment, where: c.post_id == ^post.id)
       end)
-      |> MyApp.Repo.transaction()
+      |> MyApp.Repo.transact()
 
   """
   @spec delete_all(t, name, Ecto.Queryable.t() | (changes -> Ecto.Queryable.t()), Keyword.t()) ::
@@ -782,7 +782,7 @@ defmodule Ecto.Multi do
       |> Ecto.Multi.put(:company, company)
       |> Ecto.Multi.insert(:user, fn changes -> User.changeset(changes.company) end)
       |> Ecto.Multi.insert(:person, fn changes -> Person.changeset(changes.user, changes.company) end)
-      |> MyApp.Repo.transaction()
+      |> MyApp.Repo.transact()
 
   In the example above there isn't a large benefit in putting the
   `company` in the multi, because you could also access the
@@ -818,7 +818,7 @@ defmodule Ecto.Multi do
       |> Ecto.Multi.insert(:person_a, changeset)
       |> Ecto.Multi.insert(:person_b, changeset)
       |> Ecto.Multi.inspect()
-      |> MyApp.Repo.transaction()
+      |> MyApp.Repo.transact()
 
   Prints:
       %{person_a: %Person{...}, person_b: %Person{...}}
@@ -829,7 +829,7 @@ defmodule Ecto.Multi do
       |> Ecto.Multi.insert(:person_a, changeset)
       |> Ecto.Multi.insert(:person_b, changeset)
       |> Ecto.Multi.inspect(only: :person_a)
-      |> MyApp.Repo.transaction()
+      |> MyApp.Repo.transact()
 
   Prints:
       %{person_a: %Person{...}}

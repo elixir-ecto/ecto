@@ -304,7 +304,7 @@ defmodule Ecto.Repo do
       ## Transactions
 
       if Ecto.Adapter.Transaction in behaviours do
-        def transaction(fun_or_multi, opts \\ []) do
+        def transact(fun_or_multi, opts \\ []) do
           repo = get_dynamic_repo()
 
           {adapter_meta, opts} =
@@ -312,7 +312,28 @@ defmodule Ecto.Repo do
 
           {fun_or_multi, opts} = prepare_transaction(fun_or_multi, opts)
 
-          Ecto.Repo.Transaction.transaction(__MODULE__, repo, fun_or_multi, {adapter_meta, opts})
+          Ecto.Repo.Transaction.transact(
+            __MODULE__,
+            repo,
+            fun_or_multi,
+            {adapter_meta, opts}
+          )
+        end
+
+        def transaction(fun_or_multi, opts \\ [])
+
+        def transaction(fun, opts) when is_function(fun, 0) do
+          fun = fn -> {:ok, fun.()} end
+          transact(fun, opts)
+        end
+
+        def transaction(fun, opts) when is_function(fun, 1) do
+          fun = fn repo -> {:ok, fun.(repo)} end
+          transact(fun, opts)
+        end
+
+        def transaction(%Ecto.Multi{} = multi, opts) do
+          transact(multi, opts)
         end
 
         def in_transaction? do
@@ -2153,7 +2174,7 @@ defmodule Ecto.Repo do
 
   ## Ecto.Adapter.Transaction
 
-  @optional_callbacks transaction: 2, in_transaction?: 0, rollback: 1
+  @optional_callbacks transaction: 2, transact: 2, in_transaction?: 0, rollback: 1
 
   @doc """
   Runs the given function or `Ecto.Multi` inside a transaction.
@@ -2186,6 +2207,8 @@ defmodule Ecto.Repo do
 
   A successful transaction returns the value returned by the function
   wrapped in a tuple as `{:ok, value}`.
+
+  See also `c:transact/2`.
 
   ### Nested transactions
 
@@ -2242,6 +2265,8 @@ defmodule Ecto.Repo do
   `{:error, failed_operation, failed_value, changes_so_far}` will be returned.
 
   Explore the `Ecto.Multi` documentation to learn more and find detailed examples.
+
+  See also `c:transact/2`.
 
   ## Aborted transactions
 
@@ -2306,9 +2331,232 @@ defmodule Ecto.Repo do
   documentation for more options.
   """
   @doc group: "Transaction API"
+  @doc deprecated: "Use Repo.transact/2"
   @callback transaction(fun_or_multi :: fun | Ecto.Multi.t(), opts :: Keyword.t()) ::
               {:ok, any}
               | {:error, any}
+              | Ecto.Multi.failure()
+
+  @doc """
+  Runs the given function or `Ecto.Multi` inside a transaction.
+
+  ## Use with function
+
+  `c:transact/2` can be called with both a function of arity
+  zero or one. The arity zero function will just be executed as is:
+
+      Repo.transact(fn ->
+        alice = Repo.insert!(alice_changeset)
+        bob = Repo.insert!(bob_changeset)
+        {:ok, [alice, bob]}
+      end)
+
+  While the arity one function will receive the repo of the transaction
+  as its first argument:
+
+      Repo.transact(fn repo ->
+        alice = repo.insert!(alice_changeset)
+        bob = repo.insert!(bob_changeset)
+        {:ok, [alice, bob]}
+      end)
+
+  The return value is the same as of the given `fun` which must be
+  `{:ok, result}` or `{:error, reason}`.
+
+  If this function returns `{:ok, result}`, it means the transaction
+  was successfully committed. On the other hand, if it returns `{:error, reason}`,
+  it means the transaction was rolled back.
+
+  This function is commonly used with `with/1`:
+
+      Repo.transact(fn ->
+        with {:ok, alice} <- Repo.insert(alice_changeset),
+             {:ok, bob} <- Repo.insert(bob_changeset) do
+          {:ok, [alice, bob]}
+        end
+      end)
+
+  If an Elixir exception occurs the transaction will be rolled back
+  and the exception will bubble up from the transaction function.
+  If no exception occurs, the transaction is committed if the function
+  returns `{:ok, result}`. Returning `{:error, result}` will rollback the transaction
+  and this function will return `{:error, result}` as well.
+  A transaction can be explicitly rolled back
+  by calling `c:rollback/1`, this will immediately leave the function
+  and return the value given to `rollback` as `{:error, value}`.
+
+  ### Nested transactions
+
+  If `c:transact/2` is called inside another transaction, the function
+  is simply executed, without wrapping the new transaction call in any
+  way. If there is an error in the inner transaction and the error is
+  rescued, or the inner transaction is rolled back, the whole outer
+  transaction is aborted, guaranteeing nothing will be committed.
+
+  Below is an example of how rollbacks work with nested transactions:
+
+      {:error, :rollback} =
+        Repo.transact(fn ->
+          {:error, :posting_not_allowed} =
+            Repo.transact(fn ->
+              # This function call causes the following to happen:
+              #
+              #   * the transaction is rolled back in the database,
+              #   * code execution is stopped within the current function,
+              #   * and the value, passed to `rollback/1` is returned from
+              #     `Repo.transaction/1` as the second element in the error
+              #     tuple.
+              #
+              Repo.rollback(:posting_not_allowed)
+
+              # `rollback/1` stops execution, so code here won't be run
+            end)
+
+          # The transaction here is now aborted and any further
+          # operation will raise an exception.
+        end)
+
+  See the ["Aborted transactions"](`c:transact/2#aborted-transactions`) section for more examples
+  of aborted transactions and how to handle them.
+
+  In practice, managing nested transactions can become complex quickly. As a rule of thumb, avoid them
+  in favour of composing operations inside a single transaction using regular control flow and `with/1`
+  or use `Ecto.Multi` described next.
+
+  ## Use with Ecto.Multi
+
+  `c:transact/2` also accepts the `Ecto.Multi` struct as first argument.
+  `Ecto.Multi` allows you to compose transactions operations, step by step,
+  and manage what happens in case of success or failure.
+
+  When an `Ecto.Multi` is given to this function, a transaction will be started,
+  all operations applied and in case of success committed returning `{:ok, changes}`:
+
+      # With Ecto.Multi
+      Ecto.Multi.new()
+      |> Ecto.Multi.insert(:post, %Post{})
+      |> Repo.transact()
+
+  In case of any errors the transaction will be rolled back and
+  `{:error, failed_operation, failed_value, changes_so_far}` will be returned.
+
+  Explore the `Ecto.Multi` documentation to learn more and find detailed examples.
+
+  ## Aborted transactions
+
+  When an operation inside a transaction fails, the transaction is aborted in the database.
+  For instance, if you attempt an insert that violates a unique constraint, the insert fails
+  and the transaction is aborted. In such cases, any further operation inside the transaction
+  will raise exceptions.
+
+  Take the following transaction as an example:
+
+      Repo.transact(fn repo ->
+        case Repo.insert(changeset) do
+          {:ok, post} ->
+            Repo.insert(%Status{value: "success"})
+
+          {:error, changeset} ->
+            Repo.insert(%Status{value: "failure"})
+        end
+      end)
+
+  If the changeset is valid, but the insert operation fails due to a database constraint,
+  the subsequent `Repo.insert(%Status{value: "failure"})` operation will raise an exception
+  because the database has already aborted the transaction and thus making the operation invalid.
+  In Postgres, the exception would look like this:
+
+      ** (Postgrex.Error) ERROR 25P02 (in_failed_sql_transaction) current transaction is aborted, commands ignored until end of transaction block
+
+  If the changeset is invalid before it reaches the database due to a validation error,
+  no statement is sent to the database, an `:error` tuple is returned, and `Repo.insert(%Status{value: "failure"})`
+  operation will execute as usual.
+
+  We have two options to deal with such scenarios:
+
+  If you don't want to change the semantics of your code,  you can also use the savepoints
+  feature by passing the `:mode` option like this: `Repo.insert(changeset, mode: :savepoint)`.
+  In case of an exception, the transaction will rollback to the savepoint and prevent
+  the transaction from failing.
+
+  Another alternative is to handle this operation outside of the transaction:
+
+      result =
+        Repo.transact(fn ->
+          with {:ok, post} <- Repo.insert(changeset) do
+            Repo.insert(%Status{value: "success"})
+          end
+        end)
+
+      case result do
+        {:ok, _} ->
+          :ok
+
+        {:error, _changeset} ->
+          Repo.insert!(%Status{value: "failure"})
+      end
+
+  ## Working with processes
+
+  The transaction is per process. A separate process started inside a
+  transaction won't be part of the same transaction and will use a separate
+  connection altogether.
+
+  When using the `Ecto.Adapters.SQL.Sandbox` in tests, while it may be
+  possible to share the connection between processes, the parent process
+  will typically hold the connection until the transaction completes. This
+  may lead to a deadlock if the child process attempts to use the same connection.
+  See the docs for
+  [`Ecto.Adapters.SQL.Sandbox`](https://hexdocs.pm/ecto_sql/Ecto.Adapters.SQL.Sandbox.html)
+  for more information.
+
+  ## Options
+
+  See the ["Shared options"](#module-shared-options) section at the module
+  documentation for more options.
+
+  ## Examples
+
+  If the transaction was successful, `{:ok, result}` is returned:
+
+      iex> Repo.transact(fn ->
+      ...>   Repo.insert(changeset)
+      ...> end)
+      {:ok, %User{}}
+
+  If the transaction failed, `{:error, reason}` is returned:
+
+      iex> Repo.transact(fn ->
+      ...>   Repo.insert(changeset)
+      ...> end)
+      {:error, #Ecto.Changeset<...>}
+
+  Transaction can be aborted by returning `{:error, reason}`, calling `c:rollback/1`,
+  or raising from the given `fun`:
+
+      iex> Repo.transact(fn ->
+      ...>   Repo.insert!(%User{}) # will be rolled back
+      ...>   {:error, :oops}
+      ...> end)
+      {:error, :oops}
+
+      iex> Repo.transact(fn ->
+      ...>   Repo.insert!(%User{}) # will be rolled back
+      ...>   Repo.rollback(:oops)
+      ...> end)
+      {:error, :oops}
+
+      iex> Repo.transact(fn ->
+      ...>   Repo.insert!(%User{}) # will be rolled back
+      ...>   raise "oops"
+      ...> end)
+      ** (RuntimeError) oops
+  """
+  @doc group: "Transaction API"
+  @callback transact(fun :: (-> result), opts :: Keyword.t()) :: result
+            when result: {:ok, any()} | {:error, any()}
+  @callback transact(multi :: Ecto.Multi.t(), opts :: Keyword.t()) ::
+              {:ok, map()}
               | Ecto.Multi.failure()
 
   @doc """

@@ -2079,6 +2079,7 @@ defmodule Ecto.RepoTest do
     test "no transaction functions generated on repo without adapter support" do
       assert function_exported?(NoTransactionRepo, :config, 0)
       refute function_exported?(NoTransactionRepo, :transaction, 2)
+      refute function_exported?(NoTransactionRepo, :transact, 2)
       refute function_exported?(NoTransactionRepo, :in_transaction?, 2)
       refute function_exported?(NoTransactionRepo, :rollback, 1)
     end
