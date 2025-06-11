@@ -2241,7 +2241,7 @@ defmodule Ecto.Changeset do
     if changeset.valid? do
       {:ok, apply_changes(changeset)}
     else
-      {:error, %Changeset{changeset | action: action}}
+      {:error, %{changeset | action: action}}
     end
   end
 
@@ -3256,23 +3256,75 @@ defmodule Ecto.Changeset do
     result = Decimal.compare(value, target_value)
 
     case decimal_compare(result, spec_key) do
-      true -> nil
-      false -> [{field, message(opts, default_message, validation: :number, kind: spec_key, number: target_value)}]
+      true ->
+        nil
+
+      false ->
+        [
+          {field,
+           message(opts, default_message,
+             validation: :number,
+             kind: spec_key,
+             number: target_value
+           )}
+        ]
     end
   end
 
-  defp compare_numbers(field, value, default_message, spec_key, spec_function, %Decimal{} = target_value, opts) do
-    compare_numbers(field, decimal_new(value), default_message, spec_key, spec_function, target_value, opts)
+  defp compare_numbers(
+         field,
+         value,
+         default_message,
+         spec_key,
+         spec_function,
+         %Decimal{} = target_value,
+         opts
+       ) do
+    compare_numbers(
+      field,
+      decimal_new(value),
+      default_message,
+      spec_key,
+      spec_function,
+      target_value,
+      opts
+    )
   end
 
-  defp compare_numbers(field, %Decimal{} = value, default_message, spec_key, spec_function, target_value, opts) do
-    compare_numbers(field, value, default_message, spec_key, spec_function, decimal_new(target_value), opts)
+  defp compare_numbers(
+         field,
+         %Decimal{} = value,
+         default_message,
+         spec_key,
+         spec_function,
+         target_value,
+         opts
+       ) do
+    compare_numbers(
+      field,
+      value,
+      default_message,
+      spec_key,
+      spec_function,
+      decimal_new(target_value),
+      opts
+    )
   end
 
   defp compare_numbers(field, value, default_message, spec_key, spec_function, target_value, opts) do
     case apply(spec_function, [value, target_value]) do
-      true -> nil
-      false -> [{field, message(opts, default_message, validation: :number, kind: spec_key, number: target_value)}]
+      true ->
+        nil
+
+      false ->
+        [
+          {field,
+           message(opts, default_message,
+             validation: :number,
+             kind: spec_key,
+             number: target_value
+           )}
+        ]
     end
   end
 

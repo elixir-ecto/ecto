@@ -1,5 +1,9 @@
 # Changelog for v3.x
 
+## v3.12.6 (2025-06-11)
+
+Fix deprecations on Elixir v1.19.
+
 ## v3.12.5 (2024-11-28)
 
 ### Enhancements
