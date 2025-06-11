@@ -279,7 +279,7 @@ defmodule Ecto.Multi do
   Adds an insert operation to the multi.
 
   The `name` must be unique from other statements in the multi.
-  
+
   The remaining arguments and options are the same as in `c:Ecto.Repo.insert/2`.
 
   ## Example
@@ -299,7 +299,7 @@ defmodule Ecto.Multi do
   @spec insert(
           t,
           name,
-          Changeset.t() | Ecto.Schema.t() | fun(Changeset.t() | Ecto.Schema.t()),
+          Changeset.t() | Ecto.Schema.t() | (changes -> Changeset.t() | Ecto.Schema.t()),
           Keyword.t()
         ) :: t
   def insert(multi, name, changeset_or_struct_or_fun, opts \\ [])
@@ -320,7 +320,7 @@ defmodule Ecto.Multi do
   Adds an update operation to the multi.
 
   The `name` must be unique from other statements in the multi.
-  
+
   The remaining arguments and options are the same as in `c:Ecto.Repo.update/2`.
 
   ## Example
@@ -339,7 +339,7 @@ defmodule Ecto.Multi do
       |> MyApp.Repo.transaction()
 
   """
-  @spec update(t, name, Changeset.t() | fun(Changeset.t()), Keyword.t()) :: t
+  @spec update(t, name, Changeset.t() | (changes -> Changeset.t()), Keyword.t()) :: t
   def update(multi, name, changeset_or_fun, opts \\ [])
 
   def update(multi, name, %Changeset{} = changeset, opts) do
@@ -354,7 +354,7 @@ defmodule Ecto.Multi do
   Inserts or updates a changeset depending on whether the changeset was persisted or not.
 
   The `name` must be unique from other statements in the multi.
-  
+
   The remaining arguments and options are the same as in `c:Ecto.Repo.insert_or_update/2`.
 
   ## Example
@@ -374,7 +374,7 @@ defmodule Ecto.Multi do
       |> MyApp.Repo.transaction()
 
   """
-  @spec insert_or_update(t, name, Changeset.t() | fun(Changeset.t()), Keyword.t()) :: t
+  @spec insert_or_update(t, name, Changeset.t() | (changes -> Changeset.t()), Keyword.t()) :: t
   def insert_or_update(multi, name, changeset_or_fun, opts \\ [])
 
   def insert_or_update(
@@ -425,7 +425,7 @@ defmodule Ecto.Multi do
   @spec delete(
           t,
           name,
-          Changeset.t() | Ecto.Schema.t() | fun(Changeset.t() | Ecto.Schema.t()),
+          Changeset.t() | Ecto.Schema.t() | (changes -> Changeset.t() | Ecto.Schema.t()),
           Keyword.t()
         ) :: t
   def delete(multi, name, changeset_or_struct_fun, opts \\ [])
@@ -461,7 +461,7 @@ defmodule Ecto.Multi do
   @spec one(
           t,
           name,
-          queryable :: Ecto.Queryable.t() | fun(Ecto.Queryable.t()),
+          queryable :: Ecto.Queryable.t() | (changes -> Ecto.Queryable.t()),
           opts :: Keyword.t()
         ) :: t
   def one(multi, name, queryable_or_fun, opts \\ [])
@@ -478,7 +478,7 @@ defmodule Ecto.Multi do
   Runs a query and stores all entries in the multi.
 
   The `name` must be unique from other statements in the multi.
-  
+
   The remaining arguments and options are the same as in `c:Ecto.Repo.all/2` does.
 
   ## Example
@@ -494,7 +494,7 @@ defmodule Ecto.Multi do
   @spec all(
           t,
           name,
-          queryable :: Ecto.Queryable.t() | fun(Ecto.Queryable.t()),
+          queryable :: Ecto.Queryable.t() | (changes -> Ecto.Queryable.t()),
           opts :: Keyword.t()
         ) :: t
   def all(multi, name, queryable_or_fun, opts \\ [])
@@ -511,7 +511,7 @@ defmodule Ecto.Multi do
   Checks if there exists an entry matching the given query and stores a boolean in the multi.
 
   The `name` must be unique from other statements in the multi.
-  
+
   The remaining arguments and options are the same as in `c:Ecto.Repo.exists?/2`.
 
   ## Example
@@ -527,7 +527,7 @@ defmodule Ecto.Multi do
   @spec exists?(
           t,
           name,
-          queryable :: Ecto.Queryable.t() | fun(Ecto.Queryable.t()),
+          queryable :: Ecto.Queryable.t() | (changes -> Ecto.Queryable.t()),
           opts :: Keyword.t()
         ) :: t
   def exists?(multi, name, queryable_or_fun, opts \\ [])
@@ -639,7 +639,7 @@ defmodule Ecto.Multi do
           name,
           schema_or_source,
           entries_or_query_or_fun ::
-            [map | Keyword.t()] | fun([map | Keyword.t()]) | Ecto.Query.t(),
+            [map | Keyword.t()] | (changes -> [map | Keyword.t()]) | Ecto.Query.t(),
           Keyword.t()
         ) :: t
   def insert_all(multi, name, schema_or_source, entries_or_query_or_fun, opts \\ [])
@@ -681,7 +681,7 @@ defmodule Ecto.Multi do
   @spec update_all(
           t,
           name,
-          Ecto.Queryable.t() | fun(Ecto.Queryable.t()),
+          Ecto.Queryable.t() | (changes -> Ecto.Queryable.t()),
           Keyword.t(),
           Keyword.t()
         ) :: t
@@ -723,7 +723,8 @@ defmodule Ecto.Multi do
       |> MyApp.Repo.transaction()
 
   """
-  @spec delete_all(t, name, Ecto.Queryable.t() | fun(Ecto.Queryable.t()), Keyword.t()) :: t
+  @spec delete_all(t, name, Ecto.Queryable.t() | (changes -> Ecto.Queryable.t()), Keyword.t()) ::
+          t
   def delete_all(multi, name, queryable_or_fun, opts \\ [])
 
   def delete_all(multi, name, fun, opts) when is_function(fun, 1) and is_list(opts) do
