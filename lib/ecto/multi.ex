@@ -18,6 +18,13 @@ defmodule Ecto.Multi do
   `Ecto.Multi.to_list/1` returns a canonical representation of the
   structure that can be used for introspection.
 
+  > #### When to use Ecto.Multi? {: .info}
+
+  > `Ecto.Multi` is particularly useful when the set of operations to perform
+  > is dynamic. For most use cases, however, using regular control flow within
+  > [`Repo.transact(fun)`](`c:Ecto.Repo.transact/2`) and returning
+  > `{:ok, result}` or `{:error, reason}` is more straightforward.
+
   ## Changesets
 
   If multi contains operations that accept changesets (like `insert/4`,

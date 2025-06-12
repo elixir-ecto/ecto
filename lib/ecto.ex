@@ -340,14 +340,14 @@ defmodule Ecto do
   Another function in `Ecto` is `build_assoc/3`, which allows
   someone to build an associated struct with the proper fields:
 
-      Repo.transaction fn ->
+      Repo.transact(fn ->
         post = Repo.insert!(%Post{title: "Hello", body: "world"})
 
         # Build a comment from post
         comment = Ecto.build_assoc(post, :comments, body: "Excellent!")
 
         Repo.insert!(comment)
-      end
+      end)
 
   In the example above, `Ecto.build_assoc/3` is equivalent to:
 
