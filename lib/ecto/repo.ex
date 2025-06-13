@@ -750,14 +750,14 @@ defmodule Ecto.Repo do
   Returns true if a connection has been checked out.
 
   This is true if inside a `c:Ecto.Repo.checkout/2` or
-  `c:Ecto.Repo.transaction/2`.
+  `c:Ecto.Repo.transact/2`.
 
   ## Examples
 
       MyRepo.checked_out?
       #=> false
 
-      MyRepo.transaction(fn ->
+      MyRepo.transact(fn ->
         MyRepo.checked_out? #=> true
       end)
 
@@ -1460,10 +1460,11 @@ defmodule Ecto.Repo do
   ## Example
 
       # Fetch all post titles
-      query = from p in Post,
-           select: p.title
+      query = from p in Post, select: p.title
+
       stream = MyRepo.stream(query)
-      MyRepo.transaction(fn ->
+
+      MyRepo.transact(fn ->
         Enum.to_list(stream)
       end)
   """
@@ -2208,8 +2209,6 @@ defmodule Ecto.Repo do
   A successful transaction returns the value returned by the function
   wrapped in a tuple as `{:ok, value}`.
 
-  See also `c:transact/2`.
-
   ### Nested transactions
 
   If `c:transaction/2` is called inside another transaction, the function
@@ -2265,8 +2264,6 @@ defmodule Ecto.Repo do
   `{:error, failed_operation, failed_value, changes_so_far}` will be returned.
 
   Explore the `Ecto.Multi` documentation to learn more and find detailed examples.
-
-  See also `c:transact/2`.
 
   ## Aborted transactions
 
@@ -2572,7 +2569,7 @@ defmodule Ecto.Repo do
       MyRepo.in_transaction?
       #=> false
 
-      MyRepo.transaction(fn ->
+      MyRepo.transact(fn ->
         MyRepo.in_transaction? #=> true
       end)
 

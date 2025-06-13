@@ -143,7 +143,6 @@ defmodule Ecto.MixProject do
     [
       "guides/introduction/Getting Started.md",
       "guides/howtos/Aggregates and subqueries.md",
-      "guides/howtos/Composable transactions with Multi.md",
       "guides/howtos/Constraints and Upserts.md",
       "guides/howtos/Data mapping and validation.md",
       "guides/howtos/Duration Types with Postgrex.md",
