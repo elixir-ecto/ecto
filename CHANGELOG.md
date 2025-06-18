@@ -16,12 +16,18 @@ Requires Elixir v1.14+.
   * [Ecto.Query] Allow source fields in `json_extract_path`
   * [Ecto.Repo] Add `Ecto.Repo.prepare_transaction/2` user callback
   * [Ecto.Repo] Add `Ecto.Repo.all_by/3`
+  * [Ecto.Repo] Add `Ecto.Repo.transact/2`
+  * [Ecto.Repo] Allow HOT updates on upsert queries in Postgres by removing duplicate fields during `replace` and `replace_all_except`
   * [Ecto.Schema] Support `@schema_redact: :all_except_primary_keys` module attribute
 
 ### Bug fixes
 
   * [Ecto.Query] Allow select merging maps with all nil values
   * [Ecto.Schema] Fix an issue where Ecto could warn an association did not exist, when it did
+
+### Deprecations
+
+  * [Ecto.Repo] `Ecto.Repo.transaction/2` is soft-deprecated in favor of `Ecto.Repo.transaction/1`
 
 ## v3.12.6 (2025-06-11)
 
@@ -85,7 +91,7 @@ Fix deprecations on Elixir v1.19.
   * [Ecto.Query] Allow map updates with dynamic values in `select`
   * [Ecto.Query] Allow any data structure that implements the Enumerable protocol on the right side of `in`
   * [Ecto.Repo] Support 2-arity preload functions that receive ids and the association metadata
-  * [Ecto.Repo] Allow Hot Updates on upsert queries in Postgres by removing duplicate fields during replace_all
+  * [Ecto.Repo] Allow HOT updates on upsert queries in Postgres by removing duplicate fields during `replace_all`
   * [Ecto.Repo] `insert_all` supports queries with only source
   * [Ecto.Repo] `insert_all` supports queries with the update syntax
   * [Ecto.Repo] Support `:allow_stale` on Repo struct/changeset operations
