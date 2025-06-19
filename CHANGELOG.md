@@ -1,5 +1,11 @@
 # Changelog for v3.x
 
+## v3.13.1 (2025-06-19)
+
+### Bug fixes
+
+  * [Ecto.Repo] Do not automatically apply HOT updates on upsert with `replace`. It is the user responsibility to make sure they do not overlap
+
 ## v3.13.0 (2025-06-18)
 
 Requires Elixir v1.14+.
@@ -17,7 +23,7 @@ Requires Elixir v1.14+.
   * [Ecto.Repo] Add `Ecto.Repo.prepare_transaction/2` user callback
   * [Ecto.Repo] Add `Ecto.Repo.all_by/3`
   * [Ecto.Repo] Add `Ecto.Repo.transact/2`
-  * [Ecto.Repo] Allow HOT updates on upsert queries in Postgres by removing duplicate fields during `replace` and `replace_all_except`
+  * [Ecto.Repo] Allow HOT updates on upsert queries in Postgres by removing duplicate fields during `replace_all_except`
   * [Ecto.Schema] Support `@schema_redact: :all_except_primary_keys` module attribute
 
 ### Bug fixes
