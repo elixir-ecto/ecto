@@ -25,7 +25,7 @@ Requires Elixir v1.14+.
   * [Ecto.Query] Allow select merging maps with all nil values
   * [Ecto.Schema] Fix an issue where Ecto could warn an association did not exist, when it did
 
-### Deprecations
+### Soft deprecations (no warnings emitted)
 
   * [Ecto.Repo] `Ecto.Repo.transaction/2` is soft-deprecated in favor of `Ecto.Repo.transac/1`
 
