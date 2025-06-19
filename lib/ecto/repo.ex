@@ -1681,10 +1681,13 @@ defmodule Ecto.Repo do
       or `{:replace, fields}` explicitly instead. This option requires a schema
 
     * `{:replace_all_except, fields}` - same as above except the given fields
-      are not replaced. This option requires a schema
+      (and the ones given as conflict target) are not replaced. This option
+      requires a schema
 
     * `{:replace, fields}` - replace only specific columns. This option requires
-      `:conflict_target`
+      `:conflict_target`. Generally speaking, you want to make sure the given
+      fields to replace do not overlap with the `conflict_target` as databases
+      can then perform more efficient upserts
 
     * a keyword list of update instructions - such as the one given to
       `c:update_all/3`, for example: `[set: [title: "new title"]]`
