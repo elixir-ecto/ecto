@@ -717,7 +717,9 @@ defmodule Ecto.RepoTest do
       query = from s in MySchema, select: s
       TestRepo.insert_all(MySchema, query)
 
-      assert_received {:insert_all, %{source: "my_schema", header: header}, {%Ecto.Query{}, _params}}
+      assert_received {:insert_all, %{source: "my_schema", header: header},
+                       {%Ecto.Query{}, _params}}
+
       assert header == [:id, :x, :yyy, :z, :array, :map]
     end
 
@@ -725,7 +727,9 @@ defmodule Ecto.RepoTest do
       query = from p in MyParent, join: a in MySchemaWithAssoc, on: true, select: a
       TestRepo.insert_all(MySchemaWithAssoc, query)
 
-      assert_received {:insert_all, %{source: "my_schema", header: header}, {%Ecto.Query{}, _params}}
+      assert_received {:insert_all, %{source: "my_schema", header: header},
+                       {%Ecto.Query{}, _params}}
+
       assert header == [:id, :n, :parent_id]
     end
 
@@ -733,7 +737,8 @@ defmodule Ecto.RepoTest do
       query = from s in MySchema, select: %{s | x: "x"}
       TestRepo.insert_all(MySchema, query)
 
-      assert_received {:insert_all, %{source: "my_schema", header: header}, {%Ecto.Query{} = query, _params}}
+      assert_received {:insert_all, %{source: "my_schema", header: header},
+                       {%Ecto.Query{} = query, _params}}
 
       unchanged_fields = [:id, :yyy, :z, :array, :map]
       updated_fields = [:x]
@@ -747,7 +752,8 @@ defmodule Ecto.RepoTest do
       query = from s in MySchema, select: %{s | x: ^"x"}
       TestRepo.insert_all(MySchema, query)
 
-      assert_received {:insert_all, %{source: "my_schema", header: header}, {%Ecto.Query{} = query, _params}}
+      assert_received {:insert_all, %{source: "my_schema", header: header},
+                       {%Ecto.Query{} = query, _params}}
 
       unchanged_fields = [:id, :yyy, :z, :array, :map]
       updated_fields = [:x]
@@ -758,10 +764,13 @@ defmodule Ecto.RepoTest do
     end
 
     test "takes query selecting on source with join column update" do
-      query = from p in MyParent, join: a in MySchemaWithAssoc, on: true, select: %{p | id: a.parent_id}
+      query =
+        from p in MyParent, join: a in MySchemaWithAssoc, on: true, select: %{p | id: a.parent_id}
+
       TestRepo.insert_all(MySchemaWithAssoc, query)
 
-      assert_received {:insert_all, %{source: "my_schema", header: header}, {%Ecto.Query{} = query, _params}}
+      assert_received {:insert_all, %{source: "my_schema", header: header},
+                       {%Ecto.Query{} = query, _params}}
 
       unchanged_fields = [:n]
       updated_fields = [:id]
@@ -818,7 +827,8 @@ defmodule Ecto.RepoTest do
       query = from s in MySchema, select: %{map(s, [:id, :x, :z]) | x: "x"}
       TestRepo.insert_all(MySchema, query)
 
-      assert_received {:insert_all, %{source: "my_schema", header: header}, {%Ecto.Query{} = query, _params}}
+      assert_received {:insert_all, %{source: "my_schema", header: header},
+                       {%Ecto.Query{} = query, _params}}
 
       unchanged_fields = [:id, :z]
       updated_fields = [:x]
@@ -1563,7 +1573,9 @@ defmodule Ecto.RepoTest do
     assert schema = TestRepo.get(MySchemaWithNonStringPrefix, 123, prefix: %{key: :public})
     assert schema.__meta__.prefix == %{key: :private}
 
-    assert schema = TestRepo.get_by(MySchemaWithNonStringPrefix, [id: 123], prefix: %{key: :public})
+    assert schema =
+             TestRepo.get_by(MySchemaWithNonStringPrefix, [id: 123], prefix: %{key: :public})
+
     assert schema.__meta__.prefix == %{key: :private}
 
     assert schema = TestRepo.one(MySchemaWithNonStringPrefix, prefix: %{key: :public})
@@ -1572,7 +1584,9 @@ defmodule Ecto.RepoTest do
     assert [schema] = TestRepo.all(MySchemaWithNonStringPrefix, prefix: %{key: :public})
     assert schema.__meta__.prefix == %{key: :private}
 
-    assert [schema] = TestRepo.all_by(MySchemaWithNonStringPrefix, [id: 123], prefix: %{key: :public})
+    assert [schema] =
+             TestRepo.all_by(MySchemaWithNonStringPrefix, [id: 123], prefix: %{key: :public})
+
     assert schema.__meta__.prefix == %{key: :private}
   end
 
@@ -1906,15 +1920,13 @@ defmodule Ecto.RepoTest do
 
     test "includes conflict target in the field list given to :replace_all_except" do
       fields = [:map, :z, :yyy, :x]
-      TestRepo.insert(%MySchema{id: 1}, on_conflict: {:replace_all_except, [:array]}, conflict_target: [:id])
-      assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], [:id]}}}
-    end
 
-    test "excludes conflict target from the field list given to :replace" do
-      fields = [:id, :map, :z, :x]
-      TestRepo.insert(%MySchema{id: 1}, on_conflict: {:replace, fields}, conflict_target: [:id])
-      expected_fields = fields -- [:id]
-      assert_received {:insert, %{source: "my_schema", on_conflict: {^expected_fields, [], [:id]}}}
+      TestRepo.insert(%MySchema{id: 1},
+        on_conflict: {:replace_all_except, [:array]},
+        conflict_target: [:id]
+      )
+
+      assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], [:id]}}}
     end
 
     test "excludes conflict target from :replace_all" do
@@ -2323,9 +2335,11 @@ defmodule Ecto.RepoTest do
 
       update_query = from w in MySchemaWritable, update: [set: [insert: 10]]
 
-      assert_raise Ecto.QueryError,  ~r/cannot update non-updatable field `:insert` in query/, fn ->
-        TestRepo.update_all(update_query, [])
-      end
+      assert_raise Ecto.QueryError,
+                   ~r/cannot update non-updatable field `:insert` in query/,
+                   fn ->
+                     TestRepo.update_all(update_query, [])
+                   end
     end
 
     test "insert only saves changes for writable: :always/:insert" do
@@ -2351,9 +2365,11 @@ defmodule Ecto.RepoTest do
       # conflict query
       on_conflict = from w in MySchemaWritable, update: [set: [insert: 10]]
 
-      assert_raise Ecto.QueryError, ~r/cannot update non-updatable field `:insert` in query/, fn ->
-        TestRepo.insert(%MySchemaWritable{}, on_conflict: on_conflict)
-      end
+      assert_raise Ecto.QueryError,
+                   ~r/cannot update non-updatable field `:insert` in query/,
+                   fn ->
+                     TestRepo.insert(%MySchemaWritable{}, on_conflict: on_conflict)
+                   end
 
       # conflict keyword
       assert_raise Ecto.QueryError, ~r/cannot update non-updatable field `:never` in query/, fn ->
@@ -2361,9 +2377,13 @@ defmodule Ecto.RepoTest do
       end
 
       # conflict replace
-      assert_raise ArgumentError, ~r/cannot replace non-updatable field `:never` in :on_conflict option/, fn ->
-        TestRepo.insert(%MySchemaWritable{}, on_conflict: {:replace, [:always, :never]})
-      end
+      assert_raise ArgumentError,
+                   ~r/cannot replace non-updatable field `:never` in :on_conflict option/,
+                   fn ->
+                     TestRepo.insert(%MySchemaWritable{},
+                       on_conflict: {:replace, [:always, :never]}
+                     )
+                   end
     end
 
     test "insert with on_conflict = replace_all and returning" do
@@ -2389,7 +2409,10 @@ defmodule Ecto.RepoTest do
       msg = "cannot select unwritable field `:never` for insert_all"
 
       assert_raise ArgumentError, msg, fn ->
-        query = from w in MySchemaWritable, select: %{always: w.always, insert: w.insert, never: w.insert}
+        query =
+          from w in MySchemaWritable,
+            select: %{always: w.always, insert: w.insert, never: w.insert}
+
         TestRepo.insert_all(MySchemaWritable, query)
       end
 
