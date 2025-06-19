@@ -28,6 +28,7 @@ Requires Elixir v1.14+.
 ### Deprecations
 
   * [Ecto.Repo] `Ecto.Repo.transaction/2` is soft-deprecated in favor of `Ecto.Repo.transaction/1`
+  * [Ecto.Query.API] `literal/1` is deprecated in favor of `identifier/1`
 
 ## v3.12.6 (2025-06-11)
 
