@@ -27,7 +27,7 @@ Requires Elixir v1.14+.
 
 ### Soft deprecations (no warnings emitted)
 
-  * [Ecto.Repo] `Ecto.Repo.transaction/2` is soft-deprecated in favor of `Ecto.Repo.transac/1`
+  * [Ecto.Repo] `Ecto.Repo.transaction/2` is soft-deprecated in favor of `Ecto.Repo.transact/1`
 
 ## v3.12.6 (2025-06-11)
 
