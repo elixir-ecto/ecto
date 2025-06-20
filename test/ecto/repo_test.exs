@@ -181,6 +181,15 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  defmodule MySchemaOneField do
+     use Ecto.Schema
+
+    @primary_key false
+    schema "my_schema" do
+      field :n, :integer
+    end
+  end
+
   test "defines child_spec/1" do
     assert TestRepo.child_spec([]) == %{
              id: TestRepo,
@@ -1929,10 +1938,32 @@ defmodule Ecto.RepoTest do
       assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], [:id]}}}
     end
 
+    test "raises on empty-list of fields to update when :replace_all_except is given" do
+      msg = "empty list of fields to update, use the `:replace` option instead"
+
+      assert_raise ArgumentError, msg, fn ->
+        TestRepo.insert(%MySchema{id: 1},
+          on_conflict: {:replace_all_except, [:array, :map, :z, :y, :x]},
+          conflict_target: [:id]
+        )
+      end
+    end
+
     test "excludes conflict target from :replace_all" do
       fields = [:map, :array, :z, :yyy, :x]
       TestRepo.insert(%MySchema{id: 1}, on_conflict: :replace_all, conflict_target: [:id])
       assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], [:id]}}}
+    end
+
+    test "raises on empty-list of fields to update when :replace_all is given" do
+      msg = "empty list of fields to update, use the `:replace` option instead"
+
+      assert_raise ArgumentError, msg, fn ->
+        TestRepo.insert(%MySchemaOneField{n: 1},
+          on_conflict: :replace_all,
+          conflict_target: [:n]
+        )
+      end
     end
 
     test "converts keyword list into query" do

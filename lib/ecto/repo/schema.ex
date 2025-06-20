@@ -914,11 +914,19 @@ defmodule Ecto.Repo.Schema do
         # since the values don't change and this allows postgres to
         # possibly perform a HOT optimization: https://www.postgresql.org/docs/current/storage-hot.html
         to_remove = List.wrap(conflict_target)
-        {{replace_all_fields!(:replace_all, schema, to_remove), [], conflict_target}, []}
+        replace = replace_all_fields!(:replace_all, schema, to_remove)
+
+        if replace == [], do: raise(ArgumentError, "empty list of fields to update, use the `:replace` option instead")
+
+        {{replace, [], conflict_target}, []}
 
       {:replace_all_except, fields} ->
         to_remove = List.wrap(conflict_target) ++ fields
-        {{replace_all_fields!(:replace_all_except, schema, to_remove), [], conflict_target}, []}
+        replace = replace_all_fields!(:replace_all_except, schema, to_remove)
+
+        if replace == [], do: raise(ArgumentError, "empty list of fields to update, use the `:replace` option instead")
+
+        {{replace, [], conflict_target}, []}
 
       [_ | _] = on_conflict ->
         from = if schema, do: {source, schema}, else: source
