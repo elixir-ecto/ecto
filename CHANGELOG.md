@@ -29,6 +29,7 @@ Requires Elixir v1.14+.
 ### Bug fixes
 
   * [Ecto.Query] Allow select merging maps with all nil values
+  * [Ecto.Query] `map/2` in queries now always returns a map on joins, even on left joins, for consistency with `from` sources
   * [Ecto.Schema] Fix an issue where Ecto could warn an association did not exist, when it did
 
 ### Soft deprecations (no warnings emitted)
