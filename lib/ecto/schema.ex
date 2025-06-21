@@ -1106,6 +1106,12 @@ defmodule Ecto.Schema do
     * `:where` - A filter for the association. See "Filtering associations"
       in `has_many/3`.
 
+    * `:writable` - Defines when the underlying field is allowed to modified, Must be
+      one of `:always`, `:insert`, or `:never`. If set to `:always`, the field can be
+      modified by any repo operation. If set to `:insert`, the field can be inserted
+      but cannot be further modified, even in an upsert. If set to `:never`, the field
+      becomes read only. Defaults to `:always`.
+
   ## Examples
 
       defmodule Comment do
@@ -2138,6 +2144,7 @@ defmodule Ecto.Schema do
     :defaults,
     :primary_key,
     :source,
+    :writable,
     :where
   ]
 
