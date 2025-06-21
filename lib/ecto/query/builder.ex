@@ -1007,11 +1007,13 @@ defmodule Ecto.Query.Builder do
         {query, vars}
 
       {vars, [_ | tail]} ->
+        var = Macro.unique_var(:query, __MODULE__)
+
         query =
           quote do
-            query = Ecto.Queryable.to_query(unquote(query))
-            escape_count = Ecto.Query.Builder.count_binds(query)
-            query
+            unquote(var) = Ecto.Queryable.to_query(unquote(query))
+            escape_count = Ecto.Query.Builder.count_binds(unquote(var))
+            unquote(var)
           end
 
         tail =
@@ -1029,18 +1031,21 @@ defmodule Ecto.Query.Builder do
   defp calculate_named_binds(query, []), do: {query, []}
 
   defp calculate_named_binds(query, vars) do
+    var = Macro.unique_var(:query, __MODULE__)
+
     assignments =
       for {:named, key, name} <- vars do
         quote do
-          unquote({key, [], __MODULE__}) = unquote(__MODULE__).count_alias!(query, unquote(name))
+          unquote({key, [], __MODULE__}) =
+            unquote(__MODULE__).count_alias!(unquote(var), unquote(name))
         end
       end
 
     query =
       quote do
-        query = Ecto.Queryable.to_query(unquote(query))
+        unquote(var) = Ecto.Queryable.to_query(unquote(query))
         unquote_splicing(assignments)
-        query
+        unquote(var)
       end
 
     pairs =
