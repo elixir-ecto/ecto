@@ -399,28 +399,33 @@ defmodule Ecto.Query.API do
 
       fragment("lower(?)", p.title) == type(^title, :string)
 
-  ## Literals
+  ## Identifiers and Constants
 
-  Sometimes you need to interpolate a literal value into a fragment,
-  instead of a parameter. For example, you may need to pass a table
-  name or a collation, such as:
+  Sometimes you need to interpolate an identifier or a constant value into a fragment,
+  instead of a query parameter. The latter can happen if your database does not allow
+  parameterizing certain clauses. For example:
 
       collation = "es_ES"
       fragment("? COLLATE ?", ^name, ^collation)
 
-  The example above won't work because `collation` will be passed
-  as a parameter, while it has to be a literal part of the query.
+      limit = "10"
+      "posts" |> select([p], p.title) |> limit(fragment("?", ^limit))
 
-  You can address this by telling Ecto that variable is a literal:
+  The first example above won't work because `collation` needs to be quoted as an identifier. 
+  The second example won't work on databases that do not allow passing query parameters
+  as part of `limit`.
 
-      fragment("? COLLATE ?", ^name, literal(^collation))
+  You can address this by telling Ecto to treat these values differently than a query parameter:
 
-  Ecto will then escape it and make it part of the query.
+      fragment("? COLLATE ?", ^name, identifier(^collation))
+      "posts" |> select([p], p.title) |> limit(fragment("?", ^constant(limit))
 
-  > #### Literals and query caching {: .warning}
+  Ecto will make these values directly part of the query, handling quoting and escaping where necessary.
+
+  > #### Query caching {: .warning}
   >
-  > Because literals are made part of the query, each interpolated
-  > literal will generate a separate query, with its own cache.
+  > Because identifiers and constants are made part of the query, each different
+  > value will generate a separate query, with its own cache.
 
   ## Splicing
 
