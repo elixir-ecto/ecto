@@ -1,13 +1,9 @@
-Code.require_file("../builder_test.exs", __DIR__)
-
 defmodule Ecto.Query.Builder.SelectTest do
   use ExUnit.Case, async: true
 
   import Ecto.Query
   import Ecto.Query.Builder.Select
   doctest Ecto.Query.Builder.Select
-
-  import Ecto.Query.BuilderTest, only: [my_custom_field: 1, my_complex_order: 1]
 
   defmodule Post do
     defstruct [:title]
@@ -176,6 +172,18 @@ defmodule Ecto.Query.Builder.SelectTest do
       query = from p in "posts", select: ^field
       assert escaped_alias == query.select.expr
       assert %{alias: _} = query.select.aliases
+    end
+
+    defmacro my_custom_field(p) do
+      quote do
+        fragment("lower(?)", unquote(p).title)
+      end
+    end
+
+    defmacro my_complex_order(p) do
+      quote do
+        [desc: unquote(p).id, asc: my_custom_field(unquote(p)), asc: nth_value(unquote(p).links, 1)]
+      end
     end
 
     test "supports macro expansion in over/2" do
