@@ -75,13 +75,13 @@ defmodule Ecto.Query.Builder.OrderBy do
 
   defp do_escape({dir, expr}, params_acc, kind, vars, env) do
     fun = &escape_expansion(kind, &1, &2, &3, &4, &5)
-    {ast, params_acc} = Builder.escape(expr, :any, params_acc, vars, {env, fun})
+    {ast, params_acc} = Builder.escape(expr, :any, params_acc, vars, {get_env(env), fun})
     {[{quoted_dir!(kind, dir), ast}], params_acc}
   end
 
   defp do_escape(expr, params_acc, kind, vars, env) do
     fun = &escape_expansion(kind, &1, &2, &3, &4, &5)
-    {ast, params_acc} = Builder.escape(expr, :any, params_acc, vars, {env, fun})
+    {ast, params_acc} = Builder.escape(expr, :any, params_acc, vars, {get_env(env), fun})
 
     if is_list(ast) do
       {ast, params_acc}
@@ -89,6 +89,9 @@ defmodule Ecto.Query.Builder.OrderBy do
       {[{:asc, ast}], params_acc}
     end
   end
+
+  defp get_env({env, _}), do: env
+  defp get_env(env), do: env
 
   defp escape_expansion(kind, expr, _type, params_acc, vars, env) when is_list(expr) do
     escape(kind, expr, params_acc, vars, env)

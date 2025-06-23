@@ -1,9 +1,13 @@
+Code.require_file("../builder_test.exs", __DIR__)
+
 defmodule Ecto.Query.Builder.SelectTest do
   use ExUnit.Case, async: true
 
   import Ecto.Query
   import Ecto.Query.Builder.Select
   doctest Ecto.Query.Builder.Select
+
+  import Ecto.Query.BuilderTest, only: [my_custom_field: 1, my_complex_order: 1]
 
   defmodule Post do
     defstruct [:title]
@@ -172,6 +176,41 @@ defmodule Ecto.Query.Builder.SelectTest do
       query = from p in "posts", select: ^field
       assert escaped_alias == query.select.expr
       assert %{alias: _} = query.select.aliases
+    end
+
+    test "supports macro expansion in over/2" do
+      query = from p in "posts", select: %{row_number: over(row_number(), order_by: [desc: my_custom_field(p)])}
+
+      assert {:%{}, [],
+       [
+         row_number:
+           {:over, [],
+            [
+              {:row_number, [], []},
+              [
+                order_by: [
+                  desc: {:fragment, [], [raw: "lower(", expr: _, raw: ")"]}
+                ]
+              ]
+            ]}
+       ]} = query.select.expr
+
+      query = from p in "posts", select: %{row_number: over(row_number(), order_by: my_complex_order(p))}
+      assert {:%{}, [],
+        [
+          row_number:
+            {:over, [],
+              [
+                {:row_number, [], []},
+                [
+                  order_by: [
+                    desc: _,
+                    asc: {:fragment, [], [raw: "lower(", expr: _, raw: ")"]},
+                    asc: {:nth_value, [], _}
+                  ]
+                ]
+              ]}
+        ]} = query.select.expr
     end
 
     test "raises if name given to selected_as/2 is not an atom" do
