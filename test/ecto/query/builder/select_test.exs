@@ -174,6 +174,53 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert %{alias: _} = query.select.aliases
     end
 
+    defmacro my_custom_field(p) do
+      quote do
+        fragment("lower(?)", unquote(p).title)
+      end
+    end
+
+    defmacro my_complex_order(p) do
+      quote do
+        [desc: unquote(p).id, asc: my_custom_field(unquote(p)), asc: nth_value(unquote(p).links, 1)]
+      end
+    end
+
+    test "supports macro expansion in over/2" do
+      query = from p in "posts", select: %{row_number: over(row_number(), order_by: [desc: my_custom_field(p)])}
+
+      assert {:%{}, [],
+       [
+         row_number:
+           {:over, [],
+            [
+              {:row_number, [], []},
+              [
+                order_by: [
+                  desc: {:fragment, [], [raw: "lower(", expr: _, raw: ")"]}
+                ]
+              ]
+            ]}
+       ]} = query.select.expr
+
+      query = from p in "posts", select: %{row_number: over(row_number(), order_by: my_complex_order(p))}
+      assert {:%{}, [],
+        [
+          row_number:
+            {:over, [],
+              [
+                {:row_number, [], []},
+                [
+                  order_by: [
+                    desc: _,
+                    asc: {:fragment, [], [raw: "lower(", expr: _, raw: ")"]},
+                    asc: {:nth_value, [], _}
+                  ]
+                ]
+              ]}
+        ]} = query.select.expr
+    end
+
     test "raises if name given to selected_as/2 is not an atom" do
       message = "expected literal atom or interpolated value in selected_as/2, got: `\"ident\"`"
 
