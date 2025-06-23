@@ -399,7 +399,7 @@ defmodule Ecto.Query.API do
 
       fragment("lower(?)", p.title) == type(^title, :string)
 
-  ## Literals
+  ## Identifiers (literals)
 
   Sometimes you need to interpolate a literal value into a fragment,
   instead of a parameter. For example, you may need to pass a table
@@ -413,7 +413,7 @@ defmodule Ecto.Query.API do
 
   You can address this by telling Ecto that variable is a literal:
 
-      fragment("? COLLATE ?", ^name, literal(^collation))
+      fragment("? COLLATE ?", ^name, identifier(^collation))
 
   Ecto will then escape it and make it part of the query.
 
