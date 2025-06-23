@@ -483,7 +483,7 @@ defmodule Ecto.Query.API do
   Allows a dynamic identifier to be injected into a fragment:
 
       collation = "es_ES"
-      select("posts", [p], fragment("? COLLATE ?", p.title, identifier(^"es_ES")))
+      select("posts", [p], fragment("? COLLATE ?", p.title, identifier(^collation)))
 
   The example above will inject the value of `collation` directly
   into the query instead of treating it as a query parameter. It will
