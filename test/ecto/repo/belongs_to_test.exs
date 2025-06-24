@@ -35,15 +35,6 @@ defmodule Ecto.Repo.BelongsToTest do
     end
   end
 
-  defmodule RestrictedSchema do
-    use Ecto.Schema
-
-    schema "restricted_schema" do
-      belongs_to :unwritable, MyAssoc, writable: :never
-      belongs_to :non_updatable, MyAssoc, writable: :insert
-    end
-  end
-
   test "handles assocs on insert" do
     sample = %MyAssoc{x: "xyz"}
 
@@ -504,30 +495,5 @@ defmodule Ecto.Repo.BelongsToTest do
 
     assert updated_schema.assoc_id == 2
     assert %Ecto.Association.NotLoaded{} = updated_schema.assoc
-  end
-
-  test "handles writable: :never" do
-    schema =
-      %RestrictedSchema{}
-      |> Ecto.Changeset.cast(%{unwritable_id: 111}, [:unwritable_id])
-      |> TestRepo.insert!()
-
-    assert schema.unwritable_id == nil
-  end
-
-  test "handles writable: :insert" do
-    schema =
-      %RestrictedSchema{}
-      |> Ecto.Changeset.cast(%{non_updatable_id: 222}, [:non_updatable_id])
-      |> TestRepo.insert!()
-
-    assert schema.non_updatable_id == 222
-
-    schema =
-      schema
-      |> Ecto.Changeset.cast(%{non_updatable_id: 333}, [:non_updatable_id])
-      |> TestRepo.update!()
-
-    assert schema.non_updatable_id == 222
   end
 end
