@@ -1,5 +1,13 @@
 # Changelog for v3.x
 
+## v3.13.2 (2025-06-24)
+
+### Bug fixes
+
+  * [Ecto.Query] Fix regression which made queries with multiple joins expensive to compile
+  * [Ecto.Repo] Fix detection of missing primary key on associations with only nil entries
+  * [Ecto.Query] Fix macro expansion in `over` clause's `order_by`
+
 ## v3.13.1 (2025-06-19)
 
 ### Bug fixes
