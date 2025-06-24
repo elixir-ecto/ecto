@@ -526,6 +526,51 @@ defmodule Ecto.Integration.PreloadTest do
     assert [] = sort_by_id(p3.comments)
   end
 
+  test "take with join nil maps (many association)" do
+    p = TestRepo.insert!(%Post{})
+
+    # many
+    query =
+      from p in Post,
+        left_join: c in Comment,
+        on: p.id == c.post_id,
+        select: map(p, [:id, comments: [:id, :post_id]]),
+        preload: [comments: c]
+
+    assert TestRepo.one(query) == %{id: p.id, comments: []}
+
+    query =
+      from p in Post,
+        left_join: c in Comment,
+        on: p.id == c.post_id,
+        select: map(p, [:id, comments: [:id, :post_id]]),
+        preload: [:comments]
+
+    assert TestRepo.one(query) == %{id: p.id, comments: []}
+  end
+
+  test "take with join nil maps (one association)" do
+    p = TestRepo.insert!(%Post{})
+
+    query =
+      from p in Post,
+        left_join: u in User,
+        on: p.author_id == u.id,
+        select: map(p, [:id, author: [:id, :name]]),
+        preload: [author: u]
+
+    assert TestRepo.one(query) == %{id: p.id, author: nil}
+
+    query =
+      from p in Post,
+        left_join: u in User,
+        on: p.author_id == u.id,
+        select: map(p, [:id, author: [:id, :name]]),
+        preload: [:author]
+
+    assert TestRepo.one(query) == %{id: p.id, author: nil}
+  end
+
   test "preload through with take" do
     %Post{id: pid1} = TestRepo.insert!(%Post{})
 
