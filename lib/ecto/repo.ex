@@ -2228,7 +2228,7 @@ defmodule Ecto.Repo do
       # With Ecto.Multi
       Ecto.Multi.new()
       |> Ecto.Multi.insert(:post, %Post{})
-      |> MyRepo.transaction
+      |> MyRepo.transaction()
 
   In case of any errors the transaction will be rolled back and
   `{:error, failed_operation, failed_value, changes_so_far}` will be returned.
