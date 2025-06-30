@@ -1955,7 +1955,7 @@ defmodule Ecto.Changeset do
   comments at once, automatically computing inserts/updates/deletes by
   comparing the data that you gave with the one already in the database.
   If your goal is to manage individual resources, such as adding a new
-  comment to a post, or update post linked to a comment, tnen it is not
+  comment to a post, or update post linked to a comment, then it is not
   necessary to use this function. We will explore this later in the
   ["Example: Adding a comment to a post" section](#put_assoc/4-example-adding-a-comment-to-a-post).
 
