@@ -213,7 +213,7 @@ defmodule Ecto.Repo.Queryable do
 
   ## Helpers
 
-  defp execute(operation, name, query, {adapter_meta, opts} = tuplet) do
+  defp execute(operation, name, query, {adapter_meta, opts} = _tuplet) do
     %{adapter: adapter, cache: cache, repo: repo} = adapter_meta
 
     {query, opts} = repo.prepare_query(operation, query, opts)
@@ -244,7 +244,14 @@ defmodule Ecto.Repo.Queryable do
         {count,
          rows
          |> Ecto.Repo.Assoc.query(assocs, sources, preprocessor)
-         |> Ecto.Repo.Preloader.query(name, preloads, take, assocs, postprocessor, tuplet)}
+         |> Ecto.Repo.Preloader.query(
+           name,
+           preloads,
+           take,
+           assocs,
+           postprocessor,
+           {adapter_meta, opts}
+         )}
     end
   end
 
