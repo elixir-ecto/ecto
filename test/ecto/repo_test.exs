@@ -182,7 +182,7 @@ defmodule Ecto.RepoTest do
   end
 
   defmodule MySchemaOneField do
-     use Ecto.Schema
+    use Ecto.Schema
 
     @primary_key false
     schema "my_schema" do
@@ -2211,6 +2211,13 @@ defmodule Ecto.RepoTest do
 
       def prepare_query(op, query, opts) do
         send(self(), {op, query, opts})
+
+        opts =
+          case Keyword.fetch(opts, :for_on_preloader_spawn) do
+            {:ok, fun} -> [{:on_preloader_spawn, fun} | opts]
+            _ -> opts
+          end
+
         {%{query | prefix: "rewritten"}, opts}
       end
     end
@@ -2265,6 +2272,32 @@ defmodule Ecto.RepoTest do
 
       %MySchemaWithMultiAssoc{parent_id: 1, mother_id: 2}
       |> PrepareRepo.preload([:parent, :mother], on_preloader_spawn: fun)
+
+      assert_received {:callback_ran, pid1} when pid1 != self()
+      assert_received {:callback_ran, pid2} when pid2 != self()
+      assert pid1 != pid2
+    end
+
+    test "preload with :on_preloader_spawn in prepare_query/3 callback" do
+      test_process = self()
+      fun = fn -> send(test_process, {:callback_ran, self()}) end
+
+      %MySchemaWithMultiAssoc{parent_id: 1, mother_id: 2}
+      |> PrepareRepo.preload([:parent, :mother], for_on_preloader_spawn: fun)
+
+      assert_received {:callback_ran, pid1} when pid1 != self()
+      assert_received {:callback_ran, pid2} when pid2 != self()
+      assert pid1 != pid2
+    end
+
+    test "all with preload with :on_preloader_spawn in prepare_query/3 callback" do
+      test_process = self()
+      fun = fn -> send(test_process, {:callback_ran, self()}) end
+
+      from(p in MyParent,
+        preload: [:parent, :mother]
+      )
+      |> PrepareRepo.all(for_on_preloader_spawn: fun)
 
       assert_received {:callback_ran, pid1} when pid1 != self()
       assert_received {:callback_ran, pid2} when pid2 != self()

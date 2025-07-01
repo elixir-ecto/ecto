@@ -644,11 +644,17 @@ defmodule Ecto.Repo do
         def preload(struct_or_structs_or_nil, preloads, opts \\ []) do
           repo = get_dynamic_repo()
 
+          {adapter_meta, opts} =
+            _tuplet =
+            Ecto.Repo.Supervisor.tuplet(repo, prepare_opts(:preload, opts))
+
+          {_query, opts} = repo.prepare_query(:preload, struct_or_structs_or_nil, opts)
+
           Ecto.Repo.Preloader.preload(
             struct_or_structs_or_nil,
             repo,
             preloads,
-            Ecto.Repo.Supervisor.tuplet(repo, prepare_opts(:preload, opts))
+            {adapter_meta, opts}
           )
         end
 
