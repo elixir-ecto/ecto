@@ -935,7 +935,7 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  Resets a previously set field on a query.
+  Resets a previously set field or fields on a query.
 
   It can reset many fields except the query source (`from`). When excluding
   a `:join`, it will remove *all* types of joins. If you prefer to remove a
@@ -959,6 +959,11 @@ defmodule Ecto.Query do
       Ecto.Query.exclude(query, :update)
       Ecto.Query.exclude(query, :windows)
 
+  You can remove multiple things at once by passing a list
+
+      Ecto.Query.exclude(query, [:join, :where])
+      Ecto.Query.exclude(query, [:limit, :offset])
+
   You can remove specific joins such as `left_join` and `inner_join`:
 
       Ecto.Query.exclude(query, :inner_join)
@@ -980,8 +985,11 @@ defmodule Ecto.Query do
 
   If a window was referenced elsewhere, for example in `select` or `order_by`,
   it won't be removed. You must recreate the expressions manually.
-
   """
+  def exclude(query, fields) when is_list(fields) do
+    Enum.reduce(fields, query, &exclude(&2, &1))
+  end
+
   def exclude(%Ecto.Query{} = query, field), do: do_exclude(query, field)
   def exclude(query, field), do: do_exclude(Ecto.Queryable.to_query(query), field)
 

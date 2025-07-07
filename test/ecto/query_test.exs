@@ -773,6 +773,25 @@ defmodule Ecto.QueryTest do
       assert excluded_query.offset == base.offset
       assert excluded_query.lock == base.lock
       assert excluded_query.updates == base.updates
+
+      # excluding lists
+
+      assert excluded_query ==
+               exclude(query, [
+                 :with_ctes,
+                 :join,
+                 :where,
+                 :order_by,
+                 :group_by,
+                 :having,
+                 :distinct,
+                 :select,
+                 :combinations,
+                 :limit,
+                 :offset,
+                 :lock,
+                 :update
+               ])
     end
 
     test "works on any queryable" do
