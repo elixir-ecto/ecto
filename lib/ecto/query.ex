@@ -986,13 +986,16 @@ defmodule Ecto.Query do
   If a window was referenced elsewhere, for example in `select` or `order_by`,
   it won't be removed. You must recreate the expressions manually.
   """
-  def exclude(query, fields) when is_list(fields) do
-    query = Ecto.Queryable.to_query(query)
-    Enum.reduce(fields, query, &do_exclude(&2, &1))
+  def exclude(%Ecto.Query{} = query, field), do: maybe_exclude_list(query, field)
+  def exclude(query, field), do: maybe_exclude_list(Ecto.Queryable.to_query(query), field)
+
+  defp maybe_exclude_list(query, list) when is_list(list) do
+    Enum.reduce(list, query, &do_exclude(&2, &1))
   end
 
-  def exclude(%Ecto.Query{} = query, field), do: do_exclude(query, field)
-  def exclude(query, field), do: do_exclude(Ecto.Queryable.to_query(query), field)
+  defp maybe_exclude_list(query, field) do
+    do_exclude(query, field)
+  end
 
   defp do_exclude(%Ecto.Query{} = query, :join) do
     %{query | joins: [], aliases: Map.take(query.aliases, [query.from.as])}
