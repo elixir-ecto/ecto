@@ -987,7 +987,8 @@ defmodule Ecto.Query do
   it won't be removed. You must recreate the expressions manually.
   """
   def exclude(query, fields) when is_list(fields) do
-    Enum.reduce(fields, query, &exclude(&2, &1))
+    query = Ecto.Queryable.to_query(query)
+    Enum.reduce(fields, query, &do_exclude(&2, &1))
   end
 
   def exclude(%Ecto.Query{} = query, field), do: do_exclude(query, field)
