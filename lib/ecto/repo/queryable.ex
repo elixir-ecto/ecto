@@ -353,7 +353,8 @@ defmodule Ecto.Repo.Queryable do
         process_update(data, args, row, from, adapter)
 
       {data, _row} ->
-        raise BadStructError, struct: struct, term: data
+        raise ArgumentError,
+              "expected a struct named #{inspect(struct)}, got: #{inspect(data)}"
     end
   end
 
