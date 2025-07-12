@@ -1378,7 +1378,7 @@ defmodule Ecto.Integration.RepoTest do
         TestRepo.all(from p in Post, select: %{p.title | title: "new title"})
       end
 
-      assert_raise BadStructError, fn ->
+      assert_raise ArgumentError, ~r/expected a struct named/, fn ->
         TestRepo.all(from p in Post, select: %Foo{p | title: p.title})
       end
     end
