@@ -43,7 +43,10 @@ defmodule Ecto.MixProject do
     [
       maintainers: ["Eric Meadows-Jönsson", "José Valim", "Felipe Stival", "Greg Rychlewski"],
       licenses: ["Apache-2.0"],
-      links: %{"GitHub" => @source_url},
+      links: %{
+        "GitHub" => @source_url,
+        "Changelog" => "https://hexdocs.pm/ecto/changelog.html"
+      },
       files:
         ~w(.formatter.exs mix.exs README.md CHANGELOG.md lib) ++
           ~w(integration_test/cases integration_test/support)
