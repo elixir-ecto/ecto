@@ -593,7 +593,7 @@ defmodule Ecto.Query do
 
   ## `where`, `having` and a `join`'s `on`
 
-  The `dynamic` macro can be interpolated at the root of a `where`,
+  The [`dynamic`](`dynamic/2`) macro can be interpolated at the root of a `where`,
   `having` or a `join`'s `on`.
 
   For example, assuming the `conditions` variable defined in the
@@ -2870,7 +2870,7 @@ defmodule Ecto.Query do
 
   ## Dynamic preloads
 
-  Preloads can also be specified dynamically using the `dynamic` macro:
+  Preloads can also be specified dynamically using the [`dynamic`](`dynamic/2`) macro:
 
         preloads = [comments: dynamic([comments: c], c)]
 
