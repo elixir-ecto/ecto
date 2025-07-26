@@ -2,7 +2,8 @@ defprotocol Ecto.Queryable do
   @moduledoc """
   Converts a data structure into an `Ecto.Query`.
 
-  This is used by `Ecto.Repo` and also `from` macro. For example, `Repo.all`
+  This is used by `Ecto.Repo` and also by the [`from`](`Ecto.Query.from/2`) macro.
+  For example, [`Repo.all`](`c:Ecto.Repo.all/2`)
   expects any queryable as argument, which is why you can do `Repo.all(MySchema)`
   or `Repo.all(query)`. Furthermore, when you write `from ALIAS in QUERYABLE`,
   `QUERYABLE` accepts any data structure that implements `Ecto.Queryable`.

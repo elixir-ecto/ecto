@@ -40,7 +40,7 @@ defmodule Ecto.Schema do
       end
 
   By default, a schema will automatically generate a primary key which is named
-  `id` and of type `:integer`. The `field` macro defines a field in the schema
+  `id` and of type `:integer`. The [`field`](`field/3`) macro defines a field in the schema
   with given name and type. `has_many` associates many posts with the user
   schema. Schemas are regular structs and can be created and manipulated directly
   using Elixir's struct API:
@@ -180,8 +180,8 @@ defmodule Ecto.Schema do
     * `@field_source_mapper` - a function that receives the current field name
       and returns the mapping of this field name in the underlying source.
       In other words, it is a mechanism to automatically generate the `:source`
-      option for the `field` macro. It defaults to `fn x -> x end`, where no
-      field transformation is done;
+      option for the [`field`](`field/3`) macro. It defaults to `fn x -> x end`,
+      where no field transformation is done;
 
   The advantage of configuring the schema via those attributes is
   that they can be set with a macro to configure application wide
