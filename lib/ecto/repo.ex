@@ -223,6 +223,7 @@ defmodule Ecto.Repo do
   contains either atoms, for named Ecto repositories, or
   PIDs.
   """
+  @doc group: "Process API"
   @spec all_running() :: [atom() | pid()]
   defdelegate all_running(), to: Ecto.Repo.Registry
 
