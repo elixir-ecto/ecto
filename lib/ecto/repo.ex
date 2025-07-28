@@ -214,6 +214,24 @@ defmodule Ecto.Repo do
 
   """
 
+  @moduledoc groups: [
+               %{title: "Query API", description: "Functions that operate on an `Ecto.Query`."},
+               %{
+                 title: "Schema API",
+                 description: "Functions that operate on an `Ecto.Schema` or a `Ecto.Changeset`."
+               },
+               %{
+                 title: "Transaction API",
+                 description: "Functions to work with database transactions and connections."
+               },
+               %{
+                 title: "Process API",
+                 description: "Functions to work with repository processes."
+               },
+               "Config API",
+               "User callbacks"
+             ]
+
   @type t :: module
 
   @doc """

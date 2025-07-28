@@ -63,14 +63,6 @@ defmodule Ecto.MixProject do
       skip_undefined_reference_warnings_on: ["CHANGELOG.md"],
       extras: extras(),
       groups_for_extras: groups_for_extras(),
-      groups_for_docs: [
-        group_for_function("Query API"),
-        group_for_function("Schema API"),
-        group_for_function("Transaction API"),
-        group_for_function("Process API"),
-        group_for_function("Config API"),
-        group_for_function("User callbacks")
-      ],
       groups_for_modules: [
         # Ecto,
         # Ecto.Changeset,
@@ -164,8 +156,6 @@ defmodule Ecto.MixProject do
       "CHANGELOG.md"
     ]
   end
-
-  defp group_for_function(group), do: {String.to_atom(group), &(&1[:group] == group)}
 
   defp groups_for_extras do
     [
