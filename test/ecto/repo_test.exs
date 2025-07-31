@@ -49,7 +49,7 @@ defmodule Ecto.RepoTest do
 
     schema "my_schema_child" do
       field :a, :string
-      belongs_to :my_schema, MySchema
+      belongs_to :my_schema, Ecto.RepoTest.MySchema
       belongs_to :my_schema_no_pk, MySchemaNoPK, references: :n, foreign_key: :n
     end
 
@@ -2068,6 +2068,80 @@ defmodule Ecto.RepoTest do
       assert_raise ArgumentError, msg, fn ->
         TestRepo.preload(%MySchema{id: 1}, children: intersect_all(query, ^query))
       end
+    end
+
+    test "preload assigns belongs_to assoc" do
+      struct = %MySchemaWithAssoc{
+        id: 1,
+        parent_id: 1
+      }
+
+      assert %Ecto.Association.NotLoaded{} = struct.parent
+
+      mock_results = {
+        1,
+        [
+          [1, 2]
+        ]
+      }
+
+      Process.put(:test_repo_all_results, mock_results)
+
+      result = TestRepo.preload(struct, :parent)
+
+      assert_received {:all, _query}
+
+      assert result.parent == %MyParent{n: 2}
+    end
+
+    test "preload assigns nested has_many->belongs_to assocs" do
+      structs = [
+        %MySchema{
+          id: nil,
+          children: [
+            %MySchemaChild{
+              id: nil,
+              my_schema_id: 123,
+              my_schema: %Ecto.Association.NotLoaded{}
+            }
+          ]
+        },
+        %MySchema{
+          id: nil,
+          children: [
+            %MySchemaChild{
+              id: nil,
+              my_schema_id: 456,
+              my_schema: %Ecto.Association.NotLoaded{}
+            }
+          ]
+        }
+      ]
+
+      {result, _log} =
+        ExUnit.CaptureLog.with_log(fn ->
+          TestRepo.preload(structs, children: :my_schema)
+        end)
+
+      assert [
+               %{
+                 children: [
+                   %{
+                     my_schema_id: 123,
+                     my_schema: %{id: 123}
+                   }
+                 ]
+               },
+               %{
+                 children: [
+                   %{
+                     my_schema_id: 456,
+                     my_schema: %{id: 456}
+                   }
+                 ]
+               }
+             ] =
+               result
     end
   end
 
