@@ -164,7 +164,7 @@ defmodule Ecto.Query.API do
             )
           )
 
-  This is best used in conjunction with `parent_as` to correlate the subquery
+  This is best used in conjunction with `parent_as/1` to correlate the subquery
   with the parent query to test some condition on related rows in a different table.
   In the above example the query returns posts which have at least one comment that
   has more than 5 replies.
