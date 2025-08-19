@@ -30,7 +30,8 @@ defmodule Ecto.Repo do
   for more information. In spite of this, the following configuration values
   are common across all adapters:
 
-    * `:name`- The name of the Repo supervisor process
+    * `:name`- The name of the Repo supervisor process. Notice that
+      it must be unique across **all repo modules**
 
     * `:priv` - the directory where to keep repository data, like
       migrations, schema and more. Defaults to "priv/YOUR_REPO".
@@ -873,6 +874,21 @@ defmodule Ecto.Repo do
 
   From this moment on, all future queries done by the current process will
   run on `:tenant_foo`.
+
+  > ### Global repo names {: .warning}
+  >
+  > The repo name resolution is global across all repo modules. When using
+  > `put_dynamic_repo/1`, ensure you're referencing the intended repo, as
+  > it is possible to accidentally reference repos from other modules:
+  >
+  > ```elixir
+  > Repo.start_link(name: :primary)
+  > AnalyticstRepo.start_link(name: :analytics)
+  >
+  > # This works but may not be intended - queries will use AnalyticsRepo's connection
+  > Repo.put_dynamic_repo(:analytics)
+  > Repo.all(User)  # Executes against AnalyticsRepo's connection!
+  > ```
   """
   @doc group: "Process API"
   @callback put_dynamic_repo(name_or_pid :: atom() | pid()) :: atom() | pid()
