@@ -17,7 +17,7 @@ defmodule Ecto.Changeset do
     
     * **type casting** - a web form sends most of its data as strings.
       When the user types the number "100", Ecto will receive it as
-      as the string "100", which must then be converted to 100.
+      the string "100", which must then be converted to 100.
       Changesets are responsible for converting these values to the
       types defined in your `Ecto.Schema`, support even complex types
       such as datetimes
