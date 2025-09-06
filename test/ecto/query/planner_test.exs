@@ -1459,6 +1459,20 @@ defmodule Ecto.Query.PlannerTest do
     assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) =~ "in %Ecto.SubQuery{"
   end
 
+  test "normalize: parent_as in subquery wrapped in a query should not raise an error" do
+    child = from(p in Post,
+      where: p.status == ^:published,
+      select: %{field: parent_as(:outer).posted > ^~N[2025-01-01 00:00:00]}
+    )
+
+    query = from thing in Post, 
+      as: :outer, 
+      inner_lateral_join: sub in ^(from row in subquery(child)),
+      on: true
+
+    assert Macro.to_string(normalize(query)) =~ "%{field: parent_as(:outer).posted"
+  end
+
   test "normalize: assoc join with wheres that have regular filters" do
     # Mixing both has_many and many_to_many
     {_query, cast_params, dump_params, _select} =

@@ -669,6 +669,8 @@ defmodule Ecto.Query.Planner do
         distinct: nil,
         lock: nil
       } ->
+        join_query = put_in(join_query.aliases[@parent_as], query)
+
         join_query = rewrite_prefix(join_query, query.prefix)
         from = rewrite_prefix(join_query.from, prefix)
         {from, source} = plan_source(join_query, from, adapter, cte_names)
