@@ -875,7 +875,7 @@ defmodule Ecto.Query.API do
   @doc """
   Refer to a named atom binding.
 
-  See the "Named bindings" section in `Ecto.Query` for more information.
+  See [Named Bindings](Ecto.Query.html#module-named-bindings) for more information.
   """
   def as(binding), do: doc!([binding])
 
@@ -884,7 +884,7 @@ defmodule Ecto.Query.API do
 
   This is available only inside subqueries.
 
-  See the "Named bindings" section in `Ecto.Query` for more information.
+  See [Named Bindings](Ecto.Query.html#module-named-bindings) for more information.
   """
   def parent_as(binding), do: doc!([binding])
 
