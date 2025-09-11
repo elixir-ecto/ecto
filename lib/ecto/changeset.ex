@@ -382,7 +382,7 @@ defmodule Ecto.Changeset do
   alias Ecto.Changeset.Relation
   alias Ecto.Schema.Metadata
 
-  @empty_values [&Ecto.Type.empty_trimmed_string?/2]
+  @empty_values [&Ecto.Type.empty_trimmed?/2]
 
   # If a new field is added here, def merge must be adapted
   defstruct valid?: false,

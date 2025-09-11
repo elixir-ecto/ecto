@@ -220,7 +220,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "cast/4: with binary empty values" do
-    # <<9>> is a control character which should not be empty_trimmed_string
+    # <<9>> is a control character which should not be empty_trimmed
     # for a binary field
     params = %{"color" => <<9>>}
     struct = %Post{}
