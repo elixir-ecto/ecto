@@ -382,7 +382,7 @@ defmodule Ecto.Changeset do
   alias Ecto.Changeset.Relation
   alias Ecto.Schema.Metadata
 
-  @empty_values [&Ecto.Type.empty_trimmed_string?/1]
+  @empty_values [&Ecto.Type.empty_trimmed?/2]
 
   # If a new field is added here, def merge must be adapted
   defstruct valid?: false,
@@ -656,7 +656,10 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:empty_values` - a list of values to be considered as empty when casting.
+    * `:empty_values` - a list containing elements of type `t:empty_value/0`. Those are
+      either values, which will be considered empty if they match, or a function that must
+      return a boolean if the value is empty or not. 1-arity functions will receive the value
+      being casted and 2-arity functions will receive the value being casted and its field type.
       Empty values are always replaced by the default value of the respective field.
       If the field is an array type, any empty value inside of the array will be removed.
       To set this option while keeping the current default, use `empty_values/0` and add
@@ -961,24 +964,31 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp filter_empty_values(_type, value, empty_values) do
-    filter_empty_value(empty_values, value)
+  defp filter_empty_values(type, value, empty_values) do
+    filter_empty_value(empty_values, value, type)
   end
 
-  defp filter_empty_value([head | tail], value) when is_function(head) do
+  defp filter_empty_value([head | tail], value, type) when is_function(head, 1) do
     case head.(value) do
       true -> :empty
-      false -> filter_empty_value(tail, value)
+      false -> filter_empty_value(tail, value, type)
     end
   end
 
-  defp filter_empty_value([value | _tail], value),
+  defp filter_empty_value([head | tail], value, type) when is_function(head, 2) do
+    case head.(value, type) do
+      true -> :empty
+      false -> filter_empty_value(tail, value, type)
+    end
+  end
+
+  defp filter_empty_value([value | _tail], value, _type),
     do: :empty
 
-  defp filter_empty_value([_head | tail], value),
-    do: filter_empty_value(tail, value)
+  defp filter_empty_value([_head | tail], value, type),
+    do: filter_empty_value(tail, value, type)
 
-  defp filter_empty_value([], value),
+  defp filter_empty_value([], value, _type),
     do: {:ok, value}
 
   # We only look at the first element because traversing the whole map
