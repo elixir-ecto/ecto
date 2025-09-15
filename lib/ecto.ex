@@ -602,6 +602,7 @@ defmodule Ecto do
 
   @doc """
   Gets the metadata from the given struct.
+
   For example, to check whether it has been persisted:
 
       iex> Ecto.get_meta(changeset.data, :state)
