@@ -602,6 +602,13 @@ defmodule Ecto do
 
   @doc """
   Gets the metadata from the given struct.
+
+  For example, to check whether it has been persisted:
+
+      iex> Ecto.get_meta(changeset.data, :state)
+      :built
+
+  See `Ecto.Schema.Metadata`.
   """
   def get_meta(struct, :context),
     do: struct.__meta__.context
@@ -625,7 +632,7 @@ defmodule Ecto do
     * `:context` - changes the struct meta context
     * `:state` - changes the struct state
 
-  Please refer to the `Ecto.Schema.Metadata` module for more information.
+  See `Ecto.Schema.Metadata`.
   """
   @spec put_meta(Ecto.Schema.schema(), meta) :: Ecto.Schema.schema()
         when meta: [
