@@ -66,9 +66,9 @@ defmodule Ecto.Query.Builder.PreloadTest do
     test "supports dynamics for join association bindings using named bindings" do
       comments = :comments
 
-      query = 
-        from p in "posts", 
-        join: c in assoc(p, :comments), 
+      query =
+        from p in "posts",
+        join: c in assoc(p, :comments),
         as: ^comments
       preloads = [
         comments: dynamic([{^comments, c}], c)
@@ -119,6 +119,18 @@ defmodule Ecto.Query.Builder.PreloadTest do
       outer_dynamic = dynamic(^inner_dynamic)
       preloads = [comments: outer_dynamic]
       assert %{preloads: [], assocs: [comments: {1, []}]} = preload(query, ^preloads)
+    end
+
+    test "supports preload functions" do
+      query = from p in "posts", join: c in assoc(p, :comments), as: :comments
+      function_1 = fn _ -> [] end
+      function_2 = fn _, _ -> [] end
+
+      preloads = [comments: function_1]
+      assert %{preloads: ^preloads, assocs: []} = preload(query, ^preloads)
+
+      preloads = [comments: function_2]
+      assert %{preloads: ^preloads, assocs: []} = preload(query, ^preloads)
     end
   end
 
@@ -173,6 +185,14 @@ defmodule Ecto.Query.Builder.PreloadTest do
       assert_raise ArgumentError, message, fn ->
         query = from p in "posts", join: c in assoc(p, :comments)
         preload(query, ^[comments: dynamic([_, c], c.field)])
+      end
+    end
+
+    test "raises when preload function has more than two arguments" do
+      message = ~r"invalid preload for key `:comments`:"
+      assert_raise ArgumentError, message, fn ->
+        query = from p in "posts", join: c in assoc(p, :comments)
+        preload(query, ^[comments: fn _, _, _  -> [] end])
       end
     end
   end
