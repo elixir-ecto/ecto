@@ -1,5 +1,17 @@
 # Changelog for v3.x
 
+## v3.13.3 (2025-09-19)
+
+### Enhancements
+
+  * [Ecto.Query] Accept a list of things to exclude in `exclude`
+
+### Bug fixes
+
+  * [Ecto.Query] Allow 2-arity functions as preload function in query
+  * [Ecto.Query] Remove soft deprecated literal warning
+  * [Ecto.Schema] Do not consider space and newlines as empty for binary types
+
 ## v3.13.2 (2025-06-24)
 
 ### Bug fixes
