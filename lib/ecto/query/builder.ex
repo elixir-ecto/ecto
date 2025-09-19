@@ -760,11 +760,6 @@ defmodule Ecto.Query.Builder do
         env -> env
       end
 
-    IO.warn(
-      "`literal/1` is deprecated. Please use `identifier/1` instead.",
-      Macro.Env.stacktrace(env)
-    )
-
     escape_fragment({:identifier, meta, [expr]}, params_acc, vars, env)
   end
 
