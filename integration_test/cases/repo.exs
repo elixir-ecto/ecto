@@ -450,6 +450,25 @@ defmodule Ecto.Integration.RepoTest do
 
   @tag :join
   @tag :unique_constraint
+  test "unique constraint with composite primary keys" do
+    TestRepo.insert(%CompositePk{name: "UniqueName", a: 123, b: 456})
+
+    changeset = %CompositePk{}
+    |> Ecto.Changeset.cast(%{name: "DifferentName", a: 123, b: 456}, [:name, :a, :b])
+    |> Ecto.Changeset.unique_constraint([:a, :b],
+      name: :composite_pk_pkey,
+      list_composites: true
+    )
+
+    changeset = Ecto.Changeset.unsafe_validate_unique(changeset, [:a, :b], TestRepo)
+
+    refute changeset.valid?
+    [error | _] = changeset.errors
+    assert error == {:a, {"has already been taken", [validation: :unsafe_unique, fields: [:a, :b]]}}
+  end
+
+  @tag :join
+  @tag :unique_constraint
   test "unique constraint violation error message with join table and separate changesets" do
     post =
       TestRepo.insert!(%Post{title: "some post"})

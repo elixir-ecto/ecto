@@ -14,7 +14,7 @@ defmodule Ecto.Changeset do
       a third-party, you must explicitly list which data you accept.
       For example, you most likely don't want to allow a user to set
       its own "is_admin" field to true
-    
+
     * **type casting** - a web form sends most of its data as strings.
       When the user types the number "100", Ecto will receive it as
       the string "100", which must then be converted to 100.
@@ -3897,7 +3897,8 @@ defmodule Ecto.Changeset do
     name = opts[:name] || unique_index_name(changeset, fields)
     message = constraint_message(opts, "has already been taken")
     match_type = Keyword.get(opts, :match, :exact)
-    error_key = Keyword.get(opts, :error_key, first_field)
+    field_list = if Keyword.get(opts, :list_composites, false), do: fields, else: first_field
+    error_key = Keyword.get(opts, :error_key, field_list)
 
     add_constraint(changeset, :unique, name, match_type, error_key, message, :unique)
   end
@@ -4131,7 +4132,7 @@ defmodule Ecto.Changeset do
          error_message,
          error_type
        )
-       when is_atom(field) and is_binary(error_message) do
+       when is_atom(field) or is_list(field) and is_binary(error_message) do
     constraint = %{
       constraint: normalize_constraint(constraint, match),
       error_message: error_message,
