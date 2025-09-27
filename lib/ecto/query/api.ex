@@ -603,6 +603,10 @@ defmodule Ecto.Query.API do
   @doc """
   Allows a field to be dynamically accessed.
 
+  The source name can be a binding (`p` in `from p in Post`) or a named binding
+  using `as/1` or `parent_as/1`. The named binding maybe a literal atom or an
+  interpolation.
+
   The field name can be given as either an atom or a string. In a schemaless
   query, the two types of names behave the same. However, when referencing
   a field from a schema the behaviours are different.
@@ -631,6 +635,16 @@ defmodule Ecto.Query.API do
       def at_least_four(doors_or_tires) do
         from c in Car,
           where: field(c, ^doors_or_tires) >= 4
+      end
+
+      def at_least_four(query, doors_or_tires) do
+        from q in query,
+          where: field(as(:car), ^doors_or_tires) >= 4
+      end
+
+      def at_least_four(query, binding, doors_or_tires) do
+        from q in query,
+          where: field(as(^binding), ^doors_or_tires) >= 4
       end
 
   In the example above, `at_least_four(:doors)` and `at_least_four("num_doors")`
