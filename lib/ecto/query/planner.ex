@@ -323,9 +323,17 @@ defmodule Ecto.Query.Planner do
        when kind in [:fragment, :values],
        do: {expr, source}
 
+  defp plan_source(_query, %{source: {{:fragment, _, _} = source, schema}, prefix: nil} = expr, _adapter, _cte_names)
+       when is_atom(schema) do
+    {expr, {source, schema, nil}}
+  end
+
   defp plan_source(query, %{source: {kind, _, _}, prefix: prefix} = expr, _adapter, _cte_names)
        when kind in [:fragment, :values],
        do: error!(query, expr, "cannot set prefix: #{inspect(prefix)} option for #{kind} sources")
+
+  defp plan_source(query, %{source: {{:fragment, _, _}, _schema}, prefix: prefix} = expr, _adapter, _cte_names),
+       do: error!(query, expr, "cannot set prefix: #{inspect(prefix)} option for fragment sources")
 
   defp plan_subquery(subquery, query, prefix, adapter, source?, cte_names) do
     %{query: inner_query} = subquery
@@ -2211,7 +2219,7 @@ defmodule Ecto.Query.Planner do
       {{:ok, {:struct, _}}, {_, nil, _}} ->
         error!(query, "struct/2 in select expects a source with a schema")
 
-      {{:ok, {kind, fields}}, {source, schema, prefix}} when is_binary(source) ->
+      {{:ok, {kind, fields}}, {source, schema, prefix}} ->
         dumper = if schema, do: schema.__schema__(:dump), else: %{}
         schema = if kind == :map, do: nil, else: schema
         {types, fields} = select_dump(List.wrap(fields), dumper, ix, drop)

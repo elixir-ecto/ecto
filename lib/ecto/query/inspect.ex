@@ -165,7 +165,8 @@ defimpl Inspect, for: Ecto.Query do
     "values (#{Enum.join(fields, ", ")})"
   end
 
-  defp inspect_source(%{source: {source, schema}}, _names) do
+  defp inspect_source(%{source: {source, schema}} = part, names) do
+    source = if is_binary(source), do: source, else: "#{expr(source, names, part)}"
     inspect(if source == schema.__schema__(:source), do: schema, else: {source, schema})
   end
 
