@@ -2219,7 +2219,7 @@ defmodule Ecto.Query.Planner do
       {{:ok, {:struct, _}}, {_, nil, _}} ->
         error!(query, "struct/2 in select expects a source with a schema")
 
-      {{:ok, {kind, fields}}, {source, schema, prefix}} ->
+      {{:ok, {kind, fields}}, {source, schema, prefix}} when is_binary(source) ->
         dumper = if schema, do: schema.__schema__(:dump), else: %{}
         schema = if kind == :map, do: nil, else: schema
         {types, fields} = select_dump(List.wrap(fields), dumper, ix, drop)
