@@ -782,12 +782,12 @@ defmodule Ecto.Integration.RepoTest do
     assert_raise Ecto.NoResultsError, fn -> query |> last |> TestRepo.one! end
   end
 
-  test "fragment source" do
+  test "fragment source mapped to schema" do
     query = from f in {fragment("select 1 as num"), Barebone}
     assert %Barebone{num: 1} = TestRepo.one(query)
   end
 
-  test "fragment source with take" do
+  test "fragment source mapped to schema with take" do
     query = from f in {fragment("select 1 as visits"), Post}, select: struct(f, [:visits])
     assert %Post{visits: 1} = TestRepo.one(query)
 
