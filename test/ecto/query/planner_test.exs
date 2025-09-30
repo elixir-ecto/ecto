@@ -958,6 +958,23 @@ defmodule Ecto.Query.PlannerTest do
     assert [:all, {:from, {{:fragment, _, _}, Barebone, _, _}, []}] = cache_key
   end
 
+  test "plan: tuple source with fragment and take" do
+    {query, cast_params, dump_params, cache_key} =
+      plan(from f in {fragment("? as text", ^"hi"), Post}, select: struct(f, [:text]))
+
+    assert query.select.take == %{0 => {:struct, [:text]}}
+    assert {{{:fragment, [], _}, Post, nil}} = query.sources
+    assert cast_params == ["hi"]
+    assert dump_params == ["hi"]
+
+    assert [
+             :all,
+             {:take, %{0 => {:struct, [:text]}}},
+             {:from, {{:fragment, _, _}, Post, _, _}, []},
+             {:select, {:&, [], [0]}}
+           ] = cache_key
+  end
+
   describe "plan: CTEs" do
     test "with uncacheable queries are uncacheable" do
       {_, _, _, cache} =
@@ -2599,6 +2616,18 @@ defmodule Ecto.Query.PlannerTest do
     assert types == [num: :integer]
     assert {{:fragment, _, _}, Barebone} = query.from.source
     assert query.select.fields == [{{:., [writable: :always], [{:&, [], [0]}, :num]}, [], []}]
+  end
+
+  test "normalize: tuple source with fragment and take" do
+    {query, _, _, select} =
+      normalize_with_params(
+        from f in {fragment("? as text", ^"hi"), Post}, select: struct(f, [:text])
+      )
+
+    %{from: {_, {:source, {{:fragment, _, _}, Post}, nil, types}}} = select
+    assert types == [text: :string]
+    assert {{:fragment, _, _}, Post} = query.from.source
+    assert query.select.fields == [{{:., [writable: :always], [{:&, [], [0]}, :text]}, [], []}]
   end
 
   describe "normalize: subqueries in boolean expressions" do
