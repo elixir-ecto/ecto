@@ -2220,10 +2220,14 @@ defmodule Ecto.Query.Planner do
         error!(query, "struct/2 in select expects a source with a schema")
 
       {{:ok, {kind, fields}}, {source, schema, prefix}} when is_binary(source) ->
-        dumper = if schema, do: schema.__schema__(:dump), else: %{}
+        {types, fields} = select_dump_for_schema(schema, List.wrap(fields), ix, drop)
         schema = if kind == :map, do: nil, else: schema
-        {types, fields} = select_dump(List.wrap(fields), dumper, ix, drop)
         {{:source, {source, schema}, prefix || query.prefix, types}, fields}
+
+      {{:ok, {kind, fields}}, {{:fragment, _, _} = source, schema, prefix}}  ->
+        {types, fields} = select_dump_for_schema(schema, List.wrap(fields), ix, drop)
+        schema = if kind == :map, do: nil, else: schema
+        {{:source, {source, schema}, prefix, types}, fields}
 
       {{:ok, {_, fields}}, _} ->
         {{:map, Enum.map(fields, &{&1, {:value, :any}})},
@@ -2256,6 +2260,11 @@ defmodule Ecto.Query.Planner do
         fields = subquery_source_fields(select)
         {select, Enum.map(fields, &select_field(&1, ix, :always))}
     end
+  end
+
+  defp select_dump_for_schema(schema, fields, ix, drop) do
+    dumper = if schema, do: schema.__schema__(:dump), else: %{}
+    select_dump(List.wrap(fields), dumper, ix, drop)
   end
 
   defp select_dump(fields, dumper, ix, drop) do
