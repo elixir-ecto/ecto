@@ -792,7 +792,7 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{visits: 1} = TestRepo.one(query)
 
     query = from f in {fragment("select 1 as visits"), Post}, select: map(f, [:visits])
-    assert %{visits: 1} = TestRepo.one(query)
+    assert TestRepo.one(query) == %{visits: 1}
   end
 
   test "exists?" do
