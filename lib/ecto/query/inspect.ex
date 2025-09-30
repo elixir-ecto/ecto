@@ -96,6 +96,11 @@ defimpl Inspect, for: Ecto.Query do
     end)
   end
 
+  @doc false
+  def inspect_fragment({:fragment, _, parts}) do
+    Macro.to_string({:fragment, [], unmerge_fragments(parts, "", [])})
+  end
+
   defp to_list(query) do
     names =
       query

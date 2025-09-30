@@ -14,6 +14,12 @@ defmodule Ecto.Schema.Loader do
         struct
 
       %{__meta__: %Metadata{} = metadata} = struct ->
+        source =
+          case source do
+            {:fragment, _, _} = frag -> Inspect.Ecto.Query.inspect_fragment(frag)
+            other -> other
+          end
+
         Map.put(struct, :__meta__, %{metadata | source: source, prefix: prefix})
 
       %{} = struct ->

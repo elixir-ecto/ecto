@@ -1090,6 +1090,9 @@ defmodule Ecto.Query do
       # Fragment with built-in function and undefined columns
       from(f in fragment("select generate_series(?::integer, ?::integer) as x", ^0, ^10), select: f.x)
 
+      # Fragment with schema
+      from(f in {fragment("my_table_valued_function(arg)"), Schema})
+
   ## Expressions examples
 
       # Schema

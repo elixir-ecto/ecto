@@ -784,7 +784,8 @@ defmodule Ecto.Integration.RepoTest do
 
   test "fragment source mapped to schema" do
     query = from f in {fragment("select 1 as num"), Barebone}
-    assert %Barebone{num: 1} = TestRepo.one(query)
+    assert %Barebone{__meta__: meta, num: 1} = TestRepo.one(query)
+    assert meta.source == ~s[fragment("select 1 as num")]
   end
 
   test "fragment source mapped to schema with take" do
