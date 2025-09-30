@@ -182,7 +182,7 @@ defmodule Ecto.RepoTest do
   end
 
   defmodule MySchemaOneField do
-     use Ecto.Schema
+    use Ecto.Schema
 
     @primary_key false
     schema "my_schema" do
@@ -2148,8 +2148,8 @@ defmodule Ecto.RepoTest do
   end
 
   describe "dynamic repo" do
-    setup do
-      {:ok, pid} = TestRepo.start_link(name: nil)
+    setup config do
+      {:ok, pid} = TestRepo.start_link(name: config.test)
       TestRepo = TestRepo.put_dynamic_repo(pid)
       :ok
     end
@@ -2174,7 +2174,15 @@ defmodule Ecto.RepoTest do
       assert Process.get(:ecto_prepared)
     end
 
-    test "keeps the proper repo in  multi" do
+    test "keeps the proper repo in transact rollback", config do
+      assert TestRepo.transact(fn -> {:error, :oops} end) == {:error, :oops}
+
+      # Also check it works with named repos
+      TestRepo.put_dynamic_repo(config.test)
+      assert TestRepo.transact(fn -> {:error, :oops} end) == {:error, :oops}
+    end
+
+    test "keeps the proper repo in multi" do
       fun = fn repo, _changes -> {:ok, repo} end
       multi = Ecto.Multi.new() |> Ecto.Multi.run(:run, fun)
       assert {:ok, changes} = TestRepo.transaction(multi)

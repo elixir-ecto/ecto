@@ -2,20 +2,8 @@ defmodule Ecto.Repo.Transaction do
   @moduledoc false
   @dialyzer :no_opaque
 
-  def transact(repo, _name, fun, {adapter_meta, opts}) when is_function(fun, 0) do
-    adapter_meta.adapter.transaction(adapter_meta, opts, fn ->
-      case fun.() do
-        {:ok, result} ->
-          result
-
-        {:error, reason} ->
-          rollback(repo, reason)
-
-        other ->
-          raise ArgumentError,
-                "expected to return {:ok, _} or {:error, _}, got: #{inspect(other)}"
-      end
-    end)
+  def transact(repo, name, fun, adapter_opts) when is_function(fun, 0) do
+    transact(repo, name, fn _repo -> fun.() end, adapter_opts)
   end
 
   def transact(repo, _name, fun, {adapter_meta, opts}) when is_function(fun, 1) do
@@ -25,7 +13,7 @@ defmodule Ecto.Repo.Transaction do
           result
 
         {:error, reason} ->
-          rollback(repo, reason)
+          adapter_meta.adapter.rollback(adapter_meta, reason)
 
         other ->
           raise ArgumentError,
@@ -48,7 +36,7 @@ defmodule Ecto.Repo.Transaction do
 
       {:error, operation} ->
         raise """
-        operation #{inspect operation} is rolling back unexpectedly.
+        operation #{inspect(operation)} is rolling back unexpectedly.
 
         This can happen if `repo.rollback/1` is manually called, which is not \
         supported by `Ecto.Multi`. It can also occur if a nested transaction \
