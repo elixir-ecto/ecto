@@ -81,6 +81,9 @@ defmodule Ecto.Query.InspectTest do
 
     assert i(from(subquery(Post), [])) ==
              ~s{from p0 in subquery(from p0 in Inspect.Post)}
+
+    assert i(from(x in {fragment("select generate_series(?::integer, ?::integer) as num", ^0, ^2), Inspect.Comment}, [])) ==
+             ~s[from c0 in {"fragment(\\"select generate_series(?::integer, ?::integer) as num\\", ^0, ^2)", Inspect.Comment}]
   end
 
   test "CTE" do

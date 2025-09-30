@@ -59,7 +59,7 @@ defmodule Ecto.Query.Builder.From do
 
       ^query ->
         case query do
-          {left, right} -> {left, Macro.expand(right, env)}
+          {left, right} -> {escape_source(left, env), Macro.expand(right, env)}
           _ -> query
         end
 
@@ -117,6 +117,10 @@ defmodule Ecto.Query.Builder.From do
       {{:{}, _, [:fragment, _, _]} = fragment, params} ->
         {:ok, prefix} = prefix || {:ok, nil}
         {query(prefix, fragment, params, as, hints, env.file, env.line), binds, 1}
+
+      {{{:{}, _, [:fragment, _, _]} = fragment, params}, schema} when is_atom(schema) ->
+        {:ok, prefix} = prefix || {:ok, nil}
+        {query(prefix, {fragment, schema}, params, as, hints, env.file, env.line), binds, 1}
 
       {{:{}, _, [:values, _, _]} = values, prelude, params} ->
         {:ok, prefix} = prefix || {:ok, nil}
