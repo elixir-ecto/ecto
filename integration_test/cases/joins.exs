@@ -5,6 +5,7 @@ defmodule Ecto.Integration.JoinsTest do
   import Ecto.Query
 
   alias Ecto.Integration.Post
+  alias Ecto.Integration.Barebone
   alias Ecto.Integration.Comment
   alias Ecto.Integration.Permalink
   alias Ecto.Integration.User
@@ -160,6 +161,16 @@ defmodule Ecto.Integration.JoinsTest do
 
     assert p1.permalink == nil
     assert p2.permalink.id == plid1
+  end
+
+  test "joins with fragment source mapped to schema" do
+    query =
+      from f1  in {fragment("select 1 as num"), Barebone},
+        join: f2  in {fragment("select 1 as visits"), Post},
+        on: f1.num == f2.visits,
+        select: {f1, struct(f2, [:visits])}
+
+    assert {%Barebone{num: 1} = b1, %Post{visits: 1} = b2} = TestRepo.one(query)
   end
 
   ## Associations joins

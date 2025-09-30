@@ -949,13 +949,26 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "plan: tuple source with fragment" do
-    {query, cast_params, dump_params, cache_key} =
-      plan(from {fragment("? as num", ^0), Barebone})
+    query =
+      from f1 in {fragment("? as num", ^0), Barebone},
+        join: f2 in {fragment("? as visits", ^0), Post},
+        on: f1.num == f2.visits,
+        select: {f1, f2}
 
-    assert {{{:fragment, [], _}, Barebone, nil}} = query.sources
-    assert cast_params == [0]
-    assert dump_params == [0]
-    assert [:all, {:from, {{:fragment, _, _}, Barebone, _, _}, []}] = cache_key
+    {query, cast_params, dump_params, cache_key} = plan(query)
+
+    assert {from_source, join_source} = query.sources
+    assert {{:fragment, [], _}, Barebone, nil} = from_source
+    assert {{:fragment, [], _}, Post, nil} = join_source
+    assert cast_params == [0, 0]
+    assert dump_params == [0, 0]
+
+    assert [
+             :all,
+             {:join, [{:inner, {{:fragment, _, _}, Post, _, _}, {:==, _, _}, []}]},
+             {:from, {{:fragment, _, _}, Barebone, _, _}, []},
+             {:select, {:{}, [], [{:&, [], [0]}, {:&, [], [1]}]}}
+           ] = cache_key
   end
 
   test "plan: tuple source with fragment and take" do
@@ -2609,13 +2622,23 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "normalize: tuple source with fragment" do
-    {query, _, _, select} =
-      normalize_with_params(from {fragment("? as num", ^0), Barebone})
+    query =
+      from f1 in {fragment("? as num", ^0), Barebone},
+        join: f2 in {fragment("? as num", ^0), Barebone},
+        on: f1.num == f2.num,
+        select: {f1, f2}
 
-    %{from: {_, {:source, {{:fragment, _, _}, Barebone}, nil, types}}} = select
-    assert types == [num: :integer]
+    {query, _, _, select} = normalize_with_params(query)
+
+    %{from: {_, {:source, {{:fragment, _, _}, Barebone}, nil, from_types}}} = select
+    assert from_types == [num: :integer]
     assert {{:fragment, _, _}, Barebone} = query.from.source
-    assert query.select.fields == [{{:., [writable: :always], [{:&, [], [0]}, :num]}, [], []}]
+    assert [%{source: {{:fragment, _, _}, Barebone}}] = query.joins
+
+    assert query.select.fields == [
+             {{:., [writable: :always], [{:&, [], [0]}, :num]}, [], []},
+             {{:., [writable: :always], [{:&, [], [1]}, :num]}, [], []}
+           ]
   end
 
   test "normalize: tuple source with fragment and take" do
