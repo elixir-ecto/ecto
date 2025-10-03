@@ -1142,11 +1142,21 @@ defmodule Ecto.Repo.Schema do
   defp reset_parent?(changes, data, assoc) do
     %{field: field, owner_key: owner_key, related_key: related_key} = assoc
 
-    with %{^owner_key => owner_value} <- changes,
-         %{^field => %{^related_key => related_value}} when owner_value != related_value <- data do
-      true
-    else
-      _ -> false
+    case changes do
+      %{^owner_key => owner_value} ->
+        case data do
+          %{^field => %{^related_key => related_value}} when owner_value != related_value ->
+            true
+
+          %{^field => nil} when owner_value != nil ->
+            true
+
+          _ ->
+            false
+        end
+
+      _ ->
+        false
     end
   end
 
