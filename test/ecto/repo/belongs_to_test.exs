@@ -496,4 +496,18 @@ defmodule Ecto.Repo.BelongsToTest do
     assert updated_schema.assoc_id == 2
     assert %Ecto.Association.NotLoaded{} = updated_schema.assoc
   end
+
+  test "reset assoc when foreign key update results in a mismatch and parent is nil" do
+    schema = %MySchema{} |> TestRepo.insert!() |> TestRepo.preload(:assoc)
+    assert schema.assoc_id == nil
+    assert schema.assoc == nil
+
+    updated_schema =
+      schema
+      |> Ecto.Changeset.change(%{assoc_id: 2})
+      |> TestRepo.update!()
+
+    assert updated_schema.assoc_id == 2
+    assert %Ecto.Association.NotLoaded{} = updated_schema.assoc
+  end
 end
