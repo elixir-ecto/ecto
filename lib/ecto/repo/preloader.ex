@@ -251,38 +251,46 @@ defmodule Ecto.Repo.Preloader do
   defp fetch_ids(structs, module, assoc, {_adapter_meta, opts}) do
     %{field: field, owner_key: owner_key, cardinality: card} = assoc
     force? = Keyword.get(opts, :force, false)
+    warn_if_nil_keys? = Keyword.get(opts, :warn_if_nil_keys, true)
 
-    Enum.reduce structs, {[], [], []}, fn
+    Enum.reduce(structs, {[], [], []}, fn
       nil, acc ->
         acc
+
       struct, {fetch_ids, loaded_ids, loaded_structs} ->
         assert_struct!(module, struct)
         %{^owner_key => id, ^field => value} = struct
         loaded? = Ecto.assoc_loaded?(value) and not force?
 
-        if loaded? and is_nil(id) and not Ecto.Changeset.Relation.empty?(assoc, value) do
-          Logger.warning """
+        if loaded? and is_nil(id) and not Ecto.Changeset.Relation.empty?(assoc, value) and warn_if_nil_keys? do
+          Logger.warning("""
           association `#{field}` for `#{inspect(module)}` has a loaded value but \
           its association key `#{owner_key}` is nil. This usually means one of:
 
             * `#{owner_key}` was not selected in a query
             * the struct was set with default values for `#{field}` which now you want to override
 
-          If this is intentional, set force: true to disable this warning
-          """
+          If you want to override the data, set force: true.
+
+          If you are intentionally preloading data that has not yet been committed (e.g. a new struct
+          with id: nil), you can set warn_if_nil_keys: false to disable this warning.
+          """)
         end
 
         cond do
           card == :one and loaded? ->
             {fetch_ids, [id | loaded_ids], [value | loaded_structs]}
+
           card == :many and loaded? ->
             {fetch_ids, [{id, length(value)} | loaded_ids], value ++ loaded_structs}
+
           is_nil(id) ->
             {fetch_ids, loaded_ids, loaded_structs}
+
           true ->
             {[id | fetch_ids], loaded_ids, loaded_structs}
         end
-    end
+    end)
   end
 
   defp fetch_query(ids, assoc, _repo_name, query, _prefix, related_key, _take, _tuplet)
