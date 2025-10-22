@@ -106,7 +106,7 @@ defmodule Ecto.Type do
   >
   > When you `use Ecto.Type`, it will set `@behaviour Ecto.Type` and define
   > default, overridable implementations for `c:embed_as/1` and `c:equal?/2`.
-  > You must implement your own `c:embed_as/1` function if you want 
+  > You must implement your own `c:embed_as/1` function if you want
   > your `c:dump/1` to be called when exporting from Ecto.
 
   ## Custom types and primary keys
@@ -1408,7 +1408,7 @@ defmodule Ecto.Type do
     end
   end
 
-  def format({composite, type}) when composite in [:array, :map] do
+  def format({composite, type}) when composite in [:array, :map, :in] do
     "{#{inspect(composite)}, #{format(type)}}"
   end
 
