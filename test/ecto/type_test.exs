@@ -1433,19 +1433,18 @@ defmodule Ecto.TypeTest do
       assert Ecto.Type.format({:array, with_format_defined}) ==
                "{:array, #CustomParameterizedTypeWithFormat<:custom>}"
 
-      assert Ecto.Type.format({:array, without_format_defined}) ==
-               "{:array, #Ecto.TypeTest.CustomParameterizedTypeWithoutFormat<%{}>}"
+      assert Ecto.Type.format({:in, without_format_defined}) ==
+               "{:in, #Ecto.TypeTest.CustomParameterizedTypeWithoutFormat<%{}>}"
     end
 
     test "non parameterized type" do
-      # fallback to `inspect(type)`
       assert Ecto.Type.format(:id) == ":id"
     end
 
     test "composite non parameterized type" do
-      # fallback to `inspect(type)`
       assert Ecto.Type.format({:array, :id}) == "{:array, :id}"
       assert Ecto.Type.format({:array, {:map, :integer}}) == "{:array, {:map, :integer}}"
+      assert Ecto.Type.format({:in, :binary}) == "{:in, :binary}"
     end
   end
 
