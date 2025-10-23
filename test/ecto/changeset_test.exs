@@ -88,6 +88,7 @@ defmodule Ecto.ChangesetTest do
       field :decimal, :decimal
       field :upvotes, :integer, default: 0
       field :topics, {:array, :string}
+      field :topics_defaults, {:array, :string}, default: []
       field :seo_metadata, :map
       field :virtual, :string, virtual: true
       field :unwritable, :string, writable: :never
@@ -98,6 +99,14 @@ defmodule Ecto.ChangesetTest do
       has_many :comments, Ecto.ChangesetTest.Comment, on_replace: :delete
       has_one :comment, Ecto.ChangesetTest.Comment
     end
+  end
+
+  defp changeset(schema \\ %Post{}, params) do
+    cast(
+      schema,
+      params,
+      ~w(id token title author_email body upvotes decimal color topics seo_metadata virtual unwritable)a
+    )
   end
 
   defmodule NoSchemaPost do
@@ -111,14 +120,6 @@ defmodule Ecto.ChangesetTest do
       field :body
       field :published_at, :naive_datetime
     end
-  end
-
-  defp changeset(schema \\ %Post{}, params) do
-    cast(
-      schema,
-      params,
-      ~w(id token title author_email body upvotes decimal color topics seo_metadata virtual unwritable)a
-    )
   end
 
   defmodule CustomError do
@@ -1299,6 +1300,15 @@ defmodule Ecto.ChangesetTest do
       |> validate_required([:topics])
 
     assert changeset.errors == [topics: {"can't be blank", [validation: :required]}]
+
+    # When field is list with empty list default and is an empty value
+    changeset =
+      %Post{}
+      |> cast(%{"topics_defaults" => []}, [:topics_defaults], empty_values: ["", []])
+      |> validate_required([:topics_defaults])
+      |> validate_length(:topics_defaults, min: 1)
+
+    assert changeset.errors == [topics_defaults: {"can't be blank", [validation: :required]}]
   end
 
   test "field_missing?/2" do

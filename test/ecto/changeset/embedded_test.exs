@@ -760,7 +760,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     assert ExUnit.CaptureIO.capture_io(:stderr, fn ->
              changeset = Changeset.validate_required(base_changeset, :posts)
-             assert changeset.valid?
+             refute changeset.valid?
            end) =~ ~r/attempting to determine the presence of embed_many field/
   end
 

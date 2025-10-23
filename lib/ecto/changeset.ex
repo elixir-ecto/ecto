@@ -14,7 +14,7 @@ defmodule Ecto.Changeset do
       a third-party, you must explicitly list which data you accept.
       For example, you most likely don't want to allow a user to set
       its own "is_admin" field to true
-    
+
     * **type casting** - a web form sends most of its data as strings.
       When the user types the number "100", Ecto will receive it as
       the string "100", which must then be converted to 100.
@@ -161,22 +161,15 @@ defmodule Ecto.Changeset do
 
   When applying changes using `cast/4`, an empty value will be automatically
   converted to the field's default value. If the field is an array type, any
-  empty value inside the array will be removed. When a plain map is used in
-  the data portion of a schemaless changeset, every field's default value is
-  considered to be `nil`. For example:
-
-      iex> data = %{name: "Bob"}
-      iex> types = %{name: :string}
-      iex> params = %{name: ""}
-      iex> changeset = Ecto.Changeset.cast({data, types}, params, Map.keys(types))
-      iex> changeset.changes
-      %{name: nil}
+  empty value inside the array will be removed. For schemaless changesets,
+  the default value is always `nil`.
 
   Empty values are stored as a list in the changeset's `:empty_values` field.
   The list contains elements of type `t:empty_value/0`. Those are either values,
-  which will be considered empty if they
-  match, or a function that must return a boolean if the value is empty or
-  not. By default, Ecto uses `Ecto.Changeset.empty_values/0` which will mark
+  which will be considered empty if they match, or a function that must return
+  a boolean if the value is empty or not.
+
+  By default, Ecto uses `Ecto.Changeset.empty_values/0` which will mark
   a field as empty if it is a string made only of whitespace characters.
   You can also pass the `:empty_values` option to `cast/4` in case you want
   to change how a particular `cast/4` work.
@@ -2524,22 +2517,21 @@ defmodule Ecto.Changeset do
   You can pass a single field name or a list of field names that
   are required.
 
-  If the value of a field is `nil` or a string made only of whitespace,
+  If the value of a field is `nil` or an empty string/array/map,
   the changeset is marked as invalid, the field is removed from the
-  changeset's changes, and an error is added. An error won't be added if
-  the field already has an error.
+  changeset's changes, and an error is added. An error won't be added
+  if the field already has an error.
 
-  If a field is given to `validate_required/3` but it has not been passed
-  as parameter during `cast/3` (i.e. it has not been changed), then
-  `validate_required/3` will check for its current value in the data.
-  If the data contains a non-empty value for the field, then no error is
-  added. This allows developers to use `validate_required/3` to perform
-  partial updates. For example, on `insert` all fields would be required,
-  because their default values on the data are all `nil`, but on `update`,
-  if you don't want to change a field that has been previously set,
-  you are not required to pass it as a parameter, since `validate_required/3`
-  won't add an error for missing changes as long as the value in the
-  data given to the `changeset` is not empty.
+  Keep in mind that, because `validate_required/3` is almost always called
+  after `cast/4`, the `:empty_values` property of `cast/4` plays an important
+  role in `validate_required/3`. Fields which are considered empty (such as
+  strings made of whitespace) are discarded from the changeset, and therefore
+  `validate_required/3` will check for the current value in the data. If the
+  current value is `nil` or an empty string/array/map, then an error is
+  added. In other words, `validate_required/3` validates the shape of the data
+  after casting. If you have complex rules for when a field is required or not,
+  then those rules should be applied on `cast/4`, and `validate_required/3` then
+  performs a simple value check.
 
   Do not use this function to validate associations that are required,
   instead pass the `:required` option to `cast_assoc/3` or `cast_embed/3`.
@@ -2619,9 +2611,9 @@ defmodule Ecto.Changeset do
 
   """
   @spec field_missing?(t(), atom()) :: boolean()
-  def field_missing?(%Changeset{} = changeset, field) when not is_nil(field) do
-    ensure_field_not_many!(changeset.types, field) && missing?(changeset, field) &&
-      ensure_field_exists!(changeset, changeset.types, field)
+  def field_missing?(%Changeset{types: types} = changeset, field) when not is_nil(field) do
+    ensure_field_not_many!(types, field) && missing?(changeset, field) &&
+      ensure_field_exists!(changeset, types, field)
   end
 
   @doc """
@@ -2855,14 +2847,8 @@ defmodule Ecto.Changeset do
                 "before calling validate_required/3 or field_missing?/2. " <>
                 "You may also consider passing the :required option to Ecto.Changeset.cast_assoc/3"
 
-      value when is_binary(value) ->
-        value == ""
-
-      nil ->
-        true
-
-      _ ->
-        false
+      value ->
+        value in [nil, "", [], %{}]
     end
   end
 
