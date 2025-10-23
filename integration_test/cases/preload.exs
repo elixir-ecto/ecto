@@ -708,7 +708,7 @@ defmodule Ecto.Integration.PreloadTest do
 
     # With custom query having order_by, it should override preload_order
     query = from(c in Comment, order_by: [desc: c.text])
-    post = TestRepo.preload(post, ordered_comments: query, force: true)
+    post = TestRepo.preload(post, [ordered_comments: query], force: true)
     assert [%{text: "3"}, %{text: "2"}, %{text: "1"}] = post.ordered_comments
   end
 
