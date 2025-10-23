@@ -1,5 +1,11 @@
 # Changelog for v3.x
 
+## Unreleased
+
+### Enhancements
+
+  * [Ecto.Repo] Preload custom queries with `order_by` now take precedence over `:preload_order`. The `:preload_order` option is now only applied when no custom query with ordering is provided.
+
 ## v3.13.3 (2025-09-19)
 
 ### Enhancements

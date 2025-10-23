@@ -483,6 +483,11 @@ defmodule Ecto.Repo.Preloader do
 
   defp add_preload_order([], query), do: query
 
+  defp add_preload_order(_order, %{order_bys: [_|_]} = query) do
+    # Skip applying preload_order when query already has custom order_by clauses
+    query
+  end
+
   defp add_preload_order(order, query) when is_list(order) do
     Ecto.Query.prepend_order_by(query, [q], ^order)
   end

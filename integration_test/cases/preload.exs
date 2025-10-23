@@ -695,6 +695,23 @@ defmodule Ecto.Integration.PreloadTest do
     assert [%{name: "foz"}, %{name: "baz"}] = post2.ordered_users_by_join_table
   end
 
+  test "custom query order_by overrides preload_order" do
+    post = TestRepo.insert!(%Post{title: "1"})
+
+    TestRepo.insert!(%Comment{text: "2", post_id: post.id})
+    TestRepo.insert!(%Comment{text: "1", post_id: post.id})
+    TestRepo.insert!(%Comment{text: "3", post_id: post.id})
+
+    # Without custom query, preload_order (asc by text) should apply
+    post = TestRepo.preload(post, :ordered_comments)
+    assert [%{text: "1"}, %{text: "2"}, %{text: "3"}] = post.ordered_comments
+
+    # With custom query having order_by, it should override preload_order
+    query = from(c in Comment, order_by: [desc: c.text])
+    post = TestRepo.preload(post, [ordered_comments: query], force: true)
+    assert [%{text: "3"}, %{text: "2"}, %{text: "1"}] = post.ordered_comments
+  end
+
   ## Others
 
   @tag :invalid_prefix
