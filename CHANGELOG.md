@@ -16,6 +16,20 @@
 
   * [Ecto.Changeset] `:empty_values` is deprecated in favor of `:trim_values`
 
+## v3.13.5 (2025-11-09)
+
+### Enhancements
+
+  * [Ecto.Query] Support selecting a subset of a subquery as a struct
+
+## v3.13.4 (2025-10-24)
+
+### Bug fixes
+
+  * [Ecto.Changeset] Ensure empty binaries are trimmed
+  * [Ecto.Repo] Ensure rollback applies to dynamic repos
+  * [Ecto.Type] Properly format `:in` composite types
+
 ## v3.13.3 (2025-09-19)
 
 ### Enhancements
