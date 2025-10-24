@@ -1,5 +1,13 @@
 # Changelog for v3.x
 
+## v3.13.4 (2025-10-24)
+
+### Bug fixes
+
+  * [Ecto.Changeset] Ensure empty binaries are trimmed
+  * [Ecto.Repo] Ensure rollback applies to dynamic repos
+  * [Ecto.Type] Properly format `:in` composite types
+
 ## v3.13.3 (2025-09-19)
 
 ### Enhancements
