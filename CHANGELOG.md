@@ -1,10 +1,20 @@
 # Changelog for v3.x
 
-## Unreleased
+## v3.14.0-dev
 
 ### Enhancements
 
+  * [Ecto.Changeset] Consider empty lists as empty values by default
+  * [Ecto.Query] Allow from and joins with `{fragment, Schema}` source
+  * [Ecto.Type] Add `Ecto.Type.trim/2`
+
+### Bug fixes
+
   * [Ecto.Repo] Preload custom queries with `order_by` now take precedence over `:preload_order`. The `:preload_order` option is now only applied when no custom query with ordering is provided.
+
+### Deprecations
+
+  * [Ecto.Changeset] `:empty_values` is deprecated in favor of `:trim_values`
 
 ## v3.13.3 (2025-09-19)
 
