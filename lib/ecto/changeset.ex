@@ -151,28 +151,27 @@ defmodule Ecto.Changeset do
   return `{:error, changeset}`, but rather raise an error at the end of the
   transaction.
 
-  ## Empty values
+  ## Trimming and empty values
 
   Many times, the data given on cast needs to be further pruned, specially
   regarding empty values. For example, if you are gathering data to be
   cast from the command line or through an HTML form or any other text-based
   format, it is likely those means cannot express nil values. For
-  those reasons, changesets include the concept of empty values.
+  those reasons, changesets include the ability of trimming values through
+  the `:trim_values` function.
 
-  When applying changes using `cast/4`, an empty value will be automatically
-  converted to the field's default value. If the field is an array type, any
-  empty value inside the array will be removed. For schemaless changesets,
-  the default value is always `nil`.
+  When applying changes using `cast/4`, values are automatically trimmed
+  and then checked if they are empty by checking if they belong to the
+  `changeset.empty_values` field (which defaults to `""` and `[]`).
+  If they are empty, then the field is set to its default value.
+  If the field is an array type, any empty value inside the array will
+  be removed.
 
-  Empty values are stored as a list in the changeset's `:empty_values` field.
-  The list contains elements of type `t:empty_value/0`. Those are either values,
-  which will be considered empty if they match, or a function that must return
-  a boolean if the value is empty or not.
+  The default trimming function is:
 
-  By default, Ecto uses `Ecto.Changeset.empty_values/0` which will mark
-  a field as empty if it is a string made only of whitespace characters.
-  You can also pass the `:empty_values` option to `cast/4` in case you want
-  to change how a particular `cast/4` work.
+      fn type, value ->
+        Ecto.Type.trim(type, value) in changeset.empty_values
+      end
 
   ## Associations, embeds, and on replace
 
@@ -375,7 +374,7 @@ defmodule Ecto.Changeset do
   alias Ecto.Changeset.Relation
   alias Ecto.Schema.Metadata
 
-  @empty_values [&Ecto.Type.empty_trimmed?/2]
+  @empty_values ["", []]
 
   # If a new field is added here, def merge must be adapted
   defstruct valid?: false,
@@ -426,15 +425,6 @@ defmodule Ecto.Changeset do
   @type types :: %{atom => Ecto.Type.t() | {:assoc, term()} | {:embed, term()}}
   @type traverse_result :: %{atom => [term] | traverse_result}
   @type validation :: {atom, term}
-
-  @typedoc """
-  A possible value that you can pass to the `:empty_values` option.
-
-  See `empty_values/0` and the [*Empty values* section](#module-empty-values) in
-  the module documentation for more information.
-  """
-  @typedoc since: "3.11.0"
-  @type empty_value :: (term() -> boolean()) | binary() | list() | map() | tuple()
 
   @number_validators %{
     less_than: {&</2, "must be less than %{number}"},
@@ -604,25 +594,10 @@ defmodule Ecto.Changeset do
     Enum.any?(changesets, &relation_changed?(:one, &1))
   end
 
-  @doc """
-  Returns the default empty values used by `Ecto.Changeset`.
-
-  By default, Ecto marks a field as empty if it is a string made
-  only of whitespace characters. If you want to provide your
-  additional empty values on top of the default, such as an empty
-  list, you can write:
-
-      @empty_values [[]] ++ Ecto.Changeset.empty_values()
-
-  Then, you can pass `empty_values: @empty_values` on `cast/3`.
-
-  See also the [*Empty values* section](#module-empty-values) for more
-  information.
-  """
-  @doc since: "3.10.0"
-  @spec empty_values() :: [empty_value()]
+  @doc false
+  @deprecated "Use :trim_values in cast/4 instead"
   def empty_values do
-    @empty_values
+    [fn type, value -> Ecto.Type.trim(type, value) == "" end]
   end
 
   @doc """
@@ -649,14 +624,12 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:empty_values` - a list containing elements of type `t:empty_value/0`. Those are
-      either values, which will be considered empty if they match, or a function that must
-      return a boolean if the value is empty or not. 1-arity functions will receive the value
-      being casted and 2-arity functions will receive the value being casted and its field type.
-      Empty values are always replaced by the default value of the respective field.
-      If the field is an array type, any empty value inside of the array will be removed.
-      To set this option while keeping the current default, use `empty_values/0` and add
-      your additional empty values
+    * `:trim_values` - a two arity function that receives the type, the value, and
+      returns a boolean indicating if the value should be trimmed. Trimmed values are
+      replaced by the default value of the respective field. For schemaless changesets,
+      the default value is always `nil`. The default function is:
+      `fn type, value -> Ecto.Type.trim(type, value) in changeset.empty_values end`,
+      where empty values defaults to `[]` and `""`
 
     * `:force_changes` - a boolean indicating whether to include values that don't alter
       the current data in `:changes`. See `force_change/3` for more information, Defaults
@@ -764,47 +737,45 @@ defmodule Ecto.Changeset do
   end
 
   def cast({data, types}, params, permitted, opts) when is_map(data) do
-    cast(data, types, %{}, params, permitted, opts)
+    cast(data, types, %{}, params, permitted, @empty_values, opts)
   end
 
   def cast(%Changeset{} = changeset, params, permitted, opts) do
     %{changes: changes, data: data, types: types, empty_values: empty_values} = changeset
-
-    opts =
-      cond do
-        opts[:empty_values] ->
-          opts
-
-        empty_values != empty_values() ->
-          # TODO: Remove changeset.empty_values field in Ecto v3.14
-          IO.warn(
-            "Changing the empty_values field of Ecto.Changeset is deprecated, " <>
-              "please pass the :empty_values option on cast instead"
-          )
-
-          [empty_values: empty_values] ++ opts
-
-        true ->
-          [empty_values: empty_values] ++ opts
-      end
-
-    new_changeset = cast(data, types, changes, params, permitted, opts)
+    new_changeset = cast(data, types, changes, params, permitted, empty_values, opts)
     cast_merge(changeset, new_changeset)
   end
 
   def cast(%{__struct__: module} = data, params, permitted, opts) do
-    cast(data, module.__changeset__(), %{}, params, permitted, opts)
+    cast(data, module.__changeset__(), %{}, params, permitted, @empty_values, opts)
   end
 
-  defp cast(%{} = data, %{} = types, %{} = changes, :invalid, permitted, _opts)
+  defp cast(%{} = data, %{} = types, %{} = changes, :invalid, permitted, _empty_values, _opts)
        when is_list(permitted) do
     _ = Enum.each(permitted, &cast_key/1)
     %Changeset{params: nil, data: data, valid?: false, errors: [], changes: changes, types: types}
   end
 
-  defp cast(%{} = data, %{} = types, %{} = changes, %{} = params, permitted, opts)
+  defp cast(%{} = data, %{} = types, %{} = changes, %{} = params, permitted, empty_values, opts)
        when is_list(permitted) do
-    empty_values = Keyword.get(opts, :empty_values, @empty_values)
+    trim_values =
+      if deprecated_empty_values = Keyword.get(opts, :empty_values) do
+        IO.warn(":empty_values in cast/4 is deprecated, use :trim_values instead")
+        deprecated_empty_values
+      else
+        case Keyword.get(opts, :trim_values) do
+          nil ->
+            [fn type, value -> Ecto.Type.trim(type, value) in empty_values end]
+
+          trim_values when is_function(trim_values, 2) ->
+            [trim_values]
+
+          other ->
+            raise ArgumentError,
+                  "expected `:trim_values` to be a function of arity 2, received: #{inspect(other)}"
+        end
+      end
+
     force? = Keyword.get(opts, :force_changes, false)
     params = convert_params(params)
     msg_func = Keyword.get(opts, :message, fn _, _ -> nil end)
@@ -824,7 +795,7 @@ defmodule Ecto.Changeset do
       Enum.reduce(
         permitted,
         {changes, [], true},
-        &process_param(&1, params, types, data, empty_values, defaults, force?, msg_func, &2)
+        &process_param(&1, params, types, data, trim_values, defaults, force?, msg_func, &2)
       )
 
     %Changeset{
@@ -837,7 +808,7 @@ defmodule Ecto.Changeset do
     }
   end
 
-  defp cast(%{}, %{}, %{}, params, permitted, _opts) when is_list(permitted) do
+  defp cast(%{}, %{}, %{}, params, permitted, _empty_values, _opts) when is_list(permitted) do
     raise Ecto.CastError,
       type: :map,
       value: params,
@@ -849,7 +820,7 @@ defmodule Ecto.Changeset do
          params,
          types,
          data,
-         empty_values,
+         trim_values,
          defaults,
          force?,
          msg_func,
@@ -864,7 +835,7 @@ defmodule Ecto.Changeset do
         _ -> Map.get(data, key)
       end
 
-    case cast_field(key, param_key, type, params, current, empty_values, defaults, force?, valid?) do
+    case cast_field(key, param_key, type, params, current, trim_values, defaults, force?, valid?) do
       {:ok, value, valid?} ->
         {Map.put(changes, key, value), errors, valid?}
 
@@ -912,10 +883,10 @@ defmodule Ecto.Changeset do
     raise ArgumentError, "cast/3 expects a list of atom keys, got key: `#{inspect(key)}`"
   end
 
-  defp cast_field(key, param_key, type, params, current, empty_values, defaults, force?, valid?) do
+  defp cast_field(key, param_key, type, params, current, trim_values, defaults, force?, valid?) do
     case params do
       %{^param_key => value} ->
-        value = filter_empty_values(type, value, empty_values, defaults, key)
+        value = filter_trim_values(type, value, trim_values, defaults, key)
 
         case Ecto.Type.cast(type, value) do
           {:ok, value} ->
@@ -937,51 +908,47 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp filter_empty_values(type, value, empty_values, defaults, key) do
-    case filter_empty_values(type, value, empty_values) do
+  defp filter_trim_values(type, value, trim_values, defaults, key) do
+    case filter_trim_values(type, value, trim_values) do
       :empty -> Map.get(defaults, key)
       {:ok, value} -> value
     end
   end
 
-  defp filter_empty_values({:array, type}, value, empty_values) when is_list(value) do
+  defp filter_trim_values({:array, type}, value, trim_values) when is_list(value) do
     value =
       for elem <- value,
-          {:ok, elem} <- [filter_empty_values(type, elem, empty_values)],
+          {:ok, elem} <- [filter_trim_values(type, elem, trim_values)],
           do: elem
 
-    if value in empty_values do
-      :empty
-    else
-      {:ok, value}
-    end
+    filter_trim_value(trim_values, value, {:array, type})
   end
 
-  defp filter_empty_values(type, value, empty_values) do
-    filter_empty_value(empty_values, value, type)
+  defp filter_trim_values(type, value, trim_values) do
+    filter_trim_value(trim_values, value, type)
   end
 
-  defp filter_empty_value([head | tail], value, type) when is_function(head, 1) do
+  defp filter_trim_value([head | tail], value, type) when is_function(head, 1) do
     case head.(value) do
       true -> :empty
-      false -> filter_empty_value(tail, value, type)
+      false -> filter_trim_value(tail, value, type)
     end
   end
 
-  defp filter_empty_value([head | tail], value, type) when is_function(head, 2) do
-    case head.(value, type) do
+  defp filter_trim_value([head | tail], value, type) when is_function(head, 2) do
+    case head.(type, value) do
       true -> :empty
-      false -> filter_empty_value(tail, value, type)
+      false -> filter_trim_value(tail, value, type)
     end
   end
 
-  defp filter_empty_value([value | _tail], value, _type),
+  defp filter_trim_value([value | _tail], value, _type),
     do: :empty
 
-  defp filter_empty_value([_head | tail], value, type),
-    do: filter_empty_value(tail, value, type)
+  defp filter_trim_value([_head | tail], value, type),
+    do: filter_trim_value(tail, value, type)
 
-  defp filter_empty_value([], value, _type),
+  defp filter_trim_value([], value, _type),
     do: {:ok, value}
 
   # We only look at the first element because traversing the whole map
@@ -1520,11 +1487,14 @@ defmodule Ecto.Changeset do
 
   def merge(%Changeset{data: data} = cs1, %Changeset{data: data} = cs2) do
     new_repo = merge_identical(cs1.repo, cs2.repo, "repos")
-    new_repo_opts = Keyword.merge(cs1.repo_opts, cs2.repo_opts)
     new_action = merge_identical(cs1.action, cs2.action, "actions")
+    new_repo_opts = Keyword.merge(cs1.repo_opts, cs2.repo_opts)
     new_filters = Map.merge(cs1.filters, cs2.filters)
     new_validations = cs1.validations ++ cs2.validations
     new_constraints = cs1.constraints ++ cs2.constraints
+
+    # They are always set, so they should never be nil
+    _ = merge_identical(cs1.empty_values, cs2.empty_values, "empty values")
 
     cast_merge(
       %{
@@ -2517,21 +2487,11 @@ defmodule Ecto.Changeset do
   You can pass a single field name or a list of field names that
   are required.
 
-  If the value of a field is `nil` or an empty string/array/map,
+  If the value of a field is `nil` or matches any of the values
+  configured in `changeset.empty_values` (by default `[]` and `""`),
   the changeset is marked as invalid, the field is removed from the
   changeset's changes, and an error is added. An error won't be added
   if the field already has an error.
-
-  Keep in mind that, because `validate_required/3` is almost always called
-  after `cast/4`, the `:empty_values` property of `cast/4` plays an important
-  role in `validate_required/3`. Fields which are considered empty (such as
-  strings made of whitespace) are discarded from the changeset, and therefore
-  `validate_required/3` will check for the current value in the data. If the
-  current value is `nil` or an empty string/array/map, then an error is
-  added. In other words, `validate_required/3` validates the shape of the data
-  after casting. If you have complex rules for when a field is required or not,
-  then those rules should be applied on `cast/4`, and `validate_required/3` then
-  performs a simple value check.
 
   Do not use this function to validate associations that are required,
   instead pass the `:required` option to `cast_assoc/3` or `cast_embed/3`.
@@ -2589,8 +2549,8 @@ defmodule Ecto.Changeset do
   @doc """
   Determines whether a field is missing in a changeset.
 
-  The field passed into this function will have its presence evaluated
-  according to the same rules as `validate_required/3`.
+  A field is considered missing if it is `nil` or it matches any
+  of the values configured in `changeset.empty_values`.
 
   This is useful when performing complex validations that are not possible with
   `validate_required/3`. For example, evaluating whether at least one field
@@ -2838,7 +2798,7 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp missing?(changeset, field) when is_atom(field) do
+  defp missing?(%{empty_values: empty_values} = changeset, field) when is_atom(field) do
     case get_field(changeset, field) do
       %{__struct__: Ecto.Association.NotLoaded} ->
         raise ArgumentError,
@@ -2848,7 +2808,7 @@ defmodule Ecto.Changeset do
                 "You may also consider passing the :required option to Ecto.Changeset.cast_assoc/3"
 
       value ->
-        value in [nil, "", [], %{}]
+        value == nil or value in empty_values
     end
   end
 

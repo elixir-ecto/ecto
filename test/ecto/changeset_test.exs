@@ -203,13 +203,14 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes == %{topics: ["bar"]}
   end
 
-  test "cast/4: with custom empty values" do
+  test "cast/4: with custom trim values" do
     params = %{"title" => "empty", "body" => nil}
     struct = %Post{title: "foo", body: "bar"}
 
-    changeset = cast(struct, params, ~w(title body)a, empty_values: ["empty"])
+    changeset =
+      cast(struct, params, ~w(title body)a, trim_values: fn _type, value -> value == "empty" end)
+
     assert changeset.changes == %{title: "", body: nil}
-    assert changeset.empty_values == Ecto.Changeset.empty_values()
   end
 
   test "cast/4: with matching empty values" do
@@ -221,13 +222,13 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "cast/4: with binary empty values" do
-    # <<9>> is a control character which should not be empty_trimmed
-    # for a binary field
-    params = %{"color" => <<9>>}
-    struct = %Post{}
-
-    changeset = cast(struct, params, ~w(color)a)
+    # <<9>> is a control character which should not be trimmed for a binary field
+    changeset = cast(%Post{}, %{"color" => <<9>>}, ~w(color)a)
     assert changeset.changes == %{color: <<9>>}
+
+    # But empty binary is still ani issue
+    changeset = cast(%Post{}, %{"color" => <<>>}, ~w(color)a)
+    assert changeset.changes == %{}
   end
 
   test "cast/4: with force_changes" do
@@ -240,7 +241,7 @@ defmodule Ecto.ChangesetTest do
     changeset =
       cast(struct, %{"title" => "not empty", "body" => "empty"}, ~w(title body)a,
         force_changes: true,
-        empty_values: ["empty"]
+        trim_values: fn _, value -> value == "empty" end
       )
 
     assert changeset.changes == %{title: "not empty", body: nil}
@@ -1288,7 +1289,7 @@ defmodule Ecto.ChangesetTest do
     # When field is list and is an empty value
     changeset =
       %Post{topics: ["foo"]}
-      |> cast(%{"topics" => []}, [:topics], empty_values: ["", []])
+      |> cast(%{"topics" => []}, [:topics])
       |> validate_required([:topics])
 
     assert changeset.errors == [topics: {"can't be blank", [validation: :required]}]
@@ -1296,7 +1297,7 @@ defmodule Ecto.ChangesetTest do
     # When field is list and is an empty value after filtering
     changeset =
       %Post{topics: ["foo"]}
-      |> cast(%{"topics" => ["", ""]}, [:topics], empty_values: ["", []])
+      |> cast(%{"topics" => ["", ""]}, [:topics])
       |> validate_required([:topics])
 
     assert changeset.errors == [topics: {"can't be blank", [validation: :required]}]
@@ -1304,7 +1305,7 @@ defmodule Ecto.ChangesetTest do
     # When field is list with empty list default and is an empty value
     changeset =
       %Post{}
-      |> cast(%{"topics_defaults" => []}, [:topics_defaults], empty_values: ["", []])
+      |> cast(%{"topics_defaults" => []}, [:topics_defaults])
       |> validate_required([:topics_defaults])
       |> validate_length(:topics_defaults, min: 1)
 
