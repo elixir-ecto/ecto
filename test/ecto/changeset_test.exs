@@ -222,11 +222,11 @@ defmodule Ecto.ChangesetTest do
   test "cast/4: with binary empty values" do
     # <<9>> is a control character which should not be empty_trimmed
     # for a binary field
-    params = %{"color" => <<9>>}
-    struct = %Post{}
+    changeset = cast(%Post{}, %{"color" => <<9>>}, ~w(color)a)
+    assert changeset.changes == %{color: <<9>>}
 
-    changeset = cast(struct, params, ~w(color)a)
-    assert changeset.changes == %{"color": <<9>>}
+    changeset = cast(%Post{}, %{"color" => <<>>}, ~w(color)a)
+    assert changeset.changes == %{}
   end
 
   test "cast/4: with force_changes" do

@@ -1001,9 +1001,8 @@ defmodule Ecto.Type do
   defp same_duration(_), do: :error
 
   @doc false
-  def empty_trimmed?(value, type) do
-    is_binary(value) and type != :binary and String.trim_leading(value) == ""
-  end
+  def empty_trimmed?(value, :binary), do: value == ""
+  def empty_trimmed?(value, _type), do: is_binary(value) and String.trim_leading(value) == ""
 
   ## Adapter related
 
