@@ -82,20 +82,18 @@ We haven't done anything unusual so far. We created our database instance, made 
 
 By default, connections to Postgres' databases run on the "public" prefix. When we run migrations and queries, they are all running against the "public" prefix. However imagine your application has a requirement to run on a particular prefix in production, let's call it "connection_prefix".
 
-Luckily Postgres allows us to change the prefix our database connections run on by setting the "schema search path". The best moment to change the search path is right after we setup the database connection, ensuring all of our queries will run on that particular prefix, throughout the connection life-cycle.
+Luckily Postgres allows us to change the prefix our database connections run on by setting the "schema search path". The best moment to change the search path is during the setup of the database connection, ensuring all of our queries will run on that particular prefix, throughout the connection life-cycle.
 
-To do so, let's change our database configuration in "config/config.exs" and specify an `:after_connect` option. `:after_connect` expects a tuple with module, function and arguments it will invoke with the connection process, as soon as a database connection is established:
+To do so, let's change our database configuration in "config/config.exs" and set a `:search_path` parameter in the `:parameters` option. The `:search_path` parameter expects a list of strings that define the search path for the connection:
 
 ```elixir
-query_args = ["SET search_path TO connection_prefix", []]
-
 config :my_app, MyApp.Repo,
   username: "postgres",
   password: "postgres",
   database: "demo_dev",
   hostname: "localhost",
   pool_size: 10,
-  after_connect: {Postgrex, :query!, query_args}
+  parameters: [search_path: ["connection_prefix"]]
 ```
 
 Now let's try to run the same query as before:
