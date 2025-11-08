@@ -2207,8 +2207,8 @@ defmodule Ecto.Query.Planner do
       {{:ok, {:struct, _}}, {:fragment, _, _}} ->
         error!(query, "it is not possible to return a struct subset of a fragment")
 
-      {{:ok, {:struct, _}}, %Ecto.SubQuery{}} ->
-        error!(query, "it is not possible to return a struct subset of a subquery")
+      {{:ok, {:struct, fields}}, %Ecto.SubQuery{select: select}} ->
+        handle_subquery_struct(select, fields, ix, query)
 
       {{:ok, {_, []}}, {_, _, _}} ->
         error!(
@@ -2278,6 +2278,39 @@ defmodule Ecto.Query.Planner do
       _field, acc ->
         acc
     end)
+  end
+
+  defp handle_subquery_struct(select, requested_fields, ix, query) do
+    available_fields = subquery_source_fields(select)
+    requested_fields = List.wrap(requested_fields)
+
+    Enum.each(requested_fields, fn field ->
+      unless field in available_fields do
+        error!(query, "field `#{field}` in struct/2 is not available in the subquery. " <>
+                     "Subquery only returns fields: #{inspect(available_fields)}")
+      end
+    end)
+
+    schema =
+      case select do
+        {:struct, schema, _} -> schema
+        {:source, {_, schema}, _, _} when not is_nil(schema) -> schema
+        _ ->
+          error!(query, "it is not possible to return a struct subset of a subquery that does not return a schema or a struct")
+      end
+
+    types =
+      Enum.map(requested_fields, fn field ->
+        {:ok, type} = subquery_type_for(select, field) 
+        {field, type}
+      end)
+
+    field_exprs =
+      Enum.map(types, fn {field, type} ->
+        {{:., [type: type], [{:&, [], [ix]}, field]}, [], []}
+      end)
+
+    {{:source, {nil, schema}, nil, types}, field_exprs}
   end
 
   defp select_field(field, ix, writable) do
