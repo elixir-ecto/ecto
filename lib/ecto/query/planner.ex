@@ -2208,7 +2208,7 @@ defmodule Ecto.Query.Planner do
         error!(query, "it is not possible to return a struct subset of a fragment")
 
       {{:ok, {:struct, fields}}, %Ecto.SubQuery{select: select}} ->
-        handle_subquery_struct(select, fields, ix, query)
+        subquery_select_fields(select, fields, ix, query)
 
       {{:ok, {_, []}}, {_, _, _}} ->
         error!(
@@ -2280,7 +2280,7 @@ defmodule Ecto.Query.Planner do
     end)
   end
 
-  defp handle_subquery_struct(select, requested_fields, ix, query) do
+  defp subquery_select_fields(select, requested_fields, ix, query) do
     available_fields = subquery_source_fields(select)
     requested_fields = List.wrap(requested_fields)
 
