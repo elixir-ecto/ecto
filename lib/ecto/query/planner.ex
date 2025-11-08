@@ -2284,31 +2284,27 @@ defmodule Ecto.Query.Planner do
     available_fields = subquery_source_fields(select)
     requested_fields = List.wrap(requested_fields)
 
-    Enum.each(requested_fields, fn field ->
-      unless field in available_fields do
-        error!(query, "field `#{field}` in struct/2 is not available in the subquery. " <>
-                     "Subquery only returns fields: #{inspect(available_fields)}")
-      end
-    end)
-
     schema =
       case select do
-        {:struct, schema, _} -> schema
         {:source, {_, schema}, _, _} when not is_nil(schema) -> schema
+
         _ ->
-          error!(query, "it is not possible to return a struct subset of a subquery that does not return a schema or a struct")
+          error!(query, "it is not possible to return a struct subset of a subquery that does not return a schema struct")
       end
 
     types =
       Enum.map(requested_fields, fn field ->
-        {:ok, type} = subquery_type_for(select, field) 
-        {field, type}
+        case subquery_type_for(select, field) do
+          {:ok, type} ->
+            {field, type}
+
+          :error ->
+            error!(query, "field `#{field}` in struct/2 is not available in the subquery. " <>
+                         "Subquery only returns fields: #{inspect(available_fields)}")
+        end
       end)
 
-    field_exprs =
-      Enum.map(types, fn {field, type} ->
-        {{:., [type: type], [{:&, [], [ix]}, field]}, [], []}
-      end)
+    field_exprs = Enum.map(requested_fields, &select_field(&1, ix, :always))
 
     {{:source, {nil, schema}, nil, types}, field_exprs}
   end

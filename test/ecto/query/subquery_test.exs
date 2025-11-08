@@ -453,15 +453,22 @@ defmodule Ecto.Query.SubqueryTest do
       subquery = from p in Post, select: p
       query = normalize(from(p in subquery(subquery), select: struct(p, [:id, :title])))
       assert query.select.fields == [
-        {{:., [type: CustomPermalink], [{:&, [], [0]}, :id]}, [], []},
-        {{:., [type: :string], [{:&, [], [0]}, :title]}, [], []}
+        {{:., [writable: :always], [{:&, [], [0]}, :id]}, [], []},
+        {{:., [writable: :always], [{:&, [], [0]}, :title]}, [], []}
       ]
 
       subquery = from p in Post, select: p
       query = normalize(from(c in Comment, join: p in subquery(subquery), on: true, select: struct(p, [:title])))
-      assert query.select.fields == [{{:., [type: :string], [{:&, [], [1]}, :title]}, [], []}]
+      assert query.select.fields == [{{:., [writable: :always], [{:&, [], [1]}, :title]}, [], []}]
 
-      assert_raise Ecto.QueryError, ~r/it is not possible to return a struct subset of a subquery that does not return a schema or a struct/, fn ->
+      subquery = from p in Post, select: struct(p, [:id, :title, :text])
+      query = normalize(from(p in subquery(subquery), select: struct(p, [:id, :title])))
+      assert query.select.fields == [
+        {{:., [writable: :always], [{:&, [], [0]}, :id]}, [], []},
+        {{:., [writable: :always], [{:&, [], [0]}, :title]}, [], []}
+      ]
+
+      assert_raise Ecto.QueryError, ~r/it is not possible to return a struct subset of a subquery that does not return a schema struct/, fn ->
         subquery = from p in Post, select: %{id: p.id, title: p.title}
         normalize(from(p in subquery(subquery), select: struct(p, [:title])))
       end
