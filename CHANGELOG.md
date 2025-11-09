@@ -1,5 +1,11 @@
 # Changelog for v3.x
 
+## v3.13.5 (2025-11-09)
+
+### Enhancements
+
+  * [Ecto.Query] Support selecting a subset of a subquery as a struct
+
 ## v3.13.4 (2025-10-24)
 
 ### Bug fixes
