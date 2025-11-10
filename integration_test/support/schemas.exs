@@ -275,6 +275,7 @@ defmodule Ecto.Integration.Order do
     * Embedding one schema
     * Preloading items inside embeds_many
     * Preloading items inside embeds_one
+    * Virtual embeds
     * Field source with json_extract_path
 
   """
@@ -283,6 +284,7 @@ defmodule Ecto.Integration.Order do
   schema "orders" do
     field :label, :string
     field :metadata, :map, source: :meta
+    embeds_one :last_seen_item, Ecto.Integration.Item, virtual: true
     embeds_one :item, Ecto.Integration.Item
     embeds_many :items, Ecto.Integration.Item
     belongs_to :permalink, Ecto.Integration.Permalink
