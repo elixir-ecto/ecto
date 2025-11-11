@@ -9,6 +9,9 @@ defmodule Ecto.Repo.Transaction do
   def transact(repo, _name, fun, {adapter_meta, opts}) when is_function(fun, 1) do
     adapter_meta.adapter.transaction(adapter_meta, opts, fn ->
       case fun.(repo) do
+        :ok ->
+          :ok
+
         {:ok, result} ->
           result
 

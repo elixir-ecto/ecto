@@ -2306,9 +2306,9 @@ defmodule Ecto.Repo do
       end)
 
   The return value is the same as of the given `fun` which must be
-  `{:ok, result}` or `{:error, reason}`.
+  `:ok`, `{:ok, result}` or `{:error, reason}`.
 
-  If this function returns `{:ok, result}`, it means the transaction
+  If this function returns either `:ok`, or `{:ok, result}`, it means the transaction
   was successfully committed. On the other hand, if it returns `{:error, reason}`,
   it means the transaction was rolled back.
 
@@ -2324,8 +2324,8 @@ defmodule Ecto.Repo do
   If an Elixir exception occurs the transaction will be rolled back
   and the exception will bubble up from the transaction function.
   If no exception occurs, the transaction is committed if the function
-  returns `{:ok, result}`. Returning `{:error, result}` will rollback the transaction
-  and this function will return `{:error, result}` as well.
+  returns either `:ok` or `{:ok, result}`. Returning `{:error, reason}` will rollback the transaction
+  and this function will return `{:error, reason}` as well.
   A transaction can be explicitly rolled back
   by calling `c:rollback/1`, this will immediately leave the function
   and return the value given to `rollback` as `{:error, value}`.
@@ -2499,7 +2499,7 @@ defmodule Ecto.Repo do
   """
   @doc group: "Transaction API"
   @callback transact(fun :: (-> result), opts :: Keyword.t()) :: result
-            when result: {:ok, any()} | {:error, any()}
+            when result: :ok | {:ok, any()} | {:error, any()}
   @callback transact(multi :: Ecto.Multi.t(), opts :: Keyword.t()) ::
               {:ok, map()}
               | Ecto.Multi.failure()

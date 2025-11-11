@@ -2321,6 +2321,15 @@ defmodule Ecto.Integration.RepoTest do
 
   describe "transact/2 with function" do
     test "return ok" do
+      assert :ok =
+               TestRepo.transact(fn ->
+                 post1 = TestRepo.insert!(%Post{title: "1"})
+                 post2 = TestRepo.insert!(%Post{title: "2"})
+                 :ok
+               end)
+    end
+
+    test "return ok with tuple" do
       assert {:ok, [post1, post2]} =
                TestRepo.transact(fn ->
                  post1 = TestRepo.insert!(%Post{title: "1"})
