@@ -590,4 +590,16 @@ defmodule Ecto.Query.SubqueryTest do
       assert Macro.to_string(planned_q.from.source.query.select.expr) == "%{id: ^0, text: ^1}"
     end
   end
+
+  describe "plan: select_merge with struct in subquery" do
+    test "handles select_merge source back onto merge expression" do
+      subquery = from p in Post,
+                      select: merge(p, %{comment_updated_at: fragment("now()")})
+
+      # this just needs to not raise
+      from s in subquery(subquery),
+        select: merge(s, %{text: "text"}),
+        select_merge: s
+    end
+  end
 end

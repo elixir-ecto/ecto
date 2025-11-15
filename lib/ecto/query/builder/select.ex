@@ -422,6 +422,12 @@ defmodule Ecto.Query.Builder.Select do
         {_, {:map, _, _}} ->
           {:merge, [], [old_expr, new_expr]}
 
+        {{:source_with_extra, _, _}, {:map, _, _}} ->
+          {:merge, [], [old_expr, new_expr]}
+
+        {{:source_with_extra, _, ix}, {:source, _, ix}} ->
+          {:merge, [], [old_expr, new_expr]}
+
         {_, _} ->
           message = """
           cannot select_merge #{merge_argument_to_error(new_expr, query)} into \
@@ -454,6 +460,13 @@ defmodule Ecto.Query.Builder.Select do
     case take do
       %{^ix => {:map, _}} -> {:map, meta, :runtime}
       _ -> {:source, meta, ix}
+    end
+  end
+
+  defp classify_merge({:merge, _, [{:&, meta, [ix]} | _rest]}, take) do
+    case take do
+      %{^ix => {:map, _}} -> {:map, meta, :runtime}
+      _ -> {:source_with_extra, meta, ix}
     end
   end
 
