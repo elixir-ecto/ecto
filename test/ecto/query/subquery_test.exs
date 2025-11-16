@@ -599,7 +599,7 @@ defmodule Ecto.Query.SubqueryTest do
       # this just needs to not raise
       from s in subquery(subquery),
         select: merge(s, %{text: "text"}),
-        select_merge: s
+        select_merge: struct(s, [:title, :text])
     end
   end
 end
