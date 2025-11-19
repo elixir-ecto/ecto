@@ -2096,7 +2096,7 @@ defmodule Ecto.Schema do
     :ok
   end
 
-  @valid_has_options [
+  @valid_has_many_options [
     :foreign_key,
     :references,
     :through,
@@ -2110,22 +2110,32 @@ defmodule Ecto.Schema do
   @doc false
   def __has_many__(mod, name, queryable, opts) do
     if is_list(queryable) and Keyword.has_key?(queryable, :through) do
-      check_options!(queryable, @valid_has_options, "has_many/3")
+      check_options!(queryable, @valid_has_many_options, "has_many/3")
       association(mod, :many, name, Ecto.Association.HasThrough, queryable)
     else
-      check_options!(opts, @valid_has_options, "has_many/3")
+      check_options!(opts, @valid_has_many_options, "has_many/3")
       struct = association(mod, :many, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
       Module.put_attribute(mod, :ecto_changeset_fields, {name, {:assoc, struct}})
     end
   end
 
+  @valid_has_one_options [
+    :foreign_key,
+    :references,
+    :through,
+    :on_delete,
+    :defaults,
+    :on_replace,
+    :where
+  ]
+
   @doc false
   def __has_one__(mod, name, queryable, opts) do
     if is_list(queryable) and Keyword.has_key?(queryable, :through) do
-      check_options!(queryable, @valid_has_options, "has_one/3")
+      check_options!(queryable, @valid_has_one_options, "has_one/3")
       association(mod, :one, name, Ecto.Association.HasThrough, queryable)
     else
-      check_options!(opts, @valid_has_options, "has_one/3")
+      check_options!(opts, @valid_has_one_options, "has_one/3")
       struct = association(mod, :one, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
       Module.put_attribute(mod, :ecto_changeset_fields, {name, {:assoc, struct}})
     end
