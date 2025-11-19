@@ -15,6 +15,12 @@ defmodule Ecto.UUID do
   """
   @type raw :: <<_::128>>
 
+  @typedoc """
+  Version of the UUID.
+  supported versions are `:v4` and `:v7`.
+  """
+  @type version :: :v4 | :v7
+
   @doc false
   def type, do: :uuid
 
@@ -47,6 +53,7 @@ defmodule Ecto.UUID do
   """
   @spec cast(t | raw | any) :: {:ok, t} | :error
   def cast(uuid)
+
   def cast(
         <<a1, a2, a3, a4, a5, a6, a7, a8, ?-, b1, b2, b3, b4, ?-, c1, c2, c3, c4, ?-, d1, d2, d3,
           d4, ?-, e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12>>
@@ -105,6 +112,7 @@ defmodule Ecto.UUID do
   """
   @spec dump(uuid_string :: t | any) :: {:ok, raw} | :error
   def dump(uuid_string)
+
   def dump(
         <<a1, a2, a3, a4, a5, a6, a7, a8, ?-, b1, b2, b3, b4, ?-, c1, c2, c3, c4, ?-, d1, d2, d3,
           d4, ?-, e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12>>
@@ -183,19 +191,39 @@ defmodule Ecto.UUID do
     end
   end
 
+  @default_version :v4
   @doc """
   Generates a random, version 4 UUID.
   """
   @spec generate() :: t
-  def generate(), do: encode(bingenerate())
+  def generate(), do: encode(bingenerate(@default_version))
+
+  @doc """
+  Generates a uuid of the given version
+  """
+  @spec generate(version) :: t
+  def generate(version), do: encode(bingenerate(version))
+
+  @doc """
+  Generates a uuid of the given version in the binary format.
+  """
+  @spec bingenerate() :: raw
+  def bingenerate(), do: bingenerate(@default_version)
 
   @doc """
   Generates a random, version 4 UUID in the binary format.
   """
-  @spec bingenerate() :: raw
-  def bingenerate() do
+  @spec bingenerate(version) :: raw
+  def bingenerate(:v4) do
     <<u0::48, _::4, u1::12, _::2, u2::62>> = :crypto.strong_rand_bytes(16)
     <<u0::48, 4::4, u1::12, 2::2, u2::62>>
+  end
+
+  def bingenerate(:v7) do
+    milliseconds = System.system_time(:millisecond)
+    <<u0::12, u1::62, _::6>> = :crypto.strong_rand_bytes(10)
+
+    <<milliseconds::48, 7::4, u0::12, 2::2, u1::62>>
   end
 
   # Callback invoked by autogenerate fields.
