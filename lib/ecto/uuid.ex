@@ -214,7 +214,7 @@ defmodule Ecto.UUID do
   def generate(version \\ @default_version), do: encode(bingenerate(version))
 
   @doc """
-  Generates a v4 uuid of the in binary format.
+  Generates a v4 uuid in binary format.
   """
   @spec bingenerate() :: raw
   def bingenerate(), do: bingenerate(@default_version)
