@@ -229,7 +229,7 @@ defmodule Ecto.UUID do
   end
 
   def bingenerate(:v7) do
-    milliseconds = System.monotonic_time(:millisecond)
+    milliseconds = System.system_time(:millisecond)
     <<u0::12, u1::62, _::6>> = :crypto.strong_rand_bytes(10)
 
     <<milliseconds::48, 7::4, u0::12, 2::2, u1::62>>
