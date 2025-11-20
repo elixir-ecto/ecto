@@ -30,11 +30,9 @@ defmodule Ecto.UUID do
   @type raw :: <<_::128>>
 
   @typedoc """
-  Version of the UUID.
-  supported versions are `:v4` and `:v7`.
+  currently supported option is version, it accepts 4 or 7.
   """
-  @type version :: :v4 | :v7
-  @type options :: Keyword.t()
+  @type options :: [version: 4 | 7]
 
   @doc false
   def type, do: :uuid
@@ -209,20 +207,20 @@ defmodule Ecto.UUID do
   @default_version 4
   @default_options version: 4
   @doc """
-  Generates a uuid of the given version
+  Generates a uuid with the given options.
   """
   @spec generate() :: t
   @spec generate(options) :: t
   def generate(opts \\ [@default_options]), do: encode(bingenerate(opts))
 
   @doc """
-  Generates a v4 uuid in binary format.
+  Generates a version 4 uuid in binary format.
   """
   @spec bingenerate() :: raw
   def bingenerate(), do: bingenerate(@default_options)
 
   @doc """
-  Generates a uuid of the given version in the binary format.
+  Generates a uuid with the given options in binary format.
   """
   @spec bingenerate(options) :: raw
   def bingenerate(opts) do
