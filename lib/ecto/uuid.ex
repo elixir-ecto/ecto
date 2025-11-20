@@ -14,7 +14,7 @@ defmodule Ecto.UUID do
   To use UUID v7 (time-ordered) instead:
 
       use Ecto.Schema
-      @primary_key {:id, :binary_id, autogenerate: {Ecto.UUID, :generate, [:v7]}}
+      @primary_key {:id, :binary_id, autogenerate: [version: 7]}
   """
 
   use Ecto.Type
