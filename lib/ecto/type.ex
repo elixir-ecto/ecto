@@ -320,8 +320,9 @@ defmodule Ecto.Type do
   to `field` with the `:autogenerate` flag.
   """
   @callback autogenerate() :: term()
+  @callback autogenerate(term) :: term()
 
-  @optional_callbacks autogenerate: 0
+  @optional_callbacks autogenerate: 0, autogenerate: 1
 
   ## Functions
 

@@ -33,8 +33,8 @@ defmodule Ecto.Repo.AutogenerateTest do
 
     schema "default" do
       field :code, Ecto.UUID, autogenerate: true
-      field :uuid_v4, Ecto.UUID, autogenerate: {Ecto.UUID, :generate, [:v4]}
-      field :uuid_v7, Ecto.UUID, autogenerate: {Ecto.UUID, :generate, [:v7]}
+      field :uuid_v4, Ecto.UUID, autogenerate: [version: 4]
+      field :uuid_v7, Ecto.UUID, autogenerate: [version: 7]
       has_one :manager, Manager
       has_many :offices, Office
       timestamps()

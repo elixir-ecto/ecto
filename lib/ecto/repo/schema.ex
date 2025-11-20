@@ -916,7 +916,12 @@ defmodule Ecto.Repo.Schema do
         to_remove = List.wrap(conflict_target)
         replace = replace_all_fields!(:replace_all, schema, to_remove)
 
-        if replace == [], do: raise(ArgumentError, "empty list of fields to update, use the `:replace` option instead")
+        if replace == [],
+          do:
+            raise(
+              ArgumentError,
+              "empty list of fields to update, use the `:replace` option instead"
+            )
 
         {{replace, [], conflict_target}, []}
 
@@ -924,7 +929,12 @@ defmodule Ecto.Repo.Schema do
         to_remove = List.wrap(conflict_target) ++ fields
         replace = replace_all_fields!(:replace_all_except, schema, to_remove)
 
-        if replace == [], do: raise(ArgumentError, "empty list of fields to update, use the `:replace` option instead")
+        if replace == [],
+          do:
+            raise(
+              ArgumentError,
+              "empty list of fields to update, use the `:replace` option instead"
+            )
 
         {{replace, [], conflict_target}, []}
 

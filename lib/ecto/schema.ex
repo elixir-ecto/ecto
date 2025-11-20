@@ -665,6 +665,7 @@ defmodule Ecto.Schema do
 
     * `:autogenerate` - a `{module, function, args}` tuple for a function
       to call to generate the field value before insertion if value is not set.
+      A list of options is passed as first argument `{type, :autogenerate, [options]}`.
       A shorthand value of `true` is equivalent to `{type, :autogenerate, []}`.
 
     * `:read_after_writes` - When true, the field is always read back
@@ -2043,6 +2044,9 @@ defmodule Ecto.Schema do
       case gen = opts[:autogenerate] do
         {_, _, _} ->
           store_mfa_autogenerate!(mod, name, type, gen)
+
+        autogenerate_opts when is_list(autogenerate_opts) ->
+          store_mfa_autogenerate!(mod, name, type, {type, :autogenerate, [autogenerate_opts]})
 
         true ->
           store_type_autogenerate!(mod, name, source || name, type, pk?)
