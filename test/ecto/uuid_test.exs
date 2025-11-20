@@ -66,17 +66,19 @@ defmodule Ecto.UUIDTest do
   end
 
   test "generate v4 returns valid uuid_v4" do
-    assert <<_::64, ?-, _::32, ?-, ?4, _::24, ?-, _::32, ?-, _::96>> = Ecto.UUID.generate(:v4)
+    assert <<_::64, ?-, _::32, ?-, ?4, _::24, ?-, _::32, ?-, _::96>> =
+             Ecto.UUID.generate(version: 4)
   end
 
   test "generate v7 returns valid uuid_v7" do
-    assert <<_::64, ?-, _::32, ?-, ?7, _::24, ?-, _::32, ?-, _::96>> = Ecto.UUID.generate(:v7)
+    assert <<_::64, ?-, _::32, ?-, ?7, _::24, ?-, _::32, ?-, _::96>> =
+             Ecto.UUID.generate(version: 7)
   end
 
   test "generate v7 maintains time-based sortability across milliseconds" do
-    uuid1 = Ecto.UUID.generate(:v7)
+    uuid1 = Ecto.UUID.generate(version: 7)
     Process.sleep(1)
-    uuid2 = Ecto.UUID.generate(:v7)
+    uuid2 = Ecto.UUID.generate(version: 7)
     assert uuid1 < uuid2
   end
 end

@@ -34,6 +34,7 @@ defmodule Ecto.UUID do
   supported versions are `:v4` and `:v7`.
   """
   @type version :: :v4 | :v7
+  @type options :: Keyword.t()
 
   @doc false
   def type, do: :uuid
@@ -205,30 +206,39 @@ defmodule Ecto.UUID do
     end
   end
 
-  @default_version :v4
+  @default_version 4
+  @default_options version: 4
   @doc """
   Generates a uuid of the given version
   """
   @spec generate() :: t
-  @spec generate(version) :: t
-  def generate(version \\ @default_version), do: encode(bingenerate(version))
+  @spec generate(options) :: t
+  def generate(opts \\ [@default_options]), do: encode(bingenerate(opts))
 
   @doc """
   Generates a v4 uuid in binary format.
   """
   @spec bingenerate() :: raw
-  def bingenerate(), do: bingenerate(@default_version)
+  def bingenerate(), do: bingenerate(@default_options)
 
   @doc """
   Generates a uuid of the given version in the binary format.
   """
-  @spec bingenerate(version) :: raw
-  def bingenerate(:v4) do
+  @spec bingenerate(options) :: raw
+  def bingenerate(opts) do
+    case Keyword.get(opts, :version, @default_version) do
+      4 -> bingenerate_v4()
+      7 -> bingenerate_v7()
+      _ -> raise ArgumentError, "unknown UUID version: #{inspect(opts[:version])}"
+    end
+  end
+
+  defp bingenerate_v4 do
     <<u0::48, _::4, u1::12, _::2, u2::62>> = :crypto.strong_rand_bytes(16)
     <<u0::48, 4::4, u1::12, 2::2, u2::62>>
   end
 
-  def bingenerate(:v7) do
+  defp bingenerate_v7 do
     milliseconds = System.system_time(:millisecond)
     <<u0::12, u1::62, _::6>> = :crypto.strong_rand_bytes(10)
 
@@ -237,7 +247,8 @@ defmodule Ecto.UUID do
 
   # Callback invoked by autogenerate fields.
   @doc false
-  def autogenerate, do: generate()
+  def autogenerate, do: generate(@default_options)
+  def autogenerate(opts), do: generate(opts)
 
   @spec encode(raw) :: t
   defp encode(
