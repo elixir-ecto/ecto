@@ -665,6 +665,7 @@ defmodule Ecto.Schema do
 
     * `:autogenerate` - a `{module, function, args}` tuple for a function
       to call to generate the field value before insertion if value is not set.
+      A list of options is passed as first argument `{type, :autogenerate, [options]}`.
       A shorthand value of `true` is equivalent to `{type, :autogenerate, []}`.
 
     * `:read_after_writes` - When true, the field is always read back
@@ -1594,6 +1595,8 @@ defmodule Ecto.Schema do
       as `@primary_key` (see the [Schema attributes](#module-schema-attributes)
       section for more info). Primary keys are automatically set up for embedded
       schemas as well, defaulting to `{:id,  :binary_id, autogenerate: true}`.
+      This will generate the default UUID v4. You can use UUID v7 instead by setting
+      the primary key to `{:id, :binary_id, autogenerate: [version: 7]}`
       Note `:primary_key`s are not automatically read back on `insert/2`,
       unless one of `autogenerate: true` or `read_after_writes: true` is set.
 
@@ -2041,6 +2044,9 @@ defmodule Ecto.Schema do
       case gen = opts[:autogenerate] do
         {_, _, _} ->
           store_mfa_autogenerate!(mod, name, type, gen)
+
+        autogenerate_opts when is_list(autogenerate_opts) ->
+          store_mfa_autogenerate!(mod, name, type, {type, :autogenerate, [autogenerate_opts]})
 
         true ->
           store_type_autogenerate!(mod, name, source || name, type, pk?)

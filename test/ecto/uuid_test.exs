@@ -7,8 +7,8 @@ defmodule Ecto.UUIDTest do
   @test_uuid_invalid_characters "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   @test_uuid_invalid_format "xxxxxxxx-xxxx"
   @test_uuid_null "00000000-0000-0000-0000-000000000000"
-  @test_uuid_binary <<0x60, 0x1D, 0x74, 0xE4, 0xA8, 0xD3, 0x4B, 0x6E,
-                      0x83, 0x65, 0xED, 0xDB, 0x4C, 0x89, 0x33, 0x27>>
+  @test_uuid_binary <<0x60, 0x1D, 0x74, 0xE4, 0xA8, 0xD3, 0x4B, 0x6E, 0x83, 0x65, 0xED, 0xDB,
+                      0x4C, 0x89, 0x33, 0x27>>
 
   test "cast" do
     assert Ecto.UUID.cast(@test_uuid) == {:ok, @test_uuid}
@@ -21,6 +21,7 @@ defmodule Ecto.UUIDTest do
 
   test "cast!" do
     assert Ecto.UUID.cast!(@test_uuid) == @test_uuid
+
     assert_raise Ecto.CastError, "cannot cast nil to Ecto.UUID", fn ->
       assert Ecto.UUID.cast!(nil)
     end
@@ -29,6 +30,7 @@ defmodule Ecto.UUIDTest do
   test "load" do
     assert Ecto.UUID.load(@test_uuid_binary) == {:ok, @test_uuid}
     assert Ecto.UUID.load("") == :error
+
     assert_raise ArgumentError, ~r"trying to load string UUID as Ecto.UUID:", fn ->
       Ecto.UUID.load(@test_uuid)
     end
@@ -59,7 +61,24 @@ defmodule Ecto.UUIDTest do
     end
   end
 
-  test "generate" do
-    assert << _::64, ?-, _::32, ?-, _::32, ?-, _::32, ?-, _::96 >> = Ecto.UUID.generate()
+  test "generate returns valid uuid_v4" do
+    assert <<_::64, ?-, _::32, ?-, ?4, _::24, ?-, _::32, ?-, _::96>> = Ecto.UUID.generate()
+  end
+
+  test "generate v4 returns valid uuid_v4" do
+    assert <<_::64, ?-, _::32, ?-, ?4, _::24, ?-, _::32, ?-, _::96>> =
+             Ecto.UUID.generate(version: 4)
+  end
+
+  test "generate v7 returns valid uuid_v7" do
+    assert <<_::64, ?-, _::32, ?-, ?7, _::24, ?-, _::32, ?-, _::96>> =
+             Ecto.UUID.generate(version: 7)
+  end
+
+  test "generate v7 maintains time-based sortability across milliseconds" do
+    uuid1 = Ecto.UUID.generate(version: 7)
+    Process.sleep(1)
+    uuid2 = Ecto.UUID.generate(version: 7)
+    assert uuid1 < uuid2
   end
 end
