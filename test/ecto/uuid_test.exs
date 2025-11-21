@@ -70,6 +70,16 @@ defmodule Ecto.UUIDTest do
              Ecto.UUID.generate(version: 4)
   end
 
+  test "generate v4 with precision or monotonic raises an ArgumentError" do
+    assert_raise ArgumentError, fn ->
+      Ecto.UUID.generate(precision: :millisecond)
+    end
+
+    assert_raise ArgumentError, fn ->
+      Ecto.UUID.generate(version: 4, monotonic: true)
+    end
+  end
+
   test "generate v7 returns valid uuid_v7" do
     assert <<_::64, ?-, _::32, ?-, ?7, _::24, ?-, _::32, ?-, _::96>> =
              Ecto.UUID.generate(version: 7)
@@ -80,5 +90,31 @@ defmodule Ecto.UUIDTest do
     Process.sleep(1)
     uuid2 = Ecto.UUID.generate(version: 7)
     assert uuid1 < uuid2
+  end
+
+  test "generate v7 with precision: :millisecond, monotonic: true maintains sortability" do
+    uuids =
+      for _ <- 0..5_000,
+          do: Ecto.UUID.generate(version: 7, precision: :millisecond, monotonic: true)
+
+    assert uuids == Enum.sort(uuids)
+  end
+
+  test "generate v7 with precision: :nanosecond, monotonic: true maintains sortability" do
+    uuids =
+      for _ <- 0..20_000,
+          do: Ecto.UUID.generate(version: 7, precision: :nanosecond, monotonic: true)
+
+    assert uuids == Enum.sort(uuids)
+  end
+
+  test "generate v7 with invalid precision or monotonic raises an ArgumentError" do
+    assert_raise ArgumentError, fn ->
+      Ecto.UUID.generate(version: 7, precision: :foo)
+    end
+
+    assert_raise ArgumentError, fn ->
+      Ecto.UUID.generate(version: 7, monotonic: :bar)
+    end
   end
 end
