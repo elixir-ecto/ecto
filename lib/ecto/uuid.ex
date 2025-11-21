@@ -205,29 +205,22 @@ defmodule Ecto.UUID do
   end
 
   @default_version 4
-  @default_options version: 4
   @doc """
   Generates a uuid with the given options.
   """
   @spec generate() :: t
   @spec generate(options) :: t
-  def generate(opts \\ [@default_options]), do: encode(bingenerate(opts))
-
-  @doc """
-  Generates a version 4 uuid in binary format.
-  """
-  @spec bingenerate() :: raw
-  def bingenerate(), do: bingenerate(@default_options)
+  def generate(opts \\ []), do: encode(bingenerate(opts))
 
   @doc """
   Generates a uuid with the given options in binary format.
   """
   @spec bingenerate(options) :: raw
-  def bingenerate(opts) do
+  def bingenerate(opts \\ []) do
     case Keyword.get(opts, :version, @default_version) do
       4 -> bingenerate_v4()
       7 -> bingenerate_v7()
-      _ -> raise ArgumentError, "unknown UUID version: #{inspect(opts[:version])}"
+      version -> raise ArgumentError, "unknown UUID version: #{inspect(version)}"
     end
   end
 
@@ -245,8 +238,7 @@ defmodule Ecto.UUID do
 
   # Callback invoked by autogenerate fields.
   @doc false
-  def autogenerate, do: generate(@default_options)
-  def autogenerate(opts), do: generate(opts)
+  def autogenerate(opts \\ []), do: generate(opts)
 
   @spec encode(raw) :: t
   defp encode(
