@@ -31,7 +31,6 @@ defmodule Ecto.Type do
     internal: Internal Data
     database: Database Data
     external --> internal: cast/1
-    external --> database: dump/1
     internal --> database: dump/1
     database --> internal: load/1
   ```
