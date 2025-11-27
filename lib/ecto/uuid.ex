@@ -333,10 +333,7 @@ defmodule Ecto.UUID do
 
   defp next_ascending(time_unit) when time_unit in [:millisecond, :nanosecond] do
     timestamp_ref =
-      with nil <- :persistent_term.get({__MODULE__, time_unit}, nil) do
-        :persistent_term.put({__MODULE__, time_unit}, :atomics.new(1, signed: false))
-        :persistent_term.get({__MODULE__, time_unit})
-      end
+      :persistent_term.get({__MODULE__, time_unit}, nil) || raise "Ecto has not been started"
 
     step =
       case time_unit do
