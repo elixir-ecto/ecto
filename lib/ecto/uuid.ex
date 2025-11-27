@@ -350,12 +350,7 @@ defmodule Ecto.UUID do
 
     # If the current timestamp is not at least the minimal step greater than the
     # previous step, then we make it so.
-    new_ts =
-      if current_ts > min_step_ts do
-        current_ts
-      else
-        min_step_ts
-      end
+    new_ts = max(current_ts, min_step_ts)
 
     compare_exchange(timestamp_ref, previous_ts, new_ts, step)
   end
