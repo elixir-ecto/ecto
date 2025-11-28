@@ -15,6 +15,15 @@ defmodule Ecto.UUID do
 
       use Ecto.Schema
       @primary_key {:id, :binary_id, autogenerate: [version: 7]}
+
+  To use UUID v7 (time-ordered) monotonic:
+
+      use Ecto.Schema
+      @primary_key {:id, :binary_id, autogenerate: [version: 7, monotonic: true]}
+
+  According to [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562#name-monotonicity-and-counters):
+  "Monotonicity (each subsequent value being greater than the last) is the
+  backbone of time-based sortable UUIDs."
   """
 
   use Ecto.Type
@@ -30,9 +39,18 @@ defmodule Ecto.UUID do
   @type raw :: <<_::128>>
 
   @typedoc """
-  currently supported option is version, it accepts 4 or 7.
+  Supported options: `:version`, `:precision` (v7-only), and `:monotonic` (v7-only).
   """
-  @type options :: [version: 4 | 7]
+  @type option ::
+          {:version, 4 | 7}
+          | {:precision, :millisecond | :nanosecond}
+          | {:monotonic, boolean()}
+
+  @type options :: [option]
+
+  @version_4 4
+  @version_7 7
+  @variant 2
 
   @doc false
   def type, do: :uuid
@@ -206,7 +224,48 @@ defmodule Ecto.UUID do
 
   @default_version 4
   @doc """
-  Generates a uuid with the given options.
+  Generates a UUID string.
+
+  ## Options
+
+   * `:version` - The UUID version to generate. Supported values are `4` (random)
+     and `7` (time-ordered). Defaults to `4`.
+
+  ## Options (version 7 only)
+
+   * `:precision` - The timestamp precision for version 7 UUIDs. Supported values
+     are `:millisecond` and `:nanosecond`. Defaults to `:millisecond` if
+     monotonic is `false` and `:nanosecond` if `:monotonic` is `true`.
+     When using `:nanosecond`, the sub-millisecond precision is encoded in the
+     `rand_a` field. NOTE: Due to the 12-bit space available, nanosecond
+     precision is limited to 4096 (2^12) distinct values per millisecond.
+
+   * `:monotonic` - When `true`, ensures that generated version 7 UUIDs are
+     strictly monotonically increasing, even when multiple UUIDs are generated
+     within the same timestamp. This is useful for maintaining insertion order
+     in databases. Defaults to `false`.
+     NOTE: With `:millisecond` precision, generating multiple UUIDs within the
+     same millisecond increments the timestamp by 1ms for each UUID, causing the
+     embedded timestamp to drift ahead of real time under high throughput.
+     Using `precision: :nanosecond` reduces this drift significantly, as
+     timestamps only advance by 244ns per UUID when generation outpaces real
+     time. When monotonic UUIDs are desired, it is recommended to also use
+     `precision: :nanosecond`.
+
+  ## Examples
+
+      > Ecto.UUID.generate()
+      "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+
+      > Ecto.UUID.generate(version: 7)
+      "018ec4c1-ae46-7f5a-8f5a-6f5a8f5a6f5a"
+
+      > Ecto.UUID.generate(version: 7, precision: :nanosecond)
+      "018ec4c1-ae46-7f5a-8f5a-6f5a8f5a6f5a"
+
+      > Ecto.UUID.generate(version: 7, monotonic: true)
+      "018ec4c1-ae46-7f5a-8f5a-6f5a8f5a6f5a"
+
   """
   @spec generate() :: t
   @spec generate(options) :: t
@@ -214,26 +273,93 @@ defmodule Ecto.UUID do
 
   @doc """
   Generates a uuid with the given options in binary format.
+  See `generate/1` for details and available options.
   """
   @spec bingenerate(options) :: raw
   def bingenerate(opts \\ []) do
-    case Keyword.get(opts, :version, @default_version) do
-      4 -> bingenerate_v4()
-      7 -> bingenerate_v7()
-      version -> raise ArgumentError, "unknown UUID version: #{inspect(version)}"
+    case Keyword.pop(opts, :version, @default_version) do
+      {4, []} -> bingenerate_v4()
+      {7, opts} -> bingenerate_v7(opts)
+      {4, opts} -> raise ArgumentError, "unsupported options for v4: #{inspect(opts)}"
+      {version, _} -> raise ArgumentError, "unsupported UUID version: #{inspect(version)}"
     end
   end
 
   defp bingenerate_v4 do
     <<u0::48, _::4, u1::12, _::2, u2::62>> = :crypto.strong_rand_bytes(16)
-    <<u0::48, 4::4, u1::12, 2::2, u2::62>>
+    <<u0::48, @version_4::4, u1::12, @variant::2, u2::62>>
   end
 
-  defp bingenerate_v7 do
-    milliseconds = System.system_time(:millisecond)
-    <<u0::12, u1::62, _::6>> = :crypto.strong_rand_bytes(10)
+  # The bits available for sub-millisecond fractions when using increased clock
+  # precision based on nanoseconds.
+  @ns_sub_ms_bits 12
+  # The number of values that can be represented in the bit space (2^12).
+  @ns_possible_values Bitwise.bsl(1, @ns_sub_ms_bits)
+  # The number of nanoseconds in a millisecond.
+  @ns_per_ms 1_000_000
+  # The minimum step when using increased clock precision with fractional
+  # milliseconds based on nanoseconds.
+  @ns_minimal_step div(@ns_per_ms, @ns_possible_values)
 
-    <<milliseconds::48, 7::4, u0::12, 2::2, u1::62>>
+  defp bingenerate_v7(opts) do
+    monotonic = Keyword.get(opts, :monotonic, false)
+    time_unit = Keyword.get(opts, :precision, if(monotonic, do: :nanosecond, else: :millisecond))
+
+    timestamp =
+      case monotonic do
+        true -> next_ascending(time_unit)
+        false -> System.system_time(time_unit)
+        monotonic -> raise ArgumentError, "invalid monotonic value: #{inspect(monotonic)}"
+      end
+
+    case time_unit do
+      :millisecond ->
+        <<rand_a::12, _::6, rand_b::62>> = :crypto.strong_rand_bytes(10)
+        <<timestamp::48, @version_7::4, rand_a::12, @variant::2, rand_b::62>>
+
+      :nanosecond ->
+        milliseconds = div(timestamp, @ns_per_ms)
+
+        clock_precision =
+          (rem(timestamp, @ns_per_ms) * @ns_possible_values) |> div(@ns_per_ms)
+
+        <<_::2, rand_b::62>> = :crypto.strong_rand_bytes(8)
+        <<milliseconds::48, @version_7::4, clock_precision::12, @variant::2, rand_b::62>>
+
+      time_unit ->
+        raise ArgumentError, "unsupported precision: #{inspect(time_unit)}"
+    end
+  end
+
+  defp next_ascending(time_unit) when time_unit in [:millisecond, :nanosecond] do
+    timestamp_ref =
+      :persistent_term.get({__MODULE__, time_unit}, nil) || raise "Ecto has not been started"
+
+    step =
+      case time_unit do
+        :millisecond -> 1
+        :nanosecond -> @ns_minimal_step
+      end
+
+    previous_ts = :atomics.get(timestamp_ref, 1)
+    min_step_ts = previous_ts + step
+    current_ts = System.system_time(time_unit)
+
+    # If the current timestamp is not at least the minimal step greater than the
+    # previous step, then we make it so.
+    new_ts = max(current_ts, min_step_ts)
+
+    compare_exchange(timestamp_ref, previous_ts, new_ts, step)
+  end
+
+  defp compare_exchange(timestamp_ref, previous_ts, new_ts, step) do
+    case :atomics.compare_exchange(timestamp_ref, 1, previous_ts, new_ts) do
+      # If the new value was written, then we return it.
+      :ok -> new_ts
+      # Otherwise, the atomic value has changed in the meantime. We add the
+      # minimal step value to that and try again.
+      updated_ts -> compare_exchange(timestamp_ref, updated_ts, updated_ts + step, step)
+    end
   end
 
   # Callback invoked by autogenerate fields.
