@@ -84,7 +84,7 @@ By default, connections to Postgres' databases run on the "public" prefix. When 
 
 Luckily Postgres allows us to change the prefix our database connections run on by setting the "schema search path". The best moment to change the search path is during the setup of the database connection, ensuring all of our queries will run on that particular prefix, throughout the connection life-cycle.
 
-To do so, let's change our database configuration in "config/config.exs" and set a `:search_path` parameter in the `:parameters` option. The `:search_path` parameter expects a list of strings that define the search path for the connection:
+To do so, let's change our database configuration in "config/config.exs" and set a `:search_path` parameter in the `:parameters` option. The `:search_path` parameter expects a comma separated string of prefixes that define the search path for the connection:
 
 ```elixir
 config :my_app, MyApp.Repo,
@@ -93,7 +93,7 @@ config :my_app, MyApp.Repo,
   database: "demo_dev",
   hostname: "localhost",
   pool_size: 10,
-  parameters: [search_path: ["connection_prefix"]]
+  parameters: [search_path: "connection_prefix,public"]
 ```
 
 Now let's try to run the same query as before:
