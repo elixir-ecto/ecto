@@ -350,6 +350,14 @@ defmodule Ecto.RepoTest do
       TestRepo.reload(struct_with_custom_source)
       assert_received {:all, %{from: %{source: {"custom_schema", MySchema}}}}
     end
+
+    test "returns empty list when given empty list" do
+      assert TestRepo.reload([]) == []
+    end
+
+    test "reload! returns empty list when given empty list" do
+      assert TestRepo.reload!([]) == []
+    end
   end
 
   defmodule DefaultOptionRepo do

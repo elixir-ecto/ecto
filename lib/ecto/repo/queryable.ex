@@ -90,6 +90,8 @@ defmodule Ecto.Repo.Queryable do
     one!(name, query_for_get_by(queryable, clauses), opts)
   end
 
+  def reload(_name, [], _opts), do: []
+
   def reload(name, [head | _] = structs, opts) when is_list(structs) do
     results = all(name, query_for_reload(structs), opts)
 
@@ -104,6 +106,8 @@ defmodule Ecto.Repo.Queryable do
   def reload(name, struct, opts) do
     one(name, query_for_reload([struct]), opts)
   end
+
+  def reload!(_name, [], _opts), do: []
 
   def reload!(name, [head | _] = structs, opts) when is_list(structs) do
     query = query_for_reload(structs)
