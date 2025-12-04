@@ -209,7 +209,7 @@ defmodule Ecto.Query.Builder.Join do
 
     {count_bind, query} =
       if is_nil(count_bind) do
-        var = Macro.unique_var(:query, __MODULE__)
+        var = Macro.unique_var(:query, env.module)
 
         query =
           quote do

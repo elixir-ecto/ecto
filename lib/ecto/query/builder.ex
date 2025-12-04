@@ -954,15 +954,15 @@ defmodule Ecto.Query.Builder do
 
   """
   @spec escape_binding(Macro.t(), list, Macro.Env.t()) :: {Macro.t(), Keyword.t()}
-  def escape_binding(query, binding, _env) when is_list(binding) do
+  def escape_binding(query, binding, env) when is_list(binding) do
     vars = binding |> Enum.with_index() |> Enum.map(&escape_bind/1)
     assert_no_duplicate_binding!(vars)
 
     {positional_vars, named_vars} = Enum.split_while(vars, &(not named_bind?(&1)))
     assert_named_binds_in_tail!(named_vars, binding)
 
-    {query, positional_binds} = calculate_positional_binds(query, positional_vars)
-    {query, named_binds} = calculate_named_binds(query, named_vars)
+    {query, positional_binds} = calculate_positional_binds(query, positional_vars, env)
+    {query, named_binds} = calculate_named_binds(query, named_vars, env)
     {query, positional_binds ++ named_binds}
   end
 
@@ -995,14 +995,14 @@ defmodule Ecto.Query.Builder do
     end
   end
 
-  defp calculate_positional_binds(query, vars) do
+  defp calculate_positional_binds(query, vars, env) do
     case Enum.split_while(vars, &(elem(&1, 1) != :...)) do
       {vars, []} ->
         vars = for {:pos, var, count} <- vars, do: {var, count}
         {query, vars}
 
       {vars, [_ | tail]} ->
-        var = Macro.unique_var(:query, __MODULE__)
+        var = Macro.unique_var(:query, env.module)
 
         query =
           quote do
@@ -1023,10 +1023,10 @@ defmodule Ecto.Query.Builder do
     end
   end
 
-  defp calculate_named_binds(query, []), do: {query, []}
+  defp calculate_named_binds(query, [], _env), do: {query, []}
 
-  defp calculate_named_binds(query, vars) do
-    var = Macro.unique_var(:query, __MODULE__)
+  defp calculate_named_binds(query, vars, env) do
+    var = Macro.unique_var(:query, env.module)
 
     assignments =
       for {:named, key, name} <- vars do
