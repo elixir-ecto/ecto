@@ -248,7 +248,7 @@ defmodule Ecto.Repo do
 
   @doc false
   defmacro __using__(opts) do
-    quote bind_quoted: [opts: opts] do
+    quote bind_quoted: [opts: opts], generated: true do
       @behaviour Ecto.Repo
 
       {otp_app, adapter, behaviours} =
