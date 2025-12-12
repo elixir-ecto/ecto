@@ -155,11 +155,11 @@ end
 #### The first schema
 
 ```elixir
-defmodule User do
+defmodule Movie do
   use Ecto.Schema
 
-  schema "users" do
-    many_to_many :organizations, Organization, join_through: UserOrganization
+  schema "movies" do
+    many_to_many :actors, Actor, join_through: MovieActor
   end
 end
 ```
@@ -168,11 +168,11 @@ end
 #### The second schema
 
 ```elixir
-defmodule Organization do
+defmodule Actor do
   use Ecto.Schema
 
-  schema "organizations" do
-    many_to_many :users, User, join_through: UserOrganization
+  schema "actors" do
+    many_to_many :movies, Movie, join_through: MovieActor
   end
 end
 ```
@@ -181,13 +181,13 @@ end
 #### The join schema
 
 ```elixir
-defmodule UserOrganization do
+defmodule MovieActor do
   use Ecto.Schema
 
   @primary_key false
-  schema "users_organizations" do
-    belongs_to :user, User
-    belongs_to :organization, Organization
+  schema "movies_actors" do
+    belongs_to :movie, Movie
+    belongs_to :actor, Actor
     timestamps()
   end
 end
@@ -199,31 +199,31 @@ end
 It applies to both join tables and schemas.
 
 ```elixir
-defmodule MyApp.Migrations.CreateUsersAndOrgs do
+defmodule MyApp.Migrations.CreateMoviesAndActors do
   use Ecto.Migration
 
   def change do
-    create table("users") do
+    create table("movies") do
       timestamps()
     end
 
-    create table("organizations") do
+    create table("actors") do
       timestamps()
     end
 
-    create table("users_organizations", primary_key: false) do
-      add :user_id,
-          references(:users, on_delete: :delete_all),
+    create table("movies_actors", primary_key: false) do
+      add :movie_id,
+          references(:movies, on_delete: :delete_all),
           null: false
 
-      add :organization_id,
-          references(:organizations, on_delete: :delete_all),
+      add :actor_id,
+          references(:actors, on_delete: :delete_all),
           null: false
 
       timestamps()
     end
 
-    create unique_index(:users_organizations, [:user_id, :organization_id])
+    create unique_index(:movies_actors, [:movie_id, :actor_id])
   end
 end
 ```
