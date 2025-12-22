@@ -39,8 +39,10 @@ defmodule Ecto.Repo.Queryable do
     {query, opts} = repo.prepare_query(:stream, query, opts)
     query = attach_prefix(query, opts)
 
+    query_cache? = Keyword.get(opts, :query_cache, true)
+
     {query_meta, prepared, cast_params, dump_params} =
-      Planner.query(query, :all, cache, adapter, 0)
+      Planner.query(query, :all, cache, adapter, 0, query_cache?)
 
     opts = [cast_params: cast_params] ++ opts
 
@@ -223,8 +225,10 @@ defmodule Ecto.Repo.Queryable do
     {query, opts} = repo.prepare_query(operation, query, opts)
     query = attach_prefix(query, opts)
 
+    query_cache? = Keyword.get(opts, :query_cache, true)
+
     {query_meta, prepared, cast_params, dump_params} =
-      Planner.query(query, operation, cache, adapter, 0)
+      Planner.query(query, operation, cache, adapter, 0, query_cache?)
 
     opts = [cast_params: cast_params] ++ opts
 

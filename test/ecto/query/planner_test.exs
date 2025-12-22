@@ -2829,4 +2829,29 @@ defmodule Ecto.Query.PlannerTest do
       end
     end
   end
+
+  describe "query: query_cache option" do
+    setup do
+      cache = Planner.new_query_cache(__MODULE__)
+      {:ok, cache: cache}
+    end
+
+    test "uses cache if true", %{cache: cache} do
+      query = from(p in Post, where: p.title == ^"hello")
+
+      {_meta, {:cache, _update, _prepared}, _cast, _dump} =
+        Planner.query(query, :all, cache, Ecto.CachingTestAdapter, 0, true)
+
+      assert :ets.info(cache, :size) == 1
+    end
+
+    test "bypasses cache if false", %{cache: cache} do
+      query = from(p in Post, where: p.title == ^"hello")
+
+      {_meta1, {:nocache, _prepared}, _cast1, _dump1} =
+        Planner.query(query, :all, cache, Ecto.CachingTestAdapter, 0, false)
+
+      assert :ets.info(cache, :size) == 0
+    end
+  end
 end
