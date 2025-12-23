@@ -133,9 +133,10 @@ defmodule Ecto.Query.Planner do
   The cache value is the compiled query by the adapter
   along-side the select expression.
   """
-  def query(query, operation, cache, adapter, counter) do
+  def query(query, operation, cache, adapter, counter, query_cache?) do
     {query, params, key} = plan(query, operation, adapter)
     {cast_params, dump_params} = Enum.unzip(params)
+    key = if query_cache?, do: key, else: :nocache
     query_with_cache(key, query, operation, cache, adapter, counter, cast_params, dump_params)
   end
 

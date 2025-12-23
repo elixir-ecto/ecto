@@ -161,6 +161,46 @@ defmodule Ecto.TestAdapter do
   end
 end
 
+defmodule Ecto.CachingTestAdapter do
+  @moduledoc """
+  Test adapter that supports query caching, used for testing the query_cache option.
+  """
+  @behaviour Ecto.Adapter
+  @behaviour Ecto.Adapter.Queryable
+
+  defmacro __before_compile__(_opts), do: :ok
+
+  def ensure_all_started(_, _), do: {:ok, []}
+
+  def init(_opts) do
+    {:ok, Supervisor.child_spec({Task, fn -> :timer.sleep(:infinity) end}, []), %{}}
+  end
+
+  def checkout(_mod, _opts, fun), do: fun.()
+  def checked_out?(_mod), do: false
+
+  def loaders(_primitive, type), do: [type]
+  def dumpers(_primitive, type), do: [type]
+  def autogenerate(:id), do: nil
+  def autogenerate(:embed_id), do: Ecto.UUID.autogenerate()
+  def autogenerate(:binary_id), do: Ecto.UUID.bingenerate()
+
+  # Return :cache to trigger default caching in the planner
+  def prepare(operation, query), do: {:cache, {operation, query}}
+
+  def execute(_adapter_meta, _query_meta, {_cache_status, {:all, _query}}, _dump_params, _opts) do
+    []
+  end
+
+  def execute(_adapter_meta, _query_meta, {_cache_status, {_operation, _query}}, _dump_params, _opts) do
+    {1, nil}
+  end
+
+  def stream(_adapter_meta, _query_meta, _prepared, _dump_params, _opts) do
+    []
+  end
+end
+
 Application.put_env(:ecto, Ecto.TestRepo, user: "invalid")
 
 defmodule Ecto.TestRepo do

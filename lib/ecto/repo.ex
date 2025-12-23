@@ -136,6 +136,11 @@ defmodule Ecto.Repo do
       See the next section for more information
     * `:telemetry_options` - Extra options to attach to telemetry event name.
       See the next section for more information
+    * `:query_cache` - When set to `false`, bypasses the Ecto query cache for the current
+      operation. This means the query will not be looked up in the cache, it will not be stored
+      in the cache and no cache update function will not be passed to the adapter. Note that
+      this doesn't necessarily disable the database cache, it only affects Ecto's internal
+      cache of normalized queries and adapter prepared statements. Defaults to `true`.
 
   ## Adapter-Specific Errors
 
