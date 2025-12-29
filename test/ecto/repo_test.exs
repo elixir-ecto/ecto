@@ -543,12 +543,12 @@ defmodule Ecto.RepoTest do
                "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, limit: 1, select: 1>"
     end
 
-    test "removes order by from query without distinct/limit/offset" do
+    test "keeps order by from query" do
       from(MySchema, order_by: :id) |> TestRepo.exists?()
       assert_received {:all, query}
 
       assert inspect(query) ==
-               "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, limit: 1, select: 1>"
+               "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, order_by: [asc: m0.id], limit: 1, select: 1>"
     end
 
     test "overrides any select" do
