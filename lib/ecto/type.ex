@@ -236,7 +236,6 @@ defmodule Ecto.Type do
     duration
   )a
   @composite ~w(array map try in param)a
-  @variadic ~w(in splice)a
 
   @doc """
   Returns the underlying schema type for the custom type.
@@ -550,9 +549,9 @@ defmodule Ecto.Type do
     end
   end
 
-  def dump({qual, type}, value, dumper) when qual in @variadic do
+  def dump({:in, type}, value, dumper) do
     case dump({:array, type}, value, dumper) do
-      {:ok, value} -> {:ok, {qual, value}}
+      {:ok, value} -> {:ok, {:in, value}}
       :error -> :error
     end
   end
@@ -855,7 +854,7 @@ defmodule Ecto.Type do
   defp cast_fun(:duration), do: &cast_duration/1
   defp cast_fun({:supertype, :datetime}), do: &cast_any_datetime(&1)
   defp cast_fun({:parameterized, {mod, params}}), do: &mod.cast(&1, params)
-  defp cast_fun({qual, type}) when qual in @variadic, do: cast_fun({:array, type})
+  defp cast_fun({:in, type}), do: cast_fun({:array, type})
 
   defp cast_fun({:array, {:parameterized, _} = type}) do
     fun = cast_fun(type)

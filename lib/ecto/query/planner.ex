@@ -1054,7 +1054,7 @@ defmodule Ecto.Query.Planner do
       {v, type}, {acc, cacheable?} ->
         case cast_param(kind, query, expr, v, type, adapter) do
           {cast_v, {:in, dump_v}} -> {split_variadic_params(cast_v, dump_v, acc), false}
-          {cast_v, {:splice, dump_v}} -> {split_variadic_params(cast_v, dump_v, acc), cacheable?}
+          {:splice, cast_v_and_dump_v} -> {Enum.reverse(cast_v_and_dump_v, acc), cacheable?}
           cast_v_and_dump_v -> {[cast_v_and_dump_v | acc], cacheable?}
         end
     end)
@@ -1139,6 +1139,15 @@ defmodule Ecto.Query.Planner do
       "an #{inspect(x)} struct is not supported as right-side value of `in` operator",
       "Did you mean to write `expr in subquery(query)` instead?"
     )
+  end
+
+  defp cast_param(kind, query, expr, params, :splice, adapter) do
+    cast_v_and_dump_v =
+      Enum.map(params, fn {v, type}  ->
+        cast_param(kind, query, expr, v, type, adapter)
+      end)
+
+    {:splice, cast_v_and_dump_v}
   end
 
   defp cast_param(kind, query, expr, v, type, adapter) do
@@ -1643,15 +1652,20 @@ defmodule Ecto.Query.Planner do
   end
 
   defp prewalk(
-         {:splice, splice_meta, [{:^, meta, [_]}, length]},
-         _kind,
-         _query,
-         _expr,
+         {:splice, splice_meta, splice_exprs},
+         kind,
+         query,
+         expr,
          acc,
-         _adapter
+         adapter
        ) do
-    param = {:^, meta, [acc, length]}
-    {{:splice, splice_meta, [param]}, acc + length}
+
+    {splice_exprs, acc} =
+      Enum.map_reduce(splice_exprs, acc, fn splice_expr, acc ->
+        prewalk(splice_expr, kind, query, expr, acc, adapter)
+      end)
+
+    {{:splice, splice_meta, splice_exprs}, acc}
   end
 
   defp prewalk({{:., dot_meta, [left, field]}, meta, []}, kind, query, expr, acc, _adapter) do

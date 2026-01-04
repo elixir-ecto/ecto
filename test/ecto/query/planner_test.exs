@@ -1914,9 +1914,36 @@ defmodule Ecto.Query.PlannerTest do
     assert dump_params == [1, 2, 3, 4, 5]
 
     {:in, _, [_, {:fragment, _, parts}]} = hd(query.wheres).expr
-    assert [_, _, _, {:expr, {:splice, _, [{:^, _, [start_ix, length]}]}}, _, _, _] = parts
-    assert start_ix == 1
-    assert length == 3
+    assert [_, _, _, {:expr, {:splice, _, splice_exprs}}, _, _, _] = parts
+    assert splice_exprs == [{:^, [], [1]}, {:^, [], [2]}, {:^, [], [3]}]
+  end
+
+  test "normalize: fragment with splicing and dynamic" do
+    d1 = dynamic([p], p.id)
+    d2 = dynamic([p], ^2 + 3)
+
+    {query, cast_params, dump_params, _} =
+      from(c in Comment)
+      |> where([c], c.id in fragment("(?, ?, ?)", ^1, splice(^[d1, d2, 4]), ^5))
+      |> normalize_with_params()
+
+    assert cast_params == [1, 2, 4, 5]
+    assert dump_params == [1, 2, 4, 5]
+
+    {:in, _, [_, {:fragment, _, parts}]} = hd(query.wheres).expr
+
+    [_, {:expr, before_expr}, _, {:expr, {:splice, _, splice_exprs}}, _, {:expr, after_expr}, _] =
+      parts
+
+    assert before_expr == {:^, [], [0]}
+
+    assert splice_exprs == [
+             {{:., [], [{:&, [], [0]}, :id]}, [], []},
+             {:+, [], [{:^, [], [1]}, 3]},
+             {:^, [], [2]}
+           ]
+
+    assert after_expr == {:^, [], [3]}
   end
 
   test "normalize: from values list" do
