@@ -1298,7 +1298,7 @@ defmodule Ecto.SchemaTest do
     end
   end
 
-  test "binary_id with autogenerate options" do
+  test "binary_id with autogenerate options stores metadata correctly" do
     assert SchemaWithUuidV7PrimaryKey.__schema__(:autogenerate_id) ==
              {:id, :id, :binary_id, [version: 7, monotonic: true]}
 
@@ -1322,6 +1322,22 @@ defmodule Ecto.SchemaTest do
              ]
 
     assert SchemaWithUuidV7Field.__schema__(:autogenerate_fields) == [:uuid_v7, :uuid_v7_monotonic]
+  end
+
+  defmodule EmbeddedSchemaWithUuidV7 do
+    use Ecto.Schema
+
+    @primary_key {:id, :binary_id, autogenerate: [version: 7]}
+    embedded_schema do
+      field :name, :string
+    end
+  end
+
+  test "embedded schema with binary_id autogenerate options" do
+    assert EmbeddedSchemaWithUuidV7.__schema__(:autogenerate_id) ==
+             {:id, :id, :binary_id, [version: 7]}
+
+    assert EmbeddedSchemaWithUuidV7.__schema__(:source) == nil
   end
 
 end
