@@ -1136,7 +1136,7 @@ defmodule Ecto.QueryTest do
                raw: "(",
                expr: {:^, _, [0]},
                raw: ", ",
-               expr: {:splice, _, [{:^, _, [1]}, 3]},
+               expr: {:splice, _, [{:^, [], [1]}, {:^, [], [2]}, {:^, [], [3]}]},
                raw: ", ",
                expr: {:^, _, [2]},
                raw: ")"
@@ -1145,6 +1145,33 @@ defmodule Ecto.QueryTest do
       assert_raise ArgumentError, "splice(^value) expects `value` to be a list, got `234`", fn ->
         from p in "posts", where: p.id in fragment("(?)", splice(^234))
       end
+    end
+
+    test "supports list splicing with dynamic" do
+      d1 = dynamic([p], p.id)
+      d2 = dynamic([p], ^2 + 3)
+
+      query =
+        from p in "posts", where: p.id in fragment("(?, ?, ?)", ^1, splice(^[d1, d2, 4]), ^5)
+
+      assert {:in, _, [_, {:fragment, _, parts}]} = hd(query.wheres).expr
+
+      assert [
+               raw: "(",
+               expr: {:^, _, [0]},
+               raw: ", ",
+               expr:
+                 {:splice, _, splice_exprs},
+               raw: ", ",
+               expr: {:^, _, [2]},
+               raw: ")"
+             ] = parts
+
+      assert splice_exprs == [
+             {{:., [], [{:&, [], [0]}, :id]}, [], []},
+             {:+, [], [{:^, [], [1]}, 3]},
+             {:^, [], [2]}
+           ]
     end
 
     test "keeps UTF-8 encoding" do

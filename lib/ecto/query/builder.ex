@@ -2,6 +2,7 @@ defmodule Ecto.Query.Builder do
   @moduledoc false
 
   alias Ecto.Query
+  alias Ecto.Query.Builder.Dynamic
 
   @comparisons [
     is_nil: 1,
@@ -791,14 +792,14 @@ defmodule Ecto.Query.Builder do
     end
   end
 
-  defp escape_fragment({:splice, _meta, [splice]}, params_acc, vars, env) do
+  defp escape_fragment({:splice, _meta, [splice]}, {params, acc}, _vars, _env) do
     case splice do
-      {:^, _, [value]} = expr ->
-        checked = quote do: Ecto.Query.Builder.splice!(unquote(value))
-        length = quote do: length(unquote(checked))
-        {expr, params_acc} = escape(expr, {:splice, :any}, params_acc, vars, env)
-        escaped = {:{}, [], [:splice, [], [expr, length]]}
-        {escaped, params_acc}
+      {:^, _, [value]} ->
+        checked = quote do: Ecto.Query.Builder.splice!(unquote(value), unquote(length(params)))
+        splice_exprs = quote do: elem(unquote(checked), 0)
+        splice_params = quote do: {elem(unquote(checked), 1), :splice}
+        escaped = {:{}, [], [:splice, [], splice_exprs]}
+        {escaped, {[splice_params | params], acc}}
 
       _ ->
         error!(
@@ -1319,13 +1320,27 @@ defmodule Ecto.Query.Builder do
   @doc """
   Called by escaper at runtime to verify splice in fragments.
   """
-  def splice!(value) do
-    if is_list(value) do
-      value
-    else
-      raise ArgumentError,
-            "splice(^value) expects `value` to be a list, got `#{inspect(value)}`"
-    end
+  def splice!(values, count) when is_list(values) do
+    {params, {exprs, _}} =
+      Enum.flat_map_reduce(values, {[], count}, fn
+        %Ecto.Query.DynamicExpr{} = dynamic, {exprs, count} ->
+          {expr, params, count} =
+            Dynamic.partially_expand(:splice, %Query{}, dynamic, [], count)
+
+          {Enum.reverse(params), {[expr | exprs], count}}
+
+        value, {exprs, count} ->
+          expr = {:^, [], [count]}
+          param = {value, :any}
+          {[param], {[expr | exprs], count + 1}}
+      end)
+
+    {Enum.reverse(exprs), params}
+  end
+
+  def splice!(other, _count) do
+    raise ArgumentError,
+          "splice(^value) expects `value` to be a list, got `#{inspect(other)}`"
   end
 
   @doc """

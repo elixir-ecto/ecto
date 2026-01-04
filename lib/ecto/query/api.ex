@@ -452,6 +452,27 @@ defmodule Ecto.Query.API do
 
       from p in Post, where: fragment("? in (?,?,?)", p.id, ^1, ^2, ^3)
 
+  You may also include [Dynamics](`Ecto.Query.dynamic/2`) inside of the
+  spliced list. For example:
+
+      list = [dynamic([_], "public"), dynamic([s], s.relname)]
+      from s in Sequence, select: fragment("concat_ws(?,?)", ".", splice(^list))
+
+  would be expanded into
+
+      from s in Sequence, select: fragment("concat_ws(?,?,?)", ".", "public", s.relname)
+
+  Please note that while spliced arguments outside of dynamics are automatically converted
+  into query parameters, it is up to the user to specify which parts of dynamics should be
+  treated as query parameters. For example:
+
+      list = [dynamic([p], 1), dynamic([p], ^2)]
+      from p in Post, select: fragment("? in (?)", p.visits, splice(^list))
+
+  would be expanded into
+
+      from p in Post, select: fragment(? in (?,?)", p.visits, 1, ^2)
+
   ## Defining custom functions using macros and fragment
 
   You can add a custom Ecto query function using macros.  For example
