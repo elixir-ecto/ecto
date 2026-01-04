@@ -1010,7 +1010,13 @@ defmodule Ecto.Type do
   ## Adapter related
 
   @doc false
-  def adapter_autogenerate(adapter, type) do
+  def adapter_autogenerate(adapter, type, opts \\ [])
+
+  def adapter_autogenerate(_adapter, :binary_id, opts) when opts != [] do
+    Ecto.UUID.bingenerate(opts)
+  end
+
+  def adapter_autogenerate(adapter, type, _opts) do
     type
     |> type()
     |> adapter.autogenerate()

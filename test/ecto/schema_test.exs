@@ -1286,4 +1286,42 @@ defmodule Ecto.SchemaTest do
                    end
                  end
   end
+
+  defmodule SchemaWithUuidV7PrimaryKey do
+    use Ecto.Schema
+
+    @primary_key {:id, :binary_id, autogenerate: [version: 7, monotonic: true]}
+    @foreign_key_type :binary_id
+
+    schema "customers" do
+      field :name, :string
+    end
+  end
+
+  test "binary_id with autogenerate options" do
+    assert SchemaWithUuidV7PrimaryKey.__schema__(:autogenerate_id) ==
+             {:id, :id, :binary_id, [version: 7, monotonic: true]}
+
+    assert SchemaWithUuidV7PrimaryKey.__schema__(:autogenerate_fields) == []
+  end
+
+  defmodule SchemaWithUuidV7Field do
+    use Ecto.Schema
+
+    schema "items" do
+      field :uuid_v7, Ecto.UUID, autogenerate: [version: 7]
+      field :uuid_v7_monotonic, Ecto.UUID, autogenerate: [version: 7, monotonic: true]
+    end
+  end
+
+  test "UUID fields with autogenerate options" do
+    assert SchemaWithUuidV7Field.__schema__(:autogenerate) ==
+             [
+               {[:uuid_v7], {Ecto.UUID, :autogenerate, [[version: 7]]}},
+               {[:uuid_v7_monotonic], {Ecto.UUID, :autogenerate, [[version: 7, monotonic: true]]}}
+             ]
+
+    assert SchemaWithUuidV7Field.__schema__(:autogenerate_fields) == [:uuid_v7, :uuid_v7_monotonic]
+  end
+
 end
