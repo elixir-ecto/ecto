@@ -14,12 +14,12 @@ defmodule Ecto.UUID do
   To use UUID v7 (time-ordered) instead:
 
       use Ecto.Schema
-      @primary_key {:id, :binary_id, autogenerate: [version: 7]}
+      @primary_key {:id, Ecto.UUID, autogenerate: [version: 7]}
 
   To use UUID v7 (time-ordered) monotonic:
 
       use Ecto.Schema
-      @primary_key {:id, :binary_id, autogenerate: [version: 7, monotonic: true]}
+      @primary_key {:id, Ecto.UUID, autogenerate: [version: 7, monotonic: true]}
 
   According to [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562#name-monotonicity-and-counters):
   "Monotonicity (each subsequent value being greater than the last) is the
