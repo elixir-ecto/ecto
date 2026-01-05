@@ -1596,7 +1596,7 @@ defmodule Ecto.Schema do
       section for more info). Primary keys are automatically set up for embedded
       schemas as well, defaulting to `{:id,  :binary_id, autogenerate: true}`.
       This will generate the default UUID v4. You can use UUID v7 instead by setting
-      the primary key to `{:id, :binary_id, autogenerate: [version: 7]}`
+      the primary key to `{:id, Ecto.UUID, autogenerate: [version: 7]}`
       Note `:primary_key`s are not automatically read back on `insert/2`,
       unless one of `autogenerate: true` or `read_after_writes: true` is set.
 
