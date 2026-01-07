@@ -545,7 +545,7 @@ defmodule Ecto.Query.API do
 
       defmacro concat_ws(sep, args) do
         quote do
-          fragment("concat_ws(?, ?)", unquote(sep), splice(unquote(args)))
+          fragment("concat_ws(?,?)", unquote(sep), splice(unquote(args)))
         end
       end
 
