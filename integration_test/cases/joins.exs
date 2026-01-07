@@ -170,7 +170,7 @@ defmodule Ecto.Integration.JoinsTest do
         on: f1.num == f2.visits,
         select: {f1, struct(f2, [:visits])}
 
-    assert {%Barebone{num: 1} = b1, %Post{visits: 1} = b2} = TestRepo.one(query)
+    assert {%Barebone{num: 1}, %Post{visits: 1}} = TestRepo.one(query)
   end
 
   ## Associations joins

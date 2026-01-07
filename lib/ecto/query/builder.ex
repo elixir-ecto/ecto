@@ -791,31 +791,45 @@ defmodule Ecto.Query.Builder do
     end
   end
 
-  defp escape_fragment({:splice, _meta, [splice]}, params_acc, vars, env) do
-    case splice do
-      {:^, _, [value]} = expr ->
-        checked = quote do: Ecto.Query.Builder.splice!(unquote(value))
-        length = quote do: length(unquote(checked))
-        {expr, params_acc} = escape(expr, {:splice, :any}, params_acc, vars, env)
-        escaped = {:{}, [], [:splice, [], [expr, length]]}
-        {escaped, params_acc}
+  defp escape_fragment({:splice, _meta, [{:^, _, [value]} = expr]}, params_acc, vars, env) do
+    checked = quote do: Ecto.Query.Builder.splice!(unquote(value))
+    length = quote do: length(unquote(checked))
+    {expr, params_acc} = escape(expr, {:splice, :any}, params_acc, vars, env)
+    escaped = {:{}, [], [:splice, [], [expr, length]]}
+    {escaped, params_acc}
+  end
 
-      _ ->
-        error!(
-          "splice/1 in fragment expects an interpolated value, such as splice(^value), got `#{Macro.to_string(splice)}`"
-        )
-    end
+  defp escape_fragment({:splice, _meta, [exprs]}, params_acc, vars, env) when is_list(exprs) do
+    {escaped, params_acc} =
+      Enum.map_reduce(exprs, params_acc, &escape_fragment(&1, &2, vars, env))
+
+    {{:splice, escaped}, params_acc}
+  end
+
+  defp escape_fragment({:splice, _meta, [other]}, _params_acc, _vars, _env) do
+    error!(
+      "splice/1 in fragment expects a compile-time list or interpolated value, got `#{Macro.to_string(other)}`"
+    )
   end
 
   defp escape_fragment(expr, params_acc, vars, env) do
     escape(expr, :any, params_acc, vars, env)
   end
 
+  defp merge_fragments([h1 | t1], [{:splice, exprs} | t2]),
+    do: [{:raw, h1} | merge_splice(exprs, t1, t2)]
+
   defp merge_fragments([h1 | t1], [h2 | t2]),
     do: [{:raw, h1}, {:expr, h2} | merge_fragments(t1, t2)]
 
   defp merge_fragments([h1], []),
     do: [{:raw, h1}]
+
+  defp merge_splice([splice_h], raw_t, expr_t),
+    do: [{:expr, splice_h} | merge_fragments(raw_t, expr_t)]
+
+  defp merge_splice([splice_h | splice_t], raw_t, expr_t),
+    do: [{:expr, splice_h}, {:raw, ","} | merge_splice(splice_t, raw_t, expr_t)]
 
   for {agg, arity} <- @dynamic_aggregates do
     defp call_type(unquote(agg), unquote(arity)), do: {:any, :any}
