@@ -519,7 +519,7 @@ defmodule Ecto.Query.API do
   @doc """
   Allows a list argument to be spliced into a fragment.
 
-  Dynamic lists can be spliced by interpolating them into the query
+  Dynamic lists can be spliced into a query using interpolation
 
       from p in Post, where: fragment("? in (?)", p.id, splice(^[1, 2, 3]))
 
@@ -529,13 +529,15 @@ defmodule Ecto.Query.API do
       from p in Post, where: fragment("? in (?,?,?)", p.id, ^1, ^2, ^3)
 
   You may also splice compile-time lists. This allows you to combine query parameters
-  with constants and constructs like query bindings
+  with litreals and constructs like query bindings
 
-      from p in Post, select: fragment("concat(?)", splice([p.count, " ", "count"]))
+      sep = " "
+      from p in Post, select: fragment("concat(?)", splice([p.count, ^sep, "count"]))
 
   The above example will be transformed into
 
-      from p in Post, select: fragment("concat(?,?,?)", p.count, " ", "count")
+      sep = " "
+      from p in Post, select: fragment("concat(?,?,?)", p.count, ^sep, "count")
 
   This is especially useful if you would like to create re-usable macros to inject
   variadic database functions into queries. For example, you may create a macro for
@@ -552,14 +554,14 @@ defmodule Ecto.Query.API do
       from p in Post, select: concat_ws(":", [p.author, ^year, p.title])
       from s in Sequences, select: concat_ws(".", ["public", s.relname])
 
-  You may also nest splices and fragment modifiers such as `identifier/1` and
+  You may nest others splices and fragment modifiers such as `identifier/1` and
   `constant/1` inside of compile-time splices
 
       from p in Post, where: fragment("? in (?)", p.id, splice([constant(^1), splice(^[2, 3])]))
 
   This would be transformed into
 
-      from p in Post, where: fragment(? in (?,?,?), constant(1), ^2, ^3)
+      from p in Post, where: fragment(? in (?,?,?), p.id, constant(1), ^2, ^3)
   """
   def splice(list), do: doc!([list])
 
