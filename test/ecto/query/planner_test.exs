@@ -1919,7 +1919,7 @@ defmodule Ecto.Query.PlannerTest do
     assert length == 3
   end
 
-  test "normalize: fargment with nested splicing" do
+  test "normalize: fragment with nested splicing" do
     list = [3, 4]
 
     {query, cast_params, dump_params, _} =
