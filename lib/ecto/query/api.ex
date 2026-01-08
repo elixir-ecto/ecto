@@ -529,7 +529,7 @@ defmodule Ecto.Query.API do
       from p in Post, where: fragment("? in (?,?,?)", p.id, ^1, ^2, ^3)
 
   You may also splice compile-time lists. This allows you to combine query parameters
-  with litreals and constructs like query bindings
+  with literals and constructs like query bindings
 
       sep = " "
       from p in Post, select: fragment("concat(?)", splice([p.count, ^sep, "count"]))
