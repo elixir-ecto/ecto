@@ -1919,6 +1919,35 @@ defmodule Ecto.Query.PlannerTest do
     assert length == 3
   end
 
+  test "normalize: fragment with nested splicing" do
+    list = [3, 4]
+
+    {query, cast_params, dump_params, _} =
+      from(c in Comment)
+      |> where([c], c.id in fragment("(?, ?, ?)", ^1, splice([2, splice(^list)]), ^5))
+      |> normalize_with_params()
+
+    assert cast_params == [1, 3, 4, 5]
+    assert dump_params == [1, 3, 4, 5]
+
+    {:in, _, [_, {:fragment, _, parts}]} = hd(query.wheres).expr
+
+    assert [
+             _,
+            {:expr, {:^, _, [0]}},
+             _,
+             {:expr, 2},
+             _,
+             {:expr, {:splice, _, [{:^, _, [start_ix, length]}]}},
+             _,
+             {:expr, {:^, _, [3]}},
+             _
+           ] = parts
+
+    assert start_ix == 1
+    assert length == 2
+  end
+
   test "normalize: from values list" do
     uuid = Ecto.UUID.generate()
     values = [%{bid: uuid, num: 1}, %{bid: uuid, num: 2}]
