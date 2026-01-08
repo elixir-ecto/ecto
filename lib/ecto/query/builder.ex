@@ -215,7 +215,7 @@ defmodule Ecto.Query.Builder do
     end
 
     {frags, params_acc} = Enum.map_reduce(frags, params_acc, &escape_fragment(&1, &2, vars, env))
-    {{:{}, [], [:fragment, [], merge_fragments(pieces, frags)]}, params_acc}
+    {{:{}, [], [:fragment, [], merge_fragments(pieces, frags, [])]}, params_acc}
   end
 
   # subqueries
@@ -638,7 +638,7 @@ defmodule Ecto.Query.Builder do
   def fragment_pieces(frag, args) do
     frag
     |> split_fragment("")
-    |> merge_fragments(args)
+    |> merge_fragments(args, [])
   end
 
   defp escape_window_description([], params_acc, _vars, _env),
@@ -816,20 +816,24 @@ defmodule Ecto.Query.Builder do
     escape(expr, :any, params_acc, vars, env)
   end
 
-  defp merge_fragments([h1 | t1], [{:splice, exprs} | t2]),
-    do: [{:raw, h1} | merge_splice(exprs, t1, t2)]
+  defp merge_fragments([raw_h | raw_t], [{:splice, exprs} | expr_t], []),
+    do: [{:raw, raw_h} | merge_fragments(raw_t, expr_t, exprs)]
 
-  defp merge_fragments([h1 | t1], [h2 | t2]),
-    do: [{:raw, h1}, {:expr, h2} | merge_fragments(t1, t2)]
+  defp merge_fragments([raw_h | raw_t], [expr_h | expr_t], []),
+    do: [{:raw, raw_h}, {:expr, expr_h} | merge_fragments(raw_t, expr_t, [])]
 
-  defp merge_fragments([h1], []),
-    do: [{:raw, h1}]
+  defp merge_fragments([raw_h], [], []),
+    do: [{:raw, raw_h}]
 
-  defp merge_splice([splice_h], raw_t, expr_t),
-    do: [{:expr, splice_h} | merge_fragments(raw_t, expr_t)]
+  defp merge_fragments(raw, expr, [{:splice, exprs} | splice_t]),
+    do: merge_fragments(raw, expr, exprs ++ splice_t)
 
-  defp merge_splice([splice_h | splice_t], raw_t, expr_t),
-    do: [{:expr, splice_h}, {:raw, ","} | merge_splice(splice_t, raw_t, expr_t)]
+  defp merge_fragments(raw, expr, [splice_h]),
+    do: [{:expr, splice_h} | merge_fragments(raw, expr, [])]
+
+  defp merge_fragments(raw, expr, [splice_h | splice_t]),
+    do: [{:expr, splice_h}, {:raw, ","} | merge_fragments(raw, expr, splice_t)]
+
 
   for {agg, arity} <- @dynamic_aggregates do
     defp call_type(unquote(agg), unquote(arity)), do: {:any, :any}

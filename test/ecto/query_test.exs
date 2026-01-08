@@ -1194,6 +1194,7 @@ defmodule Ecto.QueryTest do
     end
 
     test "supports compile-time list splicing with nested splicing" do
+      # nested runtime splice
       list = [3, 4]
 
       query =
@@ -1210,6 +1211,28 @@ defmodule Ecto.QueryTest do
                expr: {:splice, _, [{:^, _, [1]}, 2]},
                raw: ",",
                expr: {:^, _, [2]},
+               raw: ")"
+             ] = parts
+
+      # nested compile-time splice
+      query =
+        from p in "posts", where: p.id in fragment("(?,?,?)", ^1, splice([2, splice([3, 4]), 5]), ^6)
+
+      assert {:in, _, [_, {:fragment, _, parts}]} = hd(query.wheres).expr
+
+      assert [
+               raw: "(",
+               expr: {:^, _, [0]},
+               raw: ",",
+               expr: 2,
+               raw: ",",
+               expr: 3,
+               raw: ",",
+               expr: 4,
+               raw: ",",
+               expr: 5,
+               raw: ",",
+               expr: {:^, _, [1]},
                raw: ")"
              ] = parts
     end
