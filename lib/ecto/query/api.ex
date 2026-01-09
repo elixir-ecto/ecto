@@ -561,7 +561,7 @@ defmodule Ecto.Query.API do
 
   This would be transformed into
 
-      from p in Post, where: fragment(? in (?,?,?), p.id, constant(1), ^2, ^3)
+      from p in Post, where: fragment(? in (?,?,?), p.id, constant(^1), ^2, ^3)
   """
   def splice(list), do: doc!([list])
 
