@@ -1119,8 +1119,8 @@ defmodule Ecto.QueryTest do
 
       assert {:fragment, _, select_parts} = query.select.expr
       assert {:fragment, _, limit_parts} = query.limit.expr
-      assert [raw: "", expr: {:constant, _, ["hi"]}, raw: ""] = select_parts
-      assert [raw: "", expr: {:constant, _, [1]}, raw: ""] = limit_parts
+      assert [raw: "", expr: "hi", raw: ""] = select_parts
+      assert [raw: "", expr: 1, raw: ""] = limit_parts
 
       msg = "constant(^value) expects `value` to be a string or a number, got `%{}`"
 
@@ -1186,7 +1186,7 @@ defmodule Ecto.QueryTest do
                raw: ",",
                expr: 2,
                raw: ",",
-               expr: {:constant, _, [3]},
+               expr: 3,
                raw: ",",
                expr: {:^, _, [1]},
                raw: ")"

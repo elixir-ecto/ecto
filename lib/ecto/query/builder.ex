@@ -781,8 +781,7 @@ defmodule Ecto.Query.Builder do
     case expr do
       {:^, _, [expr]} ->
         checked = quote do: Ecto.Query.Builder.constant!(unquote(expr))
-        escaped = {:{}, [], [:constant, [], [checked]]}
-        {escaped, params_acc}
+        {checked, params_acc}
 
       _ ->
         error!(
