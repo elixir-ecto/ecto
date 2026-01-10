@@ -1642,18 +1642,6 @@ defmodule Ecto.Query.Planner do
     {{quantifier, meta, [subquery]}, acc}
   end
 
-  defp prewalk(
-         {:splice, splice_meta, [{:^, meta, [_]}, length]},
-         _kind,
-         _query,
-         _expr,
-         acc,
-         _adapter
-       ) do
-    param = {:^, meta, [acc, length]}
-    {{:splice, splice_meta, [param]}, acc + length}
-  end
-
   defp prewalk({{:., dot_meta, [left, field]}, meta, []}, kind, query, expr, acc, _adapter) do
     {ix, ix_expr, ix_query} = get_ix!(left, kind, query)
     extra = if kind == :select, do: [type: type!(kind, ix_query, expr, ix, field)], else: []
