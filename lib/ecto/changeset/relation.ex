@@ -10,10 +10,10 @@ defmodule Ecto.Changeset.Relation do
           required(:cardinality) => :one | :many,
           required(:on_replace) => :raise | :mark_as_invalid | atom,
           required(:field) => atom,
+          required(:owner) => atom,
+          required(:related) => atom,
           optional(:unique) => boolean,
           optional(:ordered) => boolean,
-          optional(:owner) => atom,
-          optional(:related) => atom,
           optional(atom()) => any()
         }
 
@@ -254,11 +254,6 @@ defmodule Ecto.Changeset.Relation do
     raise ArgumentError, "expected changeset data to be a #{mod} struct, got: #{inspect(data)}"
   end
 
-  defp assert_changeset_struct!(changeset, _relation) do
-    # For relations without a related module, any data type is accepted
-    changeset
-  end
-
   @doc """
   Handles the changeset or struct when being replaced.
   """
@@ -266,9 +261,9 @@ defmodule Ecto.Changeset.Relation do
     :error
   end
 
-  def on_replace(%{on_replace: :raise, field: name} = relation, _) do
+  def on_replace(%{on_replace: :raise, field: name, owner: owner}, _) do
     raise """
-    you are attempting to change relation #{pretty_relation(relation)}
+    you are attempting to change relation #{inspect(name)} of #{inspect(owner)}
     but the `:on_replace` option of this relation is set to `:raise`.
 
     By default it is not possible to replace or delete embeds and
@@ -298,9 +293,9 @@ defmodule Ecto.Changeset.Relation do
     {:ok, Changeset.change(changeset_or_struct) |> put_new_action(:replace)}
   end
 
-  defp raise_if_updating_with_struct!(%{field: name} = relation, %{__struct__: _} = new) do
+  defp raise_if_updating_with_struct!(%{field: name, owner: owner}, %{__struct__: _} = new) do
     raise """
-    you have set that the relation #{pretty_relation(relation)}
+    you have set that the relation #{inspect(name)} of #{inspect(owner)}
     has `:on_replace` set to `:update` but you are giving it a struct/
     changeset to put_assoc/put_change.
 
@@ -320,9 +315,6 @@ defmodule Ecto.Changeset.Relation do
   defp raise_if_updating_with_struct!(_, _) do
     true
   end
-
-  defp pretty_relation(%{field: name, owner: owner}), do: "#{inspect(name)} of #{inspect(owner)}"
-  defp pretty_relation(%{field: name}), do: inspect(name)
 
   defp cast_or_change(
          %{cardinality: :one} = relation,
@@ -482,7 +474,6 @@ defmodule Ecto.Changeset.Relation do
   # helpers
 
   defp primary_keys(%{related: mod}), do: mod.__schema__(:primary_key)
-  defp primary_keys(_relation), do: []
 
   defp on_cast_default(%{related: module}) do
     fn struct, params ->
@@ -511,14 +502,6 @@ defmodule Ecto.Changeset.Relation do
           end
       end
     end
-  end
-
-  defp on_cast_default(%{field: field}) do
-    raise ArgumentError, """
-    the relation `#{field}` does not have a schema module and requires an explicit :with option.
-
-    Please pass a changeset function of arity 2 (or arity 3 for cardinality :many) using the :with option.
-    """
   end
 
   defp check_action!(changeset, allowed_actions) do
@@ -602,10 +585,6 @@ defmodule Ecto.Changeset.Relation do
         end
       end)
     end
-  end
-
-  defp param_pk(_relation, []) do
-    fn _params -> [] end
   end
 
   defp change_pk(pks) do
