@@ -30,50 +30,61 @@ defmodule Ecto.Query.Builder.SelectTest do
 
   describe "escape" do
     test "handles expressions and params" do
-      assert {Macro.escape(quote do &0 end), params_acc()} ==
-             escape(quote do x end, [x: 0], __ENV__)
+      assert {Macro.escape(quote(do: &0)), params_acc()} ==
+               escape(quote(do: x), [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do &0.y() end), params_acc()} ==
-             escape(quote do x.y() end, [x: 0], __ENV__)
+      assert {Macro.escape(quote(do: &0.y())), params_acc()} ==
+               escape(quote(do: x.y()), [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do &0 end), params_acc(take: %{0 => {:any, [:foo, :bar, baz: :bat]}})} ==
-             escape(quote do [:foo, :bar, baz: :bat] end, [x: 0], __ENV__)
+      assert {Macro.escape(quote(do: &0)),
+              params_acc(take: %{0 => {:any, [:foo, :bar, baz: :bat]}})} ==
+               escape(quote(do: [:foo, :bar, baz: :bat]), [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do &0 end), params_acc(take: %{0 => {:struct, [:foo, :bar, baz: :bat]}})} ==
-             escape(quote do struct(x, [:foo, :bar, baz: :bat]) end, [x: 0], __ENV__)
+      assert {Macro.escape(quote(do: &0)),
+              params_acc(take: %{0 => {:struct, [:foo, :bar, baz: :bat]}})} ==
+               escape(quote(do: struct(x, [:foo, :bar, baz: :bat])), [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do &0 end), params_acc(take: %{0 => {:map, [:foo, :bar, baz: :bat]}})} ==
-             escape(quote do map(x, [:foo, :bar, baz: :bat]) end, [x: 0], __ENV__)
+      assert {Macro.escape(quote(do: &0)),
+              params_acc(take: %{0 => {:map, [:foo, :bar, baz: :bat]}})} ==
+               escape(quote(do: map(x, [:foo, :bar, baz: :bat])), [x: 0], __ENV__)
 
       assert {{:{}, [], [:{}, [], [0, 1, 2]]}, params_acc()} ==
-             escape(quote do {0, 1, 2} end, [], __ENV__)
+               escape(quote(do: {0, 1, 2}), [], __ENV__)
 
       assert {{:{}, [], [:%{}, [], [a: {:{}, [], [:&, [], [0]]}]]}, params_acc()} ==
-             escape(quote do %{a: a} end, [a: 0], __ENV__)
+               escape(quote(do: %{a: a}), [a: 0], __ENV__)
 
-      assert {{:{}, [], [:%{}, [], [{{:{}, [], [:&, [], [0]]}, {:{}, [], [:&, [], [1]]}}]]}, params_acc()} ==
-             escape(quote do %{a => b} end, [a: 0, b: 1], __ENV__)
+      assert {{:{}, [], [:%{}, [], [{{:{}, [], [:&, [], [0]]}, {:{}, [], [:&, [], [1]]}}]]},
+              params_acc()} ==
+               escape(quote(do: %{a => b}), [a: 0, b: 1], __ENV__)
 
-      assert {[Macro.escape(quote do &0.y() end), Macro.escape(quote do &0.z() end)], params_acc()} ==
-             escape(quote do [x.y(), x.z()] end, [x: 0], __ENV__)
+      assert {[Macro.escape(quote(do: &0.y())), Macro.escape(quote(do: &0.z()))], params_acc()} ==
+               escape(quote(do: [x.y(), x.z()]), [x: 0], __ENV__)
 
-      assert {[{:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :y]]}, [], []]},
-               {:{}, [], [:^, [], [0]]}], params_acc(params: [{1, :any}])} ==
-              escape(quote do [x.y(), ^1] end, [x: 0], __ENV__)
+      assert {[
+                {:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :y]]}, [], []]},
+                {:{}, [], [:^, [], [0]]}
+              ], params_acc(params: [{1, :any}])} ==
+               escape(quote(do: [x.y(), ^1]), [x: 0], __ENV__)
 
-      assert {{:{}, [], [:%, [], [Foo, {:{}, [], [:%{}, [], [a: {:{}, [], [:&, [], [0]]}]]}]]}, params_acc()} ==
-             escape(quote do %Foo{a: a} end, [a: 0], __ENV__)
+      assert {{:{}, [], [:%, [], [Foo, {:{}, [], [:%{}, [], [a: {:{}, [], [:&, [], [0]]}]]}]]},
+              params_acc()} ==
+               escape(quote(do: %Foo{a: a}), [a: 0], __ENV__)
     end
 
     test "on conflicting take" do
       assert {_, {[], %{take: %{0 => {:map, [:foo, :bar, baz: :bat]}}, subqueries: []}}} =
-             escape(quote do {map(x, [:foo, :bar]), map(x, [baz: :bat])} end, [x: 0], __ENV__)
+               escape(quote(do: {map(x, [:foo, :bar]), map(x, baz: :bat)}), [x: 0], __ENV__)
 
       assert_raise Ecto.Query.CompileError,
                    ~r"cannot select_merge because the binding at position 0",
                    fn ->
-        escape(quote do {map(x, [:foo, :bar]), struct(x, [baz: :bat])} end, [x: 0], __ENV__)
-      end
+                     escape(
+                       quote(do: {map(x, [:foo, :bar]), struct(x, baz: :bat)}),
+                       [x: 0],
+                       __ENV__
+                     )
+                   end
     end
 
     @fields [:field]
@@ -89,13 +100,13 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert_raise Ecto.Query.CompileError,
                    ~r":foo is not a valid query expression, :select expects a query expression or a list of fields",
                    fn ->
-        escape(quote do :foo end, [x: 0], __ENV__)
-      end
+                     escape(quote(do: :foo), [x: 0], __ENV__)
+                   end
     end
 
     test "raises on mixed fields and interpolation" do
       assert_raise Ecto.Query.CompileError, ~r"Cannot mix fields with interpolations", fn ->
-        escape(quote do [:foo, ^:bar] end, [], __ENV__)
+        escape(quote(do: [:foo, ^:bar]), [], __ENV__)
       end
     end
 
@@ -127,22 +138,34 @@ defmodule Ecto.Query.Builder.SelectTest do
       query = from p in "posts", select: [id: selected_as(p.id, :ident)]
       assert [{:{}, [], [:id, escaped_alias]}] == query.select.expr
 
-      query = select("posts", [p], [id: selected_as(p.id, :ident)])
+      query = select("posts", [p], id: selected_as(p.id, :ident))
       assert [{:{}, [], [:id, escaped_alias]}] == query.select.expr
     end
 
     test "supports aliasing a selected value in select_merge with selected_as/2" do
-      escaped_select_alias = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :visits]}, [], []}, :select]}
-      escaped_merge_alias = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :title]}, [], []}, :merge]}
+      escaped_select_alias =
+        {:selected_as, [], [{{:., [], [{:&, [], [0]}, :visits]}, [], []}, :select]}
+
+      escaped_merge_alias =
+        {:selected_as, [], [{{:., [], [{:&, [], [0]}, :title]}, [], []}, :merge]}
 
       # merging into a map
-      query = from p in "posts", select: %{v: selected_as(p.visits, :select)}, select_merge: %{title: selected_as(p.title, :merge)}
-      assert {:%{}, [], [v: escaped_select_alias, title: escaped_merge_alias]} == query.select.expr
+      query =
+        from p in "posts",
+          select: %{v: selected_as(p.visits, :select)},
+          select_merge: %{title: selected_as(p.title, :merge)}
+
+      assert {:%{}, [], [v: escaped_select_alias, title: escaped_merge_alias]} ==
+               query.select.expr
+
       assert %{select: _, merge: _} = query.select.aliases
 
       # merging into a source
       query = from c in Comment, select_merge: %{title: selected_as(c.title, :merge)}
-      assert {:merge, [], [{:&, [], [0]}, {:%{}, [], [title: escaped_merge_alias]}]} == query.select.expr
+
+      assert {:merge, [], [{:&, [], [0]}, {:%{}, [], [title: escaped_merge_alias]}]} ==
+               query.select.expr
+
       assert %{merge: _} = query.select.aliases
     end
 
@@ -160,7 +183,7 @@ defmodule Ecto.Query.Builder.SelectTest do
 
       # struct
       fields = %Post{
-        title: dynamic([p], selected_as(p.title, :alias)),
+        title: dynamic([p], selected_as(p.title, :alias))
       }
 
       query = from p in "posts", select: ^fields
@@ -182,50 +205,65 @@ defmodule Ecto.Query.Builder.SelectTest do
 
     defmacro my_complex_order(p) do
       quote do
-        [desc: unquote(p).id, asc: my_custom_field(unquote(p)), asc: nth_value(unquote(p).links, 1)]
+        [
+          desc: unquote(p).id,
+          asc: my_custom_field(unquote(p)),
+          asc: nth_value(unquote(p).links, 1)
+        ]
       end
     end
 
     test "supports macro expansion in over/2" do
-      query = from p in "posts", select: %{row_number: over(row_number(), order_by: [desc: my_custom_field(p)])}
+      query =
+        from p in "posts",
+          select: %{row_number: over(row_number(), order_by: [desc: my_custom_field(p)])}
 
       assert {:%{}, [],
-       [
-         row_number:
-           {:over, [],
-            [
-              {:row_number, [], []},
               [
-                order_by: [
-                  desc: {:fragment, [], [raw: "lower(", expr: _, raw: ")"]}
-                ]
-              ]
-            ]}
-       ]} = query.select.expr
+                row_number:
+                  {:over, [],
+                   [
+                     {:row_number, [], []},
+                     [
+                       order_by: [
+                         desc: {:fragment, [], [raw: "lower(", expr: _, raw: ")"]}
+                       ]
+                     ]
+                   ]}
+              ]} = query.select.expr
 
-      query = from p in "posts", select: %{row_number: over(row_number(), order_by: my_complex_order(p))}
+      query =
+        from p in "posts",
+          select: %{row_number: over(row_number(), order_by: my_complex_order(p))}
+
       assert {:%{}, [],
-        [
-          row_number:
-            {:over, [],
               [
-                {:row_number, [], []},
-                [
-                  order_by: [
-                    desc: _,
-                    asc: {:fragment, [], [raw: "lower(", expr: _, raw: ")"]},
-                    asc: {:nth_value, [], _}
-                  ]
-                ]
-              ]}
-        ]} = query.select.expr
+                row_number:
+                  {:over, [],
+                   [
+                     {:row_number, [], []},
+                     [
+                       order_by: [
+                         desc: _,
+                         asc: {:fragment, [], [raw: "lower(", expr: _, raw: ")"]},
+                         asc: {:nth_value, [], _}
+                       ]
+                     ]
+                   ]}
+              ]} = query.select.expr
     end
 
     test "raises if name given to selected_as/2 is not an atom" do
       message = "expected literal atom or interpolated value in selected_as/2, got: `\"ident\"`"
 
       assert_raise Ecto.Query.CompileError, message, fn ->
-        escape(quote do selected_as(p.id, "ident") end, [], __ENV__)
+        escape(
+          quote do
+            selected_as(p.id, "ident")
+          end,
+          [],
+          __ENV__
+        )
       end
     end
 
@@ -233,12 +271,18 @@ defmodule Ecto.Query.Builder.SelectTest do
       message = "the alias `:visits` has been specified more than once using `selected_as/2`"
 
       assert_raise Ecto.Query.CompileError, message, fn ->
-        select_expr = quote do %{visits: selected_as(p.visits, :visits), visits2: selected_as(p.visits, :visits)} end
+        select_expr =
+          quote do
+            %{visits: selected_as(p.visits, :visits), visits2: selected_as(p.visits, :visits)}
+          end
+
         escape(select_expr, [p: 0], __ENV__)
       end
 
       assert_raise Ecto.Query.CompileError, message, fn ->
-        from p in "posts", select: selected_as(p.visits, :visits), select_merge: %{visits: selected_as(p.visits, :visits)}
+        from p in "posts",
+          select: selected_as(p.visits, :visits),
+          select_merge: %{visits: selected_as(p.visits, :visits)}
       end
     end
 
@@ -246,7 +290,11 @@ defmodule Ecto.Query.Builder.SelectTest do
       message = ~r/selected_as\/2 can only be used at the root of a select statement/
 
       assert_raise Ecto.Query.CompileError, message, fn ->
-        select_expr = quote do coalesce(selected_as(p.visits, :v), 0) end
+        select_expr =
+          quote do
+            coalesce(selected_as(p.visits, :v), 0)
+          end
+
         escape(select_expr, [p: 0], __ENV__)
       end
     end
@@ -288,7 +336,8 @@ defmodule Ecto.Query.Builder.SelectTest do
       ref = dynamic(field(as(^as), ^field))
       query = from(b in "blogs", select: ^%Post{title: ref})
 
-      assert Macro.to_string(query.select.expr) == "%Ecto.Query.Builder.SelectTest.Post{title: as(:blog).title()}"
+      assert Macro.to_string(query.select.expr) ==
+               "%Ecto.Query.Builder.SelectTest.Post{title: as(:blog).title()}"
     end
 
     test "supports nested map with dynamic values interpolated at root level" do
@@ -312,7 +361,8 @@ defmodule Ecto.Query.Builder.SelectTest do
     end
 
     test "supports subqueries" do
-      subquery = from(u in "users", where: parent_as(^:list).created_by_id == u.id, select: u.email)
+      subquery =
+        from(u in "users", where: parent_as(^:list).created_by_id == u.id, select: u.email)
 
       query =
         from(l in "lists",
@@ -321,14 +371,15 @@ defmodule Ecto.Query.Builder.SelectTest do
         )
 
       assert Macro.to_string(query.select.expr) ==
-              "%{title: &0.archived_at(), user_email: {:subquery, 0}}"
+               "%{title: &0.archived_at(), user_email: {:subquery, 0}}"
 
       assert length(query.select.subqueries) == 1
       assert length(query.select.params) == 1
     end
 
     test "supports subqueries in interpolated map at root level" do
-      subquery = from(u in "users", where: parent_as(^:list).created_by_id == u.id, select: u.email)
+      subquery =
+        from(u in "users", where: parent_as(^:list).created_by_id == u.id, select: u.email)
 
       query =
         from(l in "lists",
@@ -337,7 +388,7 @@ defmodule Ecto.Query.Builder.SelectTest do
         )
 
       assert Macro.to_string(query.select.expr) ==
-              "%{user_email: {:subquery, 0}}"
+               "%{user_email: {:subquery, 0}}"
 
       assert length(query.select.subqueries) == 1
       assert length(query.select.params) == 1
@@ -382,25 +433,31 @@ defmodule Ecto.Query.Builder.SelectTest do
         )
 
       assert Macro.to_string(query.select.expr) == """
-            %{\n\
-              title: &0.archived_at(),\n\
-              maxdue: {:subquery, 0},\n\
-              user_email: {:subquery, 1},\n\
-              template_name:\n\
-                fragment(\n\
-                  {:raw, "CASE WHEN "},\n\
-                  {:expr, &0.from_template_id() == ^2},\n\
-                  {:raw, " THEN "},\n\
-                  {:expr, ""},\n\
-                  {:raw, " ELSE "},\n\
-                  {:expr, {:subquery, 2}},\n\
-                  {:raw, " END"}\n\
-                )\n\
-            }\
-            """
+             %{\n\
+               title: &0.archived_at(),\n\
+               maxdue: {:subquery, 0},\n\
+               user_email: {:subquery, 1},\n\
+               template_name:\n\
+                 fragment(\n\
+                   {:raw, "CASE WHEN "},\n\
+                   {:expr, &0.from_template_id() == ^2},\n\
+                   {:raw, " THEN "},\n\
+                   {:expr, ""},\n\
+                   {:raw, " ELSE "},\n\
+                   {:expr, {:subquery, 2}},\n\
+                   {:raw, " END"}\n\
+                 )\n\
+             }\
+             """
 
       assert length(query.select.subqueries) == 3
-      assert query.select.params == [{:subquery, 0}, {:subquery, 1}, {ignore_template_id, {0, :from_template_id}}, {:subquery, 2}]
+
+      assert query.select.params == [
+               {:subquery, 0},
+               {:subquery, 1},
+               {ignore_template_id, {0, :from_template_id}},
+               {:subquery, 2}
+             ]
     end
 
     test "supports interpolated atom names in selected_as/2" do
@@ -409,7 +466,9 @@ defmodule Ecto.Query.Builder.SelectTest do
 
       query1 = from p in "posts", select: {selected_as(p.id, ^:ident), selected_as(p.id, :ident2)}
       query2 = from p in "posts", select: {selected_as(p.id, :ident), selected_as(p.id, ^:ident2)}
-      query3 = from p in "posts", select: {selected_as(p.id, ^:ident), selected_as(p.id, ^:ident2)}
+
+      query3 =
+        from p in "posts", select: {selected_as(p.id, ^:ident), selected_as(p.id, ^:ident2)}
 
       assert query1.select.expr == query2.select.expr
       assert query2.select.expr == query3.select.expr
@@ -438,19 +497,32 @@ defmodule Ecto.Query.Builder.SelectTest do
     end
 
     test "supports interpolated atom names in selected_as/2 with select_merge" do
-      escaped_select_alias = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :visits]}, [], []}, :select]}
-      escaped_merge_alias = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :title]}, [], []}, :merge]}
+      escaped_select_alias =
+        {:selected_as, [], [{{:., [], [{:&, [], [0]}, :visits]}, [], []}, :select]}
+
+      escaped_merge_alias =
+        {:selected_as, [], [{{:., [], [{:&, [], [0]}, :title]}, [], []}, :merge]}
 
       # merging into a map
       select = :select
       merge = :merge
-      query = from p in "posts", select: %{v: selected_as(p.visits, ^select)}, select_merge: %{title: selected_as(p.title, ^merge)}
-      assert query.select.expr == {:%{}, [], [v: escaped_select_alias, title: escaped_merge_alias]}
+
+      query =
+        from p in "posts",
+          select: %{v: selected_as(p.visits, ^select)},
+          select_merge: %{title: selected_as(p.title, ^merge)}
+
+      assert query.select.expr ==
+               {:%{}, [], [v: escaped_select_alias, title: escaped_merge_alias]}
+
       assert %{select: _, merge: _} = query.select.aliases
 
       # merging into a source
       query = from c in Comment, select_merge: %{title: selected_as(c.title, ^:merge)}
-      assert query.select.expr == {:merge, [], [{:&, [], [0]}, {:%{}, [], [title: escaped_merge_alias]}]}
+
+      assert query.select.expr ==
+               {:merge, [], [{:&, [], [0]}, {:%{}, [], [title: escaped_merge_alias]}]}
+
       assert %{merge: _} = query.select.aliases
     end
 
@@ -468,6 +540,7 @@ defmodule Ecto.Query.Builder.SelectTest do
 
     test "raises on multiple selects" do
       message = "only one select expression is allowed in query"
+
       assert_raise Ecto.Query.CompileError, message, fn ->
         %Ecto.Query{} |> select([], 1) |> select([], 2)
       end
@@ -620,7 +693,12 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert query.select.params == []
       assert query.select.take == %{0 => {:any, [:dislikes, :title, :likes]}}
 
-      query = from p in "posts", join: c in Comment, on: true, select: c, select_merge: map(c, [:dislikes])
+      query =
+        from p in "posts",
+          join: c in Comment,
+          on: true,
+          select: c,
+          select_merge: map(c, [:dislikes])
 
       assert Macro.to_string(query.select.expr) == "&1"
       assert query.select.params == []
@@ -643,17 +721,30 @@ defmodule Ecto.Query.Builder.SelectTest do
 
     test "on conflicting take" do
       _ = from p in "posts", select: p, select_merge: map(p, [:title]), select_merge: [:body]
-      _ = from p in "posts", select: p, select_merge: map(p, [:title]), select_merge: map(p, [:body])
+
+      _ =
+        from p in "posts",
+          select: p,
+          select_merge: map(p, [:title]),
+          select_merge: map(p, [:body])
+
       _ = from p in "posts", select: p, select_merge: [:title], select_merge: map(p, [:body])
       _ = from p in "posts", select: p, select_merge: [:title], select_merge: struct(p, [:body])
       _ = from p in "posts", select: p, select_merge: struct(p, [:title]), select_merge: [:body]
-      _ = from p in "posts", select: p, select_merge: struct(p, [:title]), select_merge: struct(p, [:body])
+
+      _ =
+        from p in "posts",
+          select: p,
+          select_merge: struct(p, [:title]),
+          select_merge: struct(p, [:body])
 
       assert_raise Ecto.Query.CompileError,
                    ~r"cannot select_merge because the binding at position 0",
                    fn ->
-        from p in "posts", select: map(p, [:title]), select_merge: struct(p, [:title])
-      end
+                     from p in "posts",
+                       select: map(p, [:title]),
+                       select_merge: struct(p, [:title])
+                   end
     end
 
     test "optimizes map/struct merges" do
@@ -661,18 +752,22 @@ defmodule Ecto.Query.Builder.SelectTest do
         from p in "posts",
           select: %{t: {p.title, p.body}},
           select_merge: %{t: p.title, b: p.body}
+
       assert Macro.to_string(query.select.expr) == "%{t: &0.title(), b: &0.body()}"
 
       query =
         from p in "posts",
           select: %Post{title: p.title},
           select_merge: %{title: nil}
-      assert Macro.to_string(query.select.expr) == "%Ecto.Query.Builder.SelectTest.Post{title: nil}"
+
+      assert Macro.to_string(query.select.expr) ==
+               "%Ecto.Query.Builder.SelectTest.Post{title: nil}"
 
       query =
         from p in "posts",
           select: %{t: {p.title, ^0}},
           select_merge: %{t: p.title, b: p.body}
+
       assert Macro.to_string(query.select.expr) =~ "merge"
     end
 
@@ -722,7 +817,9 @@ defmodule Ecto.Query.Builder.SelectTest do
       # with inner subqueries
       s = from p in "posts", select: p.title, limit: 1
       query = from p in "posts", select: %{id: 1, title: subquery(s)}, select_merge: %{id: ^2}
-      assert Macro.to_string(query.select.expr) == "merge(%{id: 1, title: {:subquery, 0}}, %{id: ^1})"
+
+      assert Macro.to_string(query.select.expr) ==
+               "merge(%{id: 1, title: {:subquery, 0}}, %{id: ^1})"
     end
   end
 end

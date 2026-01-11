@@ -7,35 +7,45 @@ defmodule Ecto.Query.Builder.UpdateTest do
 
   describe "escape" do
     test "handles expressions and params" do
-      assert escape(quote do [set: [foo: 1]] end, [x: 0], __ENV__) |> elem(0) ==
-             [set: [foo: {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: 1, type: {0, :foo}]}]}]]
+      assert escape(quote(do: [set: [foo: 1]]), [x: 0], __ENV__) |> elem(0) ==
+               [
+                 set: [
+                   foo: {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: 1, type: {0, :foo}]}]}
+                 ]
+               ]
 
-      assert escape(quote do [set: [foo: x.bar()]] end, [x: 0], __ENV__) |> elem(0) ==
-             Macro.escape(quote do [set: [foo: &0.bar()]] end)
+      assert escape(quote(do: [set: [foo: x.bar()]]), [x: 0], __ENV__) |> elem(0) ==
+               Macro.escape(quote(do: [set: [foo: &0.bar()]]))
     end
 
     test "performs compile time interpolation" do
       query = "foo" |> update([p], set: [foo: p.foo == ^1])
       [compile] = query.updates
-      assert compile.expr == [set: [foo: {:==, [], [{{:., [], [{:&, [], [0]}, :foo]}, [], []}, {:^, [], [0]}]}]]
+
+      assert compile.expr == [
+               set: [foo: {:==, [], [{{:., [], [{:&, [], [0]}, :foo]}, [], []}, {:^, [], [0]}]}]
+             ]
+
       assert compile.params == [{1, {0, :foo}}]
     end
 
     test "raises on non-keyword lists" do
       assert_raise Ecto.Query.CompileError,
-                   ~r"malformed update `\[1\]` in query expression", fn ->
-        escape(quote do [1] end, [], __ENV__)
-      end
+                   ~r"malformed update `\[1\]` in query expression",
+                   fn ->
+                     escape(quote(do: [1]), [], __ENV__)
+                   end
 
       assert_raise Ecto.Query.CompileError,
-                   ~r"malformed :set in update `\[1\]`, expected a keyword list", fn ->
-        escape(quote do [set: [1]] end, [], __ENV__)
-      end
+                   ~r"malformed :set in update `\[1\]`, expected a keyword list",
+                   fn ->
+                     escape(quote(do: [set: [1]]), [], __ENV__)
+                   end
     end
 
     test "raises on invalid updates" do
       assert_raise Ecto.Query.CompileError, "unknown key `:unknown` in update", fn ->
-        escape(quote do [unknown: [1]] end, [], __ENV__)
+        escape(quote(do: [unknown: [1]]), [], __ENV__)
       end
 
       assert_raise Ecto.Query.CompileError, "unknown key `:unknown` in update", fn ->
@@ -88,8 +98,13 @@ defmodule Ecto.Query.Builder.UpdateTest do
 
       %{updates: [update]} = update("foo", [_], set: [foo: ^1, bar: ^dynamic, baz: ^2])
       assert Macro.to_string(update.expr) == "[set: [foo: ^0, bar: ^1 and ^2, baz: ^3]]"
-      assert update.params == [{1, {0, :foo}}, {false, :boolean},
-                               {true, :boolean}, {2, {0, :baz}}]
+
+      assert update.params == [
+               {1, {0, :foo}},
+               {false, :boolean},
+               {true, :boolean},
+               {2, {0, :baz}}
+             ]
     end
 
     test "raises on malformed updates" do
