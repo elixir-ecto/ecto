@@ -751,7 +751,6 @@ defmodule Ecto.Association.Has do
     unique: true,
     defaults: [],
     relationship: :child,
-    ordered: false,
     preload_order: []
   ]
 
@@ -1018,8 +1017,7 @@ defmodule Ecto.Association.HasThrough do
     :through,
     :on_cast,
     relationship: :child,
-    unique: true,
-    ordered: false
+    unique: true
   ]
 
   @impl true
@@ -1121,8 +1119,7 @@ defmodule Ecto.Association.BelongsTo do
     defaults: [],
     cardinality: :one,
     relationship: :parent,
-    unique: true,
-    ordered: false
+    unique: true
   ]
 
   @impl true
@@ -1322,7 +1319,6 @@ defmodule Ecto.Association.ManyToMany do
     relationship: :child,
     cardinality: :many,
     unique: false,
-    ordered: false,
     preload_order: []
   ]
 

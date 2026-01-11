@@ -9,11 +9,11 @@ defmodule Ecto.Changeset.Relation do
           required(:__struct__) => atom(),
           required(:cardinality) => :one | :many,
           required(:on_replace) => :raise | :mark_as_invalid | atom,
-          required(:relationship) => :parent | :child,
-          required(:ordered) => boolean,
-          required(:owner) => atom,
-          required(:related) => atom,
           required(:field) => atom,
+          optional(:unique) => boolean,
+          optional(:ordered) => boolean,
+          optional(:owner) => atom,
+          optional(:related) => atom,
           optional(atom()) => any()
         }
 
@@ -106,7 +106,7 @@ defmodule Ecto.Changeset.Relation do
     end
   end
 
-  def cast(%{related: mod} = relation, owner, params, current, on_cast) do
+  def cast(relation, owner, params, current, on_cast) do
     on_cast =
       case on_cast do
         {module, fun, args} ->
@@ -119,16 +119,16 @@ defmodule Ecto.Changeset.Relation do
           end
 
         nil ->
-          on_cast_default(mod)
+          on_cast_default(relation)
 
         fun when is_function(fun) ->
           fun
       end
 
-    pks = mod.__schema__(:primary_key)
+    pks = primary_keys(relation)
     fun = &do_cast(relation, owner, &1, &2, &3, &4, on_cast)
     data_pk = data_pk(pks)
-    param_pk = param_pk(mod, pks)
+    param_pk = param_pk(relation, pks)
 
     with :error <- cast_or_change(relation, params, current, data_pk, param_pk, fun) do
       {:error, {"is invalid", [type: expected_type(relation)]}}
@@ -181,8 +181,9 @@ defmodule Ecto.Changeset.Relation do
     end
   end
 
-  def change(%{related: mod} = relation, value, current) do
-    get_pks = data_pk(mod.__schema__(:primary_key))
+  def change(relation, value, current) do
+    pks = primary_keys(relation)
+    get_pks = data_pk(pks)
     fun = &do_change(relation, &1, &2, &3, &4)
 
     with :error <- cast_or_change(relation, value, current, get_pks, get_pks, fun) do
@@ -253,6 +254,11 @@ defmodule Ecto.Changeset.Relation do
     raise ArgumentError, "expected changeset data to be a #{mod} struct, got: #{inspect(data)}"
   end
 
+  defp assert_changeset_struct!(changeset, _relation) do
+    # For relations without a related module, any data type is accepted
+    changeset
+  end
+
   @doc """
   Handles the changeset or struct when being replaced.
   """
@@ -260,16 +266,15 @@ defmodule Ecto.Changeset.Relation do
     :error
   end
 
-  def on_replace(%{on_replace: :raise, field: name, owner: owner}, _) do
+  def on_replace(%{on_replace: :raise, field: name} = relation, _) do
     raise """
-    you are attempting to change relation #{inspect(name)} of
-    #{inspect(owner)} but the `:on_replace` option of this relation
-    is set to `:raise`.
+    you are attempting to change relation #{pretty_relation(relation)}
+    but the `:on_replace` option of this relation is set to `:raise`.
 
     By default it is not possible to replace or delete embeds and
     associations during `cast`. Therefore Ecto requires the parameters
     given to `cast` to have IDs matching the data currently associated
-    to #{inspect(owner)}. Failing to do so results in this error message.
+    in #{inspect(name)}. Failing to do so results in this error message.
 
     If you want to replace data or automatically delete any data
     not sent to `cast`, please set the appropriate `:on_replace`
@@ -293,9 +298,9 @@ defmodule Ecto.Changeset.Relation do
     {:ok, Changeset.change(changeset_or_struct) |> put_new_action(:replace)}
   end
 
-  defp raise_if_updating_with_struct!(%{field: name, owner: owner}, %{__struct__: _} = new) do
+  defp raise_if_updating_with_struct!(%{field: name} = relation, %{__struct__: _} = new) do
     raise """
-    you have set that the relation #{inspect(name)} of #{inspect(owner)}
+    you have set that the relation #{pretty_relation(relation)}
     has `:on_replace` set to `:update` but you are giving it a struct/
     changeset to put_assoc/put_change.
 
@@ -315,6 +320,9 @@ defmodule Ecto.Changeset.Relation do
   defp raise_if_updating_with_struct!(_, _) do
     true
   end
+
+  defp pretty_relation(%{field: name, owner: owner}), do: "#{inspect(name)} of #{inspect(owner)}"
+  defp pretty_relation(%{field: name}), do: inspect(name)
 
   defp cast_or_change(
          %{cardinality: :one} = relation,
@@ -342,12 +350,11 @@ defmodule Ecto.Changeset.Relation do
        )
        when is_list(value) do
     {current_pks, current_map} = process_current(current, current_pks_fun, relation)
-    %{unique: unique, ordered: ordered, related: mod} = relation
-    change_pks_fun = change_pk(mod.__schema__(:primary_key))
-    ordered = if ordered, do: current_pks, else: []
+    change_pks_fun = change_pk(primary_keys(relation))
+    ordered = if Map.get(relation, :ordered, false), do: current_pks, else: []
+    unique = if Map.get(relation, :unique, false), do: %{}, else: nil
     funs = {new_pks_fun, change_pks_fun, fun}
-
-    map_changes(value, current_map, [], true, true, unique && %{}, 0, ordered, funs)
+    map_changes(value, current_map, [], true, true, unique, 0, ordered, funs)
   end
 
   defp cast_or_change(_, _, _, _, _, _), do: :error
@@ -405,18 +412,7 @@ defmodule Ecto.Changeset.Relation do
     case fun.(changes, struct, allowed_actions, idx) do
       {:ok, %{action: :ignore}} ->
         ordered = pop_ordered(pk_values, ordered)
-
-        map_changes(
-          rest,
-          current,
-          acc,
-          valid?,
-          skip?,
-          unique,
-          idx + 1,
-          ordered,
-          funs
-        )
+        map_changes(rest, current, acc, valid?, skip?, unique, idx + 1, ordered, funs)
 
       {:ok, changeset} ->
         pk_values = change_pks.(changeset)
@@ -485,7 +481,10 @@ defmodule Ecto.Changeset.Relation do
 
   # helpers
 
-  defp on_cast_default(module) do
+  defp primary_keys(%{related: mod}), do: mod.__schema__(:primary_key)
+  defp primary_keys(_relation), do: []
+
+  defp on_cast_default(%{related: module}) do
     fn struct, params ->
       try do
         module.changeset(struct, params)
@@ -512,6 +511,14 @@ defmodule Ecto.Changeset.Relation do
           end
       end
     end
+  end
+
+  defp on_cast_default(%{field: field}) do
+    raise ArgumentError, """
+    the relation `#{field}` does not have a schema module and requires an explicit :with option.
+
+    Please pass a changeset function of arity 2 (or arity 3 for cardinality :many) using the :with option.
+    """
   end
 
   defp check_action!(changeset, allowed_actions) do
@@ -582,7 +589,7 @@ defmodule Ecto.Changeset.Relation do
     end
   end
 
-  defp param_pk(mod, pks) do
+  defp param_pk(%{related: mod}, pks) do
     pks = Enum.map(pks, &{&1, Atom.to_string(&1), mod.__schema__(:type, &1)})
 
     fn params ->
@@ -595,6 +602,10 @@ defmodule Ecto.Changeset.Relation do
         end
       end)
     end
+  end
+
+  defp param_pk(_relation, []) do
+    fn _params -> [] end
   end
 
   defp change_pk(pks) do
