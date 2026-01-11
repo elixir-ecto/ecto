@@ -1265,7 +1265,6 @@ defmodule Ecto.Changeset do
   defp cast_relation(type, %Changeset{} = changeset, key, opts) do
     {key, param_key} = cast_key(key)
     %{data: data, types: types, params: params, changes: changes} = changeset
-    %{related: related} = relation = relation!(:cast, type, key, Map.get(types, key))
     params = params || %{}
 
     {changeset, required?} =
@@ -1275,7 +1274,8 @@ defmodule Ecto.Changeset do
         {changeset, false}
       end
 
-    on_cast = Keyword.get_lazy(opts, :with, fn -> on_cast_default(type, related) end)
+    relation = relation!(:cast, type, key, Map.get(types, key))
+    on_cast = Keyword.get(opts, :with)
     sort = opts_key_from_params(:sort_param, opts, params)
     drop = opts_key_from_params(:drop_param, opts, params)
 
@@ -1284,14 +1284,14 @@ defmodule Ecto.Changeset do
         value = Map.get(params, param_key)
         original = Map.get(data, key)
         current = Relation.load!(data, original)
-        value = cast_params(relation, value, sort, drop)
+        value = cast_params(relation.cardinality, value, sort, drop)
 
         case Relation.cast(relation, data, value, current, on_cast) do
           {:ok, change, relation_valid?} when change != original ->
             valid? = changeset.valid? and relation_valid?
             changes = Map.put(changes, key, change)
             changeset = %{force_update(changeset, opts) | changes: changes, valid?: valid?}
-            missing_relation(changeset, key, current, required?, relation, opts)
+            missing_relation(changeset, key, required?, relation, opts)
 
           {:error, {message, meta}} ->
             meta = [validation: type] ++ meta
@@ -1300,10 +1300,10 @@ defmodule Ecto.Changeset do
 
           # ignore or ok with change == original
           _ ->
-            missing_relation(changeset, key, current, required?, relation, opts)
+            missing_relation(changeset, key, required?, relation, opts)
         end
       else
-        missing_relation(changeset, key, Map.get(data, key), required?, relation, opts)
+        missing_relation(changeset, key, required?, relation, opts)
       end
 
     update_in(changeset.types[key], fn {type, relation} ->
@@ -1311,12 +1311,11 @@ defmodule Ecto.Changeset do
     end)
   end
 
-  defp cast_params(%{cardinality: :many} = relation, nil, sort, drop)
-       when is_list(sort) or is_list(drop) do
-    cast_params(relation, %{}, sort, drop)
+  defp cast_params(:many, nil, sort, drop) when is_list(sort) or is_list(drop) do
+    cast_params(:many, %{}, sort, drop)
   end
 
-  defp cast_params(%{cardinality: :many}, value, sort, drop) when is_map(value) do
+  defp cast_params(:many, value, sort, drop) when is_map(value) do
     drop = if is_list(drop), do: drop, else: []
 
     {sorted, pending} =
@@ -1334,7 +1333,7 @@ defmodule Ecto.Changeset do
        |> Enum.map(&elem(&1, 1)))
   end
 
-  defp cast_params(%{cardinality: :one}, value, sort, drop) do
+  defp cast_params(:one, value, sort, drop) do
     if sort do
       raise ArgumentError, ":sort_param not supported for belongs_to/has_one"
     end
@@ -1346,7 +1345,7 @@ defmodule Ecto.Changeset do
     value
   end
 
-  defp cast_params(_relation, value, _sort, _drop) do
+  defp cast_params(_cardinality, value, _sort, _drop) do
     value
   end
 
@@ -1367,38 +1366,9 @@ defmodule Ecto.Changeset do
 
   defp key_as_int(key_val), do: key_val
 
-  defp on_cast_default(type, module) do
-    fn struct, params ->
-      try do
-        module.changeset(struct, params)
-      rescue
-        e in UndefinedFunctionError ->
-          case __STACKTRACE__ do
-            [{^module, :changeset, args_or_arity, _}]
-            when args_or_arity == 2
-            when length(args_or_arity) == 2 ->
-              raise ArgumentError, """
-              the module #{inspect(module)} does not define a changeset/2 function,
-              which is used by cast_#{type}/3. You need to either:
-
-                1. implement the #{type}.changeset/2 function
-                2. pass the :with option to cast_#{type}/3 with an anonymous
-                   function of arity 2 (or possibly arity 3, if using has_many or
-                   embeds_many)
-
-              When using an inline embed, the :with option must be given
-              """
-
-            stacktrace ->
-              reraise e, stacktrace
-          end
-      end
-    end
-  end
-
-  defp missing_relation(changeset, name, current, required?, relation, opts) do
-    %{changes: changes, errors: errors} = changeset
-    current_changes = Map.get(changes, name, current)
+  defp missing_relation(changeset, name, required?, relation, opts) do
+    %{data: data, changes: changes, errors: errors} = changeset
+    current_changes = Map.get_lazy(changes, name, fn -> Map.get(data, name) end)
 
     if required? and Relation.empty?(relation, current_changes) do
       errors = [
