@@ -95,7 +95,7 @@ defmodule Ecto.Query.Builder.DistinctTest do
 
       assert_raise ArgumentError, message, fn ->
         temp = "temp"
-        distinct("posts", [p], [^temp])
+        distinct("posts", [p], [^Process.get(:unused, temp)])
       end
     end
 

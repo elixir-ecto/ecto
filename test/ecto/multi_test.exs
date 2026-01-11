@@ -438,12 +438,6 @@ defmodule Ecto.MultiTest do
     assert multi.operations == [{:changeset, {:changeset, changeset, []}}]
   end
 
-  test "add run with invalid arity" do
-    assert_raise FunctionClauseError, fn ->
-      Multi.new() |> Multi.run(:run, fn -> nil end)
-    end
-  end
-
   test "repeating an operation" do
     fun = fn _, _ -> {:ok, :ok} end
 

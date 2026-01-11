@@ -78,14 +78,14 @@ defmodule Ecto.Query.Builder.GroupByTest do
 
       assert_raise ArgumentError, message, fn ->
         temp = "temp"
-        group_by("posts", [p], [^temp])
+        group_by("posts", [p], [^Process.get(:unused, temp)])
       end
 
       message = "expected a list of fields and dynamics in `group_by`, got: `\"temp\"`"
 
       assert_raise ArgumentError, message, fn ->
         temp = "temp"
-        group_by("posts", [p], ^temp)
+        group_by("posts", [p], ^Process.get(:unused, temp))
       end
     end
 

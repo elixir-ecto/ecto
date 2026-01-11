@@ -509,16 +509,16 @@ defmodule Ecto.Query.PlannerTest do
             {"comments", _, _}, {"comments", _, _}} = query.sources
 
     assert Macro.to_string(join1.on.expr) =~
-              ~r"&1.post_id\(\) == &0.id\(\) and not[\s\(]is_nil\(&1.text\(\)\)\)?"
+             ~r"&1.post_id\(\) == &0.id\(\) and not[\s\(]is_nil\(&1.text\(\)\)\)?"
 
     assert Macro.to_string(join2.on.expr) == "&2.id() == &1.post_id()"
     assert Macro.to_string(join3.on.expr) == "&3.comment_id() == &1.id()"
 
     assert Macro.to_string(join4.on.expr) ==
-              "&4.id() == &3.special_comment_id() and is_nil(&4.text())"
+             "&4.id() == &3.special_comment_id() and is_nil(&4.text())"
 
     assert Macro.to_string(join5.on.expr) ==
-              "&5.id() == &3.special_long_comment_id() and\n  fragment({:raw, \"LEN(\"}, {:expr, &5.text()}, {:raw, \") > 100\"})"
+             "&5.id() == &3.special_long_comment_id() and\n  fragment({:raw, \"LEN(\"}, {:expr, &5.text()}, {:raw, \") > 100\"})"
   end
 
   test "plan: raises on invalid binding index in join" do
@@ -1444,7 +1444,9 @@ defmodule Ecto.Query.PlannerTest do
 
     child = from(c in Comment, select: %{map: field(parent_as(^as), "posted")})
     query = from(Post, as: :posts, join: c in subquery(child), on: true) |> normalize()
-    assert Macro.to_string(hd(query.joins).source.query.select.expr) == "%{map: parent_as(:posts) . \"posted\"()}"
+
+    assert Macro.to_string(hd(query.joins).source.query.select.expr) ==
+             "%{map: parent_as(:posts) . \"posted\"()}"
 
     child = from(c in Comment, where: parent_as(^as).visits == ^"123")
 
@@ -1471,7 +1473,9 @@ defmodule Ecto.Query.PlannerTest do
     {query, cast_params, _, _} =
       from(Post, as: :posts, join: c in subquery(child), on: true) |> normalize_with_params()
 
-    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) == "parent_as(:posts) . \"visits\"() == ^0"
+    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) ==
+             "parent_as(:posts) . \"visits\"() == ^0"
+
     assert cast_params == ["123"]
   end
 
@@ -1774,8 +1778,9 @@ defmodule Ecto.Query.PlannerTest do
     assert_raise Ecto.Query.CompileError,
                  ~s(expected `path` to be a list in json_extract_path/2, got: `"id"`),
                  fn ->
-                   query = from(p in Post, select: json_extract_path(p.metas, ^"id"))
-                   normalize(query)
+                   from(p in Post,
+                     select: json_extract_path(p.metas, ^Process.get(:unused, "id"))
+                   )
                  end
   end
 
@@ -1915,9 +1920,9 @@ defmodule Ecto.Query.PlannerTest do
 
     {:in, _, [_, {:fragment, _, parts}]} = hd(query.wheres).expr
 
-        assert [
+    assert [
              _,
-            {:expr, {:^, _, [0]}},
+             {:expr, {:^, _, [0]}},
              _,
              {:expr, {:^, _, [1]}},
              _,
@@ -1945,7 +1950,7 @@ defmodule Ecto.Query.PlannerTest do
 
     assert [
              _,
-            {:expr, {:^, _, [0]}},
+             {:expr, {:^, _, [0]}},
              _,
              {:expr, 2},
              _,
@@ -1967,7 +1972,11 @@ defmodule Ecto.Query.PlannerTest do
     start_param_ix = 0
     native_types = %{bid: :uuid, num: :integer}
     types_kw = Enum.map(types, fn {field, _} -> {field, native_types[field]} end)
-    field_ast = Enum.map(types, fn {field, _} -> {{:., [writable: :always], [{:&, [], [0]}, field]}, [], []} end)
+
+    field_ast =
+      Enum.map(types, fn {field, _} ->
+        {{:., [writable: :always], [{:&, [], [0]}, field]}, [], []}
+      end)
 
     assert q.from.source == {:values, [], [types_kw, start_param_ix, length(values)]}
     assert q.select.fields == field_ast
@@ -1985,7 +1994,12 @@ defmodule Ecto.Query.PlannerTest do
     start_param_ix = 1
     native_types = %{bid: :uuid, num: :integer}
     types_kw = Enum.map(types, fn {field, _} -> {field, native_types[field]} end)
-    field_ast = Enum.map(types, fn {field, _} -> {{:., [writable: :always], [{:&, [], [1]}, field]}, [], []} end)
+
+    field_ast =
+      Enum.map(types, fn {field, _} ->
+        {{:., [writable: :always], [{:&, [], [1]}, field]}, [], []}
+      end)
+
     [join] = q.joins
 
     assert join.source == {:values, [], [types_kw, start_param_ix, length(values)]}

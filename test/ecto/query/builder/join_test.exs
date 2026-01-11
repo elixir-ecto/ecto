@@ -136,7 +136,7 @@ defmodule Ecto.Query.Builder.JoinTest do
   test "raises on invalid qualifier" do
     assert_raise ArgumentError, ~r/invalid join qualifier `:whatever`/, fn ->
       qual = :whatever
-      join("posts", qual, [p], c in "comments", on: true)
+      join("posts", Process.get(:unused, qual), [p], c in "comments", on: true)
     end
   end
 

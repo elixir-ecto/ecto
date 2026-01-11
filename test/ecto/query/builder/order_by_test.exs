@@ -258,7 +258,7 @@ defmodule Ecto.Query.Builder.OrderByTest do
     test "raises on invalid direction" do
       assert_raise ArgumentError, ~r"expected one of :asc,", fn ->
         temp = :temp
-        order_by("posts", [p], [{^var!(temp), p.y}])
+        order_by("posts", [p], [{^Process.get(:unused, temp), p.y}])
       end
     end
 
@@ -267,12 +267,12 @@ defmodule Ecto.Query.Builder.OrderByTest do
 
       assert_raise ArgumentError, message, fn ->
         temp = "temp"
-        order_by("posts", [p], asc: ^temp)
+        order_by("posts", [p], asc: ^Process.get(:unused, temp))
       end
 
       assert_raise ArgumentError, ~r"To use dynamic expressions", fn ->
         dynamic_expr = dynamic([p], p.foo == ^1)
-        order_by("posts", [p], asc: ^dynamic_expr)
+        order_by("posts", [p], asc: ^Process.get(:unused, dynamic_expr))
       end
     end
 

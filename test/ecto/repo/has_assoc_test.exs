@@ -2,7 +2,7 @@ defmodule Ecto.Repo.HasAssocTest do
   use ExUnit.Case, async: true
 
   import Ecto, only: [put_meta: 2]
-  require Ecto.TestRepo, as: TestRepo
+  alias Ecto.TestRepo
 
   defmodule SubAssoc do
     use Ecto.Schema
@@ -53,7 +53,7 @@ defmodule Ecto.Repo.HasAssocTest do
   test "on delete deleting has_one assoc preserves parent schema prefix" do
     %MySchema{id: 1}
     |> Ecto.put_meta(prefix: "prefix")
-    |> Ecto.Changeset.change
+    |> Ecto.Changeset.change()
     |> TestRepo.delete!()
 
     assert_received {:delete_all, %{prefix: "prefix", from: %{source: {"my_assoc", _}}}}
@@ -62,7 +62,7 @@ defmodule Ecto.Repo.HasAssocTest do
   test "on delete deleting has_many assocs preserves parent schema prefix" do
     %MySchema{id: 1}
     |> Ecto.put_meta(prefix: "prefix")
-    |> Ecto.Changeset.change
+    |> Ecto.Changeset.change()
     |> TestRepo.delete!()
 
     assert_received {:delete_all, %{prefix: "prefix", from: %{source: {"my_assoc", _}}}}
@@ -71,7 +71,7 @@ defmodule Ecto.Repo.HasAssocTest do
   test "on delete nilifying has_one assoc preserves parent schema prefix" do
     %MySchema{id: 1}
     |> Ecto.put_meta(prefix: "prefix")
-    |> Ecto.Changeset.change
+    |> Ecto.Changeset.change()
     |> TestRepo.delete!()
 
     assert_received {:update_all, %{prefix: "prefix", from: %{source: {"my_assoc", _}}}}
@@ -80,7 +80,7 @@ defmodule Ecto.Repo.HasAssocTest do
   test "on delete nilifying has_many assocs preserves parent schema prefix" do
     %MySchema{id: 1}
     |> Ecto.put_meta(prefix: "prefix")
-    |> Ecto.Changeset.change
+    |> Ecto.Changeset.change()
     |> TestRepo.delete!()
 
     assert_received {:update_all, %{prefix: "prefix", from: %{source: {"my_assoc", _}}}}
@@ -91,8 +91,9 @@ defmodule Ecto.Repo.HasAssocTest do
 
     changeset =
       %MySchema{}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assoc, sample)
+
     schema = TestRepo.insert!(changeset)
     assoc = schema.assoc
     assert assoc.id
@@ -102,8 +103,9 @@ defmodule Ecto.Repo.HasAssocTest do
 
     changeset =
       %MySchema{}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assocs, [sample])
+
     schema = TestRepo.insert!(changeset)
     [assoc] = schema.assocs
     assert assoc.id
@@ -118,8 +120,9 @@ defmodule Ecto.Repo.HasAssocTest do
     changeset =
       %MySchema{}
       |> Ecto.put_meta(prefix: "prefix")
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assoc, sample)
+
     schema = TestRepo.insert!(changeset)
     assoc = schema.assoc
 
@@ -128,8 +131,9 @@ defmodule Ecto.Repo.HasAssocTest do
     changeset =
       %MySchema{}
       |> Ecto.put_meta(prefix: "prefix")
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assocs, [sample])
+
     schema = TestRepo.insert!(changeset)
     [assoc] = schema.assocs
 
@@ -160,21 +164,27 @@ defmodule Ecto.Repo.HasAssocTest do
   test "raises on action mismatch on insert" do
     changeset =
       %MySchema{}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assoc, %MyAssoc{x: "xyz"})
+
     changeset = put_in(changeset.changes.assoc.action, :delete)
-    assert_raise ArgumentError, ~r"got action :delete in changeset for associated .* while inserting", fn ->
-      TestRepo.insert!(changeset)
-    end
+
+    assert_raise ArgumentError,
+                 ~r"got action :delete in changeset for associated .* while inserting",
+                 fn ->
+                   TestRepo.insert!(changeset)
+                 end
   end
 
   test "returns untouched changeset on invalid children on insert" do
     assoc = %MyAssoc{x: "xyz"}
     assoc_changeset = %{Ecto.Changeset.change(assoc) | valid?: false}
+
     changeset =
       %MySchema{}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assoc, assoc_changeset)
+
     assert {:error, changeset} = TestRepo.insert(%{changeset | valid?: true})
     assert_received {:rollback, ^changeset}
     refute changeset.valid?
@@ -185,9 +195,10 @@ defmodule Ecto.Repo.HasAssocTest do
 
     changeset =
       put_in(%MySchema{}.__meta__.context, {:invalid, [unique: "my_schema_foo_index"]})
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assoc, assoc_changeset)
       |> Ecto.Changeset.unique_constraint(:foo)
+
     assert {:error, changeset} = TestRepo.insert(changeset)
     assert_received {:rollback, ^changeset}
     assert changeset.data.__meta__.state == :built
@@ -200,13 +211,14 @@ defmodule Ecto.Repo.HasAssocTest do
   test "returns untouched changeset on child constraint mismatch on insert" do
     assoc_changeset =
       put_in(%MyAssoc{}.__meta__.context, {:invalid, [unique: "my_assoc_foo_index"]})
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.unique_constraint(:foo)
 
     changeset =
       %MySchema{}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assoc, assoc_changeset)
+
     assert {:error, changeset} = TestRepo.insert(changeset)
     assert changeset.data.__meta__.state == :built
     assert %Ecto.Association.NotLoaded{} = changeset.data.assoc
@@ -224,12 +236,14 @@ defmodule Ecto.Repo.HasAssocTest do
   test "handles valid nested assocs on insert" do
     assoc =
       %MyAssoc{x: "xyz"}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:sub_assoc, %SubAssoc{y: "xyz"})
+
     changeset =
       %MySchema{}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assoc, assoc)
+
     schema = TestRepo.insert!(changeset)
     assert schema.assoc.sub_assoc.id
 
@@ -241,27 +255,32 @@ defmodule Ecto.Repo.HasAssocTest do
   test "handles valid nested assocs on insert preserving parent schema prefix" do
     assoc =
       %MyAssoc{x: "xyz"}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:sub_assoc, %SubAssoc{y: "xyz"})
+
     changeset =
       %MySchema{}
       |> Ecto.put_meta(prefix: "prefix")
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assoc, assoc)
+
     schema = TestRepo.insert!(changeset)
     assert schema.__meta__.prefix == "prefix"
   end
 
   test "handles invalid nested assocs on insert" do
     sub_assoc_change = %{Ecto.Changeset.change(%SubAssoc{y: "xyz"}) | valid?: false}
+
     assoc =
       %MyAssoc{x: "xyz"}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:sub_assoc, sub_assoc_change)
+
     changeset =
       %MySchema{}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assoc, assoc)
+
     assert {:error, changeset} = TestRepo.insert(%{changeset | valid?: true})
     refute Map.has_key?(changeset.changes, :id)
     refute changeset.changes.assoc.changes.my_schema_id
@@ -278,12 +297,16 @@ defmodule Ecto.Repo.HasAssocTest do
   end
 
   test "duplicate pk on insert" do
-    assocs = [%MyAssoc{x: "xyz", id: 1} |> Ecto.Changeset.change,
-              %MyAssoc{} |> Ecto.Changeset.change(%{x: "abc", id: 1})]
+    assocs = [
+      %MyAssoc{x: "xyz", id: 1} |> Ecto.Changeset.change(),
+      %MyAssoc{} |> Ecto.Changeset.change(%{x: "abc", id: 1})
+    ]
+
     changeset =
       %MySchema{}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assocs, assocs)
+
     assert {:error, changeset} = TestRepo.insert(changeset)
     refute changeset.valid?
     errors = Ecto.Changeset.traverse_errors(changeset, fn {msg, _} -> msg end)
@@ -308,8 +331,9 @@ defmodule Ecto.Repo.HasAssocTest do
 
     changeset =
       %MySchema{id: 1}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assoc, sample)
+
     schema = TestRepo.update!(changeset)
     assoc = schema.assoc
     assert assoc.id
@@ -319,8 +343,9 @@ defmodule Ecto.Repo.HasAssocTest do
 
     changeset =
       %MySchema{id: 1}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assocs, [sample])
+
     schema = TestRepo.update!(changeset)
     [assoc] = schema.assocs
     assert assoc.id
@@ -335,8 +360,9 @@ defmodule Ecto.Repo.HasAssocTest do
     changeset =
       %MySchema{id: 1}
       |> Ecto.put_meta(prefix: "prefix")
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assoc, sample)
+
     schema = TestRepo.update!(changeset)
     assoc = schema.assoc
     assert assoc.__meta__.prefix == "prefix"
@@ -344,8 +370,9 @@ defmodule Ecto.Repo.HasAssocTest do
     changeset =
       %MySchema{id: 1}
       |> Ecto.put_meta(prefix: "prefix")
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assocs, [sample])
+
     schema = TestRepo.update!(changeset)
     [assoc] = schema.assocs
     assert assoc.__meta__.prefix == "prefix"
@@ -358,10 +385,13 @@ defmodule Ecto.Repo.HasAssocTest do
       %MySchema{id: 1, delete_assoc: sample}
       |> Ecto.Changeset.cast(%{x: "abc", delete_assoc: %{delete: true, id: 10}}, [:x])
       |> Ecto.Changeset.cast_assoc(:delete_assoc)
+
     schema = TestRepo.update!(changeset)
     refute schema.delete_assoc
-    assert_received {:update, _} # Parent
-    assert_received {:delete, _} # Old assoc
+    # Parent
+    assert_received {:update, _}
+    # Old assoc
+    assert_received {:delete, _}
   end
 
   test "updating assocs with action: :delete" do
@@ -371,10 +401,13 @@ defmodule Ecto.Repo.HasAssocTest do
       %MySchema{id: 1, delete_assocs: [sample]}
       |> Ecto.Changeset.cast(%{x: "abc", delete_assocs: [%{delete: true, id: 10}]}, [:x])
       |> Ecto.Changeset.cast_assoc(:delete_assocs)
+
     schema = TestRepo.update!(changeset)
     assert schema.delete_assocs == []
-    assert_received {:update, _} # Parent
-    assert_received {:delete, _} # Old assoc
+    # Parent
+    assert_received {:update, _}
+    # Old assoc
+    assert_received {:delete, _}
   end
 
   test "replacing assocs on update on_replace: :delete" do
@@ -385,26 +418,34 @@ defmodule Ecto.Repo.HasAssocTest do
       %MySchema{id: 1, assoc: sample}
       |> Ecto.Changeset.change(x: "1")
       |> Ecto.Changeset.put_assoc(:assoc, %MyAssoc{x: "abc"})
+
     schema = TestRepo.update!(changeset)
     assoc = schema.assoc
     assert assoc.id != 10
     assert assoc.x == "abc"
     assert assoc.my_schema_id == schema.id
     assert assoc.updated_at
-    assert_received {:update, _} # Parent
-    assert_received {:insert, _} # New assoc
-    assert_received {:delete, _} # Old assoc
+    # Parent
+    assert_received {:update, _}
+    # New assoc
+    assert_received {:insert, _}
+    # Old assoc
+    assert_received {:delete, _}
 
     # Replacing assoc with nil
     changeset =
       %MySchema{id: 1, assoc: sample}
       |> Ecto.Changeset.change(x: "2")
       |> Ecto.Changeset.put_assoc(:assoc, nil)
+
     schema = TestRepo.update!(changeset)
     refute schema.assoc
-    assert_received {:update, _} # Parent
-    refute_received {:insert, _} # New assoc
-    assert_received {:delete, _} # Old assoc
+    # Parent
+    assert_received {:update, _}
+    # New assoc
+    refute_received {:insert, _}
+    # Old assoc
+    assert_received {:delete, _}
   end
 
   test "replacing assocs on update on_replace: :nilify" do
@@ -415,26 +456,34 @@ defmodule Ecto.Repo.HasAssocTest do
       %MySchema{id: 1, nilify_assoc: sample}
       |> Ecto.Changeset.change(x: "1")
       |> Ecto.Changeset.put_assoc(:nilify_assoc, %MyAssoc{x: "abc"})
+
     schema = TestRepo.update!(changeset)
     assoc = schema.nilify_assoc
     assert assoc.id != 10
     assert assoc.x == "abc"
     assert assoc.my_schema_id == schema.id
     assert assoc.updated_at
-    assert_received {:update, _} # Parent
-    assert_received {:insert, _} # New assoc
-    assert_received {:update, _} # Old assoc
+    # Parent
+    assert_received {:update, _}
+    # New assoc
+    assert_received {:insert, _}
+    # Old assoc
+    assert_received {:update, _}
 
     # Replacing assoc with nil
     changeset =
       %MySchema{id: 1, nilify_assoc: sample}
       |> Ecto.Changeset.change(x: "2")
       |> Ecto.Changeset.put_assoc(:nilify_assoc, nil)
+
     schema = TestRepo.update!(changeset)
     refute schema.nilify_assoc
-    assert_received {:update, _} # Parent
-    refute_received {:insert, _} # New assoc
-    assert_received {:update, _} # Old assoc
+    # Parent
+    assert_received {:update, _}
+    # New assoc
+    refute_received {:insert, _}
+    # Old assoc
+    assert_received {:update, _}
   end
 
   test "changing assocs on update raises if there is no id" do
@@ -443,8 +492,9 @@ defmodule Ecto.Repo.HasAssocTest do
 
     changeset =
       %MySchema{id: 1, assoc: sample}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assoc, sample_changeset)
+
     assert_raise Ecto.NoPrimaryKeyValueError, fn ->
       TestRepo.update!(changeset)
     end
@@ -452,33 +502,38 @@ defmodule Ecto.Repo.HasAssocTest do
 
   test "changing assocs on update" do
     sample = %MyAssoc{x: "xyz", id: 13, my_schema: 1, sub_assoc: nil}
-    sample = put_meta sample, state: :loaded
+    sample = put_meta(sample, state: :loaded)
 
     # Changing the assoc
     sample_changeset = Ecto.Changeset.change(sample, x: "abc")
+
     changeset =
       %MySchema{id: 1, assoc: sample}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assoc, sample_changeset)
+
     schema = TestRepo.update!(changeset)
     assoc = schema.assoc
     assert assoc.id == 13
     assert assoc.x == "abc"
     refute assoc.inserted_at
     assert assoc.updated_at
-    refute_received {:delete, _} # Same assoc should not emit delete
+    # Same assoc should not emit delete
+    refute_received {:delete, _}
 
     changeset =
       %MySchema{id: 1, assocs: [sample]}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assocs, [sample_changeset])
+
     schema = TestRepo.update!(changeset)
     [assoc] = schema.assocs
     assert assoc.id == 13
     assert assoc.x == "abc"
     refute assoc.inserted_at
     assert assoc.updated_at
-    refute_received {:delete, _} # Same assoc should not emit delete
+    # Same assoc should not emit delete
+    refute_received {:delete, _}
   end
 
   test "removing assocs on update raises if there is no id" do
@@ -487,8 +542,9 @@ defmodule Ecto.Repo.HasAssocTest do
     # Raises if there's no id
     changeset =
       %MySchema{id: 1, assoc: assoc}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assoc, nil)
+
     assert_raise Ecto.NoPrimaryKeyValueError, fn ->
       TestRepo.update!(changeset)
     end
@@ -499,15 +555,17 @@ defmodule Ecto.Repo.HasAssocTest do
 
     changeset =
       %MySchema{id: 1, assoc: assoc}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assoc, nil)
+
     schema = TestRepo.update!(changeset)
     assert schema.assoc == nil
 
     changeset =
       %MySchema{id: 1, assocs: [assoc]}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assocs, [])
+
     schema = TestRepo.update!(changeset)
     assert schema.assocs == []
   end
@@ -518,16 +576,18 @@ defmodule Ecto.Repo.HasAssocTest do
     changeset =
       %MySchema{id: 1, assoc: assoc}
       |> Ecto.put_meta(prefix: "prefix")
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assoc, nil)
+
     TestRepo.update!(changeset)
     assert_received {:delete, %{prefix: "prefix", source: "my_assoc"}}
 
     changeset =
       %MySchema{id: 1, assocs: [assoc]}
       |> Ecto.put_meta(prefix: "prefix")
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assocs, [])
+
     TestRepo.update!(changeset)
     assert_received {:delete, %{prefix: "prefix", source: "my_assoc"}}
   end
@@ -535,10 +595,12 @@ defmodule Ecto.Repo.HasAssocTest do
   test "returns untouched changeset on invalid children on update" do
     assoc = %MyAssoc{x: "xyz"}
     assoc_changeset = %{Ecto.Changeset.change(assoc) | valid?: false}
+
     changeset =
       %MySchema{id: 1}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assoc, assoc_changeset)
+
     assert {:error, changeset} = TestRepo.update(%{changeset | valid?: true})
     assert_received {:rollback, ^changeset}
     refute changeset.valid?
@@ -546,11 +608,13 @@ defmodule Ecto.Repo.HasAssocTest do
 
   test "returns untouched changeset on constraint mismatch on update" do
     my_schema = %MySchema{id: 1, assoc: nil}
+
     changeset =
       put_in(my_schema.__meta__.context, {:invalid, [unique: "my_schema_foo_index"]})
       |> Ecto.Changeset.change(x: "foo")
       |> Ecto.Changeset.put_assoc(:assoc, %MyAssoc{x: "xyz"})
       |> Ecto.Changeset.unique_constraint(:foo)
+
     assert {:error, changeset} = TestRepo.update(changeset)
     assert_received {:rollback, ^changeset}
     refute changeset.data.assoc
@@ -561,14 +625,17 @@ defmodule Ecto.Repo.HasAssocTest do
 
   test "handles valid nested assocs on update" do
     assoc = %MyAssoc{id: 1, x: "xyz"}
+
     assoc_changeset =
       assoc
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:sub_assoc, %SubAssoc{y: "xyz"})
+
     changeset =
       %MySchema{id: 1, assoc: assoc}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assoc, assoc_changeset)
+
     schema = TestRepo.update!(changeset)
     assert schema.assoc.sub_assoc.id
 
@@ -582,14 +649,15 @@ defmodule Ecto.Repo.HasAssocTest do
     sub_assoc_changeset = %{Ecto.Changeset.change(sub_assoc) | valid?: false}
 
     assoc = %MyAssoc{id: 1, x: "xyz"}
+
     assoc_changeset =
       assoc
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:sub_assoc, sub_assoc_changeset)
 
     changeset =
       %MySchema{id: 1, assoc: assoc}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:assoc, assoc_changeset)
 
     assert {:error, changeset} = TestRepo.update(%{changeset | valid?: true})
@@ -607,7 +675,7 @@ defmodule Ecto.Repo.HasAssocTest do
   test "ignore not loaded assoc on insert" do
     schema = %MySchema{}
     %{assoc: %Ecto.Association.NotLoaded{}, assocs: %Ecto.Association.NotLoaded{}} = schema
-    loaded = put_in schema.__meta__.state, :loaded
+    loaded = put_in(schema.__meta__.state, :loaded)
     TestRepo.insert!(loaded)
   end
 end

@@ -1,4 +1,4 @@
-Code.require_file "../../../support/eval_helpers.exs", __DIR__
+Code.require_file("../../../support/eval_helpers.exs", __DIR__)
 
 defmodule Ecto.Query.Builder.LimitOffsetTest do
   use ExUnit.Case, async: true
@@ -48,18 +48,22 @@ defmodule Ecto.Query.Builder.LimitOffsetTest do
 
   test "with_ties must be a runtime or compile time boolean" do
     msg = "`with_ties` expression must evaluate to a boolean at runtime, got: `1`"
+
     assert_raise RuntimeError, msg, fn ->
-      with_ties("posts", ^1)
+      with_ties("posts", ^Process.get(:unused, 1))
     end
 
-    msg = "`with_ties` expression must be a compile time boolean or an interpolated value using ^, got: `1`"
+    msg =
+      "`with_ties` expression must be a compile time boolean or an interpolated value using ^, got: `1`"
+
     assert_raise Ecto.Query.CompileError, msg, fn ->
-      quote_and_eval with_ties("posts", 1)
+      quote_and_eval(with_ties("posts", 1))
     end
   end
 
   test "with_ties requires a limit" do
     msg = "`with_ties` can only be applied to queries containing a `limit`"
+
     assert_raise Ecto.Query.CompileError, msg, fn ->
       with_ties("posts", true)
     end

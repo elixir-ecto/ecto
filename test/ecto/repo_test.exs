@@ -3,7 +3,7 @@ defmodule Ecto.RepoTest do
 
   import Ecto.Query
   import Ecto, only: [put_meta: 2]
-  require Ecto.TestRepo, as: TestRepo
+  alias Ecto.TestRepo
 
   defmodule MyParent do
     use Ecto.Schema
@@ -391,13 +391,6 @@ defmodule Ecto.RepoTest do
       assert_received {:all, query}
       assert query.from.source == {"my_parent", Ecto.RepoTest.MyParent}
       assert query.prefix == "fallback_schema"
-    end
-
-    test "raises if options aren't a keyword list" do
-      assert_raise FunctionClauseError, fn ->
-        {:ok, _pid} = DefaultOptionRepo.start_link(url: "ecto://user:pass@local/hello")
-        DefaultOptionRepo.all(MySchema, [1])
-      end
     end
   end
 

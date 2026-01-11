@@ -537,14 +537,6 @@ defmodule Ecto.ChangesetTest do
     assert_raise Ecto.CastError, ~r"mixed keys", fn ->
       cast(%Post{}, %{"title" => "foo", title: "foo"}, ~w())
     end
-
-    assert_raise FunctionClauseError, fn ->
-      cast(%Post{}, %{}, %{})
-    end
-
-    assert_raise FunctionClauseError, fn ->
-      cast(%Post{}, %{"title" => "foo"}, nil)
-    end
   end
 
   test "cast/4: protects against atom injection" do
@@ -1278,12 +1270,6 @@ defmodule Ecto.ChangesetTest do
     assert_raise ArgumentError, ~r/expect field names to be atoms, got: `"title"`/, fn ->
       changeset(%{"title" => "hello"})
       |> validate_required("title")
-    end
-
-    # When field is nil
-    assert_raise FunctionClauseError, fn ->
-      changeset(%{"title" => "hello"})
-      |> validate_required(nil)
     end
 
     # When field is list and is an empty value

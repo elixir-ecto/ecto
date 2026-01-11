@@ -1,4 +1,4 @@
-Code.require_file "../../../support/eval_helpers.exs", __DIR__
+Code.require_file("../../../support/eval_helpers.exs", __DIR__)
 
 defmodule Ecto.Query.Builder.PreloadTest do
   use ExUnit.Case, async: true
@@ -19,30 +19,41 @@ defmodule Ecto.Query.Builder.PreloadTest do
       comments = :comments
       assert preload("posts", ^comments).preloads == [:comments]
       assert preload("posts", ^[comments]).preloads == [:comments]
-      assert preload("posts", [users: ^comments]).preloads == [users: :comments]
+      assert preload("posts", users: ^comments).preloads == [users: :comments]
       assert preload("posts", ^[users: comments]).preloads == [users: :comments]
-      assert preload("posts", [users: ^[comments]]).preloads == [users: [:comments]]
+      assert preload("posts", users: ^[comments]).preloads == [users: [:comments]]
       assert preload("posts", ^[users: [comments]]).preloads == [users: [:comments]]
       assert preload("posts", [{^:users, ^comments}]).preloads == [users: :comments]
       assert preload("posts", [[[users: ^comments]]]).preloads == [users: :comments]
       assert preload("posts", ^[[[users: comments]]]).preloads == [users: :comments]
       assert preload("posts", [[users: [[^comments]]]]).preloads == [users: [:comments]]
       assert preload("posts", ^[[users: [[comments]]]]).preloads == [users: [:comments]]
-      assert preload("posts", [[:likes, users: [[^comments]]]]).preloads == [{:users, [:comments]}, :likes]
-      assert preload("posts", ^[[:likes, users: [[comments]]]]).preloads == [{:users, [:comments]}, :likes]
+
+      assert preload("posts", [[:likes, users: [[^comments]]]]).preloads == [
+               {:users, [:comments]},
+               :likes
+             ]
+
+      assert preload("posts", ^[[:likes, users: [[comments]]]]).preloads == [
+               {:users, [:comments]},
+               :likes
+             ]
 
       query = from u in "users", limit: 10
-      assert preload("posts", [users: ^query]).preloads == [users: query]
+      assert preload("posts", users: ^query).preloads == [users: query]
       assert preload("posts", [{^:users, ^query}]).preloads == [users: query]
       assert preload("posts", ^[users: query]).preloads == [users: query]
-      assert preload("posts", [users: ^{query, :comments}]).preloads == [users: {query, :comments}]
-      assert preload("posts", ^[users: {query, :comments}]).preloads == [users: {query, [:comments]}]
+      assert preload("posts", users: ^{query, :comments}).preloads == [users: {query, :comments}]
+
+      assert preload("posts", ^[users: {query, :comments}]).preloads == [
+               users: {query, [:comments]}
+             ]
 
       fun = fn _ -> [] end
-      assert preload("posts", [users: ^fun]).preloads == [users: fun]
+      assert preload("posts", users: ^fun).preloads == [users: fun]
       assert preload("posts", [{^:users, ^fun}]).preloads == [users: fun]
       assert preload("posts", ^[users: fun]).preloads == [users: fun]
-      assert preload("posts", [users: ^{fun, :comments}]).preloads == [users: {fun, :comments}]
+      assert preload("posts", users: ^{fun, :comments}).preloads == [users: {fun, :comments}]
       assert preload("posts", ^[users: {fun, :comments}]).preloads == [users: {fun, [:comments]}]
     end
 
@@ -50,17 +61,22 @@ defmodule Ecto.Query.Builder.PreloadTest do
       comments = :comments
 
       query = from p in "posts", join: c in assoc(p, :comments), as: ^comments
+
       assert %{preloads: [], assocs: [{:comments, {1, []}}]} =
                preload(query, [{^comments, c}], [{^comments, c}])
+
       assert %{preloads: [:foo], assocs: [{:comments, {1, []}}]} =
                preload(query, [{^comments, c}], [:foo, {^comments, c}])
 
       query =
         from p in "posts",
-          join: f in assoc(p, :foo), as: :foo,
-          join: c in assoc(f, :comments), as: ^comments
+          join: f in assoc(p, :foo),
+          as: :foo,
+          join: c in assoc(f, :comments),
+          as: ^comments
+
       assert %{preloads: [], assocs: [{:foo, {1, [{:comments, {2, []}}]}}]} =
-               preload(query, [{:foo, f}, {^comments, c}], [foo: {f, [{^comments, c}]}])
+               preload(query, [{:foo, f}, {^comments, c}], foo: {f, [{^comments, c}]})
     end
 
     test "supports dynamics for join association bindings using named bindings" do
@@ -68,21 +84,27 @@ defmodule Ecto.Query.Builder.PreloadTest do
 
       query =
         from p in "posts",
-        join: c in assoc(p, :comments),
-        as: ^comments
+          join: c in assoc(p, :comments),
+          as: ^comments
+
       preloads = [
         comments: dynamic([{^comments, c}], c)
       ]
+
       assert %{preloads: [], assocs: [comments: {1, []}]} = preload(query, ^preloads)
 
       query =
         from p in "posts",
-        join: c in assoc(p, :comments), as: ^comments,
-        join: l in assoc(p, :likes), as: :likes
+          join: c in assoc(p, :comments),
+          as: ^comments,
+          join: l in assoc(p, :likes),
+          as: :likes
+
       preloads = [
         likes: dynamic([likes: l], l),
         comments: dynamic([{^comments, c}], c)
       ]
+
       assert %{preloads: [], assocs: [likes: {2, []}, comments: {1, []}]} =
                preload(query, ^preloads)
     end
@@ -94,20 +116,24 @@ defmodule Ecto.Query.Builder.PreloadTest do
 
       query =
         from p in "posts",
-        join: assoc(p, :comments),
-        join: assoc(p, :likes)
+          join: assoc(p, :comments),
+          join: assoc(p, :likes)
+
       preloads = [
         likes: dynamic([_p, _c, l], l),
         comments: dynamic([_p, c], c)
       ]
+
       assert %{preloads: [], assocs: [likes: {2, []}, comments: {1, []}]} =
                preload(query, ^preloads)
 
       query =
         from p in "posts",
-        join: c in assoc(p, :comments),
-        join: assoc(c, :likes)
+          join: c in assoc(p, :comments),
+          join: assoc(c, :likes)
+
       preloads = [comments: {dynamic([_p, c], c), likes: dynamic([_p, _c, l], l)}]
+
       assert %{preloads: [], assocs: [comments: {1, [likes: {2, []}]}]} =
                preload(query, ^preloads)
     end
@@ -141,29 +167,34 @@ defmodule Ecto.Query.Builder.PreloadTest do
       assert_raise Ecto.Query.CompileError, message, fn ->
         quote_and_eval(%Ecto.Query{} |> preload(1))
       end
+
       assert_raise Ecto.Query.CompileError, message, fn ->
         quote_and_eval(%Ecto.Query{} |> preload([1]))
       end
 
       assert_raise ArgumentError, message, fn ->
-         preload(%Ecto.Query{}, ^1)
+        preload(%Ecto.Query{}, ^1)
       end
+
       assert_raise ArgumentError, message, fn ->
-         preload(%Ecto.Query{}, ^[1])
+        preload(%Ecto.Query{}, ^[1])
       end
     end
 
     test "raises on invalid keys" do
       message = ~r"malformed key in preload `1`"
+
       assert_raise Ecto.Query.CompileError, message, fn ->
         quote_and_eval(%Ecto.Query{} |> preload([{1, :foo}]))
       end
 
       message = ~r"expected key in preload to be an atom, got: `1`"
+
       assert_raise ArgumentError, message, fn ->
         temp = 1
-        preload(%Ecto.Query{}, [{^temp, :foo}])
+        preload(%Ecto.Query{}, [{^Process.get(:unused, temp), :foo}])
       end
+
       assert_raise ArgumentError, message, fn ->
         preload(%Ecto.Query{}, ^[{1, :foo}])
       end
@@ -171,9 +202,11 @@ defmodule Ecto.Query.Builder.PreloadTest do
 
     test "raises when preload join association is nested in non-join" do
       message = ~r"cannot preload join association `:comments`"
+
       assert_raise Ecto.Query.CompileError, message, fn ->
-        quote_and_eval(%Ecto.Query{} |> preload([_, c], [users: [comments: c]]))
+        quote_and_eval(%Ecto.Query{} |> preload([_, c], users: [comments: c]))
       end
+
       assert_raise ArgumentError, message, fn ->
         query = from p in "posts", join: c in assoc(p, :comments)
         preload(query, ^[users: [comments: dynamic([_, c], c)]])
@@ -182,6 +215,7 @@ defmodule Ecto.Query.Builder.PreloadTest do
 
     test "raises when dynamic evaluates to something other than single binding" do
       message = ~r"invalid dynamic in preload: `dynamic\(\[_, c\], c.field\)`"
+
       assert_raise ArgumentError, message, fn ->
         query = from p in "posts", join: c in assoc(p, :comments)
         preload(query, ^[comments: dynamic([_, c], c.field)])
@@ -190,9 +224,10 @@ defmodule Ecto.Query.Builder.PreloadTest do
 
     test "raises when preload function has more than two arguments" do
       message = ~r"invalid preload for key `:comments`:"
+
       assert_raise ArgumentError, message, fn ->
         query = from p in "posts", join: c in assoc(p, :comments)
-        preload(query, ^[comments: fn _, _, _  -> [] end])
+        preload(query, ^[comments: fn _, _, _ -> [] end])
       end
     end
   end

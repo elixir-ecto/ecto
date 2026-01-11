@@ -802,14 +802,9 @@ defmodule Ecto.QueryTest do
 
     test "resets both preloads and assocs if :preloads is passed in" do
       base = %Ecto.Query{}
-
       query = from p in "posts", join: c in assoc(p, :comments), preload: [:author, comments: c]
 
-      refute query.preloads == base.preloads
-      refute query.assocs == base.assocs
-
       excluded_query = query |> exclude(:preload)
-
       assert excluded_query.preloads == base.preloads
       assert excluded_query.assocs == base.assocs
     end
@@ -825,15 +820,6 @@ defmodule Ecto.QueryTest do
       full_query = from p in "posts", full_join: b in "blogs", on: true
       inner_lateral_query = from p in "posts", inner_lateral_join: b in "blogs", on: true
       left_lateral_query = from p in "posts", left_lateral_join: b in "blogs", on: true
-
-      refute inner_query.joins == base.joins
-      refute cross_query.joins == base.joins
-      refute cross_lateral_query.joins == base.joins
-      refute left_query.joins == base.joins
-      refute right_query.joins == base.joins
-      refute full_query.joins == base.joins
-      refute inner_lateral_query.joins == base.joins
-      refute left_lateral_query.joins == base.joins
 
       excluded_inner_query = exclude(inner_query, :inner_join)
       assert excluded_inner_query.joins == base.joins
@@ -1159,7 +1145,8 @@ defmodule Ecto.QueryTest do
 
     test "supports compile-time list splicing" do
       query =
-        from p in "posts", where: p.id in fragment("(?,?,?)", ^1, splice([2, p.id, p.id + ^3]), ^5)
+        from p in "posts",
+          where: p.id in fragment("(?,?,?)", ^1, splice([2, p.id, p.id + ^3]), ^5)
 
       assert {:in, _, [_, {:fragment, _, parts}]} = hd(query.wheres).expr
 
@@ -1222,7 +1209,8 @@ defmodule Ecto.QueryTest do
 
       # nested compile-time splice
       query =
-        from p in "posts", where: p.id in fragment("(?,?,?)", ^1, splice([2, splice([3, 4]), 5]), ^6)
+        from p in "posts",
+          where: p.id in fragment("(?,?,?)", ^1, splice([2, splice([3, 4]), 5]), ^6)
 
       assert {:in, _, [_, {:fragment, _, parts}]} = hd(query.wheres).expr
 

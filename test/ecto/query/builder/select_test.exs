@@ -480,7 +480,7 @@ defmodule Ecto.Query.Builder.SelectTest do
       message = "expected atom in selected_as/2, got: `\"ident\"`"
 
       assert_raise Ecto.Query.CompileError, message, fn ->
-        from p in "posts", select: selected_as(p.id, ^"ident")
+        from p in "posts", select: selected_as(p.id, ^Process.get(:unused, "ident"))
       end
     end
 
