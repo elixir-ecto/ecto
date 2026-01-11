@@ -1914,9 +1914,20 @@ defmodule Ecto.Query.PlannerTest do
     assert dump_params == [1, 2, 3, 4, 5]
 
     {:in, _, [_, {:fragment, _, parts}]} = hd(query.wheres).expr
-    assert [_, _, _, {:expr, {:splice, _, [{:^, _, [start_ix, length]}]}}, _, _, _] = parts
-    assert start_ix == 1
-    assert length == 3
+
+        assert [
+             _,
+            {:expr, {:^, _, [0]}},
+             _,
+             {:expr, {:^, _, [1]}},
+             _,
+             {:expr, {:^, _, [2]}},
+             _,
+             {:expr, {:^, _, [3]}},
+             _,
+             {:expr, {:^, _, [4]}},
+             _
+           ] = parts
   end
 
   test "normalize: fragment with nested splicing" do
@@ -1938,14 +1949,13 @@ defmodule Ecto.Query.PlannerTest do
              _,
              {:expr, 2},
              _,
-             {:expr, {:splice, _, [{:^, _, [start_ix, length]}]}},
+             {:expr, {:^, _, [1]}},
+             _,
+             {:expr, {:^, _, [2]}},
              _,
              {:expr, {:^, _, [3]}},
              _
            ] = parts
-
-    assert start_ix == 1
-    assert length == 2
   end
 
   test "normalize: from values list" do

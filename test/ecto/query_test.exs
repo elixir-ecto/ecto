@@ -1134,16 +1134,20 @@ defmodule Ecto.QueryTest do
       three = 3
 
       query =
-        from p in "posts", where: p.id in fragment("(?, ?, ?)", ^1, splice(^[two, three, 4]), ^5)
+        from p in "posts", where: p.id in fragment("(?,?,?)", ^1, splice(^[two, three, 4]), ^5)
 
       assert {:in, _, [_, {:fragment, _, parts}]} = hd(query.wheres).expr
 
       assert [
                raw: "(",
                expr: {:^, _, [0]},
-               raw: ", ",
-               expr: {:splice, _, [{:^, _, [1]}, 3]},
-               raw: ", ",
+               raw: ",",
+               expr: {:^, _, [1]},
+               raw: ",",
+               expr: {:^, _, [1]},
+               raw: ",",
+               expr: {:^, _, [1]},
+               raw: ",",
                expr: {:^, _, [2]},
                raw: ")"
              ] = parts
@@ -1208,7 +1212,9 @@ defmodule Ecto.QueryTest do
                raw: ",",
                expr: 2,
                raw: ",",
-               expr: {:splice, _, [{:^, _, [1]}, 2]},
+               expr: {:^, _, [1]},
+               raw: ",",
+               expr: {:^, _, [1]},
                raw: ",",
                expr: {:^, _, [2]},
                raw: ")"
