@@ -1928,12 +1928,24 @@ defmodule Ecto.RepoTest do
       assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], []}}}
     end
 
-    test "includes conflict target in the field list given to :replace_all_except" do
+    test "does not pass conflict target to :replace_all_except" do
       fields = [:map, :z, :yyy, :x]
 
       TestRepo.insert(%MySchema{id: 1},
         on_conflict: {:replace_all_except, [:array]},
         conflict_target: [:id]
+      )
+
+      assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], [:id]}}}
+    end
+
+    test "passes conflict target to :replace_all_except when replace_changed is false" do
+      fields = [:map, :z, :yyy, :x, :id]
+
+      TestRepo.insert(%MySchema{id: 1},
+        on_conflict: {:replace_all_except, [:array]},
+        conflict_target: [:id],
+        replace_changed: false
       )
 
       assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], [:id]}}}
@@ -1953,6 +1965,12 @@ defmodule Ecto.RepoTest do
     test "excludes conflict target from :replace_all" do
       fields = [:map, :array, :z, :yyy, :x]
       TestRepo.insert(%MySchema{id: 1}, on_conflict: :replace_all, conflict_target: [:id])
+      assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], [:id]}}}
+    end
+
+    test "includes conflict target in :replace_all when replace_changed is false" do
+      fields = [:map, :array, :z, :yyy, :x, :id]
+      TestRepo.insert(%MySchema{id: 1}, on_conflict: :replace_all, conflict_target: [:id], replace_changed: false)
       assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], [:id]}}}
     end
 
