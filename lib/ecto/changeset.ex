@@ -1946,7 +1946,7 @@ defmodule Ecto.Changeset do
       New comments or comments not associated to any post will be correctly
       associated. Currently associated comments that do not have a matching ID
       in the list of changesets will act according to the `:on_replace` association
-      configuration (you can chose to raise, ignore the operation, update or delete
+      configuration (you can choose to raise, ignore the operation, update or delete
       them). If there are changes in any of the changesets, they will be
       persisted too.
 
@@ -1958,7 +1958,7 @@ defmodule Ecto.Changeset do
       New comments or comments not associated to any post will be correctly
       associated. Currently associated comments that do not have a matching ID
       in the list of changesets will act according to the `:on_replace`
-      association configuration (you can chose to raise, ignore the operation,
+      association configuration (you can choose to raise, ignore the operation,
       update or delete them). Different to passing changesets, structs are not
       change tracked in any fashion. In other words, if you change a comment
       struct and give it to `put_assoc/4`, the updates in the struct won't be
