@@ -213,4 +213,14 @@ defmodule Ecto.TestRepo do
   end
 end
 
+defmodule Ecto.TestRepoInitModify do
+  use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter
+
+  def init(_type, opts) do
+    opts = [url: "ecto://user:pass@local/hello"] ++ opts
+    opts = Keyword.drop(opts, [:telemetry_prefix])
+    {:ok, opts}
+  end
+end
+
 Ecto.TestRepo.start_link()

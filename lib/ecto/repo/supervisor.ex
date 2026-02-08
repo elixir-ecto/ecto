@@ -201,7 +201,7 @@ defmodule Ecto.Repo.Supervisor do
         name = if is_atom(name), do: name, else: nil
         cache = Ecto.Query.Planner.new_query_cache(name)
         meta = Map.merge(meta, %{repo: repo, cache: cache})
-        child_spec = wrap_child_spec(child, [name, adapter, meta])
+        child_spec = wrap_child_spec(child, [name, adapter, meta, opts])
         Supervisor.init([child_spec], strategy: :one_for_one, max_restarts: 0)
 
       :ignore ->
@@ -209,11 +209,18 @@ defmodule Ecto.Repo.Supervisor do
     end
   end
 
-  def start_child({mod, fun, args}, name, adapter, meta) do
+  def start_child({mod, fun, args}, name, adapter, meta, opts) do
     case apply(mod, fun, args) do
       {:ok, pid} ->
         meta = Map.merge(meta, %{pid: pid, adapter: adapter})
         Ecto.Repo.Registry.associate(self(), name, meta)
+
+        :telemetry.execute(
+          [:ecto, :repo, :started],
+          %{system_time: System.system_time()},
+          %{repo: meta.repo, adapter: meta.adapter, config: opts}
+        )
+
         {:ok, pid}
 
       other ->

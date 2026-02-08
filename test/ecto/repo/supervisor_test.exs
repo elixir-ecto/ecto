@@ -52,6 +52,41 @@ defmodule Ecto.Repo.SupervisorTest do
     :telemetry.detach(:telemetry_test)
   end
 
+  test "emits :started telemetry event after repo process starts" do
+    :telemetry.attach_many(
+      :telemetry_started_test,
+      [[:ecto, :repo, :started]],
+      &__MODULE__.handle_event/4,
+      %{pid: self()}
+    )
+
+    {:ok, _pid} = Ecto.TestRepo.start_link(name: :telemetry_started_test)
+
+    assert_receive {[:ecto, :repo, :started], %{system_time: _}, %{repo: Ecto.TestRepo, adapter: Ecto.TestAdapter, config: config}}
+    assert config[:name] == :telemetry_started_test
+    assert config[:database] == "hello"
+
+    :telemetry.detach(:telemetry_started_test)
+  end
+
+  test "emits :started telemetry event even when repo modifies config in init" do
+    :telemetry.attach_many(
+      :telemetry_started_test_init,
+      [[:ecto, :repo, :started]],
+      &__MODULE__.handle_event/4,
+      %{pid: self()}
+    )
+
+    {:ok, _pid} = Ecto.TestRepoInitModify.start_link(name: :telemetry_started_test_init_modify)
+
+    assert_receive {[:ecto, :repo, :started], %{system_time: _}, %{repo: Ecto.TestRepoInitModify, adapter: Ecto.TestAdapter, config: config}}
+    assert config[:name] == :telemetry_started_test_init_modify
+    assert config[:database] == "hello"
+    refute Keyword.has_key?(config, :telemetry_prefix)
+
+    :telemetry.detach(:telemetry_started_test_init)
+  end
+
   test "reads otp app configuration" do
     put_env(database: "hello")
     {:ok, config} = init_config(:runtime, __MODULE__, :ecto, [])
