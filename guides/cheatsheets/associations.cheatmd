@@ -196,8 +196,6 @@ end
 
 ### The migration
 
-It applies to both join tables and schemas.
-
 ```elixir
 defmodule MyApp.Migrations.CreateMoviesAndActors do
   use Ecto.Migration
@@ -210,7 +208,39 @@ defmodule MyApp.Migrations.CreateMoviesAndActors do
     create table("actors") do
       timestamps()
     end
+  end
+end
+```
 
+#### Without a join schema, the join table can only have the foreign keys
+
+```elixir
+defmodule MyApp.Migrations.CreateJoinTable do
+  use Ecto.Migration
+
+  def change do
+    create table("movies_actors", primary_key: false) do
+      add :movie_id,
+          references(:movies, on_delete: :delete_all),
+          null: false
+
+      add :actor_id,
+          references(:actors, on_delete: :delete_all),
+          null: false
+    end
+
+    create unique_index(:movies_actors, [:movie_id, :actor_id])
+  end
+end
+```
+
+#### With a join schema, the join table can have other columns like timestamps
+
+```elixir
+defmodule MyApp.Migrations.CreateJoinTable do
+  use Ecto.Migration
+
+  def change do
     create table("movies_actors", primary_key: false) do
       add :movie_id,
           references(:movies, on_delete: :delete_all),
