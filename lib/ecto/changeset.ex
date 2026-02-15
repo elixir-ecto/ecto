@@ -1175,8 +1175,7 @@ defmodule Ecto.Changeset do
 
   The element originally at index `2` ("Third St") will be passed to the `:with`
   function with position `1`, because the list is compacted after the drop
-  operation. If you need to preserve the original semantic positions, ensure
-  you also provide a `:sort_param`.
+  operation.
 
   These parameters can be powerful in certain UIs as it allows you to decouple
   the sorting and replacement of the data from its representation.
