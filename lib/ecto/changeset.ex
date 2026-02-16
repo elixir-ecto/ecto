@@ -1160,9 +1160,8 @@ defmodule Ecto.Changeset do
       changeset
       |> cast_assoc(:children, sort_param: ..., with: &child_changeset/3)
 
-  When using `:drop_param` without `:sort_param`, the remaining elements are
-  re-indexed sequentially starting from 0. For example, if you have the following
-  parameters:
+  When using `:drop_param`, the remaining elements are re-indexed sequentially
+  starting from 0. For example, if you have the following parameters:
 
       %{
         "addresses" => %{
