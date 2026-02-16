@@ -1160,6 +1160,22 @@ defmodule Ecto.Changeset do
       changeset
       |> cast_assoc(:children, sort_param: ..., with: &child_changeset/3)
 
+  When using `:drop_param`, the remaining elements are re-indexed sequentially
+  starting from 0. For example, if you have the following parameters:
+
+      %{
+        "addresses" => %{
+          0 => %{"street" => "First St"},
+          1 => %{"street" => "Second St"},
+          2 => %{"street" => "Third St"}
+        },
+        "addresses_drop" => [1]
+      }
+
+  The element originally at index `2` ("Third St") will be passed to the `:with`
+  function with position `1`, because the list is compacted after the drop
+  operation.
+
   These parameters can be powerful in certain UIs as it allows you to decouple
   the sorting and replacement of the data from its representation.
 
