@@ -2209,7 +2209,7 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :ecto_changeset_fields, {name, {:assoc, struct}})
   end
 
-  @valid_embeds_one_options [:on_replace, :source, :load_in_query, :defaults_to_struct]
+  @valid_embeds_one_options [:on_replace, :source, :load_in_query, :defaults_to_struct, :virtual]
 
   @doc false
   def __embeds_one__(mod, name, schema, opts) when is_atom(schema) do
@@ -2230,7 +2230,7 @@ defmodule Ecto.Schema do
           "`embeds_one/3` expects `schema` to be a module name, but received #{inspect(schema)}"
   end
 
-  @valid_embeds_many_options [:on_replace, :source, :load_in_query]
+  @valid_embeds_many_options [:on_replace, :source, :load_in_query, :virtual]
 
   @doc false
   def __embeds_many__(mod, name, schema, opts) when is_atom(schema) do
