@@ -968,10 +968,6 @@ defmodule Ecto.Repo.Schema do
     Enum.map(updatable_fields -- to_remove, &field_source!(schema, &1))
   end
 
-  defp field_source!(nil, field) do
-    field
-  end
-
   defp field_source!(schema, field) do
     schema.__schema__(:field_source, field) ||
       raise ArgumentError, "unknown field for :on_conflict, got: #{inspect(field)}"
