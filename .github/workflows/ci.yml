@@ -59,7 +59,13 @@ jobs:
         run: mix compile --warning-as-errors
         if: ${{ matrix.lint }}
       - name: Run tests
-        run: mix test
+        run: mix test ${{ matrix.lint && '--cover' || '' }}
+      - name: Upload coverage to Qlty
+        if: ${{ matrix.lint }}
+        uses: qltysh/qlty-action/coverage@v2
+        with:
+          token: ${{ secrets.QLTY_COVERAGE_TOKEN }}
+          files: cover/lcov.info
 
   integration-test:
     name: integration test
