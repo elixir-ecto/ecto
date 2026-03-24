@@ -208,7 +208,9 @@ defmodule Ecto.ChangesetTest do
     struct = %Post{title: "foo", body: "bar"}
 
     changeset =
-      cast(struct, params, ~w(title body)a, trim_values: fn _type, value -> value == "empty" end)
+      cast(struct, params, ~w(title body)a,
+        trim_values: fn _type, value -> if value == "empty", do: "", else: value end
+      )
 
     assert changeset.changes == %{title: "", body: nil}
   end
@@ -241,7 +243,7 @@ defmodule Ecto.ChangesetTest do
     changeset =
       cast(struct, %{"title" => "not empty", "body" => "empty"}, ~w(title body)a,
         force_changes: true,
-        trim_values: fn _, value -> value == "empty" end
+        trim_values: fn _, value -> if value == "empty", do: "", else: value end
       )
 
     assert changeset.changes == %{title: "not empty", body: nil}
@@ -1272,29 +1274,41 @@ defmodule Ecto.ChangesetTest do
       |> validate_required("title")
     end
 
-    # When field is list and is an empty value
+    # When field is list and is not an empty value
     changeset =
       %Post{topics: ["foo"]}
       |> cast(%{"topics" => []}, [:topics])
       |> validate_required([:topics])
 
+    assert changeset.empty_values == [""]
+    assert changeset.errors == []
+
+    # When field is list and is an empty value
+    changeset =
+      %Post{topics: ["foo"]}
+      |> cast(%{"topics" => []}, [:topics], empty_values: [[], ""])
+      |> validate_required([:topics])
+
+    assert changeset.empty_values == [[], ""]
     assert changeset.errors == [topics: {"can't be blank", [validation: :required]}]
 
     # When field is list and is an empty value after filtering
     changeset =
       %Post{topics: ["foo"]}
-      |> cast(%{"topics" => ["", ""]}, [:topics])
+      |> cast(%{"topics" => ["", ""]}, [:topics], empty_values: [[], ""])
       |> validate_required([:topics])
 
+    assert changeset.empty_values == [[], ""]
     assert changeset.errors == [topics: {"can't be blank", [validation: :required]}]
 
     # When field is list with empty list default and is an empty value
     changeset =
       %Post{}
-      |> cast(%{"topics_defaults" => []}, [:topics_defaults])
+      |> cast(%{"topics_defaults" => []}, [:topics_defaults], empty_values: [[], ""])
       |> validate_required([:topics_defaults])
       |> validate_length(:topics_defaults, min: 1)
 
+    assert changeset.empty_values == [[], ""]
     assert changeset.errors == [topics_defaults: {"can't be blank", [validation: :required]}]
   end
 

@@ -162,16 +162,11 @@ defmodule Ecto.Changeset do
 
   When applying changes using `cast/4`, values are automatically trimmed
   and then checked if they are empty by checking if they belong to the
-  `changeset.empty_values` field (which defaults to `""` and `[]`).
+  `changeset.empty_values` field (which defaults to `[""]`).
   If they are empty, then the field is set to its default value.
   If the field is an array type, any empty value inside the array will
-  be removed.
-
-  The default trimming function is:
-
-      fn type, value ->
-        Ecto.Type.trim(type, value) in changeset.empty_values
-      end
+  be removed. You can set the default empty values with `:empty_values`
+  option or directly in your changeset.
 
   ## Associations, embeds, and on replace
 
@@ -374,7 +369,7 @@ defmodule Ecto.Changeset do
   alias Ecto.Changeset.Relation
   alias Ecto.Schema.Metadata
 
-  @empty_values ["", []]
+  @empty_values [""]
 
   # If a new field is added here, def merge must be adapted
   defstruct valid?: false,
@@ -594,10 +589,13 @@ defmodule Ecto.Changeset do
     Enum.any?(changesets, &relation_changed?(:one, &1))
   end
 
-  @doc false
-  @deprecated "Use :trim_values in cast/4 instead"
+  @doc """
+  The default list of empty values used by Ecto.
+
+  Defaults to `[""]`.
+  """
   def empty_values do
-    [fn type, value -> Ecto.Type.trim(type, value) == "" end]
+    @empty_values
   end
 
   @doc """
@@ -624,12 +622,13 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:trim_values` - a two arity function that receives the type, the value, and
-      returns a boolean indicating if the value should be trimmed. Trimmed values are
-      replaced by the default value of the respective field. For schemaless changesets,
-      the default value is always `nil`. The default function is:
-      `fn type, value -> Ecto.Type.trim(type, value) in changeset.empty_values end`,
-      where empty values defaults to `[]` and `""`
+    * `:trim_values` - a two arity function that trims values before checking if they
+      belong to `changeset.empty_values`. Values that belong to empty values are replaced
+      by the default value of the respective field (which is always nil for schemaless
+      changesets). The default function is `&Ecto.Type.trim/2`
+
+    * `:empty_values` - a list of values which are considered empty after trimming,
+      defaults to `[""]`
 
     * `:force_changes` - a boolean indicating whether to include values that don't alter
       the current data in `:changes`. See `force_change/3` for more information, Defaults
@@ -758,23 +757,21 @@ defmodule Ecto.Changeset do
 
   defp cast(%{} = data, %{} = types, %{} = changes, %{} = params, permitted, empty_values, opts)
        when is_list(permitted) do
-    trim_values =
-      if deprecated_empty_values = Keyword.get(opts, :empty_values) do
-        IO.warn(":empty_values in cast/4 is deprecated, use :trim_values instead")
-        deprecated_empty_values
-      else
-        case Keyword.get(opts, :trim_values) do
-          nil ->
-            [fn type, value -> Ecto.Type.trim(type, value) in empty_values end]
+    trim_values = Keyword.get(opts, :trim_values, &Ecto.Type.trim/2)
 
-          trim_values when is_function(trim_values, 2) ->
-            [trim_values]
-
-          other ->
-            raise ArgumentError,
-                  "expected `:trim_values` to be a function of arity 2, received: #{inspect(other)}"
+    empty_values =
+      if custom_empty_values = Keyword.get(opts, :empty_values) do
+        if Enum.any?(custom_empty_values, &is_function/1) do
+          raise ArgumentError,
+                "passing functions in :empty_values is no longer support, use :trim_values instead"
         end
+
+        custom_empty_values
+      else
+        empty_values
       end
+
+    filter_values = fn type, value -> trim_values.(type, value) in empty_values end
 
     force? = Keyword.get(opts, :force_changes, false)
     params = convert_params(params)
@@ -795,7 +792,7 @@ defmodule Ecto.Changeset do
       Enum.reduce(
         permitted,
         {changes, [], true},
-        &process_param(&1, params, types, data, trim_values, defaults, force?, msg_func, &2)
+        &process_param(&1, params, types, data, filter_values, defaults, force?, msg_func, &2)
       )
 
     %Changeset{
@@ -804,7 +801,8 @@ defmodule Ecto.Changeset do
       valid?: valid?,
       errors: Enum.reverse(errors),
       changes: changes,
-      types: types
+      types: types,
+      empty_values: empty_values
     }
   end
 
@@ -820,7 +818,7 @@ defmodule Ecto.Changeset do
          params,
          types,
          data,
-         trim_values,
+         filter_values,
          defaults,
          force?,
          msg_func,
@@ -835,7 +833,17 @@ defmodule Ecto.Changeset do
         _ -> Map.get(data, key)
       end
 
-    case cast_field(key, param_key, type, params, current, trim_values, defaults, force?, valid?) do
+    case cast_field(
+           key,
+           param_key,
+           type,
+           params,
+           current,
+           filter_values,
+           defaults,
+           force?,
+           valid?
+         ) do
       {:ok, value, valid?} ->
         {Map.put(changes, key, value), errors, valid?}
 
@@ -883,10 +891,10 @@ defmodule Ecto.Changeset do
     raise ArgumentError, "cast/3 expects a list of atom keys, got key: `#{inspect(key)}`"
   end
 
-  defp cast_field(key, param_key, type, params, current, trim_values, defaults, force?, valid?) do
+  defp cast_field(key, param_key, type, params, current, filter_values, defaults, force?, valid?) do
     case params do
       %{^param_key => value} ->
-        value = filter_trim_values(type, value, trim_values, defaults, key)
+        value = filter_values(type, value, filter_values, defaults, key)
 
         case Ecto.Type.cast(type, value) do
           {:ok, value} ->
@@ -908,48 +916,31 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp filter_trim_values(type, value, trim_values, defaults, key) do
-    case filter_trim_values(type, value, trim_values) do
+  defp filter_values(type, value, filter_values, defaults, key) do
+    case filter_values(type, value, filter_values) do
       :empty -> Map.get(defaults, key)
       {:ok, value} -> value
     end
   end
 
-  defp filter_trim_values({:array, type}, value, trim_values) when is_list(value) do
+  defp filter_values({:array, type}, value, filter_values) when is_list(value) do
     value =
       for elem <- value,
-          {:ok, elem} <- [filter_trim_values(type, elem, trim_values)],
+          {:ok, elem} <- [filter_values(type, elem, filter_values)],
           do: elem
 
-    filter_trim_value(trim_values, value, {:array, type})
-  end
-
-  defp filter_trim_values(type, value, trim_values) do
-    filter_trim_value(trim_values, value, type)
-  end
-
-  defp filter_trim_value([head | tail], value, type) when is_function(head, 1) do
-    case head.(value) do
+    case filter_values.({:array, type}, value) do
       true -> :empty
-      false -> filter_trim_value(tail, value, type)
+      false -> {:ok, value}
     end
   end
 
-  defp filter_trim_value([head | tail], value, type) when is_function(head, 2) do
-    case head.(type, value) do
+  defp filter_values(type, value, filter_values) do
+    case filter_values.(type, value) do
       true -> :empty
-      false -> filter_trim_value(tail, value, type)
+      false -> {:ok, value}
     end
   end
-
-  defp filter_trim_value([value | _tail], value, _type),
-    do: :empty
-
-  defp filter_trim_value([_head | tail], value, type),
-    do: filter_trim_value(tail, value, type)
-
-  defp filter_trim_value([], value, _type),
-    do: {:ok, value}
 
   # We only look at the first element because traversing the whole map
   # can be expensive and it was showing up during profiling. This means
