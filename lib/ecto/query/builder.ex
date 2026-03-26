@@ -1475,7 +1475,7 @@ defmodule Ecto.Query.Builder do
   defp get_env(env), do: env
 
   defp normalize_type(value, :binary),
-    do: quote(do: (is_binary(unquote(value)) && :binary) || :bitstring)
+    do: quote(generated: true, do: (is_binary(unquote(value)) && :binary) || :bitstring)
 
   @doc """
   Raises a query building error.

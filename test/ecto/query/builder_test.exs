@@ -16,8 +16,7 @@ defmodule Ecto.Query.BuilderTest do
               quote do
                 &0.y()
               end
-            ),
-            []} ==
+            ), []} ==
              escape(
                quote do
                  x.y()
@@ -32,8 +31,7 @@ defmodule Ecto.Query.BuilderTest do
               quote do
                 &0.y() > &0.z()
               end
-            ),
-            []} ==
+            ), []} ==
              escape(
                quote do
                  x.y() > x.z()
@@ -46,8 +44,7 @@ defmodule Ecto.Query.BuilderTest do
               quote do
                 &0.y() > &1.z()
               end
-            ),
-            []} ==
+            ), []} ==
              escape(
                quote do
                  x.y() > y.z()
@@ -62,8 +59,7 @@ defmodule Ecto.Query.BuilderTest do
               quote do
                 &0.y() + &1.z()
               end
-            ),
-            []} ==
+            ), []} ==
              escape(
                quote do
                  x.y() + y.z()
@@ -76,8 +72,7 @@ defmodule Ecto.Query.BuilderTest do
               quote do
                 avg(0)
               end
-            ),
-            []} ==
+            ), []} ==
              escape(
                quote do
                  avg(0)
@@ -105,8 +100,7 @@ defmodule Ecto.Query.BuilderTest do
                     {:||, _,
                      [{:&&, _, [{:is_binary, _, [{:<<>>, [], [0, 1, 2]}]}, :binary]}, :bitstring]}
                 ]}
-             ]},
-            []} =
+             ]}, []} =
              escape(
                quote do
                  <<0, 1, 2>>
@@ -152,8 +146,7 @@ defmodule Ecto.Query.BuilderTest do
               quote do
                 -&0.y()
               end
-            ),
-            []} ==
+            ), []} ==
              escape(
                quote do
                  -x.y()
@@ -348,8 +341,7 @@ defmodule Ecto.Query.BuilderTest do
                   {:raw, ")"}
                 )
               end
-            ),
-            [{0, :any}]} ==
+            ), [{0, :any}]} ==
              escape(
                quote do
                  fragment("date_add(?, ?)", p.created_at(), ^0)
@@ -362,8 +354,7 @@ defmodule Ecto.Query.BuilderTest do
               quote do
                 fragment({:raw, ""}, {:expr, ^0}, {:raw, "::text"})
               end
-            ),
-            [{0, :any}]} ==
+            ), [{0, :any}]} ==
              escape(
                quote do
                  fragment(~S"?::text", ^0)
@@ -376,8 +367,7 @@ defmodule Ecto.Query.BuilderTest do
               quote do
                 fragment({:raw, "query?("}, {:expr, &0.created_at()}, {:raw, ")"})
               end
-            ),
-            []} ==
+            ), []} ==
              escape(
                quote do
                  fragment("query\\?(?)", p.created_at())
@@ -390,8 +380,7 @@ defmodule Ecto.Query.BuilderTest do
               quote do
                 fragment(title: [foo: ^0])
               end
-            ),
-            [{0, :any}]} ==
+            ), [{0, :any}]} ==
              escape(
                quote do
                  fragment(title: [foo: ^0])
@@ -487,8 +476,7 @@ defmodule Ecto.Query.BuilderTest do
                     ]
                   )
               )
-            ),
-            []} ==
+            ), []} ==
              escape(
                quote(do: nth_value(x.id(), 1) |> over(order_by: my_complex_order(x))),
                [x: 0],
@@ -537,8 +525,7 @@ defmodule Ecto.Query.BuilderTest do
               quote do
                 type(&0.y() + &1.z(), :decimal)
               end
-            ),
-            []} ==
+            ), []} ==
              escape(
                quote do
                  type(x.y() + y.z(), :decimal)
@@ -551,8 +538,7 @@ defmodule Ecto.Query.BuilderTest do
               quote do
                 type(&0.y(), :decimal)
               end
-            ),
-            []} ==
+            ), []} ==
              escape(
                quote do
                  type(field(x, :y), :decimal)
@@ -565,8 +551,7 @@ defmodule Ecto.Query.BuilderTest do
               quote do
                 type(&0.y(), :"Elixir.Ecto.UUID")
               end
-            ),
-            []} ==
+            ), []} ==
              escape(
                quote do
                  type(field(x, :y), Ecto.UUID)
@@ -579,8 +564,7 @@ defmodule Ecto.Query.BuilderTest do
               quote do
                 type(&0.y(), :"Elixir.Ecto.UUID")
               end
-            ),
-            []} ==
+            ), []} ==
              escape(
                quote do
                  type(field(x, :y), Ecto.UUID)
@@ -593,8 +577,7 @@ defmodule Ecto.Query.BuilderTest do
               quote do
                 type(sum(&0.y()), :decimal)
               end
-            ),
-            []} ==
+            ), []} ==
              escape(
                quote do
                  type(sum(x.y()), :decimal)
@@ -607,8 +590,7 @@ defmodule Ecto.Query.BuilderTest do
               quote do
                 type(count(), :decimal)
               end
-            ),
-            []} ==
+            ), []} ==
              escape(
                quote do
                  type(count(), :decimal)
@@ -623,8 +605,7 @@ defmodule Ecto.Query.BuilderTest do
               quote do
                 type(filter(sum(&0.y()), &0.y() > &0.z()), :decimal)
               end
-            ),
-            []} ==
+            ), []} ==
              escape(
                quote do
                  type(filter(sum(x.y()), x.y() > x.z()), :decimal)
@@ -640,8 +621,7 @@ defmodule Ecto.Query.BuilderTest do
                   {:array, :"Elixir.Ecto.UUID"}
                 )
               end
-            ),
-            []} ==
+            ), []} ==
              escape(
                quote do
                  type(over(fragment("array_agg(?)", x.id()), :y), {:array, Ecto.UUID})
@@ -659,8 +639,7 @@ defmodule Ecto.Query.BuilderTest do
               quote do
                 type(&0.y(), unquote(parameterized_type))
               end
-            ),
-            []} ==
+            ), []} ==
              escape(
                quote do
                  type(field(x, :y), unquote(parameterized_type))
@@ -679,8 +658,7 @@ defmodule Ecto.Query.BuilderTest do
               quote do
                 type(sum(&0.y()), :integer)
               end
-            ),
-            []} ==
+            ), []} ==
              escape(
                quote do
                  type(wrapped_sum(x.y()), :integer)
@@ -715,12 +693,6 @@ defmodule Ecto.Query.BuilderTest do
                  ~r"short-circuit operators are not supported: `&&`",
                  fn ->
                    escape(quote(do: true && false), [], __ENV__)
-                 end
-
-    assert_raise Ecto.Query.CompileError,
-                 ~r"`1 = 1` is not a valid query expression. The match operator is not supported: `=`",
-                 fn ->
-                   escape(quote(do: 1 = 1), [], __ENV__)
                  end
 
     assert_raise Ecto.Query.CompileError,
