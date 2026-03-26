@@ -9,6 +9,7 @@ defmodule Mix.Tasks.Ecto.Create do
     repo: [:string, :keep],
     no_compile: :boolean,
     no_deps_check: :boolean,
+    no_timezone: :boolean,
     timezone: :string
   ]
 
@@ -59,6 +60,13 @@ defmodule Mix.Tasks.Ecto.Create do
         Ecto.Adapter.Storage,
         "create storage for #{inspect(repo)}"
       )
+
+      opts =
+        if Keyword.get(opts, :no_timezone) do
+          Keyword.put(opts, :timezone, nil)
+        else
+          opts
+        end
 
       config_opts = Keyword.take(opts, [:timezone]) ++ repo.config()
 

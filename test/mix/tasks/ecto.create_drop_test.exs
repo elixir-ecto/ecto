@@ -64,13 +64,15 @@ defmodule Mix.Tasks.Ecto.CreateDropTest do
   end
 
   test "parses options" do
-    Process.put(:storage_up, :ok)
-    Create.run(["-r", to_string(Repo)])
-    refute Keyword.has_key?(Process.get(:storage_up), :timezone)
+    run_options = fn args ->
+      Process.put(:storage_up, :ok)
+      Create.run(["-r", to_string(Repo)] ++ args)
+      Keyword.take(Process.get(:storage_up), [:timezone])
+    end
 
-    Process.put(:storage_up, :ok)
-    Create.run(["-r", to_string(Repo), "--timezone", "Europe/Warsaw"])
-    assert Keyword.take(Process.get(:storage_up), [:timezone]) == [timezone: "Europe/Warsaw"]
+    refute Keyword.has_key?(run_options.([]), :timezone)
+    assert run_options.(["--no-timezone"]) == [timezone: nil]
+    assert run_options.(["--timezone", "Europe/Warsaw"]) == [timezone: "Europe/Warsaw"]
   end
 
   test "runs the adapter storage_up with --quiet" do
