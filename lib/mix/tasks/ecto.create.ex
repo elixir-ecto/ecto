@@ -8,7 +8,8 @@ defmodule Mix.Tasks.Ecto.Create do
     quiet: :boolean,
     repo: [:string, :keep],
     no_compile: :boolean,
-    no_deps_check: :boolean
+    no_deps_check: :boolean,
+    timezone: :string
   ]
 
   @aliases [
@@ -38,6 +39,10 @@ defmodule Mix.Tasks.Ecto.Create do
     * `--quiet` - do not log output
     * `--no-compile` - do not compile before creating
     * `--no-deps-check` - do not compile before creating
+    * `--timezone` - the timezone of the database. By default,
+      it is Etc/UTC. Of the default database adapters, only
+      PostgreSQL supports timezone. Use `--no-timezone` to use
+      the default timezone of the database
 
   """
 
