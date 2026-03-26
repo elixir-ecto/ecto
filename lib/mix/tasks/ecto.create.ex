@@ -60,7 +60,9 @@ defmodule Mix.Tasks.Ecto.Create do
         "create storage for #{inspect(repo)}"
       )
 
-      case repo.__adapter__().storage_up(repo.config()) do
+      config_opts = Keyword.take(opts, [:timezone]) ++ repo.config()
+
+      case repo.__adapter__().storage_up(config_opts) do
         :ok ->
           unless opts[:quiet] do
             Mix.shell().info("The database for #{inspect(repo)} has been created")
