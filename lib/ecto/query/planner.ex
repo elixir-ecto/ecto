@@ -136,14 +136,7 @@ defmodule Ecto.Query.Planner do
   def query(query, operation, cache, adapter, counter, query_cache?) do
     {query, params, key} = plan(query, operation, adapter)
     {cast_params, dump_params} = Enum.unzip(params)
-
-    key =
-      cond do
-        not query_cache? -> :nocache
-        counter != 0 -> {key, counter}
-        true -> key
-      end
-
+    key = if query_cache?, do: [key | counter], else: :nocache
     query_with_cache(key, query, operation, cache, adapter, counter, cast_params, dump_params)
   end
 
