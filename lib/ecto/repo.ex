@@ -342,7 +342,6 @@ defmodule Ecto.Repo do
         :group_by,
         :distinct,
         :select,
-        :from,
         :update
       ]
 
