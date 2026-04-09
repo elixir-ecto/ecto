@@ -1600,6 +1600,63 @@ defmodule Ecto.RepoTest do
     assert schema.__meta__.prefix == %{key: :private}
   end
 
+  test "get, get_by, one, all, all_by, exists?, stream, and delete_all raise an error when given Ecto.Query-like opts" do
+    for {unsupported_option, bad_opts} <- [
+          {:where, [where: [user_id: Ecto.UUID.generate()]]},
+          {:preload, [preload: :users]},
+          {:order_by, [order_by: :name]},
+          {:limit, [limit: 10]}
+        ] do
+      assert_raise ArgumentError,
+                   ~r"unsupported option #{inspect(unsupported_option)} for Repo.get",
+                   fn ->
+                     TestRepo.get(MySchema, 123, bad_opts)
+                   end
+
+      assert_raise ArgumentError,
+                   ~r"unsupported option #{inspect(unsupported_option)} for Repo.get_by",
+                   fn ->
+                     TestRepo.get_by(MySchema, [id: 123], bad_opts)
+                   end
+
+      assert_raise ArgumentError,
+                   ~r"unsupported option #{inspect(unsupported_option)} for Repo.one",
+                   fn ->
+                     TestRepo.one(MySchema, bad_opts)
+                   end
+
+      assert_raise ArgumentError,
+                   ~r"unsupported option #{inspect(unsupported_option)} for Repo.all",
+                   fn ->
+                     TestRepo.all(MySchema, bad_opts)
+                   end
+
+      assert_raise ArgumentError,
+                   ~r"unsupported option #{inspect(unsupported_option)} for Repo.all_by",
+                   fn ->
+                     TestRepo.all_by(MySchema, [id: 123], bad_opts)
+                   end
+
+      assert_raise ArgumentError,
+                   ~r"unsupported option #{inspect(unsupported_option)} for Repo.exists?",
+                   fn ->
+                     TestRepo.exists?(MySchema, bad_opts)
+                   end
+
+      assert_raise ArgumentError,
+                   ~r"unsupported option #{inspect(unsupported_option)} for Repo.stream",
+                   fn ->
+                     TestRepo.stream(MySchema, bad_opts)
+                   end
+
+      assert_raise ArgumentError,
+                   ~r"unsupported option #{inspect(unsupported_option)} for Repo.delete_all",
+                   fn ->
+                     TestRepo.delete_all(MySchema, bad_opts)
+                   end
+    end
+  end
+
   describe "changeset prepare" do
     defp prepare_changeset() do
       %MySchema{id: 1}
@@ -1970,7 +2027,9 @@ defmodule Ecto.RepoTest do
 
     test "includes conflict target in :replace_all when replace_changed is false" do
       fields = [:map, :array, :z, :yyy, :x, :id]
+
       TestRepo.insert(%MySchema{id: 1}, on_conflict: :replace_all, conflict_target: [:id], replace_changed: false)
+
       assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], [:id]}}}
     end
 

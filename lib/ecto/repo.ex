@@ -326,6 +326,37 @@ defmodule Ecto.Repo do
         |> Keyword.merge(opts)
       end
 
+      # Keyword list keys a user may try to pass to something like Repo.all/2, under
+      # the mistaken belief that the keyword arguments operate like the Ecto.Query DSL.
+      # We want to proactively raise an error on something like:
+      #
+      #     Repo.delete_all(User, where: [id: user.id])
+      #
+      # ...since the query will be unscoped in a way that the caller almost certainly
+      # did not intend.
+      @unsupported_query_opts [
+        :where,
+        :preload,
+        :order_by,
+        :limit,
+        :group_by,
+        :distinct,
+        :select,
+        :update
+      ]
+
+      defp validate_query_opts!(opts, function_name) do
+        Enum.each(opts, fn
+          {key, _} when key in @unsupported_query_opts ->
+            raise ArgumentError,
+                  "unsupported option #{inspect(key)} for Repo.#{function_name}. " <>
+                    "Instead, use Ecto.Query to build a query, and pass that query into this function."
+
+          _ ->
+            :ok
+        end)
+      end
+
       ## Transactions
 
       if Ecto.Adapter.Transaction in behaviours do
@@ -491,6 +522,8 @@ defmodule Ecto.Repo do
           end
 
           def delete_all(queryable, opts \\ []) do
+            validate_query_opts!(opts, :delete_all)
+
             repo = get_dynamic_repo()
 
             Ecto.Repo.Queryable.delete_all(
@@ -502,6 +535,8 @@ defmodule Ecto.Repo do
         end
 
         def all(queryable, opts \\ []) do
+          validate_query_opts!(opts, :all)
+
           repo = get_dynamic_repo()
 
           Ecto.Repo.Queryable.all(
@@ -512,6 +547,8 @@ defmodule Ecto.Repo do
         end
 
         def all_by(queryable, clauses, opts \\ []) do
+          validate_query_opts!(opts, :all_by)
+
           repo = get_dynamic_repo()
 
           Ecto.Repo.Queryable.all_by(
@@ -523,6 +560,8 @@ defmodule Ecto.Repo do
         end
 
         def stream(queryable, opts \\ []) do
+          validate_query_opts!(opts, :stream)
+
           repo = get_dynamic_repo()
 
           Ecto.Repo.Queryable.stream(
@@ -533,6 +572,8 @@ defmodule Ecto.Repo do
         end
 
         def get(queryable, id, opts \\ []) do
+          validate_query_opts!(opts, :get)
+
           repo = get_dynamic_repo()
 
           Ecto.Repo.Queryable.get(
@@ -555,6 +596,8 @@ defmodule Ecto.Repo do
         end
 
         def get_by(queryable, clauses, opts \\ []) do
+          validate_query_opts!(opts, :get_by)
+
           repo = get_dynamic_repo()
 
           Ecto.Repo.Queryable.get_by(
@@ -597,6 +640,8 @@ defmodule Ecto.Repo do
         end
 
         def one(queryable, opts \\ []) do
+          validate_query_opts!(opts, :one)
+
           repo = get_dynamic_repo()
 
           Ecto.Repo.Queryable.one(
@@ -657,6 +702,8 @@ defmodule Ecto.Repo do
         end
 
         def exists?(queryable, opts \\ []) do
+          validate_query_opts!(opts, :exists?)
+
           repo = get_dynamic_repo()
 
           Ecto.Repo.Queryable.exists?(
