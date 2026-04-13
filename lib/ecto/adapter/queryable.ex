@@ -104,13 +104,14 @@ defmodule Ecto.Adapter.Queryable do
   def prepare_query(operation, repo_name_or_pid, queryable, opts \\ []) do
     %{adapter: adapter, cache: cache} = Ecto.Repo.Registry.lookup(repo_name_or_pid)
 
+    counter = Keyword.get(opts, :counter, 0)
     query_cache? = Keyword.get(opts, :query_cache, true)
 
     {_meta, prepared, _cast_params, dump_params} =
       queryable
       |> Ecto.Queryable.to_query()
       |> Ecto.Query.Planner.ensure_select(operation == :all)
-      |> Ecto.Query.Planner.query(operation, cache, adapter, 0, query_cache?)
+      |> Ecto.Query.Planner.query(operation, cache, adapter, counter, query_cache?)
 
     {prepared, dump_params}
   end
