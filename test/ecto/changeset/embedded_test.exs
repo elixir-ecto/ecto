@@ -156,7 +156,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
     assert %Ecto.Embedded{related: Expanded} = NestedInline.__schema__(:embed, :expanded)
   end
 
-  test "nested inilne embed overwrites conflicting alias" do
+  test "nested inline embed overwrites conflicting alias" do
     assert NestedInline.One.__schema__(:fields) == [:id, :name]
     assert NestedInline.OneNoPK.__schema__(:fields) == [:name]
     assert NestedInline.Many.__schema__(:fields) == [:id, :title]

@@ -935,7 +935,7 @@ defmodule Ecto.Repo do
   >
   > ```elixir
   > Repo.start_link(name: :primary)
-  > AnalyticstRepo.start_link(name: :analytics)
+  > AnalyticsRepo.start_link(name: :analytics)
   >
   > # This works but may not be intended - queries will use AnalyticsRepo's connection
   > Repo.put_dynamic_repo(:analytics)
@@ -1738,7 +1738,7 @@ defmodule Ecto.Repo do
   ## Source query
 
   A query can be given instead of a list with entries. This query needs to select
-  into a map containing only keys that are available as writeable columns in the
+  into a map containing only keys that are available as writable columns in the
   schema. This will query and insert the values all inside one query, without
   another round trip to the application.
 
