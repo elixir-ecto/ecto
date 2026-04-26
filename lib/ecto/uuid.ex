@@ -19,7 +19,7 @@ defmodule Ecto.UUID do
   To use UUID v7 (time-ordered) monotonic:
 
       use Ecto.Schema
-      @primary_key {:id, Ecto.UUID, autogenerate: [version: 7, monotonic: true]}
+      @primary_key {:id, Ecto.UUID, autogenerate: [version: 7, precision: :monotonic]}
 
   According to [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562#name-monotonicity-and-counters):
   "Monotonicity (each subsequent value being greater than the last) is the
@@ -39,12 +39,11 @@ defmodule Ecto.UUID do
   @type raw :: <<_::128>>
 
   @typedoc """
-  Supported options: `:version`, `:precision` (v7-only), and `:monotonic` (v7-only).
+  Supported options: `:version` and `:precision` (v7-only).
   """
   @type option ::
           {:version, 4 | 7}
-          | {:precision, :millisecond | :nanosecond}
-          | {:monotonic, boolean()}
+          | {:precision, :millisecond | :monotonic}
 
   @type options :: [option]
 
@@ -233,24 +232,15 @@ defmodule Ecto.UUID do
 
   ## Options (version 7 only)
 
-   * `:precision` - The timestamp precision for version 7 UUIDs. Supported values
-     are `:millisecond` and `:nanosecond`. Defaults to `:millisecond` if
-     monotonic is `false` and `:nanosecond` if `:monotonic` is `true`.
-     When using `:nanosecond`, the sub-millisecond precision is encoded in the
-     `rand_a` field. NOTE: Due to the 12-bit space available, nanosecond
-     precision is limited to 4096 (2^12) distinct values per millisecond.
+   * `:precision` - The timestamp precision for version 7 UUIDs. Supported
+     values are `:millisecond` and `:monotonic`. Defaults to `:millisecond`.
 
-   * `:monotonic` - When `true`, ensures that generated version 7 UUIDs are
-     strictly monotonically increasing, even when multiple UUIDs are generated
-     within the same timestamp. This is useful for maintaining insertion order
-     in databases. Defaults to `false`.
-     NOTE: With `:millisecond` precision, generating multiple UUIDs within the
-     same millisecond increments the timestamp by 1ms for each UUID, causing the
-     embedded timestamp to drift ahead of real time under high throughput.
-     Using `precision: :nanosecond` reduces this drift significantly, as
-     timestamps only advance by 244ns per UUID when generation outpaces real
-     time. When monotonic UUIDs are desired, it is recommended to also use
-     `precision: :nanosecond`.
+  > #### Monotonic precision {: .info}
+  >
+  > When using `:monotonic`, sub-millisecond precision is encoded in the
+  > `rand_a` field. The generated version 7 UUIDs are strictly monotonically
+  > increasing (per node), even when multiple UUIDs are generated within the same
+  > timestamp. This is useful for maintaining insertion order in databases.
 
   ## Examples
 
@@ -260,10 +250,10 @@ defmodule Ecto.UUID do
       > Ecto.UUID.generate(version: 7)
       "018ec4c1-ae46-7f5a-8f5a-6f5a8f5a6f5a"
 
-      > Ecto.UUID.generate(version: 7, precision: :nanosecond)
+      > Ecto.UUID.generate(version: 7, precision: :millisecond)
       "018ec4c1-ae46-7f5a-8f5a-6f5a8f5a6f5a"
 
-      > Ecto.UUID.generate(version: 7, monotonic: true)
+      > Ecto.UUID.generate(version: 7, precision: :monotonic)
       "018ec4c1-ae46-7f5a-8f5a-6f5a8f5a6f5a"
 
   """
@@ -291,7 +281,7 @@ defmodule Ecto.UUID do
   end
 
   # The bits available for sub-millisecond fractions when using increased clock
-  # precision based on nanoseconds.
+  # precision for monotonicity (based on nanoseconds).
   @ns_sub_ms_bits 12
   # The number of values that can be represented in the bit space (2^12).
   @ns_possible_values Bitwise.bsl(1, @ns_sub_ms_bits)
@@ -302,22 +292,17 @@ defmodule Ecto.UUID do
   @ns_minimal_step div(@ns_per_ms, @ns_possible_values)
 
   defp bingenerate_v7(opts) do
-    monotonic = Keyword.get(opts, :monotonic, false)
-    time_unit = Keyword.get(opts, :precision, if(monotonic, do: :nanosecond, else: :millisecond))
+    {precision, rest} = Keyword.pop(opts, :precision, :millisecond)
+    if rest != [], do: raise(ArgumentError, "unsupported options for v7: #{inspect(rest)}")
 
-    timestamp =
-      case monotonic do
-        true -> next_ascending(time_unit)
-        false -> System.system_time(time_unit)
-        monotonic -> raise ArgumentError, "invalid monotonic value: #{inspect(monotonic)}"
-      end
-
-    case time_unit do
+    case precision do
       :millisecond ->
+        timestamp = System.system_time(:millisecond)
         <<rand_a::12, _::6, rand_b::62>> = :crypto.strong_rand_bytes(10)
         <<timestamp::48, @version_7::4, rand_a::12, @variant::2, rand_b::62>>
 
-      :nanosecond ->
+      :monotonic ->
+        timestamp = next_ascending()
         milliseconds = div(timestamp, @ns_per_ms)
 
         clock_precision =
@@ -326,39 +311,33 @@ defmodule Ecto.UUID do
         <<_::2, rand_b::62>> = :crypto.strong_rand_bytes(8)
         <<milliseconds::48, @version_7::4, clock_precision::12, @variant::2, rand_b::62>>
 
-      time_unit ->
-        raise ArgumentError, "unsupported precision: #{inspect(time_unit)}"
+      precision ->
+        raise ArgumentError, "unsupported precision: #{inspect(precision)}"
     end
   end
 
-  defp next_ascending(time_unit) when time_unit in [:millisecond, :nanosecond] do
+  defp next_ascending do
     timestamp_ref =
-      :persistent_term.get({__MODULE__, time_unit}, nil) || raise "Ecto has not been started"
-
-    step =
-      case time_unit do
-        :millisecond -> 1
-        :nanosecond -> @ns_minimal_step
-      end
+      :persistent_term.get({__MODULE__, :nanosecond}, nil) || raise "Ecto has not been started"
 
     previous_ts = :atomics.get(timestamp_ref, 1)
-    min_step_ts = previous_ts + step
-    current_ts = System.system_time(time_unit)
+    min_step_ts = previous_ts + @ns_minimal_step
+    current_ts = System.system_time(:nanosecond)
 
     # If the current timestamp is not at least the minimal step greater than the
     # previous step, then we make it so.
     new_ts = max(current_ts, min_step_ts)
 
-    compare_exchange(timestamp_ref, previous_ts, new_ts, step)
+    compare_exchange(timestamp_ref, previous_ts, new_ts)
   end
 
-  defp compare_exchange(timestamp_ref, previous_ts, new_ts, step) do
+  defp compare_exchange(timestamp_ref, previous_ts, new_ts) do
     case :atomics.compare_exchange(timestamp_ref, 1, previous_ts, new_ts) do
       # If the new value was written, then we return it.
       :ok -> new_ts
       # Otherwise, the atomic value has changed in the meantime. We add the
       # minimal step value to that and try again.
-      updated_ts -> compare_exchange(timestamp_ref, updated_ts, updated_ts + step, step)
+      updated_ts -> compare_exchange(timestamp_ref, updated_ts, updated_ts + @ns_minimal_step)
     end
   end
 
