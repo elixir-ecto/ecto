@@ -61,6 +61,25 @@ defmodule Ecto.UUIDTest do
     end
   end
 
+  test "bingenerate returns 16-byte binary with correct v4 version and variant bits" do
+    assert <<_::48, 4::4, _::12, 2::2, _::62>> = Ecto.UUID.bingenerate()
+  end
+
+  test "bingenerate v7 returns 16-byte binary with correct version and variant bits" do
+    assert <<_::48, 7::4, _::12, 2::2, _::62>> = Ecto.UUID.bingenerate(version: 7)
+  end
+
+  test "bingenerate v7 with precision: :monotonic returns correct version and variant bits" do
+    assert <<_::48, 7::4, _::12, 2::2, _::62>> =
+             Ecto.UUID.bingenerate(version: 7, precision: :monotonic)
+  end
+
+  test "generate with invalid version raises an ArgumentError" do
+    assert_raise ArgumentError, ~r/unsupported UUID version/, fn ->
+      Ecto.UUID.generate(version: 99)
+    end
+  end
+
   test "generate returns valid uuid_v4" do
     assert <<_::64, ?-, _::32, ?-, ?4, _::24, ?-, _::32, ?-, _::96>> = Ecto.UUID.generate()
   end
@@ -70,19 +89,24 @@ defmodule Ecto.UUIDTest do
              Ecto.UUID.generate(version: 4)
   end
 
-  test "generate v4 with precision or monotonic raises an ArgumentError" do
-    assert_raise ArgumentError, fn ->
+  test "generate v4 with precision raises an ArgumentError" do
+    assert_raise ArgumentError, ~r/unsupported options for v4/, fn ->
       Ecto.UUID.generate(precision: :millisecond)
     end
 
-    assert_raise ArgumentError, fn ->
-      Ecto.UUID.generate(version: 4, monotonic: true)
+    assert_raise ArgumentError, ~r/unsupported options for v4/, fn ->
+      Ecto.UUID.generate(version: 4, precision: :monotonic)
     end
   end
 
   test "generate v7 returns valid uuid_v7" do
     assert <<_::64, ?-, _::32, ?-, ?7, _::24, ?-, _::32, ?-, _::96>> =
              Ecto.UUID.generate(version: 7)
+  end
+
+  test "generate v7 returns valid uuid_v7 with precision: :millisecond" do
+    assert <<_::64, ?-, _::32, ?-, ?7, _::24, ?-, _::32, ?-, _::96>> =
+             Ecto.UUID.generate(version: 7, precision: :millisecond)
   end
 
   test "generate v7 maintains time-based sortability across milliseconds" do
@@ -92,29 +116,23 @@ defmodule Ecto.UUIDTest do
     assert uuid1 < uuid2
   end
 
-  test "generate v7 with precision: :millisecond, monotonic: true maintains sortability" do
-    uuids =
-      for _ <- 0..5_000,
-          do: Ecto.UUID.generate(version: 7, precision: :millisecond, monotonic: true)
-
-    assert uuids == Enum.sort(uuids)
-  end
-
-  test "generate v7 with precision: :nanosecond, monotonic: true maintains sortability" do
+  test "generate v7 with precision: :monotonic maintains sortability" do
     uuids =
       for _ <- 0..20_000,
-          do: Ecto.UUID.generate(version: 7, precision: :nanosecond, monotonic: true)
+          do: Ecto.UUID.generate(version: 7, precision: :monotonic)
 
     assert uuids == Enum.sort(uuids)
   end
 
-  test "generate v7 with invalid precision or monotonic raises an ArgumentError" do
-    assert_raise ArgumentError, fn ->
+  test "generate v7 with invalid precision raises an ArgumentError" do
+    assert_raise ArgumentError, ~r/unsupported precision/, fn ->
       Ecto.UUID.generate(version: 7, precision: :foo)
     end
+  end
 
-    assert_raise ArgumentError, fn ->
-      Ecto.UUID.generate(version: 7, monotonic: :bar)
+  test "generate v7 with invalid opts raises an ArgumentError" do
+    assert_raise ArgumentError, ~r/unsupported options for v7/, fn ->
+      Ecto.UUID.generate(version: 7, precision: :monotonic, foo: :bar)
     end
   end
 end
