@@ -948,6 +948,30 @@ defmodule Ecto.ChangesetTest do
     assert get_assoc(belongs_to_changeset, :post, :struct) == nil
   end
 
+  test "reorder_assoc/2 sorts actions (delete then update then insert)" do
+    cs =
+      %Post{comments: [%Comment{id: 1, post_id: 1}, %Comment{id: 2, post_id: 1}]}
+      |> change()
+      |> put_assoc(:comments, [%Comment{id: 3, post_id: 2}, %Comment{id: 2, post_id: 2}])
+
+    ordered_cs = reorder_assoc(cs, :comments)
+    assert Enum.map(cs.changes.comments, & &1.action) == [:replace, :insert, :update]
+    assert Enum.map(ordered_cs.changes.comments, & &1.action) == [:replace, :update, :insert]
+  end
+
+  test "reorder_assoc/3 accepts custom sort" do
+    cs =
+      %Post{comments: [%Comment{id: 2, post_id: 1}]}
+      |> change()
+      |> put_assoc(:comments, [%Comment{id: 2, post_id: 2}, %Comment{id: 3, post_id: 2}])
+
+    sort_fn = fn cs1, _cs2 -> cs1.action == :insert end
+    ordered_cs = reorder_assoc(cs, :comments, sort_fn)
+
+    assert Enum.map(cs.changes.comments, & &1.action) == [:update, :insert]
+    assert Enum.map(ordered_cs.changes.comments, & &1.action) == [:insert, :update]
+  end
+
   test "fetch_change/2" do
     changeset = changeset(%{"title" => "foo", "body" => nil, "upvotes" => nil})
 
