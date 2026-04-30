@@ -1248,7 +1248,18 @@ defmodule Ecto.Changeset do
   """
   @spec cast_assoc(t, atom()) :: t
   def reorder_assoc(%Changeset{} = changeset, name) when is_atom(name) do
-    reorder_assoc(changeset, name, &unique_safe_sort/3)
+    refl =
+      case changeset do
+        %{data: %{__struct__: schema}} ->
+          schema.__schema__(:association, name) ||
+            raise ArgumentError,
+                  "schema #{inspect(schema)} does not have association `#{name}`"
+
+        _ ->
+          raise ArgumentError, "cannot reorder association without data"
+      end
+
+    reorder_assoc(changeset, name, &unique_safe_sort(refl, &1, &2))
   end
 
   @doc """
@@ -1263,37 +1274,22 @@ defmodule Ecto.Changeset do
 
   ## Example
 
-      iex> sort_fn = refl, cs1, _cs2 ->
-      ...>   # ensure inserts and updates come first
+      iex> sort_fn = cs1, _cs2 ->
+      ...>   # ensure inserts come first
       ...>   case cs1.action do
       ...>     :insert -> true
-      ...>     :update -> true
-      ...>     :replace when refl.on_replace == :nilify -> true
-      ...>     _ -> false
       ...>   end
       ...> end
-      iex> # assume `:comments` association has `on_replace: delete`
-      iex> cs = %Post{comments: [%Comment{id: 1, body: "hello"}, %Comment{id: 2, body: "bye"}]}
+      iex> cs = %Post{comments: [%Comment{id: 1, body: "hello"}]}
       ...> |> change()
-      ...> |> put_assoc(:comments, [%Comment{id: 2, body: "hello"}, %Comment{id: 3, body: ""}])
+      ...> |> put_assoc(:comments, [%Comment{id: 2, body: "hello"}, %Comment{id: 1, body: ""}])
       ...> |> reorder_assoc(:comments, sort_fn)
       iex> cs.changes.comments
-      [%Ecto.Changeset{data: %Comment{id: 2}}, %Ecto.Changeset{data: %Comment{id: 3}}, %Ecto.Changeset{data: %Comment{id: 1}}]
+      [%Ecto.Changeset{data: %Comment{id: 1}}, %Ecto.Changeset{data: %Comment{id: 2}}]
   """
-  @spec cast_assoc(t, atom(), (term(), t, t -> boolean())) :: t
+  @spec cast_assoc(t, atom(), (t, t -> boolean())) :: t
   def reorder_assoc(%Changeset{} = changeset, name, sort_fn)
-      when is_atom(name) and is_function(sort_fn, 3) do
-    refl =
-      case changeset do
-        %{data: %{__struct__: schema}} ->
-          schema.__schema__(:association, name) ||
-            raise ArgumentError,
-                  "schema #{inspect(schema)} does not have association `#{name}`"
-
-        _ ->
-          raise ArgumentError, "cannot reorder association without data"
-      end
-
+      when is_atom(name) and is_function(sort_fn, 2) do
     assoc_changes =
       case changeset.changes do
         %{^name => changes} when is_list(changes) ->
@@ -1304,7 +1300,7 @@ defmodule Ecto.Changeset do
                 "`reorder_assoc/3` requires an association with `:many` cardinality and a list of associated changes"
       end
 
-    sorted_assoc_changes = Enum.sort(assoc_changes, &sort_fn.(refl, &1, &2))
+    sorted_assoc_changes = Enum.sort(assoc_changes, &sort_fn.(&1, &2))
     updated_changes = Map.put(changeset.changes, name, sorted_assoc_changes)
     %{changeset | changes: updated_changes}
   end
