@@ -1276,6 +1276,7 @@ defmodule Ecto.Changeset do
       ...>   # ensure inserts come first
       ...>   case cs1.action do
       ...>     :insert -> true
+      ...>      _ -> false
       ...>   end
       ...> end
       iex> cs = %Post{comments: [%Comment{id: 1, body: "hello"}]}
