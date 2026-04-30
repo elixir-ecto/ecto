@@ -1224,7 +1224,7 @@ defmodule Ecto.Changeset do
 
   For example, if you have a unique constraint on the field `:name` and your list
   of changes might introduce conflicts, you can use this to sort changes by deletes
-  first, then updates and then inserts. The `:on_replace` behavour will be
+  first, then updates and then inserts. The `:on_replace` behaviour will be
   handled automatically.
 
   Using this function is preferable to relying on deferred constraints because the
