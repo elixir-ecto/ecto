@@ -1248,18 +1248,9 @@ defmodule Ecto.Changeset do
   """
   @spec cast_assoc(t, atom()) :: t
   def reorder_assoc(%Changeset{} = changeset, name) when is_atom(name) do
-    refl =
-      case changeset do
-        %{data: %{__struct__: schema}} ->
-          schema.__schema__(:association, name) ||
-            raise ArgumentError,
-                  "schema #{inspect(schema)} does not have association `#{name}`"
-
-        _ ->
-          raise ArgumentError, "cannot reorder association without data"
-      end
-
-    reorder_assoc(changeset, name, &unique_safe_sort(refl, &1, &2))
+    %{types: types, changes: changes} = changeset
+    refl = relation!(:reorder, :assoc, name, Map.get(types, name))
+    reorder_assoc(changeset, name, changes, &unique_safe_sort(refl, &1, &2))
   end
 
   @doc """
@@ -1289,8 +1280,14 @@ defmodule Ecto.Changeset do
   @spec cast_assoc(t, atom(), (t, t -> boolean())) :: t
   def reorder_assoc(%Changeset{} = changeset, name, sort_fn)
       when is_atom(name) and is_function(sort_fn, 2) do
+    %{types: types, changes: changes} = changeset
+    _ = relation!(:reorder, :assoc, name, Map.get(types, name))
+    reorder_assoc(changeset, name, changes, sort_fn)
+  end
+
+  defp reorder_assoc(changeset, name, changes, sort_fn) do
     assoc_changes =
-      case changeset.changes do
+      case changes do
         %{^name => changes} when is_list(changes) ->
           changes
 
