@@ -1247,6 +1247,25 @@ defmodule Ecto.Changeset do
   The next two arguments are the changesets to be compared for sorting. You must return
   a `true` if the first changeset precedes or is in the same place as the second changeset
   and `false` otherwise.
+
+  ## Example
+
+      iex> sort_fn = refl, cs1, _cs2 ->
+      ...>   # ensure inserts and updates come first
+      ...>   case cs1.action do
+      ...>     :insert -> true
+      ...>     :update -> true
+      ...>     :replace when refl.on_replace == :nilify -> true
+      ...>     _ -> false
+      ...>   end
+      ...> end
+      iex> # assume `:comments` association has `on_replace: delete`
+      iex> cs = %Post{comments: [%Comment{id: 1, body: "hello"}, %Comment{id: 2, body: "bye"}]}
+      ...> |> change()
+      ...> |> put_assoc(:comments, [%Comment{id: 2, body: "hello"}, %Comment{id: 3, body: ""}])
+      ...> |> reorder_assoc(:comments, sort_fn)
+      iex> cs.changes.comments
+      [%Ecto.Changeset{data: %Comment{id: 2}}, %Ecto.Changeset{data: %Comment{id: 3}}, %Ecto.Changeset{data: %Comment{id: 1}}]
   """
   @spec cast_assoc(t, atom(), (term(), t, t -> boolean())) :: t
   def reorder_assoc(%Changeset{} = changeset, name, sort_fn)

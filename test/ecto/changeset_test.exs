@@ -963,7 +963,7 @@ defmodule Ecto.ChangesetTest do
     cs =
       %Post{comments: [%Comment{id: 2, post_id: 1}]}
       |> change()
-      |> put_assoc(:comments, [%Comment{id: 2, post_id: 2}, %Comment{id: 3, post_id: 2}, ])
+      |> put_assoc(:comments, [%Comment{id: 2, post_id: 2}, %Comment{id: 3, post_id: 2}])
 
     sort_fn = fn _refl, cs1, _cs2 -> cs1.action == :insert end
     ordered_cs = reorder_assoc(cs, :comments, sort_fn)
