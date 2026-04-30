@@ -1266,11 +1266,9 @@ defmodule Ecto.Changeset do
   Reorders the changes for a given association using a custom sorting function.
 
   Behaviour is similar to `reorder_assoc/2` except it allows the user to define
-  their own sorting function. It must be of arity 3 where the first argument is
-  the reflection struct of the association, such as `Ecto.Association.Has`. The
-  next two arguments are the changesets to be compared. You must return `true`
-  if the first changeset precedes or is in the same place as the second changeset
-  and `false` otherwise.
+  their own sorting function. It must be of arity 2 where the two arguments are
+  the changesets to be compared. You must return `true` if the first changeset
+  precedes or is in the same place as the second changeset and `false` otherwise.
 
   ## Example
 
