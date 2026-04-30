@@ -1219,19 +1219,32 @@ defmodule Ecto.Changeset do
 
   This function should be used when wanting to re-order the list of changes
   for an association with cardinality `:many` before writing to the database.
-  The 2-arity version of this function sorts the changes in a way that is safe
-  for use with unique constraints.
+  The 2-arity version sorts the changes in a way that is safe for use with
+  unique constraints.
 
   For example, if you have a unique constraint on the field `:name` and your list
-  of changes might introduce conflicts, you can use this function to sort changes
-  by deletes, then updates and then inserts. The `:on_replace` behavour will be
+  of changes might introduce conflicts, you can use this to sort changes by deletes
+  first, then updates and then inserts. The `:on_replace` behavour will be
   handled automatically.
 
   Using this function is preferable to relying on deferred constraints because the
   resulting error cannot be mapped back into the correct changeset and your transaction
   will simply raise.
 
-  See `reorder_assoc/3` if you would like to use your own custom sorting function.
+  Care must be taken when using this in conjunction with the `:sort_param` option
+  in `cast_assoc/3`. They both change the internal ordering of the association so you
+  must isolate the effects of this function to only the database operation.
+
+  See `reorder_assoc/3` if you would like to use a custom sorting function.
+
+  ## Example
+      iex> # assume `:comments` association has `on_replace: delete`
+      iex> cs = %Post{comments: [%Comment{id: 1, body: "hello"}, %Comment{id: 2, body: "bye"}]}
+      ...> |> change()
+      ...> |> put_assoc(:comments, [%Comment{id: 3, body: ""}, %Comment{id: 2, body: "hello"}])
+      ...> |> reorder_assoc(:comments, sort_fn)
+      iex> cs.changes.comments
+      [%Ecto.Changeset{data: %Comment{id: 1}}, %Ecto.Changeset{data: %Comment{id: 2}}, %Ecto.Changeset{data: %Comment{id: 3}}]
   """
   @spec cast_assoc(t, atom()) :: t
   def reorder_assoc(%Changeset{} = changeset, name) when is_atom(name) do
@@ -1241,11 +1254,11 @@ defmodule Ecto.Changeset do
   @doc """
   Reorders the changes for a given association using a custom sorting function.
 
-  This function behaves similarly to `reorder_assoc/2` except it allows the user
-  to define their own sorting function. The function must be of arity 3 where the
-  first argument is the reflection struct of the association, such as `Ecto.Association.Has`.
-  The next two arguments are the changesets to be compared for sorting. You must return
-  a `true` if the first changeset precedes or is in the same place as the second changeset
+  Behaviour is similar to `reorder_assoc/2` except it allows the user to define
+  their own sorting function. It must be of arity 3 where the first argument is
+  the reflection struct of the association, such as `Ecto.Association.Has`. The
+  next two arguments are the changesets to be compared. You must return `true`
+  if the first changeset precedes or is in the same place as the second changeset
   and `false` otherwise.
 
   ## Example
