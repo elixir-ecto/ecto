@@ -1215,6 +1215,85 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
+  Reorders the changes for a given association.
+
+  This function should be used when wanting to re-order the list of changes
+  for an association with cardinality `:many` before writing to the database.
+  The 2-arity version of this function sorts the changes in a way that is safe
+  for use with unique constraints.
+
+  For example, if you have a unique constraint on the field `:name` and your list
+  of changes might introduce conflicts, you can use this function to sort changes
+  by deletes, then updates and then inserts. The `:on_replace` behavour will be
+  handled automatically.
+
+  Using this function is preferable to relying on deferred constraints because the
+  resulting error cannot be mapped back into the correct changeset and your transaction
+  will simply raise.
+
+  See `reorder_assoc/3` if you would like to use your own custom sorting function.
+  """
+  @spec cast_assoc(t, atom()) :: t
+  def reorder_assoc(%Changeset{} = changeset, name) when is_atom(name) do
+    reorder_assoc(changeset, name, &unique_safe_sort/3)
+  end
+
+  @doc """
+  Reorders the changes for a given association using a custom sorting function.
+
+  This function behaves similarly to `reorder_assoc/2` except it allows the user
+  to define their own sorting function. The function must be of arity 3 where the
+  first argument is the reflection struct of the association, such as `Ecto.Association.Has`.
+  The next two arguments are the changesets to be compared for sorting. You must return
+  a `true` if the first changeset precedes or is in the same place as the second changeset
+  and `false` otherwise.
+  """
+  @spec cast_assoc(t, atom(), (term(), t, t -> boolean())) :: t
+  def reorder_assoc(%Changeset{} = changeset, name, sort_fn)
+      when is_atom(name) and is_function(sort_fn, 3) do
+    refl =
+      case changeset do
+        %{data: %{__struct__: schema}} ->
+          schema.__schema__(:association, name) ||
+            raise ArgumentError,
+                  "schema #{inspect(schema)} does not have association `#{name}`"
+
+        _ ->
+          raise ArgumentError, "cannot reorder association without data"
+      end
+
+    assoc_changes =
+      case changeset.changes do
+        %{^name => changes} when is_list(changes) ->
+          changes
+
+        _ ->
+          raise ArgumentError,
+                "`reorder_assoc/3` requires an association with `:many` cardinality and a list of associated changes"
+      end
+
+    sorted_assoc_changes = Enum.sort(assoc_changes, &sort_fn.(refl, &1, &2))
+    updated_changes = Map.put(changeset.changes, name, sorted_assoc_changes)
+    %{changeset | changes: updated_changes}
+  end
+
+  defp unique_safe_sort(refl, changeset1, changeset2) do
+    action_sort_rank(changeset1.action, refl) <= action_sort_rank(changeset2.action, refl)
+  end
+
+  defp action_sort_rank(action, refl) do
+    case action do
+      :delete -> 0
+      :replace when refl.on_replace == :delete -> 0
+      :update -> 1
+      :replace when refl.on_replace == :nilify -> 1
+      :insert -> 2
+      # For things like `:ignore` we lump them at the end
+      _ -> 3
+    end
+  end
+
+  @doc """
   Casts the given embed with the changeset parameters.
 
   The parameters for the given embed will be retrieved
