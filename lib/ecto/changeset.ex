@@ -1246,7 +1246,7 @@ defmodule Ecto.Changeset do
       iex> cs.changes.comments
       [%Ecto.Changeset{data: %Comment{id: 1}}, %Ecto.Changeset{data: %Comment{id: 2}}, %Ecto.Changeset{data: %Comment{id: 3}}]
   """
-  @spec cast_assoc(t, atom()) :: t
+  @spec reorder_assoc(t, atom()) :: t
   def reorder_assoc(%Changeset{} = changeset, name) when is_atom(name) do
     %{types: types, changes: changes} = changeset
     refl = relation!(:reorder, :assoc, name, Map.get(types, name))
@@ -1277,7 +1277,7 @@ defmodule Ecto.Changeset do
       iex> cs.changes.comments
       [%Ecto.Changeset{data: %Comment{id: 1}}, %Ecto.Changeset{data: %Comment{id: 2}}]
   """
-  @spec cast_assoc(t, atom(), (t, t -> boolean())) :: t
+  @spec reorder_assoc(t, atom(), (t, t -> boolean())) :: t
   def reorder_assoc(%Changeset{} = changeset, name, sort_fn)
       when is_atom(name) and is_function(sort_fn, 2) do
     %{types: types, changes: changes} = changeset
