@@ -1,5 +1,11 @@
 # Changelog for v3.x
 
+## v3.13.6 (2026-05-05)
+
+### Enhancements
+
+  * [mix.exs] Relax decimal requirement
+
 ## v3.13.5 (2025-11-09)
 
 ### Enhancements
