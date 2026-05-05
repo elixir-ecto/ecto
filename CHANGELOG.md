@@ -19,6 +19,12 @@
   * [Ecto.Repo] Correctly extract passwords with colons from URL
   * [Ecto.Repo] Preload custom queries with `order_by` now take precedence over `:preload_order`. The `:preload_order` option is now only applied when no custom query with ordering is provided.
 
+## v3.13.6 (2026-05-05)
+
+### Enhancements
+
+  * [mix.exs] Relax decimal requirement
+
 ## v3.13.5 (2025-11-09)
 
 ### Enhancements
