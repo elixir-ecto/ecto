@@ -1,7 +1,17 @@
+defmodule Ecto.Repo.Supervisor.Start do
+  @moduledoc false
+  defstruct [:mfa]
+end
+
+defimpl Inspect, for: Ecto.Repo.Supervisor.Start do
+  def inspect(_, _opts), do: "#Ecto.Repo.Supervisor.Start<redacted>"
+end
+
 defmodule Ecto.Repo.Supervisor do
   @moduledoc false
   use Supervisor
   require Logger
+  alias Ecto.Repo.Supervisor.Start
 
   @defaults [timeout: 15000, pool_size: 10]
   @integer_url_query_params ["timeout", "pool_size", "idle_interval"]
@@ -209,7 +219,9 @@ defmodule Ecto.Repo.Supervisor do
     end
   end
 
-  def start_child({mod, fun, args}, name, adapter, meta) do
+  def start_child(start, name, adapter, meta) do
+    {mod, fun, args} = unwrap_start(start)
+
     case apply(mod, fun, args) do
       {:ok, pid} ->
         meta = Map.merge(meta, %{pid: pid, adapter: adapter})
@@ -221,7 +233,10 @@ defmodule Ecto.Repo.Supervisor do
     end
   end
 
+  defp unwrap_start(%Start{mfa: mfa}), do: mfa
+  defp unwrap_start(mfa), do: mfa
+
   defp wrap_child_spec(%{start: start} = spec, args) do
-    %{spec | start: {__MODULE__, :start_child, [start | args]}}
+    %{spec | start: {__MODULE__, :start_child, [%Start{mfa: start} | args]}}
   end
 end

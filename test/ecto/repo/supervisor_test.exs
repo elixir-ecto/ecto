@@ -3,6 +3,31 @@ defmodule Ecto.Repo.SupervisorTest do
 
   import Ecto.Repo.Supervisor
 
+  defmodule LeakyAdapter do
+    @behaviour Ecto.Adapter
+
+    defmacro __before_compile__(_opts), do: :ok
+    def ensure_all_started(_, _), do: {:ok, []}
+
+    def init(_opts) do
+      child = %{
+        id: __MODULE__,
+        start: {Task, :start_link, [fn -> :timer.sleep(:infinity) end, [password: "secret"]]}
+      }
+
+      {:ok, child, %{}}
+    end
+
+    def checkout(_repo, _opts, fun), do: fun.()
+    def checked_out?(_repo), do: false
+    def loaders(_primitive, type), do: [type]
+    def dumpers(_primitive, type), do: [type]
+  end
+
+  defmodule LeakyRepo do
+    use Ecto.Repo, otp_app: :ecto, adapter: LeakyAdapter
+  end
+
   defp put_env(env) do
     Application.put_env(:ecto, __MODULE__, env)
   end
@@ -50,6 +75,16 @@ defmodule Ecto.Repo.SupervisorTest do
     assert opts[:name] == :telemetry_test
 
     :telemetry.detach(:telemetry_test)
+  end
+
+  test "redacts adapter child start args in supervisor reports" do
+    {:ok, {_sup_flags, [child]}} =
+      Ecto.Repo.Supervisor.init({LeakyRepo, LeakyRepo, :ecto, LeakyAdapter, []})
+
+    inspected = inspect(child, limit: :infinity)
+
+    assert inspected =~ "#Ecto.Repo.Supervisor.Start<redacted>"
+    refute inspected =~ "secret"
   end
 
   test "reads otp app configuration" do
