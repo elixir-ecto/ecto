@@ -1554,8 +1554,9 @@ defmodule Ecto.Association.ManyToMany do
           owner_value = dump!(:insert, join_through, owner, owner_key, adapter)
           related_value = dump!(:insert, join_through, related, related_key, adapter)
           data = %{join_owner_key => owner_value, join_related_key => related_value}
+          join_table_opts = put_join_table_on_conflict!(opts)
 
-          case insert_join(join_through, refl, parent_changeset, data, opts) do
+          case insert_join(join_through, refl, parent_changeset, data, join_table_opts) do
             {:error, join_changeset} ->
               {:error,
                %{
@@ -1590,6 +1591,20 @@ defmodule Ecto.Association.ManyToMany do
     raise ArgumentError,
           "many_to_many #{inspect(name)} associations require the :join_through option to be " <>
             "an atom (representing a schema) or a string (representing a table)"
+  end
+
+  defp put_join_table_on_conflict!(opts) do
+    case Keyword.fetch(opts, :on_join_table_conflict) do
+      {:ok, on_conflict} when on_conflict in [:raise, :nothing] ->
+        Keyword.put(opts, :on_conflict, on_conflict)
+
+      :error ->
+        opts
+
+      {:ok, other} ->
+        raise ArgumentError,
+              "expected `:on_join_table_conflict` to be one of `:raise` or `:nothing`, got: `#{inspect(other)}`"
+    end
   end
 
   defp insert_join?(%{action: :insert}, _, _field, _related_key), do: true

@@ -107,8 +107,43 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert assoc.inserted_at
     assert_received {:insert, _}
 
-    assert_received {:insert_all, %{source: "schemas_assocs"},
+    assert_received {:insert_all, %{source: "schemas_assocs", on_conflict: {:raise, [], []}},
                      [[my_assoc_id: 1, my_schema_id: 1]]}
+  end
+
+  test "handles assocs on insert with on_join_table_conflict" do
+    sample = %MyAssoc{x: "xyz"}
+
+    changeset =
+      %MySchema{}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_assoc(:assocs, [sample])
+
+    schema = TestRepo.insert!(changeset, on_join_table_conflict: :nothing)
+    [assoc] = schema.assocs
+    assert assoc.id
+    assert assoc.x == "xyz"
+    assert assoc.inserted_at
+    assert_received {:insert, _}
+
+    assert_received {:insert_all, %{source: "schemas_assocs", on_conflict: {:nothing, [], []}},
+                     [[my_assoc_id: 1, my_schema_id: 1]]}
+  end
+
+  test "on_join_table_conflict only accepts :raise or :nothing" do
+    sample = %MyAssoc{x: "xyz"}
+
+    changeset =
+      %MySchema{}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_assoc(:assocs, [sample])
+
+    msg =
+      "expected `:on_join_table_conflict` to be one of `:raise` or `:nothing`, got: `:replace_all`"
+
+    assert_raise ArgumentError, msg, fn ->
+      TestRepo.insert!(changeset, on_join_table_conflict: :replace_all)
+    end
   end
 
   test "handles assocs on insert preserving parent schema prefix" do

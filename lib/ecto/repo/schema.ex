@@ -1163,7 +1163,7 @@ defmodule Ecto.Repo.Schema do
   defp assoc_opts([], _opts), do: []
 
   defp assoc_opts(_assocs, opts) do
-    Keyword.take(opts, [:timeout, :log, :telemetry_event, :prefix, :allow_stale])
+    Keyword.take(opts, [:timeout, :log, :telemetry_event, :prefix, :allow_stale, :on_join_table_conflict])
   end
 
   defp process_parents(changeset, user_changeset, assocs, reset_assocs, adapter, opts) do
