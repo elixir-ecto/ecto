@@ -52,12 +52,19 @@ defmodule Ecto.Repo.ManyToManyTest do
     schema "my_schema" do
       field :x, :string
       field :y, :binary
-      many_to_many :assocs, MyAssoc, join_through: "schemas_assocs", on_replace: :delete
+
+      many_to_many :assocs, MyAssoc,
+        join_through: "schemas_assocs",
+        on_replace: :delete
 
       many_to_many :where_assocs, MyAssoc,
         join_through: "schemas_assocs",
         join_where: [public: true],
         on_replace: :delete
+
+      many_to_many :on_conflict_assocs, MyAssoc,
+        join_through: "schemas_assocs",
+        on_join_through_conflict: :nothing
 
       many_to_many :schema_assocs, MyAssoc,
         join_through: MySchemaAssoc,
@@ -70,6 +77,10 @@ defmodule Ecto.Repo.ManyToManyTest do
       many_to_many :mfa_schema_assocs, MyAssoc,
         join_through: MySchemaAssoc,
         join_defaults: {__MODULE__, :send_to_self, [:extra]}
+
+      many_to_many :on_conflict_schema_assocs, MyAssoc,
+        join_through: MySchemaAssoc,
+        on_join_through_conflict: :nothing
     end
 
     def send_to_self(struct, owner, extra) do
@@ -107,8 +118,37 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert assoc.inserted_at
     assert_received {:insert, _}
 
-    assert_received {:insert_all, %{source: "schemas_assocs"},
+    assert_received {:insert_all, %{source: "schemas_assocs", on_conflict: {:raise, [], []}},
                      [[my_assoc_id: 1, my_schema_id: 1]]}
+  end
+
+  test "handles assocs on insert with on_join_through_conflict and binary join_through" do
+    sample = %MyAssoc{x: "xyz"}
+
+    changeset =
+      %MySchema{}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_assoc(:on_conflict_assocs, [sample])
+
+    TestRepo.insert!(changeset)
+    assert_received {:insert, _}
+
+    assert_received {:insert_all, %{source: "schemas_assocs", on_conflict: {:nothing, [], []}},
+                     [[my_assoc_id: 1, my_schema_id: 1]]}
+  end
+
+  test "handles assocs on insert with on_join_through_conflict and schema join_through" do
+    sample = %MyAssoc{x: "xyz"}
+
+    changeset =
+      %MySchema{}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_assoc(:on_conflict_schema_assocs, [sample])
+
+    TestRepo.insert!(changeset)
+    assert_received {:insert, _}
+
+    assert_received {:insert, %{source: "schemas_assocs", on_conflict: {:nothing, [], []}}}
   end
 
   test "handles assocs on insert preserving parent schema prefix" do
