@@ -1905,12 +1905,6 @@ defmodule Ecto.Repo do
       are not updated in order to enable optimizations such as HOT updates in PostgreSQL.
       Defaults to `true`.
 
-    * `:on_join_table_conflict` - If a many-to-many association is part of the insert,
-      Ecto will automatically try to create the corresponding entry in the association's
-      `:join_through` table. This option allows you to configure the conflict resolution
-      behaviour when the record already exists. The allowed values are `:raise` (the default)
-      or `:nothing`.
-
     * `:stale_error_field` - The field where stale errors will be added in
       the returning changeset. This option can be used to avoid raising
       `Ecto.StaleEntryError`.

@@ -1300,6 +1300,7 @@ defmodule Ecto.Association.ManyToMany do
   @behaviour Ecto.Association
   @on_delete_opts [:nothing, :delete_all]
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
+  @on_join_through_conflict_opts [:raise, :nothing]
 
   defstruct [
     :field,
@@ -1312,6 +1313,7 @@ defmodule Ecto.Association.ManyToMany do
     :join_keys,
     :join_through,
     :on_cast,
+    :on_join_through_conflict,
     where: [],
     join_where: [],
     defaults: [],
@@ -1355,7 +1357,9 @@ defmodule Ecto.Association.ManyToMany do
 
     join_keys = opts[:join_keys]
     join_through = opts[:join_through]
+    on_join_through_conflict = Keyword.get(opts, :on_join_through_conflict, :raise)
     validate_join_through(name, join_through)
+    validate_on_join_through_conflict(name, on_join_through_conflict)
 
     {owner_key, join_keys} =
       case join_keys do
@@ -1431,6 +1435,7 @@ defmodule Ecto.Association.ManyToMany do
       queryable: queryable,
       on_delete: on_delete,
       on_replace: on_replace,
+      on_join_through_conflict: on_join_through_conflict,
       unique: Keyword.get(opts, :unique, false),
       defaults: defaults,
       where: where,
@@ -1554,7 +1559,7 @@ defmodule Ecto.Association.ManyToMany do
           owner_value = dump!(:insert, join_through, owner, owner_key, adapter)
           related_value = dump!(:insert, join_through, related, related_key, adapter)
           data = %{join_owner_key => owner_value, join_related_key => related_value}
-          join_table_opts = put_join_table_on_conflict!(opts)
+          join_table_opts = Keyword.put(opts, :on_conflict, refl.on_join_through_conflict)
 
           case insert_join(join_through, refl, parent_changeset, data, join_table_opts) do
             {:error, join_changeset} ->
@@ -1593,18 +1598,15 @@ defmodule Ecto.Association.ManyToMany do
             "an atom (representing a schema) or a string (representing a table)"
   end
 
-  defp put_join_table_on_conflict!(opts) do
-    case Keyword.fetch(opts, :on_join_table_conflict) do
-      {:ok, on_conflict} when on_conflict in [:raise, :nothing] ->
-        Keyword.put(opts, :on_conflict, on_conflict)
+  defp validate_on_join_through_conflict(_name, on_join_through_conflict)
+       when on_join_through_conflict in @on_join_through_conflict_opts do
+    :ok
+  end
 
-      :error ->
-        opts
-
-      {:ok, other} ->
-        raise ArgumentError,
-              "expected `:on_join_table_conflict` to be one of `:raise` or `:nothing`, got: `#{inspect(other)}`"
-    end
+  defp validate_on_join_through_conflict(name, other) do
+    raise ArgumentError,
+          "expected `:on_join_through_conflict` to be one of `:raise` or `:nothing` in " <>
+            "many-to-many association #{inspect(name)}, got: `#{inspect(other)}`"
   end
 
   defp insert_join?(%{action: :insert}, _, _field, _related_key), do: true

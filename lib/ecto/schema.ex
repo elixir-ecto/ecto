@@ -1322,6 +1322,12 @@ defmodule Ecto.Schema do
       associated records. See `Ecto.Changeset`'s section on related data
       for more info.
 
+    * `:on_join_through_conflict` - If the association is part of an insert, Ecto
+      will automatically try to create the appropriate entry in the `:join_through`
+      table. This option allows you to configure the conflict resolution behaviour
+      when the record already exists. The allowed values are `:raise` or `:nothing`.
+      Defaults to `:raise`
+
     * `:defaults` - Default values to use when building the association.
       It may be a keyword list of options that override the association schema
       or an `atom`/`{module, function, args}` that receives the association struct
@@ -2193,6 +2199,7 @@ defmodule Ecto.Schema do
     :on_delete,
     :defaults,
     :on_replace,
+    :on_join_through_conflict,
     :unique,
     :where,
     :join_where,
