@@ -1,10 +1,11 @@
-defmodule Ecto.Repo.Supervisor.SensitiveData do
-  @moduledoc false
-  @derive {Inspect, only: []}
-  defstruct [:data]
-end
 
 defmodule Ecto.Repo.Supervisor do
+  defmodule SensitiveData do
+    @moduledoc false
+    @derive {Inspect, only: []}
+    defstruct [:data]
+  end
+
   @moduledoc false
   use Supervisor
   require Logger
@@ -214,6 +215,8 @@ defmodule Ecto.Repo.Supervisor do
         :ignore
     end
   end
+
+  @doc false
 
   # See #4718 and elixir-ecto/db_connection#340. The wrapper hides the
   # adapter MFA — which contains the full repo config — from SASL progress
