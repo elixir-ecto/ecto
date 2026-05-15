@@ -1,3 +1,9 @@
+defmodule Ecto.Repo.Supervisor.SensitiveData do
+  @moduledoc false
+  @derive {Inspect, only: []}
+  defstruct [:data]
+end
+
 defmodule Ecto.Repo.Supervisor do
   @moduledoc false
   use Supervisor
@@ -209,6 +215,13 @@ defmodule Ecto.Repo.Supervisor do
     end
   end
 
+  # See #4718 and elixir-ecto/db_connection#340. The wrapper hides the
+  # adapter MFA — which contains the full repo config — from SASL progress
+  # reports, which inspect the child spec verbatim.
+  def start_child(%__MODULE__.SensitiveData{data: {mod, fun, args}}, name, adapter, meta) do
+    start_child({mod, fun, args}, name, adapter, meta)
+  end
+
   def start_child({mod, fun, args}, name, adapter, meta) do
     case apply(mod, fun, args) do
       {:ok, pid} ->
@@ -222,6 +235,6 @@ defmodule Ecto.Repo.Supervisor do
   end
 
   defp wrap_child_spec(%{start: start} = spec, args) do
-    %{spec | start: {__MODULE__, :start_child, [start | args]}}
+    %{spec | start: {__MODULE__, :start_child, [%__MODULE__.SensitiveData{data: start} | args]}}
   end
 end
