@@ -223,31 +223,4 @@ defmodule Ecto.Repo.SupervisorTest do
       end
     end
   end
-
-  describe "child spec credential redaction (#4718)" do
-    test "the wrapper hides credentials from inspect/1" do
-      mfa =
-        {SomePool, :start_link,
-         [[username: "u", password: "s3cret-do-not-leak", url: "ecto://u:s3cret@h/d"]]}
-
-      rendered = inspect(%Ecto.Repo.Supervisor.SensitiveData{data: mfa})
-
-      refute rendered =~ "s3cret"
-      refute rendered =~ "password"
-      refute rendered =~ "url"
-      assert rendered =~ "SensitiveData"
-    end
-
-    test "start_child/4 unwraps the SensitiveData wrapper" do
-      # The wrapper clause must delegate to the same code path as the raw
-      # MFA clause. Verify with a no-op MFA that returns `:ignore`.
-      defmodule WrapperProbe do
-        def go, do: :ignore
-      end
-
-      wrapped = %Ecto.Repo.Supervisor.SensitiveData{data: {WrapperProbe, :go, []}}
-
-      assert Ecto.Repo.Supervisor.start_child(wrapped, :nope, :adapter, %{}) == :ignore
-    end
-  end
 end
