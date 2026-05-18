@@ -72,7 +72,7 @@ jobs:
         elixirbase:
           - "1.17.3-erlang-27.1-alpine-3.17.9"
           - "1.17.3-erlang-25.0.4-alpine-3.17.9"
-          - "1.14.5-erlang-23.3.4.20-alpine-3.16.9"
+          - "1.15.6-erlang-24.3.4.9-alpine-3.20.9"
     steps:
       - uses: earthly/actions-setup@v1
       - uses: actions/checkout@v3

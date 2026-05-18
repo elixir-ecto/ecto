@@ -83,7 +83,7 @@ defmodule Ecto.Integration.TypeTest do
   if Code.ensure_loaded?(Duration) do
     @tag :duration_type
     test "duration type" do
-      duration = %Duration{year: 1, month: 1, second: 1, microsecond: {100, 6}}
+      duration = %Duration{month: 13, second: 1, microsecond: {100, 6}}
 
       struct = %Ecto.Integration.Duration{
         dur: duration,
