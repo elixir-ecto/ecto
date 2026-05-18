@@ -83,7 +83,7 @@ defmodule Ecto.Integration.TypeTest do
   if Code.ensure_loaded?(Duration) do
     @tag :duration_type
     test "duration type" do
-      duration = %Duration{year: 1, month: 1, second: 1, microsecond: {100, 6}}
+      duration = %Duration{month: 13, second: 1, microsecond: {100, 6}}
 
       struct = %Ecto.Integration.Duration{
         dur: duration,
@@ -102,22 +102,19 @@ defmodule Ecto.Integration.TypeTest do
 
       # `:field` option set to MONTH so it ignores all units lower than `:month`
       assert persisted_duration.dur_with_fields == %Duration{
-               year: 1,
-               month: 1,
+               month: 13,
                microsecond: {0, 6}
              }
 
       assert persisted_duration.dur_with_precision == %Duration{
-               year: 1,
-               month: 1,
+               month: 13,
                second: 1,
                microsecond: {100, 4}
              }
 
       # `:field` option is set to HOUR TO SECOND so it ignores all units lower than `:second`
       assert persisted_duration.dur_with_fields_and_precision == %Duration{
-               year: 1,
-               month: 1,
+               month: 13,
                second: 1,
                microsecond: {0, 1}
              }
