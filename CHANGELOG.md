@@ -12,6 +12,7 @@
   * [Ecto.Repo] Add `:query_cache` option to selectively bypass query cache
   * [Ecto.Type] Add `Ecto.Type.trim/2` and allow developers to configure how values are trimmed on cast with the `:trim_values` option
   * [Ecto.UUID] Support UUIDv7
+  * [mix.exs] Require decimal v3
   * [mix ecto.create] Set timezone by default when creating new databases
 
 ### Bug fixes
