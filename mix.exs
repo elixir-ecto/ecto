@@ -19,7 +19,7 @@ defmodule Ecto.MixProject do
 
       # Docs
       name: "Ecto",
-      docs: docs()
+      docs: &docs/0
     ]
   end
 
@@ -164,7 +164,8 @@ defmodule Ecto.MixProject do
       "guides/testing/Testing with Ecto.md",
       "guides/cheatsheets/crud.cheatmd",
       "guides/cheatsheets/associations.cheatmd",
-      "CHANGELOG.md"
+      "CHANGELOG.md",
+      {"Ecto SQL guides", %{url: "https://hexdocs.pm/ecto_sql"}}
     ]
   end
 
