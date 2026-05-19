@@ -1,6 +1,6 @@
 # Changelog for v3.x
 
-## v3.14.0-dev
+## v3.14.0 (2026-05-19)
 
 ### Enhancements
 
@@ -10,6 +10,7 @@
   * [Ecto.Repo] Raise an error on query-like keyword opts to Repo functions
   * [Ecto.Repo] Support `:replace_changed` on upserts to enable HOT updates in PostgreSQL
   * [Ecto.Repo] Add `:query_cache` option to selectively bypass query cache
+  * [Ecto.Schema] Add `:on_join_through_conflict` option for
   * [Ecto.Type] Add `Ecto.Type.trim/2` and allow developers to configure how values are trimmed on cast with the `:trim_values` option
   * [Ecto.UUID] Support UUIDv7
   * [mix.exs] Require decimal v3
@@ -18,6 +19,7 @@
 ### Bug fixes
 
   * [Ecto.Repo] Correctly extract passwords with colons from URL
+  * [Ecto.Repo] Redact repo config from SASL progress reports
   * [Ecto.Repo] Preload custom queries with `order_by` now take precedence over `:preload_order`. The `:preload_order` option is now only applied when no custom query with ordering is provided.
 
 ## v3.13.6 (2026-05-05)
