@@ -1997,12 +1997,6 @@ defmodule Ecto.Schema do
     # better to raise unknown type first than unsupported option.
     type = check_field_type!(mod, name, type, opts)
 
-    if type == :any && !opts[:virtual] do
-      raise ArgumentError,
-            "only virtual fields can have type :any, " <>
-              "invalid type for field #{inspect(name)}"
-    end
-
     check_options!(type, opts, @field_opts, "field/3")
     Module.put_attribute(mod, :ecto_changeset_fields, {name, type})
     validate_default!(type, opts[:default], opts[:skip_default_validation])
