@@ -1997,7 +1997,10 @@ defmodule Ecto.Schema do
     # better to raise unknown type first than unsupported option.
     type = check_field_type!(mod, name, type, opts)
 
-    if type == :any && !opts[:virtual] do
+    fields = Module.get_attribute(mod, :ecto_struct_fields)
+    schema_with_source? = match?(%Ecto.Schema.Metadata{}, fields[:__meta__])
+
+    if schema_with_source? && type == :any && !opts[:virtual] do
       raise ArgumentError,
             "only virtual fields can have type :any, " <>
               "invalid type for field #{inspect(name)}"
