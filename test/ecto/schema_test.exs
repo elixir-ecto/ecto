@@ -1185,6 +1185,15 @@ defmodule Ecto.SchemaTest do
           end
         end
       end
+
+      # :any is allowed on embedded schema
+      defmodule EmbeddedFieldAny do
+        use Ecto.Schema
+
+        embedded_schema do
+          field :json, :any
+        end
+      end
     end
 
     defmodule FieldAnyVirtual do

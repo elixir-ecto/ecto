@@ -1997,7 +1997,7 @@ defmodule Ecto.Schema do
     # better to raise unknown type first than unsupported option.
     type = check_field_type!(mod, name, type, opts)
 
-    if type == :any && !opts[:virtual] do
+    if type == :any && !opts[:virtual] && Module.get_attribute(mod, :ecto_source) do
       raise ArgumentError,
             "only virtual fields can have type :any, " <>
               "invalid type for field #{inspect(name)}"
@@ -2301,6 +2301,7 @@ defmodule Ecto.Schema do
     end
 
     Module.put_attribute(module, :ecto_schema_defined, line)
+    Module.put_attribute(module, :ecto_source, source)
 
     if Code.can_await_module_compilation?() do
       Module.put_attribute(module, :after_verify, Ecto.Schema)
