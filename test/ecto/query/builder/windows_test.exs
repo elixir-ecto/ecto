@@ -6,6 +6,18 @@ defmodule Ecto.Query.Builder.WindowsTest do
 
   import Ecto.Query
 
+  defmacrop rows_between_preceding(count) do
+    quote do
+      fragment(unquote("ROWS BETWEEN #{count} PRECEDING AND CURRENT ROW"))
+    end
+  end
+
+  defmacro invalid_frame do
+    quote do
+      [rows: -3, exclude: :current]
+    end
+  end
+
   describe "escape" do
     test "handles expressions and params" do
       assert {Macro.escape(quote(do: [partition_by: [&0.y()]])), [], {[], %{}}} ==
@@ -62,6 +74,26 @@ defmodule Ecto.Query.Builder.WindowsTest do
     test "defines frame" do
       query = "q" |> windows([p], w: [frame: fragment("FOOBAR")])
       assert query.windows[:w].expr[:frame] == {:fragment, [], [raw: "FOOBAR"]}
+    end
+
+    test "defines frame with macro that expands to fragment" do
+      query = "q" |> windows([p], w: [frame: rows_between_preceding(6)])
+
+      assert query.windows[:w].expr[:frame] ==
+               {:fragment, [], [raw: "ROWS BETWEEN 6 PRECEDING AND CURRENT ROW"]}
+    end
+
+    test "raises on frame macro that does not expand to fragment" do
+      assert_raise Ecto.Query.CompileError, ~r"expected a dynamic or fragment in `:frame`", fn ->
+        Code.eval_quoted(
+          quote do
+            import Ecto.Query
+            import unquote(__MODULE__)
+
+            "q" |> windows([p], w: [frame: invalid_frame()])
+          end
+        )
+      end
     end
   end
 

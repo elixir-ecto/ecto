@@ -72,8 +72,21 @@ defmodule Ecto.Query.Builder.Windows do
   defp escape_frame({:fragment, _, _} = fragment, params_acc, vars, env) do
     Builder.escape(fragment, :any, params_acc, vars, env)
   end
-  defp escape_frame(other, _, _, _) do
-    Builder.error!("expected a dynamic or fragment in `:frame`, got: `#{inspect other}`")
+
+  defp escape_frame(other, params_acc, vars, env) do
+    macro_env =
+      case env do
+        {env, _} -> env
+        env -> env
+      end
+
+    case Macro.expand_once(other, macro_env) do
+      ^other ->
+        Builder.error!("expected a dynamic or fragment in `:frame`, got: `#{inspect other}`")
+
+      expanded ->
+        escape_frame(expanded, params_acc, vars, env)
+    end
   end
 
   defp error!(other) do
