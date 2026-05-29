@@ -7,6 +7,7 @@ defmodule Mix.Tasks.EctoTest do
     assert_received {:mix_shell, :info, ["mix ecto.create" <> _]}
     assert_received {:mix_shell, :info, ["mix ecto.drop" <> _]}
     assert_received {:mix_shell, :info, ["mix ecto.gen.repo" <> _]}
+    assert_received {:mix_shell, :info, ["mix ecto.query" <> _]}
   end
 
   test "expects no arguments" do

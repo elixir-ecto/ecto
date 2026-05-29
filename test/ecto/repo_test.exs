@@ -2395,6 +2395,11 @@ defmodule Ecto.RepoTest do
       assert {:ok, TestRepo} = TestRepo.transaction(fun)
       assert_received {:transaction, _, _}
     end
+
+    test "passes read_only option to the adapter" do
+      assert {:ok, :ok} = TestRepo.transaction(fn -> :ok end, read_only: true)
+      assert_received {:transaction, _fun, read_only: true}
+    end
   end
 
   describe "all_running" do

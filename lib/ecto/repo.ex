@@ -2348,6 +2348,9 @@ defmodule Ecto.Repo do
 
   See the ["Shared options"](#module-shared-options) section at the module
   documentation for more options.
+
+    * `:read_only` - when true, runs the transaction in read-only mode.
+      Adapters that do not support read-only transactions should raise.
   """
   @doc group: "Transaction API"
   @doc deprecated: "Use Repo.transact/2"
@@ -2533,6 +2536,9 @@ defmodule Ecto.Repo do
 
   See the ["Shared options"](#module-shared-options) section at the module
   documentation for more options.
+
+    * `:read_only` - when true, runs the transaction in read-only mode.
+      Adapters that do not support read-only transactions should raise.
 
   ## Examples
 

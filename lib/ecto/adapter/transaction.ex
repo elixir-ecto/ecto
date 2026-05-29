@@ -11,6 +11,9 @@ defmodule Ecto.Adapter.Transaction do
   Returns `{:ok, value}` if the transaction was successful where `value`
   is the value returned by the function or `{:error, value}` if the transaction
   was rolled back where `value` is the value given to `rollback/1`.
+
+  If the `:read_only` option is true, the adapter must run the transaction
+  in read-only mode or raise if read-only transactions are not supported.
   """
   @callback transaction(adapter_meta, options :: Keyword.t(), function :: fun) ::
               {:ok, any} | {:error, any}
