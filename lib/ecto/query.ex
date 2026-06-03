@@ -414,7 +414,8 @@ defmodule Ecto.Query do
             distinct: nil,
             lock: nil,
             windows: [],
-            with_ctes: nil
+            with_ctes: nil,
+            label: nil
 
   defmodule FromExpr do
     @moduledoc false
@@ -955,6 +956,7 @@ defmodule Ecto.Query do
       Ecto.Query.exclude(query, :limit)
       Ecto.Query.exclude(query, :offset)
       Ecto.Query.exclude(query, :lock)
+      Ecto.Query.exclude(query, :label)
       Ecto.Query.exclude(query, :preload)
       Ecto.Query.exclude(query, :update)
       Ecto.Query.exclude(query, :windows)
@@ -1024,6 +1026,7 @@ defmodule Ecto.Query do
   defp do_exclude(%Ecto.Query{} = query, :limit), do: %{query | limit: nil}
   defp do_exclude(%Ecto.Query{} = query, :offset), do: %{query | offset: nil}
   defp do_exclude(%Ecto.Query{} = query, :lock), do: %{query | lock: nil}
+  defp do_exclude(%Ecto.Query{} = query, :label), do: %{query | label: nil}
   defp do_exclude(%Ecto.Query{} = query, :preload), do: %{query | preloads: [], assocs: []}
   defp do_exclude(%Ecto.Query{} = query, :update), do: %{query | updates: []}
   defp do_exclude(%Ecto.Query{} = query, :windows), do: %{query | windows: []}
@@ -1150,7 +1153,7 @@ defmodule Ecto.Query do
   end
 
   @from_join_opts [:as, :prefix, :hints]
-  @no_binds [:union, :union_all, :except, :except_all, :intersect, :intersect_all]
+  @no_binds [:union, :union_all, :except, :except_all, :intersect, :intersect_all, :label]
   @binds [:lock, :where, :or_where, :select, :distinct, :order_by, :group_by, :windows] ++
            [:having, :or_having, :limit, :offset, :preload, :update, :select_merge, :with_ctes]
 
@@ -2535,6 +2538,40 @@ defmodule Ecto.Query do
   """
   defmacro lock(query, binding \\ [], expr) do
     Builder.Lock.build(query, binding, expr, __CALLER__)
+  end
+
+  @doc ~S"""
+  A label query expression.
+
+  Adds the given text to the generated statement as a leading SQL comment,
+  immediately before the statement keyword:
+
+      /* get_username_q */ SELECT ...
+
+  This is useful to tag and identify queries in database logs and monitoring
+  tools. The label is rendered *leading* (rather than trailing) so it survives
+  truncation of long statements in logs.
+
+  Because the label becomes part of the generated SQL, it is also part of the
+  query cache key. Avoid highly dynamic values (such as per-request ids) as they
+  would defeat Ecto's prepared-statement caching; prefer a stable identifier per
+  call site.
+
+  ## Keywords example
+
+      from(p in Post, label: "get_post_titles_q", select: p.title)
+
+  ## Expressions example
+
+      Post |> label("get_post_titles_q") |> select([p], p.title)
+
+  ## Interpolation
+
+      report = "get_posts_q"
+      from(p in Post, label: ^report)
+  """
+  defmacro label(query, expr) do
+    Builder.Label.build(query, expr, __CALLER__)
   end
 
   @doc ~S"""

@@ -124,6 +124,7 @@ defimpl Inspect, for: Ecto.Query do
     updates = kw_exprs(:update, query.updates, names)
 
     lock = kw_inspect(:lock, query.lock)
+    label = kw_inspect(:label, query.label)
     offset = kw_expr(:offset, query.offset, names)
     select = kw_expr(:select, query.select, names)
     distinct = kw_expr(:distinct, query.distinct, names)
@@ -140,6 +141,7 @@ defimpl Inspect, for: Ecto.Query do
       limit,
       offset,
       lock,
+      label,
       distinct,
       updates,
       select,

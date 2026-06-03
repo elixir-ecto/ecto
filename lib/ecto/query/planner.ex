@@ -13,7 +13,7 @@ defmodule Ecto.Query.Planner do
     LimitExpr
   }
 
-  if map_size(%Ecto.Query{}) != 21 do
+  if map_size(%Ecto.Query{}) != 22 do
     raise "Ecto.Query match out of date in builder"
   end
 
@@ -1073,7 +1073,8 @@ defmodule Ecto.Query.Planner do
   end
 
   defp finalize_cache(query, operation, cache) do
-    %{assocs: assocs, prefix: prefix, lock: lock, select: select, aliases: aliases} = query
+    %{assocs: assocs, prefix: prefix, lock: lock, label: label, select: select, aliases: aliases} =
+      query
     aliases = Map.delete(aliases, @parent_as)
 
     cache =
@@ -1090,6 +1091,7 @@ defmodule Ecto.Query.Planner do
       |> prepend_if(assocs != [], assocs: assocs)
       |> prepend_if(prefix != nil, prefix: prefix)
       |> prepend_if(lock != nil, lock: lock)
+      |> prepend_if(label != nil, label: label)
       |> prepend_if(aliases != %{}, aliases: aliases)
 
     [operation | cache]
