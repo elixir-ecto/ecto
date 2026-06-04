@@ -6,7 +6,7 @@ defmodule Ecto.Repo.Queryable do
   alias Ecto.Query.Planner
   alias Ecto.Query.SelectExpr
 
-  import Ecto.Query.Planner, only: [attach_prefix: 2]
+  import Ecto.Query.Planner, only: [attach_prefix: 2, attach_label: 2]
 
   require Ecto.Query
 
@@ -37,7 +37,7 @@ defmodule Ecto.Repo.Queryable do
       |> Ecto.Query.Planner.ensure_select(true)
 
     {query, opts} = repo.prepare_query(:stream, query, opts)
-    query = attach_prefix(query, opts)
+    query = query |> attach_prefix(opts) |> attach_label(opts)
 
     query_cache? = Keyword.get(opts, :query_cache, true)
 
@@ -222,7 +222,7 @@ defmodule Ecto.Repo.Queryable do
     %{adapter: adapter, cache: cache, repo: repo} = adapter_meta
 
     {query, opts} = repo.prepare_query(operation, query, opts)
-    query = attach_prefix(query, opts)
+    query = query |> attach_prefix(opts) |> attach_label(opts)
 
     query_cache? = Keyword.get(opts, :query_cache, true)
 

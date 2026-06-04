@@ -2907,4 +2907,50 @@ defmodule Ecto.Query.PlannerTest do
       assert :ets.info(cache, :size) == 0
     end
   end
+
+  describe "attach_label/2" do
+    test "sets the label from opts" do
+      query = Planner.attach_label(from(p in "posts"), label: "get_posts_q")
+      assert query.label == "get_posts_q"
+    end
+
+    test "leaves the query unchanged when no label is given" do
+      query = from(p in "posts")
+      assert Planner.attach_label(query, []).label == nil
+    end
+
+    test "is part of the query cache key" do
+      cache = Planner.new_query_cache(__MODULE__)
+      query = from(p in Post, where: p.title == ^"hello")
+
+      cache_query = fn label ->
+        query
+        |> Planner.attach_label(label: label)
+        |> Planner.query(:all, cache, Ecto.CachingTestAdapter, 0, true)
+      end
+
+      # Different labels produce distinct cache entries...
+      cache_query.("a")
+      cache_query.("b")
+      assert :ets.info(cache, :size) == 2
+
+      # ...while the same label reuses one.
+      cache_query.("a")
+      assert :ets.info(cache, :size) == 2
+    end
+
+    test "raises on a non-string label" do
+      assert_raise ArgumentError, ~r/must be a string/, fn ->
+        Planner.attach_label(from(p in "posts"), label: 123)
+      end
+    end
+
+    test "raises on a label that could break out of the comment" do
+      for bad <- ["a */ b", "a /* b", "a\0b"] do
+        assert_raise ArgumentError, ~r/cannot contain/, fn ->
+          Planner.attach_label(from(p in "posts"), label: bad)
+        end
+      end
+    end
+  end
 end

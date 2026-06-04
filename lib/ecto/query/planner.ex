@@ -2383,6 +2383,36 @@ defmodule Ecto.Query.Planner do
 
   def attach_prefix(query, _), do: query
 
+  @doc """
+  Puts the label given via `opts` into the given query, if available.
+
+  The label is rendered by the adapter as a leading `/* ... */` SQL comment
+  and becomes part of the query cache key. It is embedded verbatim, so it may
+  not contain `/*`, `*/`, or null bytes.
+  """
+  def attach_label(%{label: nil} = query, opts) when is_list(opts) do
+    case Keyword.fetch(opts, :label) do
+      {:ok, label} -> %{query | label: validate_label!(label)}
+      :error -> query
+    end
+  end
+
+  def attach_label(query, _), do: query
+
+  defp validate_label!(label) when is_binary(label) do
+    if String.contains?(label, ["/*", "*/", <<0>>]) do
+      raise ArgumentError,
+            "a label cannot contain `/*`, `*/`, or null bytes, got: #{inspect(label)}. " <>
+              "Allowing them would let the label break out of the surrounding `/* */` comment"
+    end
+
+    label
+  end
+
+  defp validate_label!(other) do
+    raise ArgumentError, "a label must be a string, got: #{inspect(other)}"
+  end
+
   ## Helpers
 
   @all_exprs [

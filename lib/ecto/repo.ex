@@ -141,6 +141,12 @@ defmodule Ecto.Repo do
       in the cache and no cache update function will not be passed to the adapter. Note that
       this doesn't necessarily disable the database cache, it only affects Ecto's internal
       cache of normalized queries and adapter prepared statements. Defaults to `true`.
+    * `:label` - A string embedded into the generated statement as a leading SQL comment,
+      such as `/* import_users */ INSERT ...`, to identify the query in database logs and
+      monitoring tools. It is rendered leading (rather than trailing) so it survives truncation
+      of long statements in logs. The string is embedded verbatim and therefore cannot contain
+      `/*`, `*/`, or null bytes. The label becomes part of the query cache key, so prefer a
+      stable identifier per call site over highly dynamic values such as per-request ids.
 
   ## Adapter-Specific Errors
 
@@ -1581,13 +1587,6 @@ defmodule Ecto.Repo do
       in the schema. For more information see the ["Query Prefix"](`m:Ecto.Query#module-query-prefix`) section of the
       `Ecto.Query` documentation.
 
-    * `:label` - A string to tag the generated `UPDATE` with a leading SQL
-      comment, such as `/* bump_visits */ UPDATE ...`, to identify the statement
-      in database logs and monitoring tools. The string is embedded verbatim into
-      the SQL and therefore cannot contain `/*`, `*/`, or null bytes. Prefer a
-      stable identifier per call site, as the label becomes part of the query
-      cache key. See `Ecto.Query.label/2` to set it on the query itself instead.
-
   See the ["Shared options"](#module-shared-options) section at the module
   documentation for remaining options.
 
@@ -1636,13 +1635,6 @@ defmodule Ecto.Repo do
       either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
       in the schema. For more information see the ["Query Prefix"](`m:Ecto.Query#module-query-prefix`) section of the
       `Ecto.Query` documentation.
-
-    * `:label` - A string to tag the generated `DELETE` with a leading SQL
-      comment, such as `/* purge_stale */ DELETE ...`, to identify the statement
-      in database logs and monitoring tools. The string is embedded verbatim into
-      the SQL and therefore cannot contain `/*`, `*/`, or null bytes. Prefer a
-      stable identifier per call site, as the label becomes part of the query
-      cache key. See `Ecto.Query.label/2` to set it on the query itself instead.
 
   See the ["Shared options"](#module-shared-options) section at the module
   documentation for remaining options.
@@ -1745,13 +1737,6 @@ defmodule Ecto.Repo do
 
     * `:placeholders` - A map with placeholders. This feature is not supported
       by all databases. See the ["Placeholders" section](#c:insert_all/3-placeholders) for more information.
-
-    * `:label` - A string to tag the generated `INSERT` with a leading SQL
-      comment, such as `/* import_users */ INSERT ...`, to identify the statement
-      in database logs and monitoring tools. The string is embedded verbatim into
-      the SQL and therefore cannot contain `/*`, `*/`, or null bytes. Prefer a
-      stable identifier per call site, as the label becomes part of the query
-      cache key.
 
   See the ["Shared options"](#module-shared-options) section at the module
   documentation for remaining options.
