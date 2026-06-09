@@ -98,6 +98,60 @@ defmodule Ecto.Integration.RepoTest do
     assert TestRepo.all_by(Post, title: "b") |> Enum.sort() == [post3]
   end
 
+  test "select_all" do
+    post1 = TestRepo.insert!(%Post{title: "a"})
+    post2 = TestRepo.insert!(%Post{title: "b"})
+    post3 = TestRepo.insert!(%Post{title: "c"})
+
+    # Test with full schema
+    {count, posts} = TestRepo.select_all(Post)
+    assert count == 3
+    assert Enum.sort(posts) == [post1, post2, post3]
+
+    # Test with query and select
+    query = from p in Post, where: p.title in ["a", "b"], select: p.title
+    {count, titles} = TestRepo.select_all(query)
+    assert count == 2
+    assert Enum.sort(titles) == ["a", "b"]
+
+    # Test with empty result
+    query = from p in Post, where: p.title == "nonexistent"
+    {count, posts} = TestRepo.select_all(query)
+    assert count == 0
+    assert posts == []
+
+    # Test without schema
+    {count, titles} =
+      TestRepo.select_all(from(p in "posts", order_by: p.title, select: p.title))
+    assert count == 3
+    assert titles == ["a", "b", "c"]
+  end
+
+  test "select_all_by" do
+    post1 = TestRepo.insert!(%Post{title: "a"})
+    post2 = TestRepo.insert!(%Post{title: "a"})
+    post3 = TestRepo.insert!(%Post{title: "b"})
+
+    {count, posts} = TestRepo.select_all_by(Post, title: "a")
+    assert count == 2
+    assert Enum.sort(posts) == [post1, post2]
+
+    {count, posts} = TestRepo.select_all_by(Post, title: "b")
+    assert count == 1
+    assert posts == [post3]
+
+    # Test with query
+    query = from p in Post
+    {count, posts} = TestRepo.select_all_by(query, title: "a")
+    assert count == 2
+    assert Enum.sort(posts) == [post1, post2]
+
+    # Test with empty result
+    {count, posts} = TestRepo.select_all_by(Post, title: "nonexistent")
+    assert count == 0
+    assert posts == []
+  end
+
   test "insert, update and delete" do
     post = %Post{title: "insert, update, delete", visits: 1}
     meta = post.__meta__

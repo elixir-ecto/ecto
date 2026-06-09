@@ -2318,6 +2318,20 @@ defmodule Ecto.RepoTest do
       assert_received {:all, %{prefix: "rewritten"}}
     end
 
+    test "select_all" do
+      query = from p in MyParent, select: p
+
+      PrepareRepo.select_all(query, hello: :world)
+      assert_received {:all, ^query, [hello: :world]}
+      assert_received {:all, %{prefix: "rewritten"}}
+    end
+
+    test "select_all_by" do
+      PrepareRepo.select_all_by(MyParent, [id: 1], hello: :world)
+      assert_received {:all, _query, [hello: :world]}
+      assert_received {:all, %{prefix: "rewritten"}}
+    end
+
     test "update_all" do
       query = from p in MyParent, update: [set: [n: 1]]
       PrepareRepo.update_all(query, [], hello: :world)

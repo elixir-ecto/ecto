@@ -546,6 +546,31 @@ defmodule Ecto.Repo do
           )
         end
 
+        def select_all(queryable, opts \\ []) do
+          validate_query_opts!(opts, :select_all)
+
+          repo = get_dynamic_repo()
+
+          Ecto.Repo.Queryable.select_all(
+            repo,
+            queryable,
+            Ecto.Repo.Supervisor.tuplet(repo, prepare_opts(:all, opts))
+          )
+        end
+
+        def select_all_by(queryable, clauses, opts \\ []) do
+          validate_query_opts!(opts, :select_all_by)
+
+          repo = get_dynamic_repo()
+
+          Ecto.Repo.Queryable.select_all_by(
+            repo,
+            queryable,
+            clauses,
+            Ecto.Repo.Supervisor.tuplet(repo, prepare_opts(:all, opts))
+          )
+        end
+
         def all_by(queryable, clauses, opts \\ []) do
           validate_query_opts!(opts, :all_by)
 
@@ -1484,6 +1509,76 @@ defmodule Ecto.Repo do
   """
   @doc group: "Query API"
   @callback all(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) :: [Ecto.Schema.t() | term]
+
+  @doc """
+  Fetches all entries from the data store matching the given query.
+
+  Similar to `c:all/2`, but returns a tuple with the count of rows and the list of results.
+
+  May raise `Ecto.QueryError` if query validation fails.
+
+  ## Options
+
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). This will be applied to all `from`
+      and `join`s in the query that did not have a prefix previously given
+      either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
+      in the schema. For more information see the ["Query Prefix"](`m:Ecto.Query#module-query-prefix`) section of the
+      `Ecto.Query` documentation.
+
+  See the ["Shared options"](#module-shared-options) section at the module
+  documentation for more options.
+
+  ## Example
+
+      # Fetch all post titles with count
+      query = from p in Post,
+                select: p.title
+      {count, titles} = MyRepo.select_all(query)
+
+      # With returning the full struct
+      {count, posts} = from(p in Post, select: p) |> MyRepo.select_all()
+  """
+  @doc group: "Query API"
+  @callback select_all(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) ::
+              {non_neg_integer, [Ecto.Schema.t() | term]}
+
+  @doc """
+  Fetches all entries from the data store matching the given query and conditions.
+
+  Similar to `c:all_by/3`, but returns a tuple with the count of rows and the list of results.
+
+  May raise `Ecto.QueryError` if query validation fails.
+
+  This function is a shortcut for `c:select_all/2` when adjusting the given query with simple conditions.
+
+  See also `c:select_all/2`, `c:all_by/3`, and `c:get_by/3`.
+
+  ## Options
+
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). This will be applied to all `from`
+      and `join`s in the query that did not have a prefix previously given
+      either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
+      in the schema. For more information see the ["Query Prefix"](`m:Ecto.Query#module-query-prefix`) section of the
+      `Ecto.Query` documentation.
+
+  See the ["Shared options"](#module-shared-options) section at the module
+  documentation for more options.
+
+  ## Example
+
+      {count, posts} = MyRepo.select_all_by(Post, author_id: 1)
+
+      query = from p in Post
+      {count, posts} = MyRepo.select_all_by(query, author_id: 1)
+  """
+  @doc group: "Query API"
+  @callback select_all_by(
+              queryable :: Ecto.Queryable.t(),
+              clauses :: Keyword.t() | map,
+              opts :: Keyword.t()
+            ) :: {non_neg_integer, [Ecto.Schema.t() | term]}
 
   @doc """
   Fetches all entries from the data store matching the given query and conditions.

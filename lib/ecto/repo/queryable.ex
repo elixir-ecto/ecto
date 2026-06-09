@@ -10,22 +10,30 @@ defmodule Ecto.Repo.Queryable do
 
   require Ecto.Query
 
-  def all(name, queryable, tuplet) do
+  def select_all(name, queryable, tuplet) do
     query =
       queryable
       |> Ecto.Queryable.to_query()
       |> Ecto.Query.Planner.ensure_select(true)
 
-    execute(:all, name, query, tuplet) |> elem(1)
+    execute(:all, name, query, tuplet)
   end
 
-  def all_by(name, queryable, clauses, tuplet) do
+  def select_all_by(name, queryable, clauses, tuplet) do
     query =
       queryable
       |> Ecto.Query.where([], ^Enum.to_list(clauses))
       |> Ecto.Query.Planner.ensure_select(true)
 
-    execute(:all, name, query, tuplet) |> elem(1)
+    execute(:all, name, query, tuplet)
+  end
+
+  def all(name, queryable, tuplet) do
+    select_all(name, queryable, tuplet) |> elem(1)
+  end
+
+  def all_by(name, queryable, clauses, tuplet) do
+    select_all_by(name, queryable, clauses, tuplet) |> elem(1)
   end
 
   def stream(_name, queryable, {adapter_meta, opts}) do
