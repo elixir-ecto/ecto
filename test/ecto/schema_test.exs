@@ -41,7 +41,7 @@ defmodule Ecto.SchemaTest do
                :comment_id
              ]
 
-    assert Schema.__schema__(:insertable) ==
+    assert Schema.__schema__(:insertable_fields) ==
              {[
                 :comment_id,
                 :non_updatable,
@@ -53,11 +53,11 @@ defmodule Ecto.SchemaTest do
                 :email,
                 :name,
                 :id
-              ], [{:unwritable, :nothing}]}
+              ], [:unwritable]}
 
-    assert Schema.__schema__(:updatable) ==
+    assert Schema.__schema__(:updatable_fields) ==
              {[:comment_id, :no_query_load, :uuid, :array, :count, :password, :email, :name, :id],
-              [{:non_updatable, :nothing}, {:unwritable, :nothing}]}
+              [:non_updatable, :unwritable]}
 
     assert Schema.__schema__(:virtual_fields) == [:temp]
 

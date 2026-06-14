@@ -2439,21 +2439,26 @@ defmodule Ecto.Schema do
     embed_names = Enum.map(embeds, &elem(&1, 0))
 
     updatable =
-      for {name, {_, {writable, on_writable_violation}}} <- fields, reduce: {[], []} do
+      for {name, {_, {writable, _on_writable_violation}}} <- fields, reduce: {[], []} do
         {keep, drop} ->
           case writable do
             :always -> {[name | keep], drop}
-            _ -> {keep, [{name, on_writable_violation} | drop]}
+            _ -> {keep, [name | drop]}
           end
       end
 
     insertable =
-      for {name, {_, {writable, on_writable_violation}}} <- fields, reduce: {[], []} do
+      for {name, {_, {writable, _on_writable_violation}}} <- fields, reduce: {[], []} do
         {keep, drop} ->
           case writable do
-            :never -> {keep, [{name, on_writable_violation} | drop]}
+            :never -> {keep, [name | drop]}
             _ -> {[name | keep], drop}
           end
+      end
+
+    on_writable_violation =
+      for {name, {_, {_writable, on_writable_violation}}} <- fields do
+        {name, on_writable_violation}
       end
 
     single_arg = [
@@ -2461,8 +2466,9 @@ defmodule Ecto.Schema do
       {[:load], load |> Macro.escape()},
       {[:associations], assoc_names},
       {[:embeds], embed_names},
-      {[:updatable], updatable},
-      {[:insertable], insertable},
+      {[:updatable_fields], updatable},
+      {[:insertable_fields], insertable},
+      {[:on_writable_violation], on_writable_violation |> Map.new() |> Macro.escape()},
       {[:redact_fields], redacted_fields},
       {[:autogenerate_fields], Enum.flat_map(autogenerate, &elem(&1, 0))},
       {[:virtual_fields], Enum.map(virtual_fields, &elem(&1, 0))},
