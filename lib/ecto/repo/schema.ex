@@ -6,6 +6,7 @@ defmodule Ecto.Repo.Schema do
   alias Ecto.Changeset
   alias Ecto.Changeset.Relation
   require Ecto.Query
+  require Logger
 
   import Ecto.Query.Planner, only: [attach_prefix: 2]
 
@@ -433,7 +434,7 @@ defmodule Ecto.Repo.Schema do
     struct = struct_from_changeset!(:insert, changeset)
     schema = struct.__struct__
     dumper = schema.__schema__(:dump)
-    {keep_fields, drop_fields} = schema.__schema__(:insertable_fields)
+    {insertable_fields, non_insertable} = schema.__schema__(:insertable)
     assocs = schema.__schema__(:associations)
     embeds = schema.__schema__(:embeds)
 
@@ -451,8 +452,8 @@ defmodule Ecto.Repo.Schema do
     # On insert, we always merge the whole struct into the
     # changeset as changes, except the primary key if it is nil.
     changeset = put_repo_and_action(changeset, :insert, repo, tuplet)
-    changeset = Relation.surface_changes(changeset, struct, keep_fields ++ assocs)
-    changeset = update_in(changeset.changes, &Map.drop(&1, drop_fields))
+    changeset = Relation.surface_changes(changeset, struct, insertable_fields ++ assocs)
+    changeset = update_in(changeset.changes, &drop_non_writable_changes!(&1, non_insertable, :insert))
 
     wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
       assoc_opts = assoc_opts(assocs, opts)
@@ -471,7 +472,7 @@ defmodule Ecto.Repo.Schema do
         {changes, cast_extra, dump_extra, return_types, return_sources} =
           autogenerate_id(autogen_id, changes, return_types, return_sources, adapter)
 
-        changes = Map.take(changes, keep_fields)
+        changes = Map.take(changes, insertable_fields)
         autogen = autogenerate_changes(schema, :insert, changes)
 
         dump_changes =
@@ -543,7 +544,7 @@ defmodule Ecto.Repo.Schema do
     struct = struct_from_changeset!(:update, changeset)
     schema = struct.__struct__
     dumper = schema.__schema__(:dump)
-    {keep_fields, drop_fields} = schema.__schema__(:updatable_fields)
+    {updatable_fields, non_updatable} = schema.__schema__(:updatable)
     assocs = schema.__schema__(:associations)
     embeds = schema.__schema__(:embeds)
 
@@ -560,7 +561,7 @@ defmodule Ecto.Repo.Schema do
     # fields into the changeset. All changes must be in the
     # changeset before hand.
     changeset = put_repo_and_action(changeset, :update, repo, tuplet)
-    changeset = update_in(changeset.changes, &Map.drop(&1, drop_fields))
+    changeset = update_in(changeset.changes, &drop_non_writable_changes!(&1, non_updatable, :update))
 
     if changeset.changes != %{} or force? do
       wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
@@ -575,7 +576,7 @@ defmodule Ecto.Repo.Schema do
         if changeset.valid? do
           embeds = Ecto.Embedded.prepare(changeset, embeds, adapter, :update)
 
-          changes = changeset.changes |> Map.merge(embeds) |> Map.take(keep_fields)
+          changes = changeset.changes |> Map.merge(embeds) |> Map.take(updatable_fields)
           autogen = autogenerate_changes(schema, :update, changes)
           dump_changes = dump_changes!(:update, changes, autogen, schema, [], dumper, adapter)
 
@@ -622,6 +623,31 @@ defmodule Ecto.Repo.Schema do
 
   defp do_update(repo, _name, %Changeset{valid?: false} = changeset, tuplet) do
     {:error, put_repo_and_action(changeset, :update, repo, tuplet)}
+  end
+
+  defp drop_non_writable_changes!(changes, non_writable, action) do
+    Enum.reduce(non_writable, changes, fn {name, on_writable_violation}, changes ->
+      case Map.pop(changes, name) do
+        {nil, changes} ->
+          changes
+        {_change, changes} ->
+          handle_writable_violation(name, on_writable_violation, action)
+          changes
+      end
+    end)
+  end
+
+  defp handle_writable_violation(name, on_writable_violation, action) do
+    message = "attempted to write to non-writable field #{inspect(name)} during #{action}"
+
+    case on_writable_violation do
+      :raise ->
+        raise ArgumentError, message
+      :warn ->
+        Logger.warning(message)
+      _ ->
+        :ok
+    end
   end
 
   @doc """
@@ -964,7 +990,7 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp replace_all_fields!(_kind, schema, to_remove) do
-    {updatable_fields, _} = schema.__schema__(:updatable_fields)
+    {updatable_fields, _} = schema.__schema__(:updatable)
     Enum.map(updatable_fields -- to_remove, &field_source!(schema, &1))
   end
 

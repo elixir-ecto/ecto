@@ -41,7 +41,7 @@ defmodule Ecto.SchemaTest do
                :comment_id
              ]
 
-    assert Schema.__schema__(:insertable_fields) ==
+    assert Schema.__schema__(:insertable) ==
              {[
                 :comment_id,
                 :non_updatable,
@@ -53,11 +53,11 @@ defmodule Ecto.SchemaTest do
                 :email,
                 :name,
                 :id
-              ], [:unwritable]}
+              ], [{:unwritable, :nothing}]}
 
-    assert Schema.__schema__(:updatable_fields) ==
+    assert Schema.__schema__(:updatable) ==
              {[:comment_id, :no_query_load, :uuid, :array, :count, :password, :email, :name, :id],
-              [:non_updatable, :unwritable]}
+              [{:non_updatable, :nothing}, {:unwritable, :nothing}]}
 
     assert Schema.__schema__(:virtual_fields) == [:temp]
 
@@ -715,6 +715,30 @@ defmodule Ecto.SchemaTest do
                        field :x, Ecto.UUID, autogenerate: true, writable: :insert
                      end
                    end
+                 end
+  end
+
+  test "invalid on_writable_violation for writable" do
+    assert_raise ArgumentError, "on_writable_violation must be :nothing for always writable fields",
+                 fn ->
+                  defmodule OnWritableViolationFail do
+                    use Ecto.Schema
+
+                    schema "hello" do
+                      field :x, :string, writable: :always, on_writable_violation: :warn
+                    end
+                  end
+                 end
+
+    assert_raise ArgumentError, "on_writable_violation must be :nothing for always writable fields",
+                 fn ->
+                  defmodule OnWritableViolationFail do
+                    use Ecto.Schema
+
+                    schema "hello" do
+                      field :x, :string, writable: :always, on_writable_violation: :raise
+                    end
+                  end
                  end
   end
 
