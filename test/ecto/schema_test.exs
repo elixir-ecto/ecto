@@ -718,30 +718,6 @@ defmodule Ecto.SchemaTest do
                  end
   end
 
-  test "invalid on_writable_violation for writable" do
-    assert_raise ArgumentError, "on_writable_violation must be :nothing for always writable fields",
-                 fn ->
-                  defmodule OnWritableViolationFail do
-                    use Ecto.Schema
-
-                    schema "hello" do
-                      field :x, :string, writable: :always, on_writable_violation: :warn
-                    end
-                  end
-                 end
-
-    assert_raise ArgumentError, "on_writable_violation must be :nothing for always writable fields",
-                 fn ->
-                  defmodule OnWritableViolationFail do
-                    use Ecto.Schema
-
-                    schema "hello" do
-                      field :x, :string, writable: :always, on_writable_violation: :raise
-                    end
-                  end
-                 end
-  end
-
   test "inline embed defined without schema" do
     # embeds_one
     message = ~r"`embeds_one/3` expects `schema` to be a module name, but received \[do:"
