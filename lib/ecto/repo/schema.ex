@@ -627,11 +627,11 @@ defmodule Ecto.Repo.Schema do
 
   defp drop_non_writable_changes!(changes, non_writable_fields, schema, action) do
     Enum.reduce(non_writable_fields, changes, fn field, changes ->
-      case Map.pop(changes, field) do
-        {nil, changes} ->
-          changes
-        {_change, changes} ->
+      case changes do
+        %{^field => _change} ->
           handle_writable_violation(field, schema, action)
+          changes
+        %{} ->
           changes
       end
     end)
