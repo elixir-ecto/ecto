@@ -554,6 +554,18 @@ defmodule Ecto.Query.API do
       from p in Post, select: concat_ws(":", [p.author, ^year, p.title])
       from s in Sequences, select: concat_ws(".", ["public", s.relname])
 
+  Or you may want to create re-usable macros for [Postgres's row constructor
+  comparison syntax](https://www.postgresql.org/docs/current/functions-comparisons.html#ROW-WISE-COMPARISON)
+  to support multi-column cursor-based pagination:
+
+      defmacro row_gt(columns, values) do
+        quote do
+          fragment("(?) >= (?)", splice(unquote(columns)), splice(unquote(values)))
+        end
+      end
+
+      from(p in Post, where: row_gt([p.visits, p.id], [^lower_visits, ^lower_id]))
+
   You may nest others splices and fragment modifiers such as `identifier/1` and
   `constant/1` inside of compile-time splices
 
