@@ -2513,6 +2513,15 @@ defmodule Ecto.RepoTest do
                    end
     end
 
+    test "insert with surfaced changes on_writable_violation: :nothing saves changes for writable: :always/:insert and ignores changes for writable: :never" do
+      %MySchemaWritable{id: 1, always: 10, never: 11, insert: 12}
+      |> Ecto.Changeset.change(%{})
+      |> TestRepo.insert()
+
+      assert_received {:insert, %{fields: inserted_fields}}
+      assert Enum.sort(inserted_fields) == [always: 10, id: 1, insert: 12]
+    end
+
     test "insert with on_writable_violation: :nothing saves changes for writable: :always/:insert and ignores changes for writable: :never" do
       %MySchemaWritable{id: 1}
       |> Ecto.Changeset.change(%{always: 10, never: 11, insert: 12})
@@ -2520,6 +2529,19 @@ defmodule Ecto.RepoTest do
 
       assert_received {:insert, %{fields: inserted_fields}}
       assert Enum.sort(inserted_fields) == [always: 10, id: 1, insert: 12]
+    end
+
+    test "insert with with surfaced changes and on_writable_violation: :warn saves changes for writable: :always/:insert, ignores changes for writable: :never, and logs a warning" do
+      log = capture_log(fn ->
+        %MySchemaWritableWarn{id: 1, always: 10, never: 11, insert: 12}
+        |> Ecto.Changeset.change(%{})
+        |> TestRepo.insert()
+
+        assert_received {:insert, %{fields: inserted_fields}}
+        assert Enum.sort(inserted_fields) == [always: 10, id: 1, insert: 12]
+      end)
+
+      assert log =~ "attempted to write to non-writable field :never during insert"
     end
 
     test "insert with on_writable_violation: :warn saves changes for writable: :always/:insert, ignores changes for writable: :never, and logs a warning" do
@@ -2533,6 +2555,21 @@ defmodule Ecto.RepoTest do
       end)
 
       assert log =~ "attempted to write to non-writable field :never during insert"
+    end
+
+    test "insert with surfaced changes and on_writable_violation: :raise saves changes for writable: :always/:insert and raises for changes for writable: :never" do
+      assert_raise ArgumentError, "attempted to write to non-writable field :never during insert", fn ->
+        %MySchemaWritableRaise{id: 1, never: 10}
+        |> Ecto.Changeset.change(%{})
+        |> TestRepo.insert()
+      end
+
+      %MySchemaWritableRaise{id: 2, insert: 11, always: 12}
+      |> Ecto.Changeset.change(%{})
+      |> TestRepo.insert()
+
+      assert_received {:insert, %{fields: inserted_fields}}
+      assert Enum.sort(inserted_fields) == [always: 12, id: 2, insert: 11]
     end
 
     test "insert with on_writable_violation: :raise saves changes for writable: :always/:insert and raises for changes for writable: :never" do
