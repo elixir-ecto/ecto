@@ -6,6 +6,7 @@ defmodule Ecto.Repo.Schema do
   alias Ecto.Changeset
   alias Ecto.Changeset.Relation
   require Ecto.Query
+  require Logger
 
   import Ecto.Query.Planner, only: [attach_prefix: 2]
 
@@ -451,8 +452,8 @@ defmodule Ecto.Repo.Schema do
     # On insert, we always merge the whole struct into the
     # changeset as changes, except the primary key if it is nil.
     changeset = put_repo_and_action(changeset, :insert, repo, tuplet)
-    changeset = Relation.surface_changes(changeset, struct, keep_fields ++ assocs)
-    changeset = update_in(changeset.changes, &Map.drop(&1, drop_fields))
+    changeset = Relation.surface_changes(changeset, struct, keep_fields ++ drop_fields ++ assocs)
+    changeset = update_in(changeset.changes, &drop_non_writable_changes!(&1, drop_fields, schema, :insert))
 
     wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
       assoc_opts = assoc_opts(assocs, opts)
@@ -560,7 +561,7 @@ defmodule Ecto.Repo.Schema do
     # fields into the changeset. All changes must be in the
     # changeset before hand.
     changeset = put_repo_and_action(changeset, :update, repo, tuplet)
-    changeset = update_in(changeset.changes, &Map.drop(&1, drop_fields))
+    changeset = update_in(changeset.changes, &drop_non_writable_changes!(&1, drop_fields, schema, :update))
 
     if changeset.changes != %{} or force? do
       wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
@@ -622,6 +623,33 @@ defmodule Ecto.Repo.Schema do
 
   defp do_update(repo, _name, %Changeset{valid?: false} = changeset, tuplet) do
     {:error, put_repo_and_action(changeset, :update, repo, tuplet)}
+  end
+
+  defp drop_non_writable_changes!(changes, non_writable_fields, schema, action) do
+    Enum.reduce(non_writable_fields, changes, fn field, changes ->
+      case changes do
+        %{^field => _change} ->
+          handle_writable_violation(field, schema, action)
+          changes
+        %{} ->
+          changes
+      end
+    end)
+  end
+
+  defp handle_writable_violation(field, schema, action) do
+    on_writable_violation = schema.__schema__(:on_writable_violation)[field]
+
+    message = "attempted to write to non-writable field #{inspect(field)} during #{action}"
+
+    case on_writable_violation do
+      :raise ->
+        raise ArgumentError, message
+      :warn ->
+        Logger.warning(message)
+      _ ->
+        :ok
+    end
   end
 
   @doc """
