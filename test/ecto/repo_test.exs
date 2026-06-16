@@ -2439,6 +2439,20 @@ defmodule Ecto.RepoTest do
              ]
     end
 
+    test "update with on_writable_violation: :nothing/warn does not reflect ignored changes in returned struct" do
+      {:ok, %MySchemaWritable{always: 10, never: nil, insert: nil}} =
+        %MySchemaWritable{id: 1}
+        |> Ecto.Changeset.change(%{always: 10, never: 11, insert: 12})
+        |> TestRepo.update()
+
+      capture_log(fn ->
+        {:ok, %MySchemaWritableWarn{always: 10, never: nil, insert: nil}} =
+          %MySchemaWritableWarn{id: 1}
+          |> Ecto.Changeset.change(%{always: 10, never: 11, insert: 12})
+          |> TestRepo.update()
+      end)
+    end
+
     test "update with on_writable_violation: :nothing saves changes for writable: :always and ignores changes for writable: :insert/:never" do
       %MySchemaWritable{id: 1}
       |> Ecto.Changeset.change(%{always: 10, never: 11, insert: 12})
@@ -2511,6 +2525,20 @@ defmodule Ecto.RepoTest do
                    fn ->
                      TestRepo.update_all(update_query, [])
                    end
+    end
+
+    test "insert with on_writable_violation: :nothing/warn does not reflect ignored changes in returned struct" do
+      {:ok, %MySchemaWritable{always: 10, never: nil, insert: 12}} =
+        %MySchemaWritable{id: 1}
+        |> Ecto.Changeset.change(%{always: 10, never: 11, insert: 12})
+        |> TestRepo.insert()
+
+      capture_log(fn ->
+        {:ok, %MySchemaWritableWarn{always: 10, never: nil, insert: 12}} =
+          %MySchemaWritableWarn{id: 2}
+          |> Ecto.Changeset.change(%{always: 10, never: 11, insert: 12})
+          |> TestRepo.insert()
+      end)
     end
 
     test "insert with surfaced changes on_writable_violation: :nothing saves changes for writable: :always/:insert and ignores changes for writable: :never" do

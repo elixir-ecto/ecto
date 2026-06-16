@@ -630,7 +630,7 @@ defmodule Ecto.Repo.Schema do
       case changes do
         %{^field => _change} ->
           handle_writable_violation(field, schema, action)
-          changes
+          Map.delete(changes, field)
         %{} ->
           changes
       end
