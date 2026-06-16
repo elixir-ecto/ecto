@@ -1073,7 +1073,7 @@ defmodule Ecto.Query.Planner do
   end
 
   defp finalize_cache(query, operation, cache) do
-    %{assocs: assocs, prefix: prefix, lock: lock, label: label, select: select, aliases: aliases} =
+    %{assocs: assocs, prefix: prefix, lock: lock, comments: comments, select: select, aliases: aliases} =
       query
     aliases = Map.delete(aliases, @parent_as)
 
@@ -1091,7 +1091,7 @@ defmodule Ecto.Query.Planner do
       |> prepend_if(assocs != [], assocs: assocs)
       |> prepend_if(prefix != nil, prefix: prefix)
       |> prepend_if(lock != nil, lock: lock)
-      |> prepend_if(label != nil, label: label)
+      |> prepend_if(comments != [], comments: comments)
       |> prepend_if(aliases != %{}, aliases: aliases)
 
     [operation | cache]
@@ -2384,34 +2384,23 @@ defmodule Ecto.Query.Planner do
   def attach_prefix(query, _), do: query
 
   @doc """
-  Puts the label given via `opts` into the given query, if available.
+  Appends the comments given via the `:comments` option into the query.
 
-  The label is rendered by the adapter as a leading `/* ... */` SQL comment
-  and becomes part of the query cache key. It is embedded verbatim, so it may
-  not contain `/*`, `*/`, or null bytes.
+  The option is a keyword list of `[pre: string, post: string]` entries, which
+  share the representation of the query's `comments` field. They become part of
+  the query cache key and are rendered by the adapter as `/* ... */` comments.
+  Validating and escaping them is left to the adapter, since the comment syntax
+  (and therefore what is unsafe) depends on the adapter.
   """
-  def attach_label(%{label: nil} = query, opts) when is_list(opts) do
-    case Keyword.fetch(opts, :label) do
-      {:ok, label} -> %{query | label: validate_label!(label)}
+  def attach_comments(query, opts) when is_list(opts) do
+    case Keyword.fetch(opts, :comments) do
+      {:ok, comments} when is_list(comments) -> %{query | comments: query.comments ++ comments}
+      {:ok, other} -> raise ArgumentError, "the :comments option must be a keyword list of [pre: string, post: string], got: #{inspect(other)}"
       :error -> query
     end
   end
 
-  def attach_label(query, _), do: query
-
-  defp validate_label!(label) when is_binary(label) do
-    if String.contains?(label, ["/*", "*/", <<0>>]) do
-      raise ArgumentError,
-            "a label cannot contain `/*`, `*/`, or null bytes, got: #{inspect(label)}. " <>
-              "Allowing them would let the label break out of the surrounding `/* */` comment"
-    end
-
-    label
-  end
-
-  defp validate_label!(other) do
-    raise ArgumentError, "a label must be a string, got: #{inspect(other)}"
-  end
+  def attach_comments(query, _), do: query
 
   ## Helpers
 

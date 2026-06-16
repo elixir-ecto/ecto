@@ -415,7 +415,7 @@ defmodule Ecto.Query do
             lock: nil,
             windows: [],
             with_ctes: nil,
-            label: nil
+            comments: []
 
   defmodule FromExpr do
     @moduledoc false
@@ -956,6 +956,7 @@ defmodule Ecto.Query do
       Ecto.Query.exclude(query, :limit)
       Ecto.Query.exclude(query, :offset)
       Ecto.Query.exclude(query, :lock)
+      Ecto.Query.exclude(query, :comments)
       Ecto.Query.exclude(query, :preload)
       Ecto.Query.exclude(query, :update)
       Ecto.Query.exclude(query, :windows)
@@ -1025,6 +1026,7 @@ defmodule Ecto.Query do
   defp do_exclude(%Ecto.Query{} = query, :limit), do: %{query | limit: nil}
   defp do_exclude(%Ecto.Query{} = query, :offset), do: %{query | offset: nil}
   defp do_exclude(%Ecto.Query{} = query, :lock), do: %{query | lock: nil}
+  defp do_exclude(%Ecto.Query{} = query, :comments), do: %{query | comments: []}
   defp do_exclude(%Ecto.Query{} = query, :preload), do: %{query | preloads: [], assocs: []}
   defp do_exclude(%Ecto.Query{} = query, :update), do: %{query | updates: []}
   defp do_exclude(%Ecto.Query{} = query, :windows), do: %{query | windows: []}
@@ -1151,7 +1153,8 @@ defmodule Ecto.Query do
   end
 
   @from_join_opts [:as, :prefix, :hints]
-  @no_binds [:union, :union_all, :except, :except_all, :intersect, :intersect_all]
+  @no_binds [:union, :union_all, :except, :except_all, :intersect, :intersect_all] ++
+              [:pre_comment, :post_comment]
   @binds [:lock, :where, :or_where, :select, :distinct, :order_by, :group_by, :windows] ++
            [:having, :or_having, :limit, :offset, :preload, :update, :select_merge, :with_ctes]
 
@@ -2536,6 +2539,56 @@ defmodule Ecto.Query do
   """
   defmacro lock(query, binding \\ [], expr) do
     Builder.Lock.build(query, binding, expr, __CALLER__)
+  end
+
+  @doc ~S"""
+  Adds a comment *before* the generated statement.
+
+  The text is rendered as a leading SQL comment, immediately before the
+  statement keyword:
+
+      /* list_users */ SELECT ...
+
+  This is useful to tag and identify queries in database logs and monitoring
+  tools. A leading comment (rather than a trailing one, see `post_comment/2`)
+  survives truncation of long statements in logs.
+
+  The comment must be a compile-time literal string, so the set of comments for
+  a given query stays bounded and the query remains safely cacheable. It is
+  embedded verbatim and therefore cannot contain `/*`, `*/`, or null bytes. For
+  dynamic comments, use the `:comments` option on the repository operation
+  instead. Multiple comments may be added and are rendered in order.
+
+  ## Keywords example
+
+      from(p in Post, pre_comment: "list_posts", select: p.title)
+
+  ## Expressions example
+
+      Post |> pre_comment("list_posts") |> select([p], p.title)
+  """
+  defmacro pre_comment(query, expr) do
+    Builder.Comment.build(:pre, query, expr, __CALLER__)
+  end
+
+  @doc ~S"""
+  Adds a comment *after* the generated statement.
+
+  Works like `pre_comment/2` but renders the text as a trailing SQL comment,
+  after the statement (the SQLCommenter convention):
+
+      SELECT ... /* list_users */
+
+  ## Keywords example
+
+      from(p in Post, post_comment: "list_posts", select: p.title)
+
+  ## Expressions example
+
+      Post |> post_comment("list_posts") |> select([p], p.title)
+  """
+  defmacro post_comment(query, expr) do
+    Builder.Comment.build(:post, query, expr, __CALLER__)
   end
 
 
