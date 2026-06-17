@@ -453,7 +453,7 @@ defmodule Ecto.Repo.Schema do
     # changeset as changes, except the primary key if it is nil.
     changeset = put_repo_and_action(changeset, :insert, repo, tuplet)
     changeset = Relation.surface_changes(changeset, struct, keep_fields ++ drop_fields ++ assocs)
-    changeset = update_in(changeset.changes, &drop_non_writable_changes!(&1, drop_fields, schema, :insert))
+    changeset = process_non_writable_fields!(changeset, drop_fields, schema, :insert)
 
     wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
       assoc_opts = assoc_opts(assocs, opts)
@@ -561,7 +561,7 @@ defmodule Ecto.Repo.Schema do
     # fields into the changeset. All changes must be in the
     # changeset before hand.
     changeset = put_repo_and_action(changeset, :update, repo, tuplet)
-    changeset = update_in(changeset.changes, &drop_non_writable_changes!(&1, drop_fields, schema, :update))
+    changeset = process_non_writable_fields!(changeset, drop_fields, schema, :update)
 
     if changeset.changes != %{} or force? do
       wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
@@ -625,16 +625,31 @@ defmodule Ecto.Repo.Schema do
     {:error, put_repo_and_action(changeset, :update, repo, tuplet)}
   end
 
-  defp drop_non_writable_changes!(changes, non_writable_fields, schema, action) do
-    Enum.reduce(non_writable_fields, changes, fn field, changes ->
-      case changes do
-        %{^field => _change} ->
-          handle_writable_violation(field, schema, action)
-          Map.delete(changes, field)
-        %{} ->
-          changes
-      end
-    end)
+  defp process_non_writable_fields!(changeset, non_writable_fields, schema, action) do
+    changes =
+      Enum.reduce(non_writable_fields, changeset.changes, fn field, changes ->
+        case changes do
+          %{^field => _change} ->
+            handle_writable_violation(field, schema, action)
+            Map.delete(changes, field)
+          %{} ->
+            changes
+        end
+      end)
+
+    # On insert, if the underlying struct has a value for a non-writable
+    # field, we need to nilify it so that the struct returned from the
+    # insert operation reflects that the write was not actually performed.
+    # Discarding the change above only prevents the actual write from happening.
+    data = case action do
+      :insert ->
+        updates = Enum.map(non_writable_fields, fn field -> {field, nil} end)
+        struct!(changeset.data, updates)
+      _ ->
+        changeset.data
+    end
+
+    %{changeset | data: data, changes: changes}
   end
 
   defp handle_writable_violation(field, schema, action) do
