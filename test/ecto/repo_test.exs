@@ -2516,7 +2516,10 @@ defmodule Ecto.RepoTest do
     end
 
     test "insert with surfaced changes on_writable_violation: :nothing saves changes for writable: :always/:insert and ignores changes for writable: :never" do
-      %{always: 10, never: nil, insert: 12} =
+      # For surfaced changes from the underlying struct, the value in the returned struct is
+      # maintained even though the underlying write was not performed, as opposed to "normal" changes
+      # provided via a changeset.
+      %{always: 10, never: 11, insert: 12} =
         %MySchemaWritable{id: 1, always: 10, never: 11, insert: 12}
         |> Ecto.Changeset.change(%{})
         |> TestRepo.insert!()
@@ -2537,7 +2540,10 @@ defmodule Ecto.RepoTest do
 
     test "insert with surfaced changes and on_writable_violation: :warn saves changes for writable: :always/:insert, ignores changes for writable: :never, and logs a warning" do
       log = capture_log(fn ->
-        %{always: 10, never: nil, insert: 12} =
+        # For surfaced changes from the underlying struct, the value in the returned struct is
+        # maintained even though the underlying write was not performed, as opposed to "normal" changes
+        # provided via a changeset.
+        %{always: 10, never: 11, insert: 12} =
           %MySchemaWritableWarn{id: 1, always: 10, never: 11, insert: 12}
           |> Ecto.Changeset.change(%{})
           |> TestRepo.insert!()

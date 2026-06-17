@@ -456,7 +456,7 @@ defmodule Ecto.Repo.Schema do
     # On insert, we need to nilify non-writable fields in
     # the underlying data so that the returned struct reflects
     # that the write was not actually performed.
-    changeset = nilify_unsurfaced_non_writable_data!(changeset, drop_fields, schema)
+    changeset = detect_unsurfaced_non_writable_data!(changeset, drop_fields, schema)
     changeset = drop_non_writable_changes!(changeset, drop_fields, schema, :insert)
 
     wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
@@ -526,23 +526,21 @@ defmodule Ecto.Repo.Schema do
     {:error, put_repo_and_action(changeset, :insert, repo, tuplet)}
   end
 
-  defp nilify_unsurfaced_non_writable_data!(changeset, [], _schema) do
+  defp detect_unsurfaced_non_writable_data!(changeset, [], _schema) do
     changeset
   end
 
-  defp nilify_unsurfaced_non_writable_data!(changeset, non_writable_fields, schema) do
-    updates = Enum.reduce(non_writable_fields, [], fn field, updates ->
+  defp detect_unsurfaced_non_writable_data!(changeset, non_writable_fields, schema) do
+    Enum.each(non_writable_fields, fn field ->
       case changeset.data do
         %{^field => value} when value != nil ->
           handle_writable_violation(field, schema, :insert)
-
-          [{field, nil} | updates]
         %{} ->
-          updates
+          :ok
       end
     end)
 
-    %{changeset | data: struct!(changeset.data, updates)}
+    changeset
   end
 
   @doc """
