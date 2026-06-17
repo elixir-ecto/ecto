@@ -526,6 +526,10 @@ defmodule Ecto.Repo.Schema do
     {:error, put_repo_and_action(changeset, :insert, repo, tuplet)}
   end
 
+  defp nilify_unsurfaced_non_writable_data!(changeset, [], _schema) do
+    changeset
+  end
+
   defp nilify_unsurfaced_non_writable_data!(changeset, non_writable_fields, schema) do
     updates = Enum.reduce(non_writable_fields, [], fn field, updates ->
       case changeset.data do
@@ -642,6 +646,10 @@ defmodule Ecto.Repo.Schema do
 
   defp do_update(repo, _name, %Changeset{valid?: false} = changeset, tuplet) do
     {:error, put_repo_and_action(changeset, :update, repo, tuplet)}
+  end
+
+  defp drop_non_writable_changes!(changeset, [], _schema, _action) do
+    changeset
   end
 
   defp drop_non_writable_changes!(changeset, non_writable_fields, schema, action) do
