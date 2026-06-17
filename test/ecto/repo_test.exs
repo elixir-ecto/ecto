@@ -2475,10 +2475,9 @@ defmodule Ecto.RepoTest do
         |> TestRepo.update!()
       end
 
-      %{always: 12, never: nil, insert: nil} =
-        %MySchemaWritableRaise{id: 3}
-        |> Ecto.Changeset.change(%{always: 12})
-        |> TestRepo.update!()
+      %MySchemaWritableRaise{id: 3}
+      |> Ecto.Changeset.change(%{always: 12})
+      |> TestRepo.update!()
 
       assert_received {:update, %{changes: [always: 12]}}
     end
@@ -2571,10 +2570,10 @@ defmodule Ecto.RepoTest do
         |> TestRepo.insert!()
       end
 
-      %{always: 12, never: nil, insert: 11} =
-        %MySchemaWritableRaise{id: 2, insert: 11, always: 12}
-        |> Ecto.Changeset.change(%{})
-        |> TestRepo.insert!()
+
+      %MySchemaWritableRaise{id: 2, insert: 11, always: 12}
+      |> Ecto.Changeset.change(%{})
+      |> TestRepo.insert!()
 
       assert_received {:insert, %{fields: inserted_fields}}
       assert Enum.sort(inserted_fields) == [always: 12, id: 2, insert: 11]
@@ -2587,10 +2586,9 @@ defmodule Ecto.RepoTest do
         |> TestRepo.insert!()
       end
 
-      %{always: 12, never: nil, insert: 11} =
-        %MySchemaWritableRaise{id: 2}
-        |> Ecto.Changeset.change(%{insert: 11, always: 12})
-        |> TestRepo.insert!()
+      %MySchemaWritableRaise{id: 2}
+      |> Ecto.Changeset.change(%{insert: 11, always: 12})
+      |> TestRepo.insert!()
 
       assert_received {:insert, %{fields: inserted_fields}}
       assert Enum.sort(inserted_fields) == [always: 12, id: 2, insert: 11]
