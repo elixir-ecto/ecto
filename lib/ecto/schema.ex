@@ -183,6 +183,10 @@ defmodule Ecto.Schema do
       option for the [`field`](`field/3`) macro. It defaults to `fn x -> x end`,
       where no field transformation is done;
 
+    * `@on_writable_violation` - configures the default value of `:on_writable_violation`
+      for all fields in the schema. The value set here can be changed per field through
+      the `:on_writable_violation` option.
+
   The advantage of configuring the schema via those attributes is
   that they can be set with a macro to configure application wide
   defaults.
@@ -2022,8 +2026,11 @@ defmodule Ecto.Schema do
     virtual? = opts[:virtual] || false
     pk? = opts[:primary_key] || false
     writable = opts[:writable] || :always
-    on_writable_violation = opts[:on_writable_violation] || :nothing
     put_struct_field(mod, name, Keyword.get(opts, :default))
+
+    on_writable_violation = Keyword.get_lazy(opts, :on_writable_violation, fn ->
+      Module.get_attribute(mod, :on_writable_violation, :nothing)
+    end)
 
     redact_field? =
       Keyword.get_lazy(opts, :redact, fn ->

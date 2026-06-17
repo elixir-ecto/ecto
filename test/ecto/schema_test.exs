@@ -516,6 +516,39 @@ defmodule Ecto.SchemaTest do
     assert Ecto.primary_key!(sc) == [student_id: 1, course_ref_id: 2]
   end
 
+  ## Default on_writable_violation
+
+  defmodule SchemaWithOnWritableViolation do
+    use Ecto.Schema
+
+    @on_writable_violation :raise
+    schema "on_writable_violation" do
+      field :a, :string, writable: :insert
+      field :b, :string, writable: :insert
+      field :c, :string, writable: :insert, on_writable_violation: :nothing
+      field :d, :string, writable: :insert, on_writable_violation: :warn
+    end
+  end
+
+  defmodule SchemaWithoutOnWritableViolation do
+    use Ecto.Schema
+
+    schema "on_writable_violation" do
+      field :a, :string, writable: :insert
+      field :b, :string, writable: :insert
+      field :c, :string, writable: :insert, on_writable_violation: :warn
+      field :d, :string, writable: :insert, on_writable_violation: :raise
+    end
+  end
+
+  test "schema with @on_writable_violation defaults :on_writable_violation" do
+    %{a: :raise, b: :raise, c: :nothing, d: :warn} = SchemaWithOnWritableViolation.__schema__(:on_writable_violation)
+  end
+
+  test "schema without @on_writable_violation uses the field-level default (:nothing)" do
+    %{a: :nothing, b: :nothing, c: :warn, d: :raise} = SchemaWithoutOnWritableViolation.__schema__(:on_writable_violation)
+  end
+
   ## Errors
 
   test "field name clash" do
