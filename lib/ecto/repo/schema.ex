@@ -638,7 +638,7 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp handle_writable_violation(field, schema, action) do
-    on_writable_violation = schema.__schema__(:on_writable_violation)[field]
+    on_writable_violation = schema.__schema__(:on_writable_violation, field)
 
     message = "attempted to write to non-writable field #{inspect(field)} during #{action}"
 

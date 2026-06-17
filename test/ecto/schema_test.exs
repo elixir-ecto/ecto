@@ -542,11 +542,21 @@ defmodule Ecto.SchemaTest do
   end
 
   test "schema with @on_writable_violation defaults :on_writable_violation" do
-    %{a: :raise, b: :raise, c: :nothing, d: :warn} = SchemaWithOnWritableViolation.__schema__(:on_writable_violation)
+    assert SchemaWithOnWritableViolation.__schema__(:on_writable_violation, :a) == :raise
+    assert SchemaWithOnWritableViolation.__schema__(:on_writable_violation, :b) == :raise
+    assert SchemaWithOnWritableViolation.__schema__(:on_writable_violation, :c) == :nothing
+    assert SchemaWithOnWritableViolation.__schema__(:on_writable_violation, :d) == :warn
+    assert SchemaWithOnWritableViolation.__schema__(:on_writable_violation, :unknown) == :raise
   end
 
   test "schema without @on_writable_violation uses the field-level default (:nothing)" do
-    %{a: :nothing, b: :nothing, c: :warn, d: :raise} = SchemaWithoutOnWritableViolation.__schema__(:on_writable_violation)
+    assert SchemaWithoutOnWritableViolation.__schema__(:on_writable_violation, :a) == :nothing
+    assert SchemaWithoutOnWritableViolation.__schema__(:on_writable_violation, :b) == :nothing
+    assert SchemaWithoutOnWritableViolation.__schema__(:on_writable_violation, :c) == :warn
+    assert SchemaWithoutOnWritableViolation.__schema__(:on_writable_violation, :d) == :raise
+
+    assert SchemaWithoutOnWritableViolation.__schema__(:on_writable_violation, :unknown) ==
+             :nothing
   end
 
   ## Errors
