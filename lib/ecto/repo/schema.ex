@@ -626,27 +626,29 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp process_non_writable_fields!(changeset, non_writable_fields, schema, action) do
-    changes =
-      Enum.reduce(non_writable_fields, changeset.changes, fn field, changes ->
+    {changes, data_updates} =
+      Enum.reduce(non_writable_fields, {changeset.changes, []}, fn field, {changes, data_updates} ->
         case changes do
           %{^field => _change} ->
             handle_writable_violation(field, schema, action)
-            Map.delete(changes, field)
+
+            # On insert, we need to nilify non-writable fields in
+            # the underlying data so that the returned struct reflects
+            # that the write was not actually performed.
+            data_updates = case action do
+              :insert -> [{field, nil} | data_updates]
+              _ -> data_updates
+            end
+
+            {Map.delete(changes, field), data_updates}
           %{} ->
-            changes
+            {changes, data_updates}
         end
       end)
 
-    # On insert, if the underlying struct has a value for a non-writable
-    # field, we need to nilify it so that the struct returned from the
-    # insert operation reflects that the write was not actually performed.
-    # Discarding the change above only prevents the actual write from happening.
-    data = case action do
-      :insert ->
-        updates = Enum.map(non_writable_fields, fn field -> {field, nil} end)
-        struct!(changeset.data, updates)
-      _ ->
-        changeset.data
+    data = case data_updates do
+      [] -> changeset.data
+      data_updates -> struct!(changeset.data, data_updates)
     end
 
     %{changeset | data: data, changes: changes}
