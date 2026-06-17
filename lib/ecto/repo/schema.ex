@@ -456,8 +456,8 @@ defmodule Ecto.Repo.Schema do
     # On insert, we need to nilify non-writable fields in
     # the underlying data so that the returned struct reflects
     # that the write was not actually performed.
-    changeset = update_in(changeset.data, &nilify_unsurfaced_non_writable_data!(&1, drop_fields, schema))
-    changeset = update_in(changeset.changes, &drop_non_writable_changes!(&1, drop_fields, schema, :insert))
+    changeset = nilify_unsurfaced_non_writable_data!(changeset, drop_fields, schema)
+    changeset = drop_non_writable_changes!(changeset, drop_fields, schema, :insert)
 
     wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
       assoc_opts = assoc_opts(assocs, opts)
@@ -526,9 +526,9 @@ defmodule Ecto.Repo.Schema do
     {:error, put_repo_and_action(changeset, :insert, repo, tuplet)}
   end
 
-  defp nilify_unsurfaced_non_writable_data!(data, non_writable_fields, schema) do
+  defp nilify_unsurfaced_non_writable_data!(changeset, non_writable_fields, schema) do
     updates = Enum.reduce(non_writable_fields, [], fn field, updates ->
-      case data do
+      case changeset.data do
         %{^field => value} when value != nil ->
           handle_writable_violation(field, schema, :insert)
 
@@ -538,7 +538,7 @@ defmodule Ecto.Repo.Schema do
       end
     end)
 
-    struct!(data, updates)
+    %{changeset | data: struct!(changeset.data, updates)}
   end
 
   @doc """
@@ -580,7 +580,7 @@ defmodule Ecto.Repo.Schema do
     # fields into the changeset. All changes must be in the
     # changeset before hand.
     changeset = put_repo_and_action(changeset, :update, repo, tuplet)
-    changeset = update_in(changeset.changes, &drop_non_writable_changes!(&1, drop_fields, schema, :update))
+    changeset = drop_non_writable_changes!(changeset, drop_fields, schema, :update)
 
     if changeset.changes != %{} or force? do
       wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
@@ -644,8 +644,8 @@ defmodule Ecto.Repo.Schema do
     {:error, put_repo_and_action(changeset, :update, repo, tuplet)}
   end
 
-  defp drop_non_writable_changes!(changes, non_writable_fields, schema, action) do
-    Enum.reduce(non_writable_fields, changes, fn field, changes ->
+  defp drop_non_writable_changes!(changeset, non_writable_fields, schema, action) do
+   changes = Enum.reduce(non_writable_fields, changeset.changes, fn field, changes ->
       case changes do
         %{^field => _change} ->
           handle_writable_violation(field, schema, action)
@@ -655,6 +655,8 @@ defmodule Ecto.Repo.Schema do
           changes
       end
     end)
+
+    %{changeset | changes: changes}
   end
 
   defp handle_writable_violation(field, schema, action) do
