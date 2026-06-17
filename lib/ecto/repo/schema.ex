@@ -453,9 +453,6 @@ defmodule Ecto.Repo.Schema do
     # changeset as changes, except the primary key if it is nil.
     changeset = put_repo_and_action(changeset, :insert, repo, tuplet)
     changeset = Relation.surface_changes(changeset, struct, keep_fields ++ assocs)
-    # On insert, we need to nilify non-writable fields in
-    # the underlying data so that the returned struct reflects
-    # that the write was not actually performed.
     changeset = detect_unsurfaced_non_writable_data!(changeset, drop_fields, schema)
     changeset = drop_non_writable_changes!(changeset, drop_fields, schema, :insert)
 
