@@ -710,8 +710,7 @@ defmodule Ecto.Schema do
       attempts to modify a field that should not be modified according to it's `:writable` value.
       Must be one of `:nothing`, `:warn`, or `:raise`. If set to `:nothing`, the modification is
       silently ignored. If set to `:warn`, the modification is ignored and a warning is logged. If set
-      to `:raise`, an exception is raised and the operation is aborted. If `:writable` is set to `:always`,
-      `:on_writable_violation` must be set to `:nothing`. Defaults to `:nothing`.
+      to `:raise`, an exception is raised and the operation is aborted. Defaults to `:nothing`.
 
   """
   defmacro field(name, type \\ :string, opts \\ []) do
