@@ -665,7 +665,15 @@ defmodule Ecto.Repo.Schema do
   defp handle_writable_violation(field, schema, action) do
     on_writable_violation = schema.__schema__(:on_writable_violation, field)
 
-    message = "attempted to write to non-writable field #{inspect(field)} during #{action}"
+    message = """
+    you are attempting to write to the field #{inspect(field)} of #{inspect(schema)} but
+    the `:writable` option of this field indicates the field should not be written to during an #{action}.
+
+    If you want to write to this field, please set the appropriate `:writable` option when defining the field.
+
+    If you want to customize the behavior of writing to a non-writable field,
+    please set the appropriate `:on_writable_violation` option when defining the field.
+    """
 
     case on_writable_violation do
       :raise ->
