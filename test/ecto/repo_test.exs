@@ -2458,18 +2458,35 @@ defmodule Ecto.RepoTest do
         assert_received {:update, %{changes: [always: 10]}}
       end)
 
-      assert log =~ "attempted to write to non-writable field :insert during update"
-      assert log =~ "attempted to write to non-writable field :never during update"
+      assert log =~ ~r"""
+      you are attempting to write to the field :insert of #{inspect(__MODULE__.MySchemaWritableWarn)} but
+      the `:writable` option of this field indicates the field should not be written to during an update.
+      """
+
+      assert log =~ ~r"""
+      you are attempting to write to the field :never of #{inspect(__MODULE__.MySchemaWritableWarn)} but
+      the `:writable` option of this field indicates the field should not be written to during an update.
+      """
     end
 
     test "update with on_writable_violation: :raise saves changes for writable: :always and raises for changes for writable: :insert/:never" do
-      assert_raise ArgumentError, "attempted to write to non-writable field :never during update", fn ->
+      never_message = ~r"""
+      you are attempting to write to the field :never of #{inspect(__MODULE__.MySchemaWritableRaise)} but
+      the `:writable` option of this field indicates the field should not be written to during an update.
+      """
+
+      assert_raise ArgumentError, never_message, fn ->
         %MySchemaWritableRaise{id: 1}
         |> Ecto.Changeset.change(%{never: 10})
         |> TestRepo.update!()
       end
 
-      assert_raise ArgumentError, "attempted to write to non-writable field :insert during update", fn ->
+      insert_message = ~r"""
+      you are attempting to write to the field :insert of #{inspect(__MODULE__.MySchemaWritableRaise)} but
+      the `:writable` option of this field indicates the field should not be written to during an update.
+      """
+
+      assert_raise ArgumentError, insert_message, fn ->
         %MySchemaWritableRaise{id: 2}
         |> Ecto.Changeset.change(%{insert: 11})
         |> TestRepo.update!()
@@ -2552,7 +2569,10 @@ defmodule Ecto.RepoTest do
         assert Enum.sort(inserted_fields) == [always: 10, id: 1, insert: 12]
       end)
 
-      assert log =~ "attempted to write to non-writable field :never during insert"
+      assert log =~ ~r"""
+      you are attempting to write to the field :never of #{inspect(__MODULE__.MySchemaWritableWarn)} but
+      the `:writable` option of this field indicates the field should not be written to during an insert.
+      """
     end
 
     test "insert with on_writable_violation: :warn saves changes for writable: :always/:insert, ignores changes for writable: :never, and logs a warning" do
@@ -2566,16 +2586,23 @@ defmodule Ecto.RepoTest do
         assert Enum.sort(inserted_fields) == [always: 10, id: 1, insert: 12]
       end)
 
-      assert log =~ "attempted to write to non-writable field :never during insert"
+      assert log =~ ~r"""
+      you are attempting to write to the field :never of #{inspect(__MODULE__.MySchemaWritableWarn)} but
+      the `:writable` option of this field indicates the field should not be written to during an insert.
+      """
     end
 
     test "insert with surfaced changes and on_writable_violation: :raise saves changes for writable: :always/:insert and raises for changes for writable: :never" do
-      assert_raise ArgumentError, "attempted to write to non-writable field :never during insert", fn ->
+      message = ~r"""
+      you are attempting to write to the field :never of #{inspect(__MODULE__.MySchemaWritableRaise)} but
+      the `:writable` option of this field indicates the field should not be written to during an insert.
+      """
+
+      assert_raise ArgumentError, message, fn ->
         %MySchemaWritableRaise{id: 1, never: 10}
         |> Ecto.Changeset.change(%{})
         |> TestRepo.insert!()
       end
-
 
       %MySchemaWritableRaise{id: 2, insert: 11, always: 12}
       |> Ecto.Changeset.change(%{})
@@ -2586,7 +2613,12 @@ defmodule Ecto.RepoTest do
     end
 
     test "insert with on_writable_violation: :raise saves changes for writable: :always/:insert and raises for changes for writable: :never" do
-      assert_raise ArgumentError, "attempted to write to non-writable field :never during insert", fn ->
+      message = ~r"""
+      you are attempting to write to the field :never of #{inspect(__MODULE__.MySchemaWritableRaise)} but
+      the `:writable` option of this field indicates the field should not be written to during an insert.
+      """
+
+      assert_raise ArgumentError, message, fn ->
         %MySchemaWritableRaise{id: 1}
         |> Ecto.Changeset.change(%{never: 10})
         |> TestRepo.insert!()
