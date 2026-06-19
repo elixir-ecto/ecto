@@ -2907,4 +2907,69 @@ defmodule Ecto.Query.PlannerTest do
       assert :ets.info(cache, :size) == 0
     end
   end
+
+  describe "attach_comments/2" do
+    test "appends the comments from opts" do
+      query = Planner.attach_comments(from(p in "posts"), comments: [pre: "get_posts_q"])
+      assert query.comments == [pre: "get_posts_q"]
+    end
+
+    test "appends to comments already on the query" do
+      query =
+        from(p in "posts")
+        |> Ecto.Query.pre_comment("from_macro")
+        |> Planner.attach_comments(comments: [post: "from_opts"])
+
+      assert query.comments == [{:pre, "from_macro"}, {:post, "from_opts"}]
+    end
+
+    test "leaves the query unchanged when no comments are given" do
+      query = from(p in "posts")
+      assert Planner.attach_comments(query, []).comments == []
+    end
+
+    test "raises when :comments is not a list" do
+      assert_raise ArgumentError, ~r/must be a keyword list/, fn ->
+        Planner.attach_comments(from(p in "posts"), comments: "nope")
+      end
+    end
+
+    test "is part of the query cache key" do
+      cache = Planner.new_query_cache(__MODULE__)
+      query = from(p in Post, where: p.title == ^"hello")
+
+      cache_query = fn comment ->
+        query
+        |> Planner.attach_comments(comments: [pre: comment])
+        |> Planner.query(:all, cache, Ecto.CachingTestAdapter, 0, true)
+      end
+
+      # Different comments produce distinct cache entries...
+      cache_query.("a")
+      cache_query.("b")
+      assert :ets.info(cache, :size) == 2
+
+      # ...while the same comment reuses one.
+      cache_query.("a")
+      assert :ets.info(cache, :size) == 2
+    end
+
+    test "query_cache: false keeps the cache from growing with dynamic comments" do
+      cache = Planner.new_query_cache(__MODULE__)
+      query = from(p in Post, where: p.title == ^"hello")
+
+      for comment <- ["dyn_a", "dyn_b", "dyn_c"] do
+        query
+        |> Planner.attach_comments(comments: [pre: comment])
+        |> Planner.query(:all, cache, Ecto.CachingTestAdapter, 0, false)
+      end
+
+      assert :ets.info(cache, :size) == 0
+    end
+
+    test "stores comments verbatim, leaving validation to the adapter" do
+      assert Planner.attach_comments(from(p in "posts"), comments: [pre: "a */ b"]).comments ==
+               [pre: "a */ b"]
+    end
+  end
 end
