@@ -569,4 +569,31 @@ defmodule Ecto.Changeset.BelongsToTest do
     changeset2 = %{changeset | action: :delete}
     assert Relation.apply_changes(embed, changeset2) == nil
   end
+
+  test "changed?/2 with assocs" do
+    new_profile = %Profile{name: "profile"}
+
+    changeset =
+      %Author{}
+      |> Changeset.change()
+      |> Changeset.put_assoc(:profile, new_profile)
+
+    assert Changeset.changed?(changeset, :profile)
+
+    {:ok, existing_profile} = TestRepo.insert(%Profile{name: "profile"})
+
+    changeset =
+      %Author{}
+      |> Changeset.change()
+      |> Changeset.put_assoc(:profile, existing_profile)
+
+    assert Changeset.changed?(changeset, :profile)
+
+    changeset =
+      %Author{profile: existing_profile}
+      |> Changeset.change()
+      |> Changeset.put_assoc(:profile, nil)
+
+    assert Changeset.changed?(changeset, :profile)
+  end
 end
