@@ -380,7 +380,7 @@ defmodule Ecto.UUID do
 
   Raises `ArgumentError` for non-v7 UUIDs.
   """
-  @spec to_datetime(binary()) :: {:ok, DateTime.t()} | {:error, atom()}
+  @spec to_datetime(binary()) :: DateTime.t()
   def to_datetime(<<milliseconds::48, @version_7::4, _::76>>),
     do: DateTime.from_unix!(milliseconds, :millisecond)
 
@@ -394,6 +394,7 @@ defmodule Ecto.UUID do
 
   Raises `ArgumentError` for non-v7 UUIDs.
   """
+  @spec to_unix(binary()) :: integer()
   def to_unix(<<unix::48, @version_7::4, _::76>>), do: unix
 
   def to_unix(<<_::48, version::4, _::76>>),
