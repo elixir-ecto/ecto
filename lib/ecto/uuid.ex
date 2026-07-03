@@ -235,9 +235,6 @@ defmodule Ecto.UUID do
    * `:precision` - The timestamp precision for version 7 UUIDs. Supported
      values are `:millisecond` and `:monotonic`. Defaults to `:millisecond`.
 
-   * `:timestamp` - A specific unix timestamp to generate the UUID with.
-     Only works for `precision: :millisecond`.
-
   > #### Monotonic precision {: .info}
   >
   > When using `:monotonic`, sub-millisecond precision is encoded in the
@@ -296,12 +293,11 @@ defmodule Ecto.UUID do
 
   defp bingenerate_v7(opts) do
     {precision, rest} = Keyword.pop(opts, :precision, :millisecond)
-    {timestamp, rest} = Keyword.pop(rest, :timestamp)
     if rest != [], do: raise(ArgumentError, "unsupported options for v7: #{inspect(rest)}")
 
     case precision do
       :millisecond ->
-        timestamp = timestamp || System.system_time(:millisecond)
+        timestamp = System.system_time(:millisecond)
         <<rand_a::12, _::6, rand_b::62>> = :crypto.strong_rand_bytes(10)
         <<timestamp::48, @version_7::4, rand_a::12, @variant::2, rand_b::62>>
 
@@ -380,31 +376,49 @@ defmodule Ecto.UUID do
   defp e(15), do: ?f
 
   @doc """
-  Returns the timestamp from the UUID. Only works for UUID v7.
+  Tries to fetch the `DateTime` from the UUID. Only works for UUID v7, not v4.
 
-  Raises `Ecto.ArgumentError` when a UUID is given that's not v7.
+  ## Examples
+
+      iex> match?({:ok, %DateTime{}}, Ecto.UUID.to_datetime(Ecto.UUID.generate(version: 7)))
+      true
+
+      iex> Ecto.UUID.to_datetime(Ecto.UUID.generate())
+      {:error, {:unsupported_uuid_version, 4}}
+
+      iex> Ecto.UUID.to_datetime("icecream vendor")
+      {:error, :invalid_uuid}
   """
-  def timestamp(<<milliseconds::48, @version_7::4, _::76>>), do: milliseconds
+  @spec to_datetime(binary()) :: {:ok, DateTime.t()} | {:error, atom()}
+  def to_datetime(<<milliseconds::48, @version_7::4, _::76>>),
+    do: DateTime.from_unix(milliseconds, :millisecond)
 
-  def timestamp(<<_::48, version::4, _::76>>),
-    do: raise(ArgumentError, "timestamp only supports v7 UUIDs, got v#{version}")
+  def to_datetime(<<_::48, version::4, _::76>>),
+    do: {:error, {:unsupported_uuid_version, version}}
 
-  def timestamp(<<_::288>> = uuid), do: uuid |> dump!() |> timestamp()
+  def to_datetime(uuid) do
+    case dump(uuid) do
+      {:ok, t} -> to_datetime(t)
+      :error -> {:error, :invalid_uuid}
+    end
+  end
 
   @doc """
-  Tries to fetch the `DateTime` from the UUID. Only works for UUID v7.
-
-  Raises `Ecto.ArgumentError` when a UUID is given that's not v7.
+  Same as `to_datetime/1` but raises if no valid datetime could be extracted.
   """
-  def datetime(uuid) do
-    uuid
-    |> timestamp()
-    |> DateTime.from_unix!(:millisecond)
-  end
+  @spec to_datetime!(binary()) :: DateTime.t()
+  def to_datetime!(<<milliseconds::48, @version_7::4, _::76>>),
+    do: DateTime.from_unix!(milliseconds, :millisecond)
+
+  def to_datetime!(<<_::48, version::4, _::76>>),
+    do: raise(ArgumentError, "to_datetime! does not support UUID v#{version}")
+
+  def to_datetime!(uuid), do: uuid |> dump!() |> to_datetime!()
 
   @doc """
   Returns the version number for the UUID.
   """
+  @spec version(binary()) :: 1..8
   def version(<<_::48, version::4, _::76>>), do: version
   def version(<<_::288>> = uuid), do: uuid |> dump!() |> version()
 end
