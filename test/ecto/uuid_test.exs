@@ -135,4 +135,29 @@ defmodule Ecto.UUIDTest do
       Ecto.UUID.generate(version: 7, precision: :monotonic, foo: :bar)
     end
   end
+
+  test "timestamp from uuid v7" do
+    now = DateTime.utc_now() |> DateTime.truncate(:millisecond)
+    unix = DateTime.to_unix(now, :millisecond)
+    uuid = Ecto.UUID.generate(version: 7, timestamp: unix)
+
+    assert Ecto.UUID.timestamp(uuid) == unix
+    assert Ecto.UUID.datetime(uuid) == now
+  end
+
+  test "timestamp with non-v7 uuid raises an ArgumentError" do
+    assert_raise ArgumentError, "timestamp only supports v7 UUIDs, got v4", fn ->
+      Ecto.UUID.generate()
+      |> Ecto.UUID.timestamp()
+    end
+  end
+
+  test "extract version" do
+    assert 4 = Ecto.UUID.version(Ecto.UUID.generate())
+    assert 7 = Ecto.UUID.version(Ecto.UUID.generate(version: 7))
+
+    # It generalizes to other versions
+    assert 1 = Ecto.UUID.version("1df7a830-76ee-11f1-ab07-0242ac120002")
+    assert 8 = Ecto.UUID.version("10b0e08c-acaf-81c1-be47-8e84b7ea32ce")
+  end
 end

@@ -235,6 +235,9 @@ defmodule Ecto.UUID do
    * `:precision` - The timestamp precision for version 7 UUIDs. Supported
      values are `:millisecond` and `:monotonic`. Defaults to `:millisecond`.
 
+   * `:timestamp` - A specific unix timestamp to generate the UUID with.
+     Only works for `precision: :millisecond`.
+
   > #### Monotonic precision {: .info}
   >
   > When using `:monotonic`, sub-millisecond precision is encoded in the
@@ -293,11 +296,12 @@ defmodule Ecto.UUID do
 
   defp bingenerate_v7(opts) do
     {precision, rest} = Keyword.pop(opts, :precision, :millisecond)
+    {timestamp, rest} = Keyword.pop(rest, :timestamp)
     if rest != [], do: raise(ArgumentError, "unsupported options for v7: #{inspect(rest)}")
 
     case precision do
       :millisecond ->
-        timestamp = System.system_time(:millisecond)
+        timestamp = timestamp || System.system_time(:millisecond)
         <<rand_a::12, _::6, rand_b::62>> = :crypto.strong_rand_bytes(10)
         <<timestamp::48, @version_7::4, rand_a::12, @variant::2, rand_b::62>>
 
@@ -374,4 +378,33 @@ defmodule Ecto.UUID do
   defp e(13), do: ?d
   defp e(14), do: ?e
   defp e(15), do: ?f
+
+  @doc """
+  Returns the timestamp from the UUID. Only works for UUID v7.
+
+  Raises `Ecto.ArgumentError` when a UUID is given that's not v7.
+  """
+  def timestamp(<<milliseconds::48, @version_7::4, _::76>>), do: milliseconds
+
+  def timestamp(<<_::48, version::4, _::76>>),
+    do: raise(ArgumentError, "timestamp only supports v7 UUIDs, got v#{version}")
+
+  def timestamp(<<_::288>> = uuid), do: uuid |> dump!() |> timestamp()
+
+  @doc """
+  Tries to fetch the `DateTime` from the UUID. Only works for UUID v7.
+
+  Raises `Ecto.ArgumentError` when a UUID is given that's not v7.
+  """
+  def datetime(uuid) do
+    uuid
+    |> timestamp()
+    |> DateTime.from_unix!(:millisecond)
+  end
+
+  @doc """
+  Returns the version number for the UUID.
+  """
+  def version(<<_::48, version::4, _::76>>), do: version
+  def version(<<_::288>> = uuid), do: uuid |> dump!() |> version()
 end
