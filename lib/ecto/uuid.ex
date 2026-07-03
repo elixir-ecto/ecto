@@ -376,44 +376,30 @@ defmodule Ecto.UUID do
   defp e(15), do: ?f
 
   @doc """
-  Tries to fetch the `DateTime` from the UUID. Only works for UUID v7, not v4.
+  Converts the timestamp in the UUID to a datetime. Only works for UUID v7.
 
-  ## Examples
-
-      iex> match?({:ok, %DateTime{}}, Ecto.UUID.to_datetime(Ecto.UUID.generate(version: 7)))
-      true
-
-      iex> Ecto.UUID.to_datetime(Ecto.UUID.generate())
-      {:error, {:unsupported_uuid_version, 4}}
-
-      iex> Ecto.UUID.to_datetime("icecream vendor")
-      {:error, :invalid_uuid}
+  Raises `ArgumentError` for non-v7 UUIDs.
   """
   @spec to_datetime(binary()) :: {:ok, DateTime.t()} | {:error, atom()}
   def to_datetime(<<milliseconds::48, @version_7::4, _::76>>),
-    do: DateTime.from_unix(milliseconds, :millisecond)
-
-  def to_datetime(<<_::48, version::4, _::76>>),
-    do: {:error, {:unsupported_uuid_version, version}}
-
-  def to_datetime(uuid) do
-    case dump(uuid) do
-      {:ok, t} -> to_datetime(t)
-      :error -> {:error, :invalid_uuid}
-    end
-  end
-
-  @doc """
-  Same as `to_datetime/1` but raises if no valid datetime could be extracted.
-  """
-  @spec to_datetime!(binary()) :: DateTime.t()
-  def to_datetime!(<<milliseconds::48, @version_7::4, _::76>>),
     do: DateTime.from_unix!(milliseconds, :millisecond)
 
-  def to_datetime!(<<_::48, version::4, _::76>>),
-    do: raise(ArgumentError, "to_datetime! does not support UUID v#{version}")
+  def to_datetime(<<_::48, version::4, _::76>>),
+    do: raise(ArgumentError, "to_datetime doesn't support UUID v#{version}")
 
-  def to_datetime!(uuid), do: uuid |> dump!() |> to_datetime!()
+  def to_datetime(uuid), do: uuid |> dump!() |> to_datetime()
+
+  @doc """
+  Extracts the unix timestamp from the UUID. Only works for v7 UUIDs.
+
+  Raises `ArgumentError` for non-v7 UUIDs.
+  """
+  def to_unix(<<unix::48, @version_7::4, _::76>>), do: unix
+
+  def to_unix(<<_::48, version::4, _::76>>),
+    do: raise(ArgumentError, "to_unix doesn't support UUID v#{version}")
+
+  def to_unix(uuid), do: uuid |> dump!() |> to_unix()
 
   @doc """
   Returns the version number for the UUID.

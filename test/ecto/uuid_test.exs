@@ -138,23 +138,31 @@ defmodule Ecto.UUIDTest do
 
   test "to_datetime from uuid v7" do
     {uuid, now} = uuidv7_now()
-    assert {:ok, now} == Ecto.UUID.to_datetime(uuid)
+    assert now == Ecto.UUID.to_datetime(uuid)
 
     uuid = Ecto.UUID.generate(version: 7, precision: :monotonic)
-    assert {:ok, %DateTime{}} = Ecto.UUID.to_datetime(uuid)
+    assert %DateTime{} = Ecto.UUID.to_datetime(uuid)
   end
 
-  test "to_datetime! from uuid v7" do
+  test "to_datetime raises ArgumentError on UUID v4" do
+    assert_raise ArgumentError, "to_datetime doesn't support UUID v4", fn ->
+      Ecto.UUID.to_datetime(Ecto.UUID.generate())
+    end
+  end
+
+  test "to_unix" do
     {uuid, now} = uuidv7_now()
-    assert now == Ecto.UUID.to_datetime!(uuid)
+    assert DateTime.to_unix(now, :millisecond) == Ecto.UUID.to_unix(uuid)
 
-    uuid = Ecto.UUID.generate(version: 7, precision: :monotonic)
-    assert %DateTime{} = Ecto.UUID.to_datetime!(uuid)
+    assert num = Ecto.UUID.to_unix(Ecto.UUID.generate(version: 7))
+    assert {:ok, %DateTime{}} = DateTime.from_unix(num, :millisecond)
+    assert num = Ecto.UUID.to_unix(Ecto.UUID.generate(version: 7, precision: :monotonic))
+    assert {:ok, %DateTime{}} = DateTime.from_unix(num, :millisecond)
   end
 
-  test "to_datetime! raises on uuid v4" do
-    assert_raise ArgumentError, "to_datetime! does not support UUID v4", fn ->
-      Ecto.UUID.to_datetime!(Ecto.UUID.generate())
+  test "to_unix raises ArgumentError on UUID v4" do
+    assert_raise ArgumentError, "to_unix doesn't support UUID v4", fn ->
+      Ecto.UUID.to_unix(Ecto.UUID.generate())
     end
   end
 
