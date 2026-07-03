@@ -1522,6 +1522,11 @@ defmodule Ecto.Query.Planner do
     {{:fragment, meta, fragments}, acc}
   end
 
+  defp prewalk_source({{:fragment, meta, fragments}, schema}, kind, query, expr, acc, adapter) do
+    {fragments, acc} = prewalk(fragments, kind, query, expr, acc, adapter)
+    {{{:fragment, meta, fragments}, schema}, acc}
+  end
+
   defp prewalk_source({:values, meta, [types, num_rows]}, _kind, _query, _expr, acc, _adapter) do
     length = num_rows * length(types)
     # Adapters will use the schema types to cast the values
