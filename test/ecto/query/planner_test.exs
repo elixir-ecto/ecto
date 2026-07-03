@@ -990,7 +990,7 @@ defmodule Ecto.Query.PlannerTest do
 
   test "plan: tuple source with fragment numbers later placeholders after the source" do
     good_query =
-      from(f in fragment("widgets_since(?)", ^"as_of"),
+      from(f in fragment("some_sql_function(?)", ^"value"),
         where: f.visits in ^[1, 2],
         select: f
       )
@@ -999,7 +999,7 @@ defmodule Ecto.Query.PlannerTest do
     assert Macro.to_string(hd(good_query.wheres).expr) == "&0.visits() in ^(1, 2)"
 
     bad_query =
-      from(f in {fragment("widgets_since(?)", ^"as_of"), Post},
+      from(f in {fragment("some_sql_function(?)", ^"value"), Post},
         where: f.visits in ^[1, 2],
         select: f
       )
