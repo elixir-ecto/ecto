@@ -285,7 +285,7 @@ defmodule Ecto.Repo.Schema do
       %{^key => {idx, ^type, _, _}} ->
         {{:placeholder, idx}, placeholder_dump, counter}
 
-      %{^key => {_, type, _}} ->
+      %{^key => {_, type, _, _}} ->
         raise ArgumentError,
               "a placeholder key can only be used with columns of the same type. " <>
                 "The key #{inspect(key)} has already been dumped as a #{inspect(type)}"
