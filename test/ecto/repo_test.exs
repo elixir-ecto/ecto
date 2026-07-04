@@ -960,9 +960,9 @@ defmodule Ecto.RepoTest do
     test "Repo.insert_all raises when placeholder key is used for different types" do
       placeholders = %{uuid_key: Ecto.UUID.generate()}
       ph_key = {:placeholder, :uuid_key}
-      entries = [%{bid: ph_key, string: ph_key}]
+      entries = [%{bid: ph_key, str: ph_key}]
 
-      assert_raise ArgumentError, fn ->
+      assert_raise ArgumentError, ~r/a placeholder key can only be used with columns of the same type/, fn ->
         TestRepo.insert_all(MySchemaWithBinaryId, entries, placeholders: placeholders)
       end
     end
