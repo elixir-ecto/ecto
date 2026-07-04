@@ -395,12 +395,16 @@ defmodule Ecto.UUID do
   Raises `ArgumentError` for non-v7 UUIDs.
   """
   @spec to_unix(binary()) :: integer()
-  def to_unix(<<unix::48, @version_7::4, _::76>>), do: unix
+  def to_unix(uuid, precision \\ :second)
 
-  def to_unix(<<_::48, version::4, _::76>>),
+  def to_unix(<<unix::48, @version_7::4, _::76>>, precision),
+    do: System.convert_time_unit(unix, :millisecond, precision)
+
+  def to_unix(<<_::48, version::4, _::76>>, _precision),
     do: raise(ArgumentError, "to_unix doesn't support UUID v#{version}")
 
-  def to_unix(uuid), do: uuid |> dump!() |> to_unix()
+  def to_unix(uuid, precision),
+    do: uuid |> dump!() |> to_unix(precision)
 
   @doc """
   Returns the version number for the UUID.

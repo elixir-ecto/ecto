@@ -152,12 +152,20 @@ defmodule Ecto.UUIDTest do
 
   test "to_unix" do
     {uuid, now} = uuidv7_now()
-    assert DateTime.to_unix(now, :millisecond) == Ecto.UUID.to_unix(uuid)
+    assert DateTime.to_unix(now, :millisecond) == Ecto.UUID.to_unix(uuid, :millisecond)
 
-    assert num = Ecto.UUID.to_unix(Ecto.UUID.generate(version: 7))
+    assert num = Ecto.UUID.to_unix(Ecto.UUID.generate(version: 7), :millisecond)
     assert {:ok, %DateTime{}} = DateTime.from_unix(num, :millisecond)
-    assert num = Ecto.UUID.to_unix(Ecto.UUID.generate(version: 7, precision: :monotonic))
+
+    uuid = Ecto.UUID.generate(version: 7, precision: :monotonic)
+    assert num = Ecto.UUID.to_unix(uuid, :millisecond)
+
     assert {:ok, %DateTime{}} = DateTime.from_unix(num, :millisecond)
+  end
+
+  test "to_unix with precision argument" do
+    {uuid, now} = uuidv7_now()
+    assert DateTime.to_unix(now, :second) == Ecto.UUID.to_unix(uuid, :second)
   end
 
   test "to_unix raises ArgumentError on UUID v4" do
