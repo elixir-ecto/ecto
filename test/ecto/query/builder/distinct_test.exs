@@ -6,6 +6,10 @@ defmodule Ecto.Query.Builder.DistinctTest do
 
   import Ecto.Query
 
+  defp subquery_sources(%{subqueries: subqueries}) do
+    Enum.map(subqueries, fn subquery -> elem(subquery.query.from.source, 0) end)
+  end
+
   describe "escape" do
     test "handles expressions and params" do
       assert {true, {[], %{}}} ==
@@ -79,6 +83,20 @@ defmodule Ecto.Query.Builder.DistinctTest do
       assert distinct.expr == [asc: {:exists, [], [subquery: 0]}]
       assert [_] = distinct.subqueries
 
+      distinct = [
+        asc: dynamic([p], exists(from f in "foos", where: f.id == parent_as(:p).id)),
+        desc: dynamic([p], exists(from b in "bars", where: b.id == parent_as(:p).id))
+      ]
+
+      %{distinct: distinct} = from p in "posts", as: :p, distinct: ^distinct
+
+      assert distinct.expr == [
+               asc: {:exists, [], [subquery: 0]},
+               desc: {:exists, [], [subquery: 1]}
+             ]
+
+      assert subquery_sources(distinct) == ["foos", "bars"]
+
       %{distinct: distinct} =
         from p in "posts",
           as: :p,
@@ -88,6 +106,21 @@ defmodule Ecto.Query.Builder.DistinctTest do
 
       assert distinct.expr == [asc: {:exists, [], [subquery: 0]}]
       assert [_] = distinct.subqueries
+
+      %{distinct: distinct} =
+        from p in "posts",
+          as: :p,
+          distinct: [
+            asc: exists(from f in "foos", where: f.id == parent_as(:p).id),
+            desc: exists(from b in "bars", where: b.id == parent_as(:p).id)
+          ]
+
+      assert distinct.expr == [
+               asc: {:exists, [], [subquery: 0]},
+               desc: {:exists, [], [subquery: 1]}
+             ]
+
+      assert subquery_sources(distinct) == ["foos", "bars"]
     end
 
     test "raises on non-atoms" do

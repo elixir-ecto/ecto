@@ -6,6 +6,10 @@ defmodule Ecto.Query.Builder.GroupByTest do
 
   import Ecto.Query
 
+  defp subquery_sources(%{subqueries: subqueries}) do
+    Enum.map(subqueries, fn subquery -> elem(subquery.query.from.source, 0) end)
+  end
+
   describe "escape" do
     test "handles expressions and params" do
       assert {Macro.escape(quote(do: [&0.y()])), {[], %{}}} ==
@@ -62,6 +66,15 @@ defmodule Ecto.Query.Builder.GroupByTest do
       assert group_by.expr == [{:exists, [], [{:subquery, 0}]}]
       assert [_] = group_by.subqueries
 
+      key = [
+        dynamic([q], exists(from f in "foos", where: f.title == parent_as(:q).title)),
+        dynamic([q], exists(from b in "bars", where: b.title == parent_as(:q).title))
+      ]
+
+      assert [group_by] = from(q in "q", as: :q, group_by: ^key).group_bys
+      assert group_by.expr == [{:exists, [], [{:subquery, 0}]}, {:exists, [], [{:subquery, 1}]}]
+      assert subquery_sources(group_by) == ["foos", "bars"]
+
       assert [group_by] =
                group_by(
                  "q",
@@ -71,6 +84,19 @@ defmodule Ecto.Query.Builder.GroupByTest do
 
       assert group_by.expr == [{:exists, [], [{:subquery, 0}]}]
       assert [_] = group_by.subqueries
+
+      assert [group_by] =
+               from(
+                 q in "q",
+                 as: :q,
+                 group_by: [
+                   exists(from f in "foos", where: f.title == parent_as(:q).title),
+                   exists(from b in "bars", where: b.title == parent_as(:q).title)
+                 ]
+               ).group_bys
+
+      assert group_by.expr == [{:exists, [], [{:subquery, 0}]}, {:exists, [], [{:subquery, 1}]}]
+      assert subquery_sources(group_by) == ["foos", "bars"]
     end
 
     test "raises when no a field or a list of fields" do

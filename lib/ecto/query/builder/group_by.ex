@@ -49,8 +49,14 @@ defmodule Ecto.Query.Builder.GroupBy do
   Shared between group_by and partition_by.
   """
   def group_or_partition_by!(kind, query, exprs, params) do
+    {expr, params, subqueries} = group_or_partition_by!(kind, query, exprs, params, [])
+    {expr, params, Enum.reverse(subqueries)}
+  end
+
+  @doc false
+  def group_or_partition_by!(kind, query, exprs, params, subqueries) do
     {expr, {params, _, subqueries}} =
-      Enum.map_reduce(List.wrap(exprs), {params, length(params), []}, fn
+      Enum.map_reduce(List.wrap(exprs), {params, length(params), subqueries}, fn
         field, params_count when is_atom(field) ->
           {to_field(field), params_count}
 
@@ -99,7 +105,7 @@ defmodule Ecto.Query.Builder.GroupBy do
     group_by = quote do: %Ecto.Query.ByExpr{
                            expr: unquote(expr),
                            params: unquote(params),
-                           subqueries: unquote(acc.subqueries),
+                           subqueries: unquote(Enum.reverse(acc.subqueries)),
                            file: unquote(env.file),
                            line: unquote(env.line)}
     Builder.apply_query(query, __MODULE__, [group_by], env)

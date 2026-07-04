@@ -6,6 +6,10 @@ defmodule Ecto.Query.Builder.WindowsTest do
 
   import Ecto.Query
 
+  defp subquery_sources(%{subqueries: subqueries}) do
+    Enum.map(subqueries, fn subquery -> elem(subquery.query.from.source, 0) end)
+  end
+
   defmacrop rows_between_preceding(count) do
     quote do
       fragment(unquote("ROWS BETWEEN #{count} PRECEDING AND CURRENT ROW"))
@@ -132,6 +136,20 @@ defmodule Ecto.Query.Builder.WindowsTest do
       assert query.windows[:w].expr[:partition_by] == [{:exists, [], [subquery: 0]}]
       assert [_] = query.windows[:w].subqueries
 
+      partition_by = [
+        dynamic([p], exists(from f in "foos", where: f.title == parent_as(:q).title)),
+        dynamic([p], exists(from b in "bars", where: b.title == parent_as(:q).title))
+      ]
+
+      query = "q" |> windows([p], w: [partition_by: ^partition_by])
+
+      assert query.windows[:w].expr[:partition_by] == [
+               {:exists, [], [subquery: 0]},
+               {:exists, [], [subquery: 1]}
+             ]
+
+      assert subquery_sources(query.windows[:w]) == ["foos", "bars"]
+
       query =
         "q"
         |> windows([p],
@@ -142,6 +160,48 @@ defmodule Ecto.Query.Builder.WindowsTest do
 
       assert query.windows[:w].expr[:partition_by] == [{:exists, [], [subquery: 0]}]
       assert [_] = query.windows[:w].subqueries
+
+      query =
+        "q"
+        |> windows([p],
+          w: [
+            partition_by: [
+              exists(from f in "foos", where: f.title == parent_as(:q).title),
+              exists(from b in "bars", where: b.title == parent_as(:q).title)
+            ]
+          ]
+        )
+
+      assert query.windows[:w].expr[:partition_by] == [
+               {:exists, [], [subquery: 0]},
+               {:exists, [], [subquery: 1]}
+             ]
+
+      assert subquery_sources(query.windows[:w]) == ["foos", "bars"]
+
+      order_by = [
+        asc: dynamic([p], exists(from baz in "bazs", where: baz.title == parent_as(:q).title))
+      ]
+
+      query =
+        "q"
+        |> windows([p],
+          w: [
+            partition_by: [
+              exists(from f in "foos", where: f.title == parent_as(:q).title),
+              exists(from b in "bars", where: b.title == parent_as(:q).title)
+            ],
+            order_by: ^order_by
+          ]
+        )
+
+      assert query.windows[:w].expr[:partition_by] == [
+               {:exists, [], [subquery: 0]},
+               {:exists, [], [subquery: 1]}
+             ]
+
+      assert query.windows[:w].expr[:order_by] == [asc: {:exists, [], [subquery: 2]}]
+      assert subquery_sources(query.windows[:w]) == ["foos", "bars", "bazs"]
     end
 
     test "raises on invalid partition by" do
