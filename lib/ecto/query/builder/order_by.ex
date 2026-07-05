@@ -159,8 +159,14 @@ defmodule Ecto.Query.Builder.OrderBy do
   Shared between order_by and distinct.
   """
   def order_by_or_distinct!(kind, query, exprs, params) do
+    {expr, params, subqueries} = order_by_or_distinct!(kind, query, exprs, params, [])
+    {expr, params, Enum.reverse(subqueries)}
+  end
+
+  @doc false
+  def order_by_or_distinct!(kind, query, exprs, params, subqueries) do
     {expr, {params, _, subqueries}} =
-      Enum.map_reduce(List.wrap(exprs), {params, length(params), []}, fn
+      Enum.map_reduce(List.wrap(exprs), {params, length(params), subqueries}, fn
         {dir, expr}, params_count when dir in @directions ->
           {expr, params} = dynamic_or_field!(kind, expr, query, params_count)
           {{dir, expr}, params}
@@ -248,7 +254,7 @@ defmodule Ecto.Query.Builder.OrderBy do
       quote do: %Ecto.Query.ByExpr{
               expr: unquote(expr),
               params: unquote(params),
-              subqueries: unquote(acc.subqueries),
+              subqueries: unquote(Enum.reverse(acc.subqueries)),
               file: unquote(env.file),
               line: unquote(env.line)
             }

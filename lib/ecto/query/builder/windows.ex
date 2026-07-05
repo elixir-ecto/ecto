@@ -148,7 +148,7 @@ defmodule Ecto.Query.Builder.Windows do
        %Ecto.Query.ByExpr{
          expr: unquote(compile_acc),
          params: unquote(params),
-         subqueries: unquote(acc.subqueries),
+         subqueries: unquote(Enum.reverse(acc.subqueries)),
          file: unquote(env.file),
          line: unquote(env.line)
        }
@@ -166,7 +166,7 @@ defmodule Ecto.Query.Builder.Windows do
     windows =
       Enum.map(runtime, fn {name, compile_acc, runtime_acc, params, escape_acc} ->
         {{acc, subqueries}, params} = do_runtime_window!(runtime_acc, query, {compile_acc, escape_acc.subqueries}, params)
-        expr = %Ecto.Query.ByExpr{expr: Enum.reverse(acc), params: Enum.reverse(params), file: file, line: line, subqueries: subqueries}
+        expr = %Ecto.Query.ByExpr{expr: Enum.reverse(acc), params: Enum.reverse(params), file: file, line: line, subqueries: Enum.reverse(subqueries)}
         {name, expr}
       end)
 
@@ -174,15 +174,15 @@ defmodule Ecto.Query.Builder.Windows do
   end
 
   defp do_runtime_window!([{:order_by, order_by} | kw], query, {acc, subqueries_acc}, params) do
-    {order_by, params, subqueries} = OrderBy.order_by_or_distinct!(:order_by, query, order_by, params)
+    {order_by, params, subqueries} = OrderBy.order_by_or_distinct!(:order_by, query, order_by, params, subqueries_acc)
 
-    do_runtime_window!(kw, query, {[{:order_by, order_by} | acc], subqueries_acc ++ subqueries}, params)
+    do_runtime_window!(kw, query, {[{:order_by, order_by} | acc], subqueries}, params)
   end
 
   defp do_runtime_window!([{:partition_by, partition_by} | kw], query, {acc, subqueries_acc}, params) do
-    {partition_by, params, subqueries} = GroupBy.group_or_partition_by!(:partition_by, query, partition_by, params)
+    {partition_by, params, subqueries} = GroupBy.group_or_partition_by!(:partition_by, query, partition_by, params, subqueries_acc)
 
-    do_runtime_window!(kw, query, {[{:partition_by, partition_by} | acc], subqueries_acc ++ subqueries}, params)
+    do_runtime_window!(kw, query, {[{:partition_by, partition_by} | acc], subqueries}, params)
   end
 
   defp do_runtime_window!([{:frame, frame} | kw], query, {acc, subqueries_acc}, params) do

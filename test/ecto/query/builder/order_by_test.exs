@@ -6,6 +6,10 @@ defmodule Ecto.Query.Builder.OrderByTest do
 
   import Ecto.Query
 
+  defp subquery_sources(%{subqueries: subqueries}) do
+    Enum.map(subqueries, fn subquery -> elem(subquery.query.from.source, 0) end)
+  end
+
   describe "escape" do
     defmacro my_custom_field(p) do
       quote(do: fragment("lower(?)", unquote(p).title))
@@ -233,6 +237,20 @@ defmodule Ecto.Query.Builder.OrderByTest do
       assert order_by.expr == [asc: {:exists, [], [subquery: 0]}]
       assert [_] = order_by.subqueries
 
+      order_by = [
+        asc: dynamic([p], exists(from f in "foos", where: f.id == parent_as(:p).id)),
+        desc: dynamic([p], exists(from b in "bars", where: b.id == parent_as(:p).id))
+      ]
+
+      %{order_bys: [order_by]} = from p in "posts", as: :p, order_by: ^order_by
+
+      assert order_by.expr == [
+               asc: {:exists, [], [subquery: 0]},
+               desc: {:exists, [], [subquery: 1]}
+             ]
+
+      assert subquery_sources(order_by) == ["foos", "bars"]
+
       %{order_bys: [order_by]} =
         from p in "posts",
           as: :p,
@@ -242,6 +260,21 @@ defmodule Ecto.Query.Builder.OrderByTest do
 
       assert order_by.expr == [asc: {:exists, [], [subquery: 0]}]
       assert [_] = order_by.subqueries
+
+      %{order_bys: [order_by]} =
+        from p in "posts",
+          as: :p,
+          order_by: [
+            asc: exists(from f in "foos", where: f.id == parent_as(:p).id),
+            desc: exists(from b in "bars", where: b.id == parent_as(:p).id)
+          ]
+
+      assert order_by.expr == [
+               asc: {:exists, [], [subquery: 0]},
+               desc: {:exists, [], [subquery: 1]}
+             ]
+
+      assert subquery_sources(order_by) == ["foos", "bars"]
     end
 
     test "supports interpolated atomnames in selected_as/1" do
