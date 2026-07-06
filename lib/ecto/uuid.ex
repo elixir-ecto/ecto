@@ -394,7 +394,7 @@ defmodule Ecto.UUID do
 
   Raises `ArgumentError` for non-v7 UUIDs.
   """
-  @spec to_unix(binary()) :: integer()
+  @spec to_unix(binary(), System.time_unit()) :: integer()
   def to_unix(uuid, precision \\ :second)
 
   def to_unix(<<unix::48, @version_7::4, _::76>>, precision),
