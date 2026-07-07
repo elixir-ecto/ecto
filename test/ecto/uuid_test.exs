@@ -135,4 +135,59 @@ defmodule Ecto.UUIDTest do
       Ecto.UUID.generate(version: 7, precision: :monotonic, foo: :bar)
     end
   end
+
+  test "to_datetime from uuid v7" do
+    {uuid, now} = uuidv7_now()
+    assert now == Ecto.UUID.to_datetime(uuid)
+
+    uuid = Ecto.UUID.generate(version: 7, precision: :monotonic)
+    assert %DateTime{} = Ecto.UUID.to_datetime(uuid)
+  end
+
+  test "to_datetime raises ArgumentError on UUID v4" do
+    assert_raise ArgumentError, "to_datetime doesn't support UUID v4", fn ->
+      Ecto.UUID.to_datetime(Ecto.UUID.generate())
+    end
+  end
+
+  test "to_unix" do
+    {uuid, now} = uuidv7_now()
+    assert DateTime.to_unix(now, :millisecond) == Ecto.UUID.to_unix(uuid, :millisecond)
+
+    assert num = Ecto.UUID.to_unix(Ecto.UUID.generate(version: 7), :millisecond)
+    assert {:ok, %DateTime{}} = DateTime.from_unix(num, :millisecond)
+
+    uuid = Ecto.UUID.generate(version: 7, precision: :monotonic)
+    assert num = Ecto.UUID.to_unix(uuid, :millisecond)
+
+    assert {:ok, %DateTime{}} = DateTime.from_unix(num, :millisecond)
+  end
+
+  test "to_unix with precision argument" do
+    {uuid, now} = uuidv7_now()
+    assert DateTime.to_unix(now, :second) == Ecto.UUID.to_unix(uuid, :second)
+  end
+
+  test "to_unix raises ArgumentError on UUID v4" do
+    assert_raise ArgumentError, "to_unix doesn't support UUID v4", fn ->
+      Ecto.UUID.to_unix(Ecto.UUID.generate())
+    end
+  end
+
+  test "extract version" do
+    assert 4 = Ecto.UUID.version(Ecto.UUID.generate())
+    assert 7 = Ecto.UUID.version(Ecto.UUID.generate(version: 7))
+
+    # It generalizes to other versions
+    assert 1 = Ecto.UUID.version("1df7a830-76ee-11f1-ab07-0242ac120002")
+    assert 8 = Ecto.UUID.version("10b0e08c-acaf-81c1-be47-8e84b7ea32ce")
+  end
+
+  defp uuidv7_now() do
+    now = DateTime.utc_now() |> DateTime.truncate(:millisecond)
+    timestamp = DateTime.to_unix(now, :millisecond)
+    <<rand_a::12, _::6, rand_b::62>> = :crypto.strong_rand_bytes(10)
+    uuid = <<timestamp::48, 7::4, rand_a::12, 2::2, rand_b::62>>
+    {uuid, now}
+  end
 end

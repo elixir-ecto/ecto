@@ -374,4 +374,42 @@ defmodule Ecto.UUID do
   defp e(13), do: ?d
   defp e(14), do: ?e
   defp e(15), do: ?f
+
+  @doc """
+  Converts the timestamp in the UUID to a datetime. Only works for UUID v7.
+
+  Raises `ArgumentError` for non-v7 UUIDs.
+  """
+  @spec to_datetime(binary()) :: DateTime.t()
+  def to_datetime(<<milliseconds::48, @version_7::4, _::76>>),
+    do: DateTime.from_unix!(milliseconds, :millisecond)
+
+  def to_datetime(<<_::48, version::4, _::76>>),
+    do: raise(ArgumentError, "to_datetime doesn't support UUID v#{version}")
+
+  def to_datetime(uuid), do: uuid |> dump!() |> to_datetime()
+
+  @doc """
+  Extracts the unix timestamp from the UUID. Only works for v7 UUIDs.
+
+  Raises `ArgumentError` for non-v7 UUIDs.
+  """
+  @spec to_unix(binary(), System.time_unit()) :: integer()
+  def to_unix(uuid, precision \\ :second)
+
+  def to_unix(<<unix::48, @version_7::4, _::76>>, precision),
+    do: System.convert_time_unit(unix, :millisecond, precision)
+
+  def to_unix(<<_::48, version::4, _::76>>, _precision),
+    do: raise(ArgumentError, "to_unix doesn't support UUID v#{version}")
+
+  def to_unix(uuid, precision),
+    do: uuid |> dump!() |> to_unix(precision)
+
+  @doc """
+  Returns the version number for the UUID.
+  """
+  @spec version(binary()) :: 1..8
+  def version(<<_::48, version::4, _::76>>), do: version
+  def version(<<_::288>> = uuid), do: uuid |> dump!() |> version()
 end
