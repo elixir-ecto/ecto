@@ -19,7 +19,7 @@ defmodule Ecto.Query.BuilderTest do
             ), []} ==
              escape(
                quote do
-                 x.y()
+                 x.y
                end,
                [x: 0],
                __ENV__
@@ -34,7 +34,7 @@ defmodule Ecto.Query.BuilderTest do
             ), []} ==
              escape(
                quote do
-                 x.y() > x.z()
+                 x.y > x.z
                end,
                [x: 0],
                __ENV__
@@ -47,7 +47,7 @@ defmodule Ecto.Query.BuilderTest do
             ), []} ==
              escape(
                quote do
-                 x.y() > y.z()
+                 x.y > y.z
                end,
                [x: 0, y: 1],
                __ENV__
@@ -62,7 +62,7 @@ defmodule Ecto.Query.BuilderTest do
             ), []} ==
              escape(
                quote do
-                 x.y() + y.z()
+                 x.y + y.z
                end,
                [x: 0, y: 1],
                __ENV__
@@ -149,7 +149,7 @@ defmodule Ecto.Query.BuilderTest do
             ), []} ==
              escape(
                quote do
-                 -x.y()
+                 -x.y
                end,
                [x: 0],
                __ENV__
@@ -344,7 +344,7 @@ defmodule Ecto.Query.BuilderTest do
             ), [{0, :any}]} ==
              escape(
                quote do
-                 fragment("date_add(?, ?)", p.created_at(), ^0)
+                 fragment("date_add(?, ?)", p.created_at, ^0)
                end,
                [p: 0],
                __ENV__
@@ -370,7 +370,7 @@ defmodule Ecto.Query.BuilderTest do
             ), []} ==
              escape(
                quote do
-                 fragment("query\\?(?)", p.created_at())
+                 fragment("query\\?(?)", p.created_at)
                end,
                [p: 0],
                __ENV__
@@ -434,13 +434,13 @@ defmodule Ecto.Query.BuilderTest do
 
   test "escape over with window name" do
     assert {Macro.escape(quote(do: over(count(&0.id()), :w))), []} ==
-             escape(quote(do: count(x.id()) |> over(:w)), [x: 0], __ENV__)
+             escape(quote(do: count(x.id) |> over(:w)), [x: 0], __ENV__)
 
     assert {Macro.escape(quote(do: over(nth_value(&0.id(), 1), :w))), []} ==
-             escape(quote(do: nth_value(x.id(), 1) |> over(:w)), [x: 0], __ENV__)
+             escape(quote(do: nth_value(x.id, 1) |> over(:w)), [x: 0], __ENV__)
 
     assert {Macro.escape(quote(do: over(nth_value(&0.id(), 1), :w))), []} ==
-             escape(quote(do: my_first_value(x.id()) |> over(:w)), [x: 0], __ENV__)
+             escape(quote(do: my_first_value(x.id) |> over(:w)), [x: 0], __ENV__)
   end
 
   defmacro my_custom_field(p) do
@@ -460,10 +460,10 @@ defmodule Ecto.Query.BuilderTest do
              escape(quote(do: over(row_number())), [], __ENV__)
 
     assert {Macro.escape(quote(do: over(nth_value(&0.id(), 1), []))), []} ==
-             escape(quote(do: over(my_first_value(x.id()))), [x: 0], __ENV__)
+             escape(quote(do: over(my_first_value(x.id))), [x: 0], __ENV__)
 
     assert {Macro.escape(quote(do: over(nth_value(&0.id(), 1), order_by: [asc: &0.id()]))), []} ==
-             escape(quote(do: nth_value(x.id(), 1) |> over(order_by: x.id())), [x: 0], __ENV__)
+             escape(quote(do: nth_value(x.id, 1) |> over(order_by: x.id)), [x: 0], __ENV__)
 
     assert {Macro.escape(
               quote(
@@ -478,14 +478,14 @@ defmodule Ecto.Query.BuilderTest do
               )
             ), []} ==
              escape(
-               quote(do: nth_value(x.id(), 1) |> over(order_by: my_complex_order(x))),
+               quote(do: nth_value(x.id, 1) |> over(order_by: my_complex_order(x))),
                [x: 0],
                __ENV__
              )
 
     assert {Macro.escape(quote(do: over(nth_value(&0.id(), 1), partition_by: [&0.id()]))), []} ==
              escape(
-               quote(do: nth_value(x.id(), 1) |> over(partition_by: x.id())),
+               quote(do: nth_value(x.id, 1) |> over(partition_by: x.id)),
                [x: 0],
                __ENV__
              )
@@ -493,7 +493,7 @@ defmodule Ecto.Query.BuilderTest do
     assert {Macro.escape(quote(do: over(nth_value(&0.id(), 1), frame: fragment({:raw, "ROWS"})))),
             []} ==
              escape(
-               quote(do: nth_value(x.id(), 1) |> over(frame: fragment("ROWS"))),
+               quote(do: nth_value(x.id, 1) |> over(frame: fragment("ROWS"))),
                [x: 0],
                __ENV__
              )
@@ -502,7 +502,7 @@ defmodule Ecto.Query.BuilderTest do
                  ~r"windows definitions given to over/2 do not allow interpolations at the root",
                  fn ->
                    escape(
-                     quote(do: nth_value(x.id(), 1) |> over(order_by: ^foo)),
+                     quote(do: nth_value(x.id, 1) |> over(order_by: ^foo)),
                      [x: 0],
                      __ENV__
                    )
@@ -512,7 +512,7 @@ defmodule Ecto.Query.BuilderTest do
 
     assert {Macro.escape(quote(do: over(filter(avg(&0.value()), is_nil(&0.flag())), []))), []} ==
              escape(
-               quote(do: avg(x.value()) |> filter(is_nil(x.flag())) |> over([])),
+               quote(do: avg(x.value) |> filter(is_nil(x.flag)) |> over([])),
                [x: 0],
                __ENV__
              )
@@ -528,7 +528,7 @@ defmodule Ecto.Query.BuilderTest do
             ), []} ==
              escape(
                quote do
-                 type(x.y() + y.z(), :decimal)
+                 type(x.y + y.z, :decimal)
                end,
                [x: 0, y: 1],
                __ENV__
@@ -580,7 +580,7 @@ defmodule Ecto.Query.BuilderTest do
             ), []} ==
              escape(
                quote do
-                 type(sum(x.y()), :decimal)
+                 type(sum(x.y), :decimal)
                end,
                [x: 0],
                {__ENV__, %{}}
@@ -608,7 +608,7 @@ defmodule Ecto.Query.BuilderTest do
             ), []} ==
              escape(
                quote do
-                 type(filter(sum(x.y()), x.y() > x.z()), :decimal)
+                 type(filter(sum(x.y), x.y > x.z), :decimal)
                end,
                [x: 0],
                {__ENV__, %{}}
@@ -624,7 +624,7 @@ defmodule Ecto.Query.BuilderTest do
             ), []} ==
              escape(
                quote do
-                 type(over(fragment("array_agg(?)", x.id()), :y), {:array, Ecto.UUID})
+                 type(over(fragment("array_agg(?)", x.id), :y), {:array, Ecto.UUID})
                end,
                [x: 0],
                {__ENV__, %{}}
@@ -661,7 +661,7 @@ defmodule Ecto.Query.BuilderTest do
             ), []} ==
              escape(
                quote do
-                 type(wrapped_sum(x.y()), :integer)
+                 type(wrapped_sum(x.y), :integer)
                end,
                [x: 0],
                __ENV__

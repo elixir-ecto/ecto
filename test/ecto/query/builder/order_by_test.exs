@@ -33,15 +33,15 @@ defmodule Ecto.Query.Builder.OrderByTest do
 
     test "handles expressions and params" do
       assert {Macro.escape(quote(do: [asc: &0.y()])), {[], %{}}} ==
-               escape(:order_by, quote(do: x.y()), {[], %{}}, [x: 0], __ENV__)
+               escape(:order_by, quote(do: x.y), {[], %{}}, [x: 0], __ENV__)
 
       assert {Macro.escape(quote(do: [asc: &0.x(), asc: &1.y()])), {[], %{}}} ==
-               escape(:order_by, quote(do: [x.x(), y.y()]), {[], %{}}, [x: 0, y: 1], __ENV__)
+               escape(:order_by, quote(do: [x.x, y.y]), {[], %{}}, [x: 0, y: 1], __ENV__)
 
       assert {Macro.escape(quote(do: [asc: &0.x(), desc: &1.y()])), {[], %{}}} ==
                escape(
                  :order_by,
-                 quote(do: [asc: x.x(), desc: y.y()]),
+                 quote(do: [asc: x.x, desc: y.y]),
                  {[], %{}},
                  [x: 0, y: 1],
                  __ENV__
@@ -50,7 +50,7 @@ defmodule Ecto.Query.Builder.OrderByTest do
       assert {Macro.escape(quote(do: [asc: &0.x(), desc: &1.y()])), {[], %{}}} ==
                escape(
                  :order_by,
-                 quote(do: [x.x(), desc: y.y()]),
+                 quote(do: [x.x, desc: y.y]),
                  {[], %{}},
                  [x: 0, y: 1],
                  __ENV__

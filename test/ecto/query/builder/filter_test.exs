@@ -13,7 +13,7 @@ defmodule Ecto.Query.Builder.FilterTest do
       assert escape(:where, quote(do: []), 0, [x: 0], __ENV__) ===
                {true, {[], %{subqueries: []}}}
 
-      assert escape(:where, quote(do: {x.x()} == {^"foo"}), 0, [x: 0], __ENV__) ===
+      assert escape(:where, quote(do: {x.x} == {^"foo"}), 0, [x: 0], __ENV__) ===
                {Macro.escape(quote(do: {&0.x()} == {^0})),
                 {[{"foo", {0, :x}}], %{subqueries: []}}}
 

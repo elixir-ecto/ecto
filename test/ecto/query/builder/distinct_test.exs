@@ -16,13 +16,13 @@ defmodule Ecto.Query.Builder.DistinctTest do
                escape(true, {[], %{}}, [x: 0], __ENV__)
 
       assert {Macro.escape(quote(do: [asc: &0.y()])), {[], %{}}} ==
-               escape(quote(do: x.y()), {[], %{}}, [x: 0], __ENV__)
+               escape(quote(do: x.y), {[], %{}}, [x: 0], __ENV__)
 
       assert {Macro.escape(quote(do: [asc: &0.x(), asc: &1.y()])), {[], %{}}} ==
-               escape(quote(do: [x.x(), y.y()]), {[], %{}}, [x: 0, y: 1], __ENV__)
+               escape(quote(do: [x.x, y.y]), {[], %{}}, [x: 0, y: 1], __ENV__)
 
       assert {Macro.escape(quote(do: [asc: &0.x(), desc: &1.y()])), {[], %{}}} ==
-               escape(quote(do: [x.x(), desc: y.y()]), {[], %{}}, [x: 0, y: 1], __ENV__)
+               escape(quote(do: [x.x, desc: y.y]), {[], %{}}, [x: 0, y: 1], __ENV__)
 
       import Kernel, except: [>: 2]
 
