@@ -730,6 +730,22 @@ defmodule Ecto.Query.BuilderTest do
     end
   end
 
+  test "warns on parentheses in field access" do
+    import ExUnit.CaptureIO
+
+    warning =
+      capture_io(:stderr, fn ->
+        escape(quote(do: x.y()), [x: 0], __ENV__)
+      end)
+
+    assert warning =~ "using parentheses after a field access"
+    assert warning =~ "x.y()"
+
+    assert capture_io(:stderr, fn ->
+             escape(quote(do: x.y), [x: 0], __ENV__)
+           end) == ""
+  end
+
   test "doesn't escape interpolation" do
     import Kernel, except: [>: 2, ++: 2]
 
