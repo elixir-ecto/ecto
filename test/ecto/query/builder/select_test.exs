@@ -34,7 +34,7 @@ defmodule Ecto.Query.Builder.SelectTest do
                escape(quote(do: x), [x: 0], __ENV__)
 
       assert {Macro.escape(quote(do: &0.y())), params_acc()} ==
-               escape(quote(do: x.y()), [x: 0], __ENV__)
+               escape(quote(do: x.y), [x: 0], __ENV__)
 
       assert {Macro.escape(quote(do: &0)),
               params_acc(take: %{0 => {:any, [:foo, :bar, baz: :bat]}})} ==
@@ -59,13 +59,13 @@ defmodule Ecto.Query.Builder.SelectTest do
                escape(quote(do: %{a => b}), [a: 0, b: 1], __ENV__)
 
       assert {[Macro.escape(quote(do: &0.y())), Macro.escape(quote(do: &0.z()))], params_acc()} ==
-               escape(quote(do: [x.y(), x.z()]), [x: 0], __ENV__)
+               escape(quote(do: [x.y, x.z]), [x: 0], __ENV__)
 
       assert {[
                 {:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :y]]}, [], []]},
                 {:{}, [], [:^, [], [0]]}
               ], params_acc(params: [{1, :any}])} ==
-               escape(quote(do: [x.y(), ^1]), [x: 0], __ENV__)
+               escape(quote(do: [x.y, ^1]), [x: 0], __ENV__)
 
       assert {{:{}, [], [:%, [], [Foo, {:{}, [], [:%{}, [], [a: {:{}, [], [:&, [], [0]]}]]}]]},
               params_acc()} ==

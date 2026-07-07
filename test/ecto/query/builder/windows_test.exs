@@ -25,13 +25,13 @@ defmodule Ecto.Query.Builder.WindowsTest do
   describe "escape" do
     test "handles expressions and params" do
       assert {Macro.escape(quote(do: [partition_by: [&0.y()]])), [], {[], %{}}} ==
-               escape(quote(do: [partition_by: x.y()]), {[], %{}}, [x: 0], __ENV__)
+               escape(quote(do: [partition_by: x.y]), {[], %{}}, [x: 0], __ENV__)
 
       assert {Macro.escape(quote(do: [partition_by: [&0.y()]])), [], {[], %{}}} ==
                escape(quote(do: [partition_by: :y]), {[], %{}}, [x: 0], __ENV__)
 
       assert {Macro.escape(quote(do: [order_by: [asc: &0.y()]])), [], {[], %{}}} ==
-               escape(quote(do: [order_by: x.y()]), {[], %{}}, [x: 0], __ENV__)
+               escape(quote(do: [order_by: x.y]), {[], %{}}, [x: 0], __ENV__)
 
       assert {Macro.escape(quote(do: [order_by: [asc: &0.y()]])), [], {[], %{}}} ==
                escape(quote(do: [order_by: :y]), {[], %{}}, [x: 0], __ENV__)

@@ -84,8 +84,19 @@ defmodule Ecto.Query.Builder do
   def escape(expr, type, params_acc, vars, env)
 
   # var.x - where var is bound
-  def escape({{:., _, [callee, field]}, _, []}, _type, params_acc, vars, _env)
+  def escape({{:., _, [callee, field]}, call_meta, []}, _type, params_acc, vars, env)
       when is_atom(field) do
+    if call_meta[:no_parens] != true do
+      stacktrace = Macro.Env.stacktrace(get_env(env))
+
+      IO.warn(
+        "using parentheses after a field access, such as `#{Macro.to_string(callee)}.#{field}()`, " <>
+          "is deprecated and will raise in future Ecto versions. Remove the parentheses to keep " <>
+          "the current behaviour: `#{Macro.to_string(callee)}.#{field}`",
+        stacktrace
+      )
+    end
+
     {escape_field!(callee, field, vars), params_acc}
   end
 

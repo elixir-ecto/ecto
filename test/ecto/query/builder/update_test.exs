@@ -14,7 +14,7 @@ defmodule Ecto.Query.Builder.UpdateTest do
                  ]
                ]
 
-      assert escape(quote(do: [set: [foo: x.bar()]]), [x: 0], __ENV__) |> elem(0) ==
+      assert escape(quote(do: [set: [foo: x.bar]]), [x: 0], __ENV__) |> elem(0) ==
                Macro.escape(quote(do: [set: [foo: &0.bar()]]))
     end
 
