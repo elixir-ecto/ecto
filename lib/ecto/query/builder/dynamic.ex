@@ -79,29 +79,58 @@ defmodule Ecto.Query.Builder.Dynamic do
     {expr, params, count}
   end
 
-  defp expand(query, %{fun: fun}, {binding, params, subqueries, aliases, count}) do
+  defp expand(query, dynamic, acc) do
+    expand(query, dynamic, acc, %{})
+  end
+
+  defp expand(query, %{fun: fun}, {binding, params, subqueries, aliases, count}, splices) do
     {dynamic_expr, dynamic_params, dynamic_subqueries, dynamic_aliases} = fun.(query)
     aliases = merge_aliases(aliases, dynamic_aliases)
 
-    Macro.postwalk(dynamic_expr, {binding, params, subqueries, aliases, count}, fn
-      {:^, meta, [ix]}, {binding, params, subqueries, aliases, count} ->
-        case Enum.fetch!(dynamic_params, ix) do
-          {%Ecto.Query.DynamicExpr{binding: new_binding} = dynamic, _} ->
-            binding = if length(new_binding) > length(binding), do: new_binding, else: binding
-            expand(query, dynamic, {binding, params, subqueries, aliases, count})
+    {expr, {binding, params, subqueries, aliases, count, _splices}} =
+      Macro.postwalk(dynamic_expr, {binding, params, subqueries, aliases, count, splices}, fn
+        {:^, meta, [ix]}, {binding, params, subqueries, aliases, count, splices} ->
+          case Enum.fetch!(dynamic_params, ix) do
+            {%Ecto.Query.DynamicExpr{binding: new_binding} = dynamic, _} ->
+              binding = if length(new_binding) > length(binding), do: new_binding, else: binding
 
-          param ->
-            {{:^, meta, [count]}, {binding, [param | params], subqueries, aliases, count + 1}}
-        end
+              # Splice keys are indexes into the current dynamic's params, so nested dynamics
+              # must track their own splice placeholders while continuing the outer count.
+              {expr, {binding, params, subqueries, aliases, count}} =
+                expand(query, dynamic, {binding, params, subqueries, aliases, count})
 
-      {:subquery, i}, {binding, params, subqueries, aliases, count} ->
-        subquery = Enum.fetch!(dynamic_subqueries, i)
-        ix = length(subqueries)
-        {{:subquery, ix}, {binding, [{:subquery, ix} | params], [subquery | subqueries], aliases, count + 1}}
+              {expr, {binding, params, subqueries, aliases, count, splices}}
 
-      expr, acc ->
-        {expr, acc}
-    end)
+            {_, {:splice, _}} = param ->
+              case splices do
+                %{^ix => splice_count} ->
+                  {{:^, meta, [splice_count]},
+                   {binding, params, subqueries, aliases, count, splices}}
+
+                %{} ->
+                  {{:^, meta, [count]},
+                   {binding, [param | params], subqueries, aliases, count + 1,
+                    Map.put(splices, ix, count)}}
+              end
+
+            param ->
+              {{:^, meta, [count]},
+               {binding, [param | params], subqueries, aliases, count + 1, splices}}
+          end
+
+        {:subquery, i}, {binding, params, subqueries, aliases, count, splices} ->
+          subquery = Enum.fetch!(dynamic_subqueries, i)
+          ix = length(subqueries)
+
+          {{:subquery, ix},
+           {binding, [{:subquery, ix} | params], [subquery | subqueries], aliases, count + 1,
+            splices}}
+
+        expr, acc ->
+          {expr, acc}
+      end)
+
+    {expr, {binding, params, subqueries, aliases, count}}
   end
 
   defp merge_aliases(old_aliases, new_aliases) do

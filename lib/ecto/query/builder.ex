@@ -811,7 +811,7 @@ defmodule Ecto.Query.Builder do
   end
 
   defp escape_fragment({:splice, _meta, [{:^, _, [value]}]}, {params, acc, _}, _vars, _env) do
-    checked = quote do: Ecto.Query.Builder.splice!(unquote(value), length(unquote(params)))
+    checked = quote do: Ecto.Query.Builder.splice!(unquote(value), unquote(length(params)))
     param = {value, {:splice, :any}}
     {{:splice, checked}, {[param | params], acc, false}}
   end
