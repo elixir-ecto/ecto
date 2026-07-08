@@ -173,6 +173,12 @@ defmodule Ecto.Query.PlannerTest do
     {query, cast_params, dump_params, select}
   end
 
+  defp flatten_boolean({op, _, [left, right]}, op) do
+    flatten_boolean(left, op) ++ flatten_boolean(right, op)
+  end
+
+  defp flatten_boolean(expr, _op), do: [expr]
+
   defp select_fields(fields, ix) do
     for field <- fields do
       {{:., [writable: :always], [{:&, [], [ix]}, field]}, [], []}
@@ -1981,6 +1987,54 @@ defmodule Ecto.Query.PlannerTest do
              {:expr, {:^, _, [3]}},
              _
            ] = parts
+  end
+
+  test "normalize: params around splicing inside dynamic" do
+    list = [1, 2, 3]
+    ids = [10, 11]
+
+    dynamic =
+      dynamic(
+        [p],
+        p.title == ^"a" and fragment("? = ANY(?)", p.id, splice(^list)) and
+          p.visits > ^1 and fragment("? = ANY(?)", p.id, splice(^ids))
+      )
+
+    {query, cast_params, dump_params, _} =
+      from(p in Post, select: p.id)
+      |> where(^dynamic)
+      |> normalize_with_params()
+
+    assert cast_params == ["a", 1, 2, 3, 1, 10, 11]
+    assert dump_params == ["a", 1, 2, 3, 1, 10, 11]
+
+    [title_expr, {:fragment, _, first_fragment}, visits_expr, {:fragment, _, second_fragment}] =
+      flatten_boolean(hd(query.wheres).expr, :and)
+
+    assert Macro.to_string(title_expr) == "&0.post_title() == ^0"
+    assert Macro.to_string(visits_expr) == "&0.visits() > ^4"
+
+    assert [
+             _,
+             {:expr, {{:., _, [{:&, _, [0]}, :id]}, _, []}},
+             _,
+             {:expr, {:^, _, [1]}},
+             _,
+             {:expr, {:^, _, [2]}},
+             _,
+             {:expr, {:^, _, [3]}},
+             _
+           ] = first_fragment
+
+    assert [
+             _,
+             {:expr, {{:., _, [{:&, _, [0]}, :id]}, _, []}},
+             _,
+             {:expr, {:^, _, [5]}},
+             _,
+             {:expr, {:^, _, [6]}},
+             _
+           ] = second_fragment
   end
 
   test "normalize: from values list" do

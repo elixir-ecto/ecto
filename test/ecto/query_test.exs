@@ -1246,6 +1246,19 @@ defmodule Ecto.QueryTest do
              ] = parts
     end
 
+    test "evaluates interpolated expressions before runtime splicing once" do
+      Process.put(:fragment_eval_count, 0)
+
+      value = fn ->
+        Process.put(:fragment_eval_count, Process.get(:fragment_eval_count) + 1)
+        1
+      end
+
+      from p in "posts", select: fragment("(?, ?)", ^value.(), splice(^[2, 3]))
+
+      assert Process.get(:fragment_eval_count) == 1
+    end
+
     test "keeps UTF-8 encoding" do
       assert inspect(from p in "posts", where: fragment("héllò")) ==
                ~s[#Ecto.Query<from p0 in \"posts\", where: fragment("héllò")>]
