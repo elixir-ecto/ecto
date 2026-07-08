@@ -1111,6 +1111,93 @@ defmodule Ecto.Query.PlannerTest do
              ] = cte_cache
     end
 
+    test "on update_all with data-modifying CTE" do
+      update_comments =
+        from(c in Comment,
+          where: c.id == ^10,
+          update: [set: [text: ^"Root"]],
+          select: c.id
+        )
+
+      {_, ["Root", 10], ["Root", 10], cache} =
+        "updated_comments"
+        |> with_cte("updated_comments", as: ^update_comments, operation: :update_all)
+        |> select([c], c.id)
+        |> plan()
+
+      assert [
+               :all,
+               {:from, {{"updated_comments", nil}, nil}, []},
+               {:select, {{:., [], [{:&, [], [0]}, :id]}, [], []}},
+               {:non_recursive_cte, "updated_comments", nil, :update_all, cte_cache}
+             ] = cache
+
+      assert [
+               :update_all,
+               {:select, {{:., [], [{:&, [], [0]}, :id]}, [], []}},
+               {:where, _},
+               {:update, [[set: [text: {:^, [], [0]}]]]},
+               {:from, {"comments", Comment, _, nil}, []}
+             ] = cte_cache
+    end
+
+    test "on update_all with data-modifying CTE keeps update expressions in cache key" do
+      update_comments_1 =
+        from(c in Comment,
+          update: [set: [visits: 1]],
+          select: c.id
+        )
+
+      update_comments_2 =
+        from(c in Comment,
+          update: [set: [visits: 2]],
+          select: c.id
+        )
+
+      {_, _, _, cache_1} =
+        "updated_comments"
+        |> with_cte("updated_comments", as: ^update_comments_1, operation: :update_all)
+        |> select([c], c.id)
+        |> plan()
+
+      {_, _, _, cache_2} =
+        "updated_comments"
+        |> with_cte("updated_comments", as: ^update_comments_2, operation: :update_all)
+        |> select([c], c.id)
+        |> plan()
+
+      assert cache_1 != cache_2
+    end
+
+    test "on delete_all with data-modifying CTE keeps params in delete order" do
+      delete_comments =
+        from(c in "comments",
+          where: c.id == ^10,
+          select: %{id: c.id, text: ^"deleted"}
+        )
+
+      {_, [10, "deleted"], [10, "deleted"], cache} =
+        "deleted_comments"
+        |> with_cte("deleted_comments", as: ^delete_comments, operation: :delete_all)
+        |> select([c], c.id)
+        |> plan()
+
+      assert [
+               :all,
+               {:from, {{"deleted_comments", nil}, nil}, []},
+               {:select, {{:., [], [{:&, [], [0]}, :id]}, [], []}},
+               {:non_recursive_cte, "deleted_comments", nil, :delete_all, cte_cache}
+             ] = cache
+
+      assert [
+               :delete_all,
+               {:select,
+                {:%{}, [], [id: {{:., [], [{:&, [], [0]}, :id]}, [], []}, text: {:^, [], [0]}]}},
+               {:where, _},
+               {:from, {{"comments", nil}, nil}, []}
+             ] = cte_cache
+    end
+
     test "on delete_all" do
       recent_comments =
         from(c in Comment,
