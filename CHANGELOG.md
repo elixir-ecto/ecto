@@ -1,5 +1,24 @@
 # Changelog for v3.x
 
+## v3.14.1 (2026-07-09)
+
+### Enhancements
+
+  * [Ecto.Schema] Allow `embedded_schema` to have non-virtual `:any` fields
+  * [Ecto.Schema] Add `:on_writable_violation` option for fields (a default can be specified with `@on_writable_violation`)
+  * [Ecto.UUID] Add helper functions for UUIDv7
+
+### Bug fixes
+
+  * [Ecto.Query] Warn on parentheses in query field access
+  * [Ecto.Query] Expand macros in window frames
+  * [Ecto.Query] Fix data-modifying CTE planner cache traversal
+  * [Ecto.Query] Fix splice parameters in dynamic expressions
+  * [Ecto.Query] Fix subquery order in query builders
+  * [Ecto.Query] Fix wrong placeholder numbering when a `from` source is a `{fragment, schema}` tuple
+  * [Ecto.Repo] Do not reflect changes ignored due to `:writable` in returned struct
+  * [Ecto.Repo] Fix placeholder type mismatch check on `insert_all` with placeholders
+
 ## v3.14.0 (2026-05-19)
 
 ### Enhancements
