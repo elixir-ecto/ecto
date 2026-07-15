@@ -98,6 +98,8 @@ defmodule Ecto.ChangesetTest do
       belongs_to :category, Ecto.ChangesetTest.Category, references: :category_id, source: :cat_id
       has_many :comments, Ecto.ChangesetTest.Comment, on_replace: :delete
       has_one :comment, Ecto.ChangesetTest.Comment
+      has_one :deletable_comment, Ecto.ChangesetTest.Comment, on_replace: :delete
+      has_one :nilify_comment, Ecto.ChangesetTest.Comment, on_replace: :nilify
     end
   end
 
@@ -876,6 +878,26 @@ defmodule Ecto.ChangesetTest do
     assert_raise ArgumentError, fn ->
       changed?(changeset, :comment, from: change(%Comment{}, %{}))
     end
+  end
+
+  test "changed?/3 returns true when a cardinality-one association is removed" do
+    comment = %Comment{id: 1}
+
+    changeset =
+      %Post{deletable_comment: comment}
+      |> change()
+      |> put_assoc(:deletable_comment, nil)
+
+    assert changeset.changes.deletable_comment == nil
+    assert changed?(changeset, :deletable_comment)
+
+    changeset =
+      %Post{nilify_comment: comment}
+      |> cast(%{"nilify_comment" => nil}, [])
+      |> cast_assoc(:nilify_comment)
+
+    assert changeset.changes.nilify_comment == nil
+    assert changed?(changeset, :nilify_comment)
   end
 
   test "fetch_field/2" do

@@ -581,6 +581,8 @@ defmodule Ecto.Changeset do
     end
   end
 
+  defp relation_changed?(:one, nil), do: true
+
   defp relation_changed?(:one, changeset) do
     changeset.action != :update or changeset.changes != %{}
   end
