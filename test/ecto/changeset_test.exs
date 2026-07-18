@@ -1083,8 +1083,10 @@ defmodule Ecto.ChangesetTest do
     assert changed_post.title == "foo"
     assert changed_post.category_id == category.category_id
 
+    post_with_category = %Post{category_id: 5}
+
     changeset =
-      post
+      post_with_category
       |> changeset(%{"title" => "foo"})
       |> put_assoc(:category, nil)
 

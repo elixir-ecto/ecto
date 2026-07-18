@@ -4323,9 +4323,12 @@ defmodule Ecto.Changeset do
 
     acc = Map.put(acc, key, relation_changed)
 
-    with %Ecto.Association.BelongsTo{related_key: related_key} <- relation,
-         %{^related_key => id} <- relation_changed do
-      Map.put(acc, relation.owner_key, id)
+    with %Ecto.Association.BelongsTo{related_key: related_key, owner_key: owner_key} <- relation do
+      case relation_changed do
+        %{^related_key => id} -> Map.put(acc, owner_key, id)
+        nil -> Map.put(acc, owner_key, nil)
+        _ -> acc
+      end
     else
       _ -> acc
     end
