@@ -2698,6 +2698,54 @@ defmodule Ecto.Query.PlannerTest do
     assert query.select.fields == fields
   end
 
+  test "normalize: map updates only drop fields overwritten by every source reference" do
+    query =
+      Post
+      |> select([p], {%{p | title: nil}, %{p | title: nil, posted: nil}})
+      |> normalize()
+
+    assert query.select.fields ==
+             select_fields(
+               [
+                 :id,
+                 :text,
+                 :code,
+                 :posted,
+                 :visits,
+                 :links,
+                 :preferences,
+                 :status,
+                 :parameterized_map,
+                 :meta,
+                 :metas
+               ],
+               0
+             )
+  end
+
+  test "normalize: struct update does not drop fields from another full source reference" do
+    query = Post |> select([p], {%Post{p | title: nil}, p}) |> normalize()
+
+    assert query.select.fields ==
+             select_fields(
+               [
+                 :id,
+                 :post_title,
+                 :text,
+                 :code,
+                 :posted,
+                 :visits,
+                 :links,
+                 :preferences,
+                 :status,
+                 :parameterized_map,
+                 :meta,
+                 :metas
+               ],
+               0
+             )
+  end
+
   test "normalize: select single dynamic value interpolated at root level" do
     ref = dynamic([p], p.title)
 
