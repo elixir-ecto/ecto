@@ -2671,6 +2671,33 @@ defmodule Ecto.Query.PlannerTest do
                select_fields([:id, :posted, :uuid, :crazy_comment, :post_id, :crazy_post_id], 1)
   end
 
+  test "normalize: map update does not drop fields from another full source reference" do
+    fields =
+      select_fields(
+        [
+          :id,
+          :post_title,
+          :text,
+          :code,
+          :posted,
+          :visits,
+          :links,
+          :preferences,
+          :status,
+          :parameterized_map,
+          :meta,
+          :metas
+        ],
+        0
+      )
+
+    query = Post |> select([p], {%{p | title: nil}, p}) |> normalize()
+    assert query.select.fields == fields
+
+    query = Post |> select([p], {p, %{p | title: nil}}) |> normalize()
+    assert query.select.fields == fields
+  end
+
   test "normalize: select single dynamic value interpolated at root level" do
     ref = dynamic([p], p.title)
 
