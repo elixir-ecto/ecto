@@ -475,15 +475,15 @@ defmodule Ecto.Query.API do
 
   ## Defining column names for fragment sources
 
-  When using a fragment as a query source, you will be required to
-  define the column names within the fragment so that they can be
-  referenced in other parts of the query. For example:
+  When using a fragment as a query source, you are required to
+  define the column names so that they can be referenced in other
+  parts of the query. For example:
 
       from(f in fragment("select generate_series(?::integer, ?::integer) as x", ^0, ^10), select: f.x)
 
-  If this fragment the column name `x` was hard-coded directly into the string.
+  In this fragment the column name `x` was hard-coded directly into the string.
   This can become quite verbose, but more importantly it does not lend itself to
-  re-usability.
+  re-use.
 
   The best way to define column names on a fragment source is to use the `:columns`
   keyword as the last argument to the fragment:
