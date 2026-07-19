@@ -23,9 +23,9 @@ defmodule Ecto.Query.Builder.FromTest do
     end
   end
 
-  defmacro jsonb_to_recordset(data, columns) do
+  defmacro generate_series(data, columns) do
     quote do
-      fragment("jsonb_to_recordset(?)", unquote(data))
+      fragment("generate_series(?)", splice(unquote(data)))
       |> with_columns(unquote(columns))
     end
   end
@@ -98,15 +98,15 @@ defmodule Ecto.Query.Builder.FromTest do
   end
 
   test "add column names to fragment sources with with_columns/2" do
-    data = [%{a: 1, b: "foo"}, %{a: 2, b: "bar"}]
-    q = from(j in jsonb_to_recordset(^data, [:a, :b]))
-    assert %{source: {:fragment, [column_names: [:a, :b]], _}} = q.from
+    data = [0, 10]
+    q = from(j in generate_series(^data, [:x]))
+    assert %{source: {:fragment, [column_names: [:x]], _}} = q.from
   end
 
   test "add interpolated column names to fragment sources with with_columns/2" do
-    columns = [:a, :b]
-    data = [%{a: 1, b: "foo"}, %{a: 2, b: "bar"}]
-    q = from(j in jsonb_to_recordset(^data, ^columns))
+    columns = [:x]
+    data = [0, 10]
+    q = from(j in generate_series(^data, ^columns))
     assert %{source: {:fragment, [column_names: ^columns], _}} = q.from
   end
 
@@ -114,7 +114,7 @@ defmodule Ecto.Query.Builder.FromTest do
     msg = ~r/must have a fragment as a first argument/
 
     assert_raise Ecto.Query.CompileError, msg, fn->
-      quote_and_eval(from(p in with_columns(Post, [:a, :b])))
+      quote_and_eval(from(p in with_columns("posts", [:a, :b])))
     end 
   end
 
@@ -122,7 +122,7 @@ defmodule Ecto.Query.Builder.FromTest do
     msg = ~r/expected a list of atoms/
 
     assert_raise Ecto.Query.CompileError, msg, fn->
-      quote_and_eval(from(j in jsonb_to_recordset(^[%{a: 1, b: "foo"}], ["a", "b"])))
+      quote_and_eval(from(j in generate_series(^[%{a: 1, b: "foo"}], ["a", "b"])))
     end 
   end
 end

@@ -15,9 +15,9 @@ defmodule Ecto.Query.Builder.JoinTest do
     end
   end
 
-  defmacro jsonb_to_recordset(data, columns) do
+  defmacro generate_series(data, columns) do
     quote do
-      fragment("jsonb_to_recordset(?)", unquote(data))
+      fragment("generate_series(?)", splice(unquote(data)))
       |> with_columns(unquote(columns))
     end
   end
@@ -246,8 +246,8 @@ defmodule Ecto.Query.Builder.JoinTest do
   end
 
   test "add column names to fragment sources with with_columns/2" do
-    data = [%{a: 1, b: "foo"}, %{a: 2, b: "bar"}]
-    q = from p in "posts", join: j in jsonb_to_recordset(^data, [:a, :b]), on: true
-    assert [%{source: {:fragment, [column_names: [:a, :b]], _}}] = q.joins
+    data = [0, 10]
+    q = from p in "posts", join: j in generate_series(^data, [:x]), on: true
+    assert [%{source: {:fragment, [column_names: [:x]], _}}] = q.joins
   end
 end
