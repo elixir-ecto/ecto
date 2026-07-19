@@ -235,7 +235,7 @@ defmodule Ecto.Query.Builder do
         quote do: Ecto.Query.Builder.merge_fragments(unquote(pieces), unquote(frags), [])
       end
 
-    {{:{}, [], [:fragment, meta, merged]}, {params, acc}}
+    {{:{}, [], [:fragment, Keyword.take(meta, :column_names), merged]}, {params, acc}}
   end
 
   # subqueries
