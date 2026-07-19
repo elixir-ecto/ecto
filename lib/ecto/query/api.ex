@@ -473,6 +473,40 @@ defmodule Ecto.Query.API do
   inspecting the Elixir query.  Other than that, it should be
   equivalent to a built-in Ecto query function.
 
+  ## Defining column names for fragment sources
+
+  When using a fragment as a query source, you will be required to
+  define the column names within the fragment so that they can be
+  referenced in other parts of the query. For example:
+
+      from(f in fragment("select generate_series(?::integer, ?::integer) as x", ^0, ^10), select: f.x)
+
+  If this fragment the column name `x` was hard-coded directly into the string.
+  This can become quite verbose, but more importantly it does not lend itself to
+  re-usability.
+
+  The best way to define column names on a fragment source is to use the `:columns`
+  keyword as the last argument to the fragment:
+
+      from(f in fragment("generate_series(?, ?)", ^0, ^10, columns: [:x]))
+
+  where the column value is a non-empty list of atoms. This lends itself particularly
+  well to defining custom macros for complicated database functions. For example, the
+  variadic Postgres function `unnest` could be encapsulated into a macro as follows:
+
+    defmacro unnest(data, columns) do
+      fragment("unnest(?)", splice(unquote(data)), columns: unquote(columns))
+    end
+
+    nums = [1, 2, 3, 4, 5]
+    str = ["a", "b", "c", "d", "e"]
+
+    from u in unnest(
+          [type(^nums, {:array, :integer}), type(^str, {:array, :string})],
+          [:num, :text]
+        ),
+        select: {u.num, u.text}
+
   ## Keyword fragments
 
   In order to support databases that do not have string-based
