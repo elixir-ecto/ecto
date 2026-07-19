@@ -15,10 +15,9 @@ defmodule Ecto.Query.Builder.JoinTest do
     end
   end
 
-  defmacro generate_series(data, columns) do
+  defmacro generate_series(lower, upper, columns) do
     quote do
-      fragment("generate_series(?)", splice(unquote(data)))
-      |> with_columns(unquote(columns))
+      fragment("generate_series(?, ?)", unquote(lower), unquote(upper), columns: unquote(columns))
     end
   end
 
@@ -246,8 +245,9 @@ defmodule Ecto.Query.Builder.JoinTest do
   end
 
   test "add column names to fragment sources with with_columns/2" do
-    data = [0, 10]
-    q = from p in "posts", join: j in generate_series(^data, [:x]), on: true
+    lower = 0
+    upper = 10
+    q = from p in "posts", join: j in generate_series(^lower, ^upper, [:x]), on: true
     assert [%{source: {:fragment, [column_names: [:x]], _}}] = q.joins
   end
 end

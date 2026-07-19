@@ -578,48 +578,6 @@ defmodule Ecto.Query.API do
   def splice(list), do: doc!([list])
 
   @doc """
-  Attaches a list of column names to a fragment source.
-
-  Accepts a fragment as the first argument and a list of atoms as the second.
-  Without this function, columns from a fragment source must be defined within
-  the fragment string itself:
-
-      from(f in fragment("select generate_series(?::integer, ?::integer) as x", ^0, ^10), select: f.x)
-
-  This method can be verbose, but more importantly it does not lend itself to re-use since the
-  column names are hard-coded within the fragment string.
-
-  With this function you may create re-usable macros that allow for dynamic column names:
-
-      defmacro generate_series(lower, upper, columns) do
-        quote do
-          fragment("generate_series(?::integer, ?::integer)", unquote(lower), unquote(upper))
-          |> with_columns(unquote(columns))
-        end
-      end
-
-      from f in generate_series(^0, ^10, [:x]), select: x
-
-  Combining this function with `splice/1` can be particularly powerful as it allows
-  you to create macros for variadic functions such as Postgres's `unnest`:
-
-      defmacro unnest(data, columns) do
-        fragment("unnest(?)", splice(unquote(data)))
-        |> columns(unquote(columns))
-      end
-
-      nums = [1, 2, 3, 4, 5]
-      str = ["a", "b", "c", "d", "e"]
-
-      from u in unnest(
-           [type(^nums, {:array, :integer}), type(^str, {:array, :string})],
-           [:num, :text]
-         ),
-         select: {u.num, u.text}
-  """
-  def with_columns(fragment, list), do: doc!([fragment, list])
-
-  @doc """
   Creates a values list/constant table.
 
   A values list can be used as a source in a query, both in `Ecto.Query.from/2`

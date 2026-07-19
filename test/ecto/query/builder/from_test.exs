@@ -23,10 +23,9 @@ defmodule Ecto.Query.Builder.FromTest do
     end
   end
 
-  defmacro generate_series(data, columns) do
+  defmacro generate_series(lower, upper, columns) do
     quote do
-      fragment("generate_series(?)", splice(unquote(data)))
-      |> with_columns(unquote(columns))
+      fragment("generate_series(?, ?)", unquote(lower), unquote(upper), columns: unquote(columns))
     end
   end
 
@@ -97,32 +96,26 @@ defmodule Ecto.Query.Builder.FromTest do
     end
   end
 
-  test "add column names to fragment sources with with_columns/2" do
-    data = [0, 10]
-    q = from(j in generate_series(^data, [:x]))
+  test "add column names to fragment sources" do
+    lower = 0
+    upper = 10
+    q = from(j in generate_series(^lower, ^upper, [:x]))
     assert %{source: {:fragment, [column_names: [:x]], _}} = q.from
   end
 
-  test "add interpolated column names to fragment sources with with_columns/2" do
+  test "add interpolated column names to fragment sources" do
     columns = [:x]
-    data = [0, 10]
-    q = from(j in generate_series(^data, ^columns))
+    lower = 0
+    upper = 10
+    q = from(j in generate_series(^lower, ^upper, ^columns))
     assert %{source: {:fragment, [column_names: ^columns], _}} = q.from
   end
 
-  test "with_columns/2 raises when not given a fragment" do
-    msg = ~r/must have a fragment as a first argument/
+  test "fragment raises when columns are not a list of atoms" do
+    msg = ~r/columns must be a list of atoms/
 
-    assert_raise Ecto.Query.CompileError, msg, fn->
-      quote_and_eval(from(p in with_columns("posts", [:a, :b])))
-    end 
-  end
-
-  test "with_columns/2 raises when not given a list of atoms" do
-    msg = ~r/expected a list of atoms/
-
-    assert_raise Ecto.Query.CompileError, msg, fn->
-      quote_and_eval(from(j in generate_series(^[%{a: 1, b: "foo"}], ["a", "b"])))
-    end 
+    assert_raise Ecto.Query.CompileError, msg, fn ->
+      quote_and_eval(from(j in generate_series(^0, ^10, ["x"])))
+    end
   end
 end

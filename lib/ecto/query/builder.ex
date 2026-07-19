@@ -215,8 +215,21 @@ defmodule Ecto.Query.Builder do
     {{:{}, [], [:fragment, [], [expr]]}, params_acc}
   end
 
-  def escape({:fragment, meta, [query | frags]}, _type, {params, acc}, vars, env) do
+  def escape({:fragment, _, [query | frags]}, _type, {params, acc}, vars, env) do
     pieces = expand_and_split_fragment(query, env)
+
+    columns =
+      case Enum.reverse(frags) do
+        [[columns: cols] | _] -> columns!(cols)
+        _ -> []
+      end
+
+    {frags, meta} =
+      if columns != [] do
+        {List.delete_at(frags, -1), [column_names: columns]}
+      else
+        {frags, []}
+      end
 
     if length(pieces) != length(frags) + 1 do
       error!(
@@ -235,7 +248,7 @@ defmodule Ecto.Query.Builder do
         quote do: Ecto.Query.Builder.merge_fragments(unquote(pieces), unquote(frags), [])
       end
 
-    {{:{}, [], [:fragment, Keyword.take(meta, [:column_names]), merged]}, {params, acc}}
+    {{:{}, [], [:fragment, meta, merged]}, {params, acc}}
   end
 
   # subqueries
@@ -1234,29 +1247,29 @@ defmodule Ecto.Query.Builder do
   end
 
   @doc """
-  Checks if the column names provided to `with_columns/2`
+  Checks if the column names provided to a fragment
   is a list of atoms.
   """
-  def column_names!({:^, _, [expr]}),
-    do: quote(do: Ecto.Query.Builder.column_names!(unquote(expr)))
+  def columns!({:^, _, [expr]}),
+    do: quote(do: Ecto.Query.Builder.columns!(unquote(expr)))
 
-  def column_names!([]),
-    do: error!("cannot provide an empty list to `with_columns/2`")
+  def columns!([]),
+    do: error!("fragment(...) columns expects a non-empty list")
 
-  def column_names!(columns) when is_list(columns) do
+  def columns!(columns) when is_list(columns) do
     if Enum.all?(columns, &is_atom/1) do
       columns
     else
       error!(
-        "expected a list of atoms in `with_columns/2`, got: " <>
+        "fragment(...) columns must be a list of atoms, got: " <>
           "`#{Macro.to_string(columns)}`"
       )
     end
   end
 
-  def column_names!(other) do
+  def columns!(other) do
     error!(
-      "expected a list of atoms in `with_columns/2`, got: " <>
+      "fragment(...) columns expects a list of atoms, got: " <>
         "`#{Macro.to_string(other)}`"
     )
   end
