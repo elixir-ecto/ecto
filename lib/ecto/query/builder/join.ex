@@ -58,6 +58,23 @@ defmodule Ecto.Query.Builder.Join do
     {:_, quote(do: Ecto.Query.subquery(unquote(expr), unquote(opts))), nil, nil, []}
   end
 
+  def escape({:with_columns, _, [fragment, columns]}, vars, env) do
+    {:fragment, meta, expr} =
+      case fragment do
+        {:fragment, _, _} = fragment ->
+          fragment
+
+        other ->
+          Builder.error!(
+            "`with_columns/2` must have a fragment as a first argument, got: #{Macro.to_string(other)}"
+          )
+      end
+
+    columns = Builder.column_names!(columns)
+    meta = Keyword.put(meta, :column_names, columns)
+    escape({:fragment, meta, expr}, vars, env)
+  end
+
   def escape({:fragment, _, [_ | _]} = expr, vars, env) do
     {expr, {params, _acc}} = Builder.escape(expr, :any, {[], %{}}, vars, env)
     {:_, expr, nil, nil, params}

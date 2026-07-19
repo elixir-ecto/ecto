@@ -1,6 +1,9 @@
+Code.require_file("../../../support/eval_helpers.exs", __DIR__)
+
 defmodule Ecto.Query.Builder.FromTest do
   use ExUnit.Case, async: true
   import Ecto.Query.Builder.From
+  import Support.EvalHelpers
   doctest Ecto.Query.Builder.From
 
   import Ecto.Query
@@ -17,6 +20,13 @@ defmodule Ecto.Query.Builder.FromTest do
   defmacro from_macro(left, right) do
     quote do
       fragment("? <> ?", unquote(left), unquote(right))
+    end
+  end
+
+  defmacro jsonb_to_recordset(data, columns) do
+    quote do
+      fragment("jsonb_to_recordset(?)", unquote(data))
+      |> with_columns(unquote(columns))
     end
   end
 
@@ -85,5 +95,34 @@ defmodule Ecto.Query.Builder.FromTest do
       types = %{num: :integer, text: :string}
       from(v in values(values, types))
     end
+  end
+
+  test "add column names to fragment sources with with_columns/2" do
+    data = [%{a: 1, b: "foo"}, %{a: 2, b: "bar"}]
+    q = from(j in jsonb_to_recordset(^data, [:a, :b]))
+    assert %{source: {:fragment, [column_names: [:a, :b]], _}} = q.from
+  end
+
+  test "add interpolated column names to fragment sources with with_columns/2" do
+    columns = [:a, :b]
+    data = [%{a: 1, b: "foo"}, %{a: 2, b: "bar"}]
+    q = from(j in jsonb_to_recordset(^data, ^columns))
+    assert %{source: {:fragment, [column_names: ^columns], _}} = q.from
+  end
+
+  test "with_columns/2 raises when not given a fragment" do
+    msg = ~r/must have a fragment as a first argument/
+
+    assert_raise Ecto.Query.CompileError, msg, fn->
+      quote_and_eval(from(p in with_columns(Post, [:a, :b])))
+    end 
+  end
+
+  test "with_columns/2 raises when not given a list of atoms" do
+    msg = ~r/expected a list of atoms/
+
+    assert_raise Ecto.Query.CompileError, msg, fn->
+      quote_and_eval(from(j in jsonb_to_recordset(^[%{a: 1, b: "foo"}], ["a", "b"])))
+    end 
   end
 end

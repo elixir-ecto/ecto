@@ -46,9 +46,8 @@ defmodule Ecto.Query.Builder.From do
 
   defp escape_source(query, env) do
     case Macro.expand_once(query, env) do
-      {:fragment, _, _} = fragment ->
-        {fragment, {params, _acc}} = Builder.escape(fragment, :any, {[], %{}}, [], env)
-        {fragment, Builder.escape_params(params)}
+      {tag, _, _} = expr when tag in [:fragment, :with_columns] ->
+        escape_fragment(expr, env)
 
       {:values, _, [values_list, types]} ->
         prelude = quote do: values = Ecto.Query.Values.new(unquote(values_list), unquote(types))
@@ -66,6 +65,28 @@ defmodule Ecto.Query.Builder.From do
       other ->
         escape_source(other, env)
     end
+  end
+
+  defp escape_fragment({:with_columns, _, [fragment, columns]}, env) do
+    {:fragment, meta, expr} =
+      case fragment do
+        {:fragment, _, _} = fragment ->
+          fragment
+
+        other ->
+          Builder.error!(
+            "`with_columns/2` must have a fragment as a first argument, got: #{Macro.to_string(other)}"
+          )
+      end
+
+    columns = Builder.column_names!(columns)
+    meta = Keyword.put(meta, :column_names, columns)
+    escape_fragment({:fragment, meta, expr}, env)
+  end
+
+  defp escape_fragment({:fragment, _, _} = expr, env) do
+    {fragment, {params, _acc}} = Builder.escape(expr, :any, {[], %{}}, [], env)
+    {fragment, Builder.escape_params(params)}
   end
 
   @typep hints :: [String.t() | Macro.t()]

@@ -15,6 +15,13 @@ defmodule Ecto.Query.Builder.JoinTest do
     end
   end
 
+  defmacro jsonb_to_recordset(data, columns) do
+    quote do
+      fragment("jsonb_to_recordset(?)", unquote(data))
+      |> with_columns(unquote(columns))
+    end
+  end
+
   test "expands macros as sources" do
     left = "left"
     right = "right"
@@ -236,5 +243,11 @@ defmodule Ecto.Query.Builder.JoinTest do
         select: {s.id, j.id}
 
     assert {:{}, _, [_, {{:., [], [{:&, [], [2]}, :id]}, [], []}]} = q.select.expr
+  end
+
+  test "add column names to fragment sources with with_columns/2" do
+    data = [%{a: 1, b: "foo"}, %{a: 2, b: "bar"}]
+    q = from p in "posts", join: j in jsonb_to_recordset(^data, [:a, :b]), on: true
+    assert [%{source: {:fragment, [column_names: [:a, :b]], _}}] = q.joins
   end
 end
