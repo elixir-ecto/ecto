@@ -612,10 +612,10 @@ defmodule Ecto.Query.API do
       str = ["a", "b", "c", "d", "e"]
 
       from u in unnest(
-        [type(^nums, {:array, :integer}), type(^str, {:array, :string})],
-        [:num, :text]
-      ),
-      select: {u.num, u.text}
+           [type(^nums, {:array, :integer}), type(^str, {:array, :string})],
+           [:num, :text]
+         ),
+         select: {u.num, u.text}
   """
   def with_columns(fragment, list), do: doc!([fragment, list])
 
