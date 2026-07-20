@@ -495,7 +495,9 @@ defmodule Ecto.Query.API do
   variadic Postgres function `unnest` could be encapsulated into a macro as follows:
 
     defmacro unnest(data, columns) do
-      fragment("unnest(?)", splice(unquote(data)), columns: unquote(columns))
+      quote do
+        fragment("unnest(?)", splice(unquote(data)), columns: unquote(columns))
+      end
     end
 
     nums = [1, 2, 3, 4, 5]
