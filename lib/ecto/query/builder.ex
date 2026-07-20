@@ -218,13 +218,11 @@ defmodule Ecto.Query.Builder do
   def escape({:fragment, _, [query | frags]}, _type, {params, acc}, vars, env) do
     pieces = expand_and_split_fragment(query, env)
 
-    {frags, columns} =
+    {frags, meta} =
       case Enum.reverse(frags) do
-        [[columns: cols] | rest] -> {Enum.reverse(rest), columns!(cols)}
+        [[columns: cols] | rest] -> {Enum.reverse(rest), [column_names: columns!(cols)]}
         _ -> {frags, []}
       end
-
-    meta = if columns != [], do: [column_names: columns], else: []
 
     if length(pieces) != length(frags) + 1 do
       error!(
