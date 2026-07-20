@@ -1,6 +1,9 @@
+Code.require_file("../../../support/eval_helpers.exs", __DIR__)
+
 defmodule Ecto.Query.Builder.FromTest do
   use ExUnit.Case, async: true
   import Ecto.Query.Builder.From
+  import Support.EvalHelpers
   doctest Ecto.Query.Builder.From
 
   import Ecto.Query
@@ -17,6 +20,12 @@ defmodule Ecto.Query.Builder.FromTest do
   defmacro from_macro(left, right) do
     quote do
       fragment("? <> ?", unquote(left), unquote(right))
+    end
+  end
+
+  defmacro generate_series(lower, upper, columns) do
+    quote do
+      fragment("generate_series(?, ?)", unquote(lower), unquote(upper), columns: unquote(columns))
     end
   end
 
@@ -84,6 +93,29 @@ defmodule Ecto.Query.Builder.FromTest do
       values = [%{num: 1, text: "one"}, %{num: 2}]
       types = %{num: :integer, text: :string}
       from(v in values(values, types))
+    end
+  end
+
+  test "add column names to fragment sources" do
+    lower = 0
+    upper = 10
+    q = from(j in generate_series(^lower, ^upper, [:x]))
+    assert %{source: {:fragment, [column_names: [:x]], _}} = q.from
+  end
+
+  test "add interpolated column names to fragment sources" do
+    columns = [:x]
+    lower = 0
+    upper = 10
+    q = from(j in generate_series(^lower, ^upper, ^columns))
+    assert %{source: {:fragment, [column_names: ^columns], _}} = q.from
+  end
+
+  test "fragment raises when columns are not a list of atoms" do
+    msg = ~r/columns must be a list of atoms/
+
+    assert_raise Ecto.Query.CompileError, msg, fn ->
+      quote_and_eval(from(j in generate_series(^0, ^10, ["x"])))
     end
   end
 end

@@ -15,6 +15,12 @@ defmodule Ecto.Query.Builder.JoinTest do
     end
   end
 
+  defmacro generate_series(lower, upper, columns) do
+    quote do
+      fragment("generate_series(?, ?)", unquote(lower), unquote(upper), columns: unquote(columns))
+    end
+  end
+
   test "expands macros as sources" do
     left = "left"
     right = "right"
@@ -236,5 +242,12 @@ defmodule Ecto.Query.Builder.JoinTest do
         select: {s.id, j.id}
 
     assert {:{}, _, [_, {{:., [], [{:&, [], [2]}, :id]}, [], []}]} = q.select.expr
+  end
+
+  test "add column names to fragment sources with with_columns/2" do
+    lower = 0
+    upper = 10
+    q = from p in "posts", join: j in generate_series(^lower, ^upper, [:x]), on: true
+    assert [%{source: {:fragment, [column_names: [:x]], _}}] = q.joins
   end
 end

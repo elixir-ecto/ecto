@@ -218,6 +218,12 @@ defmodule Ecto.Query.Builder do
   def escape({:fragment, _, [query | frags]}, _type, {params, acc}, vars, env) do
     pieces = expand_and_split_fragment(query, env)
 
+    {frags, meta} =
+      case Enum.reverse(frags) do
+        [[columns: cols] | rest] -> {Enum.reverse(rest), [column_names: columns!(cols)]}
+        _ -> {frags, []}
+      end
+
     if length(pieces) != length(frags) + 1 do
       error!(
         "fragment(...) expects extra arguments in the same amount of question marks in string. " <>
@@ -235,7 +241,7 @@ defmodule Ecto.Query.Builder do
         quote do: Ecto.Query.Builder.merge_fragments(unquote(pieces), unquote(frags), [])
       end
 
-    {{:{}, [], [:fragment, [], merged]}, {params, acc}}
+    {{:{}, [], [:fragment, meta, merged]}, {params, acc}}
   end
 
   # subqueries
@@ -1231,6 +1237,34 @@ defmodule Ecto.Query.Builder do
       other ->
         quoted_atom!(other, "#{kind}/1")
     end
+  end
+
+  @doc """
+  Checks if the column names provided to a fragment
+  is a list of atoms.
+  """
+  def columns!({:^, _, [expr]}),
+    do: quote(do: Ecto.Query.Builder.columns!(unquote(expr)))
+
+  def columns!([]),
+    do: error!("fragment(...) columns expects a non-empty list")
+
+  def columns!(columns) when is_list(columns) do
+    if Enum.all?(columns, &is_atom/1) do
+      columns
+    else
+      error!(
+        "fragment(...) columns must be a list of atoms, got: " <>
+          "`#{Macro.to_string(columns)}`"
+      )
+    end
+  end
+
+  def columns!(other) do
+    error!(
+      "fragment(...) columns expects a list of atoms, got: " <>
+        "`#{Macro.to_string(other)}`"
+    )
   end
 
   defp escape_json_path(path, vars) when is_list(path) do
