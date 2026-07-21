@@ -2251,12 +2251,13 @@ defmodule Ecto.Query.Planner do
         {{:map, Enum.map(fields, &{&1, {:value, :any}})},
          Enum.map(fields, &select_field(&1, ix, :always))}
 
-      {:error, {:fragment, [column_names: columns], _}} ->
-        {types, fields} = select_dump(columns, %{}, ix, drop)
-        {{:source, :fragment, nil, types}, fields}
-
-      {:error, {:fragment, _, _}} ->
-        {{:value, :map}, [{:&, [], [ix]}]}
+      {:error, {:fragment, meta, _}} ->
+        if columns = meta[:column_names] do
+          {{:map, Enum.map(columns, &{&1, {:value, :any}})},
+           Enum.map(columns, &select_field(&1, ix, :always))}
+        else
+          {{:value, :map}, [{:&, [], [ix]}]}
+        end
 
       {:error, {:values, _, [types, _]}} ->
         fields = Keyword.keys(types)

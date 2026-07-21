@@ -2505,7 +2505,7 @@ defmodule Ecto.Query.PlannerTest do
   test "normalize: select source on fragment with columns" do
     query = from f in fragment("select 1", columns: [:x])
     {_, _, _, select} = normalize_with_params(query)
-    assert %{from: {_, {:source, :fragment, nil, [x: :any]}}} = select
+    assert %{from: {_, {:map, [x: {:value, :any}]}}} = select
   end
 
   test "normalize: select with map/2" do
