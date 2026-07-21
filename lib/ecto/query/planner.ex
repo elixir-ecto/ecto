@@ -1282,8 +1282,11 @@ defmodule Ecto.Query.Planner do
     error!(query, "queries that do not have a schema need to explicitly pass a :select clause")
   end
 
-  def ensure_select(%{select: nil, from: %{source: {:fragment, _, _}}} = query, true) do
-    error!(query, "queries from a fragment need to explicitly pass a :select clause")
+  def ensure_select(%{select: nil, from: %{source: {:fragment, [], _}}} = query, true) do
+    error!(
+      query,
+      "queries from a fragment need to explicitly pass a :select clause or use the `:columns` option"
+    )
   end
 
   def ensure_select(%{select: nil} = query, true) do
@@ -2247,6 +2250,10 @@ defmodule Ecto.Query.Planner do
       {{:ok, {_, fields}}, _} ->
         {{:map, Enum.map(fields, &{&1, {:value, :any}})},
          Enum.map(fields, &select_field(&1, ix, :always))}
+
+      {:error, {:fragment, [column_names: columns], _}} ->
+        {types, fields} = select_dump(columns, %{}, ix, drop)
+        {{:source, :fragment, nil, types}, fields}
 
       {:error, {:fragment, _, _}} ->
         {{:value, :map}, [{:&, [], [ix]}]}

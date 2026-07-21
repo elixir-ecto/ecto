@@ -315,6 +315,10 @@ defmodule Ecto.Repo.Queryable do
     values_list_load!(types, row, [], true, adapter)
   end
 
+  defp process(row, {:source, :fragment, _prefix, types}, _from, adapter) do
+    struct_load!(types, row, [], true, %{}, adapter)
+  end
+
   defp process(row, {:merge, left, right}, from, adapter) do
     {left, row} = process(row, left, from, adapter)
     {right, row} = process(row, right, from, adapter)
