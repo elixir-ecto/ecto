@@ -392,7 +392,7 @@ defmodule Ecto.Repo.Preloader do
     # If we are returning many results, we must sort by the key too
     query =
       case {card, query.combinations} do
-        {:many, [{kind, _} | []]} ->
+        {:many, [{kind, _} | _]} ->
           raise ArgumentError,
                 "`#{kind}` queries must be wrapped inside of a subquery " <>
                   "when preloading a `has_many` or `many_to_many` association. " <>
