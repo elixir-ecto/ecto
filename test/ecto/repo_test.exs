@@ -2138,6 +2138,11 @@ defmodule Ecto.RepoTest do
         TestRepo.preload(%MySchema{id: 1}, children: union(query, ^query))
       end
 
+      assert_raise ArgumentError, msg, fn ->
+        combination_query = query |> union(^query) |> union(^query)
+        TestRepo.preload(%MySchema{id: 1}, children: combination_query)
+      end
+
       msg = ~r"`union_all` queries must be wrapped inside of a subquery"
 
       assert_raise ArgumentError, msg, fn ->
