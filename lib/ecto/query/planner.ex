@@ -13,7 +13,7 @@ defmodule Ecto.Query.Planner do
     LimitExpr
   }
 
-  if map_size(%Ecto.Query{}) != 21 do
+  if map_size(%Ecto.Query{}) != 22 do
     raise "Ecto.Query match out of date in builder"
   end
 
@@ -1073,7 +1073,8 @@ defmodule Ecto.Query.Planner do
   end
 
   defp finalize_cache(query, operation, cache) do
-    %{assocs: assocs, prefix: prefix, lock: lock, select: select, aliases: aliases} = query
+    %{assocs: assocs, prefix: prefix, lock: lock, comments: comments, select: select, aliases: aliases} =
+      query
     aliases = Map.delete(aliases, @parent_as)
 
     cache =
@@ -1090,6 +1091,7 @@ defmodule Ecto.Query.Planner do
       |> prepend_if(assocs != [], assocs: assocs)
       |> prepend_if(prefix != nil, prefix: prefix)
       |> prepend_if(lock != nil, lock: lock)
+      |> prepend_if(comments != [], comments: comments)
       |> prepend_if(aliases != %{}, aliases: aliases)
 
     [operation | cache]
@@ -2414,6 +2416,25 @@ defmodule Ecto.Query.Planner do
   end
 
   def attach_prefix(query, _), do: query
+
+  @doc """
+  Appends the comments given via the `:comments` option into the query.
+
+  The option is a keyword list of `[pre: string, post: string]` entries, which
+  share the representation of the query's `comments` field. They become part of
+  the query cache key and are rendered by the adapter as `/* ... */` comments.
+  Validating and escaping them is left to the adapter, since the comment syntax
+  (and therefore what is unsafe) depends on the adapter.
+  """
+  def attach_comments(query, opts) when is_list(opts) do
+    case Keyword.fetch(opts, :comments) do
+      {:ok, comments} when is_list(comments) -> %{query | comments: query.comments ++ comments}
+      {:ok, other} -> raise ArgumentError, "the :comments option must be a keyword list of [pre: string, post: string], got: #{inspect(other)}"
+      :error -> query
+    end
+  end
+
+  def attach_comments(query, _), do: query
 
   ## Helpers
 
