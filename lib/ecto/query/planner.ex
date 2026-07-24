@@ -985,7 +985,7 @@ defmodule Ecto.Query.Planner do
           {params, join_cacheable?} = cast_and_merge_params(:join, query, join, params, adapter)
           {params, on_cacheable?} = cast_and_merge_params(:join, query, on, params, adapter)
 
-          {{qual, key, on.expr, hints},
+          {{qual, key, expr_to_cache(on), hints},
            {params, cacheable? and join_cacheable? and on_cacheable? and key != :nocache}}
       end)
 

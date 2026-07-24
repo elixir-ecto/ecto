@@ -651,8 +651,9 @@ defmodule Ecto.Query.PlannerTest do
   test "plan: interpolated join query with a subquery in where" do
     subquery = from(s in "subposts", select: s.id)
     join_query = from(p in "posts", where: p.id in subquery(subquery))
+    query = from(p in Post, join: p2 in ^join_query, on: true)
 
-    {query, _, _, _} = from(p in Post, join: p2 in ^join_query, on: true) |> plan()
+    {planned, _, _, _} = plan(query)
 
     assert [
              %{
@@ -661,7 +662,31 @@ defmodule Ecto.Query.PlannerTest do
                  subqueries: [%Ecto.SubQuery{}]
                }
              }
-           ] = query.joins
+           ] = planned.joins
+
+    assert [%{on: %{expr: {:in, _, [_, %Ecto.SubQuery{}]}}}] = normalize(query).joins
+  end
+
+  test "plan: join cache includes subqueries from interpolated wheres" do
+    first_subquery = from(s in "first_subposts", select: s.id)
+    second_subquery = from(s in "second_subposts", select: s.id)
+
+    first_query =
+      from(p in Post,
+        join: p2 in ^from(p in "posts", where: p.id in subquery(first_subquery)),
+        on: true
+      )
+
+    second_query =
+      from(p in Post,
+        join: p2 in ^from(p in "posts", where: p.id in subquery(second_subquery)),
+        on: true
+      )
+
+    {_, _, _, first_key} = plan(first_query)
+    {_, _, _, second_key} = plan(second_query)
+
+    refute first_key == second_key
   end
 
   test "plan: merges subqueries from interpolated join wheres" do

@@ -15,6 +15,7 @@
   * [Ecto.Query] Fix data-modifying CTE planner cache traversal
   * [Ecto.Query] Fix splice parameters in dynamic expressions
   * [Ecto.Query] Fix subquery order in query builders
+  * [Ecto.Query] Fix subqueries in interpolated join query filters
   * [Ecto.Query] Fix wrong placeholder numbering when a `from` source is a `{fragment, schema}` tuple
   * [Ecto.Repo] Do not reflect changes ignored due to `:writable` in returned struct
   * [Ecto.Repo] Fix placeholder type mismatch check on `insert_all` with placeholders
