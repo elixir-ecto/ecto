@@ -50,12 +50,12 @@ defmodule Ecto.Query.Planner do
   defp merge_expr_and_params(
          op,
          %BooleanExpr{expr: left_expr, params: left_params, subqueries: left_subqueries} = struct,
-         %{expr: right_expr, params: right_params} = right
+         %BooleanExpr{
+           expr: right_expr,
+           params: right_params,
+           subqueries: right_subqueries
+         }
        ) do
-    # The right side may be a QueryExpr (an explicit join `on`),
-    # which holds no subqueries
-    right_subqueries = Map.get(right, :subqueries, [])
-
     merge_expr_and_params(
       op,
       struct,
@@ -71,10 +71,8 @@ defmodule Ecto.Query.Planner do
   defp merge_expr_and_params(
          op,
          %QueryExpr{expr: left_expr, params: left_params} = struct,
-         %{expr: right_expr, params: right_params} = right
+         %BooleanExpr{expr: right_expr, params: right_params, subqueries: []}
        ) do
-    # A QueryExpr cannot hold subqueries, so none may come from the right side
-    [] = Map.get(right, :subqueries, [])
     merge_expr_and_params(op, struct, left_expr, left_params, [], right_expr, right_params, [])
   end
 
@@ -806,7 +804,17 @@ defmodule Ecto.Query.Planner do
     {joins, sources, tail_sources}
   end
 
-  defp attach_on([%{on: on} = h | t], expr) do
+  defp attach_on(joins, %QueryExpr{expr: expr, file: file, line: line, params: params}) do
+    attach_on(joins, %BooleanExpr{
+      op: :and,
+      expr: expr,
+      file: file,
+      line: line,
+      params: params
+    })
+  end
+
+  defp attach_on([%{on: on} = h | t], %BooleanExpr{} = expr) do
     [%{h | on: merge_expr_and_params(:and, on, expr)} | t]
   end
 
