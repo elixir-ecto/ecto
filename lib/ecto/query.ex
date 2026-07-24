@@ -428,7 +428,7 @@ defmodule Ecto.Query do
 
   defmodule QueryExpr do
     @moduledoc false
-    defstruct [:expr, :file, :line, params: []]
+    defstruct [:expr, :file, :line, params: [], subqueries: []]
   end
 
   defmodule ByExpr do
