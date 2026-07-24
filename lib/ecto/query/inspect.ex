@@ -1,7 +1,7 @@
 import Inspect.Algebra
 import Kernel, except: [to_string: 1]
 
-alias Ecto.Query.{DynamicExpr, JoinExpr, QueryExpr, WithExpr, LimitExpr}
+alias Ecto.Query.{DynamicExpr, JoinExpr, WithExpr, LimitExpr}
 
 defimpl Inspect, for: Ecto.Query.DynamicExpr do
   def inspect(%DynamicExpr{binding: binding} = dynamic, opts) do
@@ -191,8 +191,10 @@ defimpl Inspect, for: Ecto.Query do
     [{join_qual(qual), string}] ++ kw_as_and_prefix(join) ++ [on: expr(on, names)]
   end
 
-  defp maybe_on(%QueryExpr{expr: true}, _names), do: []
-  defp maybe_on(%QueryExpr{} = on, names), do: [on: expr(on, names)]
+  # The `on` may be a QueryExpr or, while an interpolated join query
+  # is being planned, a BooleanExpr
+  defp maybe_on(%{expr: true}, _names), do: []
+  defp maybe_on(%{} = on, names), do: [on: expr(on, names)]
 
   defp preloads([]), do: []
   defp preloads(preloads), do: [preload: inspect(preloads)]
