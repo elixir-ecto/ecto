@@ -648,6 +648,71 @@ defmodule Ecto.Query.PlannerTest do
     assert key == :nocache
   end
 
+  test "plan: interpolated join query with a subquery in where" do
+    subquery = from(s in "subposts", select: s.id)
+    join_query = from(p in "posts", where: p.id in subquery(subquery))
+    query = from(p in Post, join: p2 in ^join_query, on: true)
+
+    {planned, _, _, _} = plan(query)
+
+    assert [
+             %{
+               on: %{
+                 expr: {:in, _, [_, {:subquery, 0}]},
+                 subqueries: [%Ecto.SubQuery{}]
+               }
+             }
+           ] = planned.joins
+
+    # adapters pattern match on `%JoinExpr{on: %QueryExpr{}}`, so the
+    # BooleanExpr used during planning must not leak into the normalized query
+    assert [%{on: %Ecto.Query.QueryExpr{expr: {:in, _, [_, %Ecto.SubQuery{}]}}}] =
+             normalize(query).joins
+  end
+
+  test "plan: join cache includes subqueries from interpolated wheres" do
+    first_subquery = from(s in "first_subposts", select: s.id)
+    second_subquery = from(s in "second_subposts", select: s.id)
+
+    first_query =
+      from(p in Post,
+        join: p2 in ^from(p in "posts", where: p.id in subquery(first_subquery)),
+        on: true
+      )
+
+    second_query =
+      from(p in Post,
+        join: p2 in ^from(p in "posts", where: p.id in subquery(second_subquery)),
+        on: true
+      )
+
+    {_, _, _, first_key} = plan(first_query)
+    {_, _, _, second_key} = plan(second_query)
+
+    refute first_key == second_key
+  end
+
+  test "plan: merges subqueries from interpolated join wheres" do
+    first_subquery = from(s in "first_subposts", where: s.id == ^1, select: s.id)
+    second_subquery = from(s in "second_subposts", where: s.id == ^2, select: s.id)
+
+    join_query =
+      from(p in "posts",
+        where: p.id in subquery(first_subquery),
+        or_where: p.id in subquery(second_subquery)
+      )
+
+    {query, cast_params, dump_params, _} =
+      from(p in Post, join: p2 in ^join_query, on: true) |> plan()
+
+    assert cast_params == [1, 2]
+    assert dump_params == [1, 2]
+
+    assert [%{on: %{expr: {:or, _, [_, _]}, subqueries: [first, second]}}] = query.joins
+    assert %Ecto.SubQuery{query: %{from: %{source: {"first_subposts", nil}}}} = first
+    assert %Ecto.SubQuery{query: %{from: %{source: {"second_subposts", nil}}}} = second
+  end
+
   test "plan: normalizes prefixes" do
     # No schema prefix in from
     {query, _, _, _} = from(Comment, select: 1) |> plan()
