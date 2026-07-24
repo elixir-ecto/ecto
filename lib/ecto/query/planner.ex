@@ -30,8 +30,8 @@ defmodule Ecto.Query.Planner do
     on = %QueryExpr{file: __ENV__.file, line: __ENV__.line, expr: true, params: []}
 
     on =
-      Enum.reduce(wheres, on, fn %BooleanExpr{op: op, expr: expr, params: params}, acc ->
-        merge_expr_and_params(op, acc, expr, params)
+      Enum.reduce(wheres, on, fn %BooleanExpr{op: op} = expr, acc ->
+        merge_expr_and_params(op, acc, expr)
       end)
 
     join = %JoinExpr{qual: qual, source: source, file: __ENV__.file, line: __ENV__.line, on: on}
@@ -49,12 +49,31 @@ defmodule Ecto.Query.Planner do
 
   defp merge_expr_and_params(
          op,
-         %QueryExpr{expr: left_expr, params: left_params} = struct,
-         right_expr,
-         right_params
+         %{expr: left_expr, params: left_params, subqueries: left_subqueries} = struct,
+         %{expr: right_expr, params: right_params, subqueries: right_subqueries}
        ) do
-    right_expr = Ecto.Query.Builder.bump_interpolations(right_expr, left_params)
-    %{struct | expr: merge_expr(op, left_expr, right_expr), params: left_params ++ right_params}
+    right_expr =
+      right_expr
+      |> Ecto.Query.Builder.bump_interpolations(left_params)
+      |> Ecto.Query.Builder.bump_subqueries(left_subqueries)
+
+    right_params = bump_subquery_params(right_params, left_subqueries)
+
+    %{
+      struct
+      | expr: merge_expr(op, left_expr, right_expr),
+        params: left_params ++ right_params,
+        subqueries: left_subqueries ++ right_subqueries
+    }
+  end
+
+  defp bump_subquery_params(params, subqueries) do
+    len = length(subqueries)
+
+    Enum.map(params, fn
+      {:subquery, counter} -> {:subquery, len + counter}
+      other -> other
+    end)
   end
 
   defp merge_expr(_op, left, true), do: left
@@ -227,6 +246,7 @@ defmodule Ecto.Query.Planner do
 
     query
     |> plan_assocs()
+    |> plan_join_subqueries(plan_subquery)
     |> plan_combinations(adapter, cte_names)
     |> plan_expr_subqueries(:wheres, plan_subquery)
     |> plan_expr_subqueries(:havings, plan_subquery)
@@ -746,8 +766,8 @@ defmodule Ecto.Query.Planner do
     {joins, sources, tail_sources}
   end
 
-  defp attach_on([%{on: on} = h | t], %{expr: expr, params: params}) do
-    [%{h | on: merge_expr_and_params(:and, on, expr, params)} | t]
+  defp attach_on([%{on: on} = h | t], expr) do
+    [%{h | on: merge_expr_and_params(:and, on, expr)} | t]
   end
 
   defp rewrite_prefix(expr, nil), do: expr
@@ -879,6 +899,19 @@ defmodule Ecto.Query.Planner do
     query
   end
 
+  defp plan_join_subqueries(query, fun) do
+    joins =
+      Enum.map(query.joins, fn
+        %{on: %{subqueries: []}} = join ->
+          join
+
+        %{on: %{subqueries: subqueries} = on} = join ->
+          %{join | on: %{on | subqueries: Enum.map(subqueries, fun)}}
+      end)
+
+    %{query | joins: joins}
+  end
+
   defp plan_expr_subquery(query, key, fun) do
     with %{^key => %{subqueries: [_ | _] = subqueries} = expr} <- query do
       %{query | key => %{expr | subqueries: Enum.map(subqueries, fun)}}
@@ -952,7 +985,7 @@ defmodule Ecto.Query.Planner do
           {params, join_cacheable?} = cast_and_merge_params(:join, query, join, params, adapter)
           {params, on_cacheable?} = cast_and_merge_params(:join, query, on, params, adapter)
 
-          {{qual, key, on.expr, hints},
+          {{qual, key, expr_to_cache(on), hints},
            {params, cacheable? and join_cacheable? and on_cacheable? and key != :nocache}}
       end)
 
@@ -1018,7 +1051,11 @@ defmodule Ecto.Query.Planner do
     end)
   end
 
-  defp expr_to_cache(%QueryExpr{expr: expr}), do: expr
+  defp expr_to_cache(%QueryExpr{expr: expr, subqueries: []}), do: expr
+
+  defp expr_to_cache(%QueryExpr{expr: expr, subqueries: subqueries}) do
+    {expr, Enum.map(subqueries, fn %{cache: cache} -> {:subquery, cache} end)}
+  end
 
   defp expr_to_cache(%SelectExpr{expr: expr, subqueries: []}), do: expr
 
