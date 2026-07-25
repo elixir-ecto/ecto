@@ -159,10 +159,12 @@ defmodule Ecto.Repo.Preloader do
       # still necessary.
       opts = Keyword.put_new(opts, :caller, self())
       on_preloader_spawn = Keyword.get(opts, :on_preloader_spawn, fn -> :ok end)
+      log_level = caller_log_level()
 
       preloaders
       |> Task.async_stream(
         fn preloader ->
+          put_log_level(log_level)
           on_preloader_spawn.()
           preloader.({adapter_meta, opts})
         end,
@@ -175,6 +177,16 @@ defmodule Ecto.Repo.Preloader do
     else
       Enum.map(preloaders, & &1.({adapter_meta, opts}))
     end
+  end
+
+  # Logger.get_process_level/1 and put_process_level/2 require Elixir 1.15+.
+  if Version.match?(System.version(), ">= 1.15.0") do
+    defp caller_log_level, do: Logger.get_process_level(self())
+    defp put_log_level(nil), do: :ok
+    defp put_log_level(level), do: Logger.put_process_level(self(), level)
+  else
+    defp caller_log_level, do: nil
+    defp put_log_level(_level), do: :ok
   end
 
   # Then we unpack the query results, merge them, and preload recursively
