@@ -4,7 +4,7 @@ defmodule Ecto.Query.Builder.Join do
   @moduledoc false
 
   alias Ecto.Query.Builder
-  alias Ecto.Query.{JoinExpr, QueryExpr}
+  alias Ecto.Query.{BooleanExpr, JoinExpr}
 
   @doc """
   Escapes a join expression (not including the `on` expression).
@@ -262,7 +262,7 @@ defmodule Ecto.Query.Builder.Join do
 
       Ecto.Query.Builder.Join.join!(
         query,
-        %JoinExpr{unquote_splicing(join), on: %QueryExpr{}},
+        %JoinExpr{unquote_splicing(join), on: %BooleanExpr{op: :and}},
         unquote(var),
         unquote(as),
         unquote(count_bind),
@@ -286,7 +286,8 @@ defmodule Ecto.Query.Builder.Join do
 
             %JoinExpr{
               unquote_splicing(join),
-              on: %QueryExpr{
+              on: %BooleanExpr{
+                op: :and,
                 expr: unquote(on_expr),
                 params: unquote(on_params),
                 line: unquote(env.line),
@@ -386,7 +387,7 @@ defmodule Ecto.Query.Builder.Join do
 
     join = %{
       join
-      | on: %QueryExpr{expr: on_expr, params: on_params, line: on_line, file: on_file}
+      | on: %BooleanExpr{op: :and, expr: on_expr, params: on_params, line: on_line, file: on_file}
     }
 
     apply(query, join, as, count_bind)

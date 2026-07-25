@@ -613,7 +613,7 @@ defmodule Ecto.Query.PlannerTest do
              {:where, [{:and, {:is_nil, [], [nil]}}, {:or, {:is_nil, [], [nil]}}]},
              {:join,
               [
-                {:inner, {"comments", Comment, 38_292_156, "world"}, true, ["join hint"]}
+                {:inner, {"comments", Comment, 38_292_156, "world"}, {:and, true}, ["join hint"]}
               ]},
              {:from, {"posts", Post, 50_009_106, "hello"}, ["hint"]},
              {:select, 1}
@@ -664,9 +664,7 @@ defmodule Ecto.Query.PlannerTest do
              }
            ] = planned.joins
 
-    # adapters pattern match on `%JoinExpr{on: %QueryExpr{}}`, so the
-    # BooleanExpr used during planning must not leak into the normalized query
-    assert [%{on: %Ecto.Query.QueryExpr{expr: {:in, _, [_, %Ecto.SubQuery{}]}}}] =
+    assert [%{on: %Ecto.Query.BooleanExpr{expr: {:in, _, [_, %Ecto.SubQuery{}]}}}] =
              normalize(query).joins
   end
 
@@ -1036,7 +1034,7 @@ defmodule Ecto.Query.PlannerTest do
 
     assert [
              :all,
-             {:join, [{:inner, {{:fragment, _, _}, Post, _, _}, {:==, _, _}, []}]},
+             {:join, [{:inner, {{:fragment, _, _}, Post, _, _}, {:and, {:==, _, _}}, []}]},
              {:from, {{:fragment, _, _}, Barebone, _, _}, []},
              {:select, {:{}, [], [{:&, [], [0]}, {:&, [], [1]}]}}
            ] = cache_key

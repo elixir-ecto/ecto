@@ -50,41 +50,7 @@ defmodule Ecto.Query.Planner do
   defp merge_expr_and_params(
          op,
          %BooleanExpr{expr: left_expr, params: left_params, subqueries: left_subqueries} = struct,
-         %BooleanExpr{
-           expr: right_expr,
-           params: right_params,
-           subqueries: right_subqueries
-         }
-       ) do
-    merge_expr_and_params(
-      op,
-      struct,
-      left_expr,
-      left_params,
-      left_subqueries,
-      right_expr,
-      right_params,
-      right_subqueries
-    )
-  end
-
-  defp merge_expr_and_params(
-         op,
-         %QueryExpr{expr: left_expr, params: left_params} = struct,
-         %BooleanExpr{expr: right_expr, params: right_params, subqueries: []}
-       ) do
-    merge_expr_and_params(op, struct, left_expr, left_params, [], right_expr, right_params, [])
-  end
-
-  defp merge_expr_and_params(
-         op,
-         struct,
-         left_expr,
-         left_params,
-         left_subqueries,
-         right_expr,
-         right_params,
-         right_subqueries
+         %BooleanExpr{expr: right_expr, params: right_params, subqueries: right_subqueries}
        ) do
     right_expr =
       right_expr
@@ -93,16 +59,12 @@ defmodule Ecto.Query.Planner do
 
     right_params = bump_subquery_params(right_params, left_subqueries)
 
-    struct = %{
+    %{
       struct
       | expr: merge_expr(op, left_expr, right_expr),
-        params: left_params ++ right_params
+        params: left_params ++ right_params,
+        subqueries: left_subqueries ++ right_subqueries
     }
-
-    case left_subqueries ++ right_subqueries do
-      [] -> struct
-      subqueries -> %{struct | subqueries: subqueries}
-    end
   end
 
   defp bump_subquery_params(params, subqueries) do
@@ -804,16 +766,6 @@ defmodule Ecto.Query.Planner do
     {joins, sources, tail_sources}
   end
 
-  defp attach_on(joins, %QueryExpr{expr: expr, file: file, line: line, params: params}) do
-    attach_on(joins, %BooleanExpr{
-      op: :and,
-      expr: expr,
-      file: file,
-      line: line,
-      params: params
-    })
-  end
-
   defp attach_on([%{on: on} = h | t], %BooleanExpr{} = expr) do
     [%{h | on: merge_expr_and_params(:and, on, expr)} | t]
   end
@@ -1503,7 +1455,7 @@ defmodule Ecto.Query.Planner do
     Enum.map_reduce(exprs, counter, fn join, acc ->
       {source, acc} = prewalk_source(join.source, :join, query, join, acc, adapter)
       {on, acc} = prewalk(:join, query, join.on, acc, adapter)
-      {%{join | on: on_to_query_expr(on), source: source, params: nil}, acc}
+      {%{join | on: on, source: source, params: nil}, acc}
     end)
   end
 
@@ -1533,15 +1485,6 @@ defmodule Ecto.Query.Planner do
 
     {Enum.reverse(combinations), counter}
   end
-
-  # Interpolated join queries carry their `on` as a BooleanExpr during
-  # planning, as it may hold subqueries. Once subqueries are inlined by
-  # prewalk, convert it back to the QueryExpr adapters expect.
-  defp on_to_query_expr(%BooleanExpr{expr: expr, file: file, line: line, params: params}) do
-    %QueryExpr{expr: expr, file: file, line: line, params: params}
-  end
-
-  defp on_to_query_expr(on), do: on
 
   defp validate_json_path!([path_field | rest], field, {:parameterized, {Ecto.Embedded, embed}})
        when is_binary(path_field) or is_integer(path_field) do
