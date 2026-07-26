@@ -662,6 +662,18 @@ defmodule Ecto.ChangesetTest do
     assert length(constraints(changeset)) == 2
   end
 
+  test "merge/2: merges prepare changes callbacks" do
+    data = %Post{}
+    cs1 = change(data) |> prepare_changes(&put_change(&1, :title, "Title"))
+    cs2 = change(data) |> optimistic_lock(:upvotes)
+
+    for changeset <- [merge(cs1, cs2), merge(cs2, cs1)] do
+      assert length(changeset.prepare) == 2
+      assert changeset.filters == %{upvotes: 0}
+      assert prepared_changes(changeset) == %{title: "Title", upvotes: 1}
+    end
+  end
+
   test "merge/2: merges types" do
     cs1 = cast({%{}, %{title: :string}}, %{title: "foo"}, ~w(title)a)
     cs2 = cast({%{}, %{body: :string}}, %{body: "foo"}, ~w(body)a)
