@@ -2382,6 +2382,23 @@ defmodule Ecto.RepoTest do
       assert_received {:callback_ran, pid2} when pid2 != self()
       assert pid1 != pid2
     end
+
+    # Logger.{put,get,delete}_process_level were added in Elixir 1.15.
+    if Version.match?(System.version(), ">= 1.15.0") do
+      test "preload tasks inherit the caller's Logger level" do
+        Logger.put_process_level(self(), :warning)
+        on_exit(fn -> Logger.delete_process_level(self()) end)
+
+        test_process = self()
+        fun = fn -> send(test_process, {:level, Logger.get_process_level(self())}) end
+
+        %MySchemaWithMultiAssoc{parent_id: 1, mother_id: 2}
+        |> PrepareRepo.preload([:parent, :mother], on_preloader_spawn: fun)
+
+        assert_received {:level, :warning}
+        assert_received {:level, :warning}
+      end
+    end
   end
 
   describe "prepare_transaction" do
