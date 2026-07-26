@@ -667,12 +667,12 @@ defmodule Ecto.ChangesetTest do
     cs1 = change(data) |> prepare_changes(&put_change(&1, :title, "Title"))
     cs2 = change(data) |> optimistic_lock(:upvotes)
 
-    assert length(merge(cs1, cs2).prepare) == 2
-    assert length(merge(cs2, cs1).prepare) == 2
-
-    changeset = merge(change(data), cs2)
+    changeset = merge(cs1, cs2)
+    assert length(changeset.prepare) == 2
     assert changeset.filters == %{upvotes: 0}
-    assert prepared_changes(changeset) == %{upvotes: 1}
+    assert prepared_changes(changeset) == %{title: "Title", upvotes: 1}
+
+    assert length(merge(cs2, cs1).prepare) == 2
   end
 
   test "merge/2: merges types" do
