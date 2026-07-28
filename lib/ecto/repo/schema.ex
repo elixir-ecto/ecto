@@ -458,7 +458,7 @@ defmodule Ecto.Repo.Schema do
 
     wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
       assoc_opts = assoc_opts(assocs, opts)
-      user_changeset = run_prepare(changeset, prepare)
+      user_changeset = changeset |> run_prepare(prepare) |> drop_non_writable_changes!(drop_fields, schema, :insert)
 
       {changeset, parents, children, _} = pop_assocs(user_changeset, assocs)
       changeset = process_parents(changeset, user_changeset, parents, [], adapter, assoc_opts)
@@ -584,7 +584,7 @@ defmodule Ecto.Repo.Schema do
     if changeset.changes != %{} or force? do
       wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
         assoc_opts = assoc_opts(assocs, opts)
-        user_changeset = run_prepare(changeset, prepare)
+        user_changeset = changeset |> run_prepare(prepare) |> drop_non_writable_changes!(drop_fields, schema, :update)
 
         {changeset, parents, children, reset_parents} = pop_assocs(user_changeset, assocs)
 
