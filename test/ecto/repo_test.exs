@@ -2521,6 +2521,28 @@ defmodule Ecto.RepoTest do
       assert_received {:update, %{changes: [always: 12]}}
     end
 
+    test "update enforces writable fields added by prepare_changes" do
+      %{always: 10, never: nil} =
+        %MySchemaWritable{id: 1}
+        |> Ecto.Changeset.change(%{always: 10})
+        |> Ecto.Changeset.prepare_changes(&Ecto.Changeset.put_change(&1, :never, 11))
+        |> TestRepo.update!()
+
+      assert_received {:update, %{changes: [always: 10]}}
+
+      message = ~r"""
+      you are attempting to write to the field :never of #{inspect(__MODULE__.MySchemaWritableRaise)} but
+      the `:writable` option of this field indicates the field should not be written to during an update.
+      """
+
+      assert_raise ArgumentError, message, fn ->
+        %MySchemaWritableRaise{id: 2}
+        |> Ecto.Changeset.change(%{always: 12})
+        |> Ecto.Changeset.prepare_changes(&Ecto.Changeset.put_change(&1, :never, 13))
+        |> TestRepo.update!()
+      end
+    end
+
     test "update is a no-op when updatable fields are not changed" do
       %MySchemaWritable{id: 1}
       |> Ecto.Changeset.change(%{never: "can't update", insert: "can't update either"})
@@ -2652,6 +2674,29 @@ defmodule Ecto.RepoTest do
 
       assert_received {:insert, %{fields: inserted_fields}}
       assert Enum.sort(inserted_fields) == [always: 12, id: 2, insert: 11]
+    end
+
+    test "insert enforces writable fields added by prepare_changes" do
+      %{always: 10, never: nil} =
+        %MySchemaWritable{id: 1}
+        |> Ecto.Changeset.change(%{always: 10})
+        |> Ecto.Changeset.prepare_changes(&Ecto.Changeset.put_change(&1, :never, 11))
+        |> TestRepo.insert!()
+
+      assert_received {:insert, %{fields: inserted_fields}}
+      assert Enum.sort(inserted_fields) == [always: 10, id: 1]
+
+      message = ~r"""
+      you are attempting to write to the field :never of #{inspect(__MODULE__.MySchemaWritableRaise)} but
+      the `:writable` option of this field indicates the field should not be written to during an insert.
+      """
+
+      assert_raise ArgumentError, message, fn ->
+        %MySchemaWritableRaise{id: 2}
+        |> Ecto.Changeset.change(%{always: 12})
+        |> Ecto.Changeset.prepare_changes(&Ecto.Changeset.put_change(&1, :never, 13))
+        |> TestRepo.insert!()
+      end
     end
 
     test "insert with returning" do
