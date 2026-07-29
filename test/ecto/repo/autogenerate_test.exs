@@ -133,6 +133,38 @@ defmodule Ecto.Repo.AutogenerateTest do
     end
   end
 
+  defmodule AutogenerateOptionsType do
+    use Ecto.Type
+
+    def type, do: :string
+    def cast(value), do: {:ok, value}
+    def load(value), do: {:ok, value}
+    def dump(value), do: {:ok, value}
+    def autogenerate(opts), do: Keyword.fetch!(opts, :value)
+  end
+
+  defmodule ParameterizedAutogenerateOptionsType do
+    use Ecto.ParameterizedType
+
+    def init(opts), do: opts
+    def type(_params), do: :string
+    def cast(value, _params), do: {:ok, value}
+    def load(value, _loader, _params), do: {:ok, value}
+    def dump(value, _dumper, _params), do: {:ok, value}
+    def autogenerate(opts), do: Keyword.fetch!(opts, :value)
+  end
+
+  defmodule AutogenerateOptionsSchema do
+    use Ecto.Schema
+
+    schema "autogenerate_options_schema" do
+      field :parameterized, ParameterizedAutogenerateOptionsType,
+        autogenerate: [value: "parameterized"]
+
+      field :composite, {:array, AutogenerateOptionsType}, autogenerate: [value: ["composite"]]
+    end
+  end
+
   ## Autogenerate
 
   @uuid "30313233-3435-4637-9839-616263646566"
@@ -177,6 +209,13 @@ defmodule Ecto.Repo.AutogenerateTest do
     schema = TestRepo.insert!(changeset)
     assert byte_size(schema.uuid_v4) == 36
     assert byte_size(schema.uuid_v7) == 36
+  end
+
+  test "autogenerates parameterized and composite types with options" do
+    schema = TestRepo.insert!(%AutogenerateOptionsSchema{})
+
+    assert schema.parameterized == "parameterized"
+    assert schema.composite == ["composite"]
   end
 
   ## Timestamps
