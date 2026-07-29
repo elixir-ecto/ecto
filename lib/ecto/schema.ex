@@ -2066,7 +2066,8 @@ defmodule Ecto.Schema do
           store_mfa_autogenerate!(mod, name, type, gen)
 
         autogenerate_opts when is_list(autogenerate_opts) ->
-          store_mfa_autogenerate!(mod, name, type, {type, :autogenerate, [autogenerate_opts]})
+          mfa = {autogenerate_module(type), :autogenerate, [autogenerate_opts]}
+          store_mfa_autogenerate!(mod, name, type, mfa)
 
         true ->
           store_type_autogenerate!(mod, name, source || name, type, pk?)
@@ -2634,6 +2635,14 @@ defmodule Ecto.Schema do
   end
 
   defp composite?(_type, _name), do: false
+
+  defp autogenerate_module({:parameterized, {type, _params}}), do: type
+
+  defp autogenerate_module({composite, nested_type} = type) do
+    if Ecto.Type.composite?(composite), do: autogenerate_module(nested_type), else: type
+  end
+
+  defp autogenerate_module(type), do: type
 
   defp store_mfa_autogenerate!(mod, name, type, mfa) do
     if autogenerate_id?(type) do
