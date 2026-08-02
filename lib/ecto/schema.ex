@@ -2411,6 +2411,7 @@ defmodule Ecto.Schema do
           {name, type}
         end
       end
+      |> Keyword.merge(virtual_fields)
 
     dump =
       for {name, {type, writable}} <- fields do
