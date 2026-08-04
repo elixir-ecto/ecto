@@ -2337,15 +2337,20 @@ defmodule Ecto.Query.Planner do
   end
 
   defp subquery_select_fields(kind, select, requested_fields, ix, query) do
+    kind = if kind == :any, do: :struct, else: kind
     available_fields = subquery_source_fields(select)
     requested_fields = List.wrap(requested_fields)
 
     schema =
-      case select do
-        {:source, {_, schema}, _, _} when not is_nil(schema) -> schema
+      case {kind, select} do
+        {:struct, {:source, {_, schema}, _, _}} when not is_nil(schema) ->
+          schema
 
-        _ ->
-          error!(query, "it is not possible to return a subset (struct/2, map/2, list of fields) of a subquery that does not return a schema struct")
+        {:map, _} ->
+          nil
+
+        {:struct, _} when ->
+          error!(query, "it is not possible to return a struct subset of a subquery that does not return a schema struct")   
       end
 
     types =
@@ -2361,7 +2366,6 @@ defmodule Ecto.Query.Planner do
       end)
 
     field_exprs = Enum.map(requested_fields, &select_field(&1, ix, :always))
-    schema = if kind == :map, do: nil, else: schema
 
     {{:source, {nil, schema}, nil, types}, field_exprs}
   end
