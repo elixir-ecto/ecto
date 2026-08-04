@@ -36,7 +36,7 @@ defmodule Ecto.Query.Builder.Select do
       take?(other) ->
         {
           {:{}, [], [:&, [], [0]]},
-          {[], %{take: %{0 => {:any, Macro.expand(other, env)}}, subqueries: [], aliases: %{}}}
+          {[], %{take: %{0 => {:struct, Macro.expand(other, env)}}, subqueries: [], aliases: %{}}}
         }
 
       maybe_take?(other) ->
@@ -239,7 +239,7 @@ defmodule Ecto.Query.Builder.Select do
   end
 
   def select!(kind, query, fields, file, line) do
-    take = %{0 => {:any, fields!(:select, fields)}}
+    take = %{0 => {:struct, fields!(:select, fields)}}
 
     %Ecto.Query.SelectExpr{expr: {:&, [], [0]}, take: take, file: file, line: line}
     |> apply_or_merge(kind, query)
