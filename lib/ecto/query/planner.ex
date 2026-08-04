@@ -2337,16 +2337,15 @@ defmodule Ecto.Query.Planner do
   end
 
   defp subquery_select_fields(kind, select, requested_fields, ix, query) do
-    kind = if kind == :any, do: :struct, else: kind
     available_fields = subquery_source_fields(select)
     requested_fields = List.wrap(requested_fields)
 
     schema =
       case {kind, select} do
-        {:struct, {:source, {_, schema}, _, _}} when not is_nil(schema) ->
+        {kind, {:source, {_, schema}, _, _}} when not is_nil(schema) when kind != :map ->
           schema
 
-        {:map, _} ->
+        {kind, _} when kind != :struct ->
           nil
 
         {:struct, _} ->
