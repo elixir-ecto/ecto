@@ -2349,7 +2349,7 @@ defmodule Ecto.Query.Planner do
         {:map, _} ->
           nil
 
-        {:struct, _} when ->
+        {:struct, _} ->
           error!(query, "it is not possible to return a struct subset of a subquery that does not return a schema struct")   
       end
 
