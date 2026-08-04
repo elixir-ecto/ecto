@@ -2342,7 +2342,7 @@ defmodule Ecto.Query.Planner do
 
     schema =
       case {kind, select} do
-        {kind, {:source, {_, schema}, _, _}} when not is_nil(schema) when kind != :map ->
+        {kind, {:source, {_, schema}, _, _}} when not is_nil(schema) and kind != :map ->
           schema
 
         {kind, _} when kind != :struct ->
