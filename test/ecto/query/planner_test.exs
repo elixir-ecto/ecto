@@ -2670,6 +2670,20 @@ defmodule Ecto.Query.PlannerTest do
            ] = query.select.fields
   end
 
+  test "normalze: select list of fields from subquery source" do
+    {_, _, _, select} = subquery(Post) |> select([p], [:title]) |> normalize_with_params()
+    %{from: {_, {:source, {_, postprocess_schema}, _, types}}} = select
+    assert postprocess_schema == Post
+    assert types == [title: :string]
+  end
+
+  test "normalze: select map/2 from subquery source" do
+    {_, _, _, select} = subquery(Post) |> select([p], map(p, [:title])) |> normalize_with_params()
+    %{from: {_, {:source, {_, postprocess_schema}, _, types}}} = select
+    assert postprocess_schema == nil
+    assert types == [title: :string]
+  end
+
   test "normalize: select with :%{}" do
     query = Post |> select([p], %{p | title: "foo"}) |> normalize()
     assert query.select.expr == {:%{}, [], [{:|, [], [{:&, [], [0]}, [title: "foo"]]}]}

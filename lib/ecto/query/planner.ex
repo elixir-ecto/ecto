@@ -2258,8 +2258,8 @@ defmodule Ecto.Query.Planner do
       {{:ok, {:struct, _}}, {:fragment, _, _}} ->
         error!(query, "it is not possible to return a struct subset of a fragment")
 
-      {{:ok, {:struct, fields}}, %Ecto.SubQuery{select: select}} ->
-        subquery_select_fields(select, fields, ix, query)
+      {{:ok, {kind, fields}}, %Ecto.SubQuery{select: select}} ->
+        subquery_select_fields(kind, select, fields, ix, query)
 
       {{:ok, {_, []}}, {_, _, _}} ->
         error!(
@@ -2336,16 +2336,20 @@ defmodule Ecto.Query.Planner do
     end)
   end
 
-  defp subquery_select_fields(select, requested_fields, ix, query) do
+  defp subquery_select_fields(kind, select, requested_fields, ix, query) do
     available_fields = subquery_source_fields(select)
     requested_fields = List.wrap(requested_fields)
 
     schema =
-      case select do
-        {:source, {_, schema}, _, _} when not is_nil(schema) -> schema
+      case {kind, select} do
+        {kind, {:source, {_, schema}, _, _}} when not is_nil(schema) and kind != :map ->
+          schema
 
-        _ ->
-          error!(query, "it is not possible to return a struct subset of a subquery that does not return a schema struct")
+        {kind, _} when kind != :struct ->
+          nil
+
+        {:struct, _} ->
+          error!(query, "it is not possible to return a struct subset of a subquery that does not return a schema struct")   
       end
 
     types =
@@ -2355,7 +2359,7 @@ defmodule Ecto.Query.Planner do
             {field, type}
 
           :error ->
-            error!(query, "field `#{field}` in struct/2 is not available in the subquery. " <>
+            error!(query, "field `#{field}` is not available in the subquery. " <>
                          "Subquery only returns fields: #{inspect(available_fields)}")
         end
       end)
