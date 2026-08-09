@@ -2390,10 +2390,12 @@ defmodule Ecto.Schema do
     on_writable_violation_default = Module.get_attribute(module, :on_writable_violation, :nothing)
 
     struct_fields = Module.get_attribute(module, :ecto_struct_fields) |> Enum.reverse()
-    derive = Module.get_attribute(module, :derive)
 
-    if redacted_fields != [] and not List.keymember?(derive, Inspect, 0) and
-         derive_inspect?(module) do
+    # Reading @derive makes every module named in its options a compile-time
+    # dependency of the schema. Keep the read last so it is skipped unless a
+    # redacted field actually requires deriving Inspect.
+    if redacted_fields != [] and derive_inspect?(module) and
+         not List.keymember?(Module.get_attribute(module, :derive), Inspect, 0) do
       Module.put_attribute(module, :derive, {Inspect, except: redacted_fields})
     end
 
