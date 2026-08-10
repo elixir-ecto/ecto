@@ -977,6 +977,83 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  describe "short-circuiting unsatisfiable WHEREs" do
+    test "all does not hit the database when provably unsatisfiable" do
+      empty = []
+      assert from(s in MySchema, where: s.x in ^empty) |> TestRepo.all() == []
+      refute_received {:all, _}
+
+      assert from(s in MySchema, where: s.x in ^[]) |> TestRepo.all() == []
+      refute_received {:all, _}
+
+      assert from(s in MySchema, where: s.x in []) |> TestRepo.all() == []
+      refute_received {:all, _}
+
+      assert from(s in MySchema, where: false) |> TestRepo.all() == []
+      refute_received {:all, _}
+
+      assert from(s in MySchema, where: true and false) |> TestRepo.all() == []
+      refute_received {:all, _}
+
+      assert from(s in MySchema, where: true, where: false) |> TestRepo.all() == []
+      refute_received {:all, _}
+    end
+
+    test "all does not hit the database when empty `in` is and-ed with other filters" do
+      assert from(s in MySchema, where: s.x in ^[] and s.x == "a") |> TestRepo.all() == []
+      refute_received {:all, _}
+    end
+
+    test "correctly queries the database when empty `in` is or-ed with other filters" do
+      assert [_] = from(s in MySchema, where: s.x in ^[] or s.x == "a") |>  TestRepo.all()
+      assert_received {:all, _}
+
+      assert [_] = from(s in MySchema, where: s.x in ^[]) |> or_where([s], s.x == "a") |> TestRepo.all()
+      assert_received {:all, _}
+
+      assert [_] = from(s in MySchema, where: s.x in ^[]) |> or_where([_], true) |> TestRepo.all()
+      assert_received {:all, _}
+    end
+
+    test "correctly queries the database for values not in the empty list" do
+      assert [_] = from(s in MySchema, where: s.x not in ^[]) |> TestRepo.all()
+      assert_received {:all, _}
+    end
+
+    test "correctly queries the database for non-empty `in` list" do
+      assert [_] = from(s in MySchema, where: s.x in ^["a"]) |> TestRepo.all()
+      assert_received {:all, _}
+    end
+
+    test "update_all does not hit the database for empty `in`" do
+      assert {0, nil} = from(s in MySchema, where: s.x in ^[]) |> TestRepo.update_all(set: [x: "b"])
+      refute_received {:update_all, _}
+    end
+
+    test "delete_all does not hit the database for empty `in`" do
+      assert {0, nil} = from(s in MySchema, where: s.x in ^[]) |> TestRepo.delete_all()
+      refute_received {:delete_all, _}
+    end
+
+    test "exists? does not hit the database for empty `in`" do
+      refute from(s in MySchema, where: s.x in ^[]) |> TestRepo.exists?()
+      refute_received {:all, _}
+    end
+
+    test "aggregate queries do not hit the database for empty `in`" do
+      assert from(s in MySchema, where: s.x in ^[]) |> TestRepo.aggregate(:count) == 0
+      refute_received {:all, _}
+
+      assert from(s in MySchema, where: s.id in ^[]) |> TestRepo.aggregate(:sum, :id) == nil
+      refute_received {:all, _}
+    end
+
+    test "stream does not hit the database for empty `in`" do
+      assert from(s in MySchema, where: s.x in ^[]) |> TestRepo.stream() |> Enum.to_list() == []
+      refute_received {:stream, _}
+    end
+  end
+
   describe "update_all" do
     test "raises on bad input" do
       # Success

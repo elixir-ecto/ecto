@@ -39,40 +39,44 @@ defmodule Ecto.Repo.Queryable do
     {query, opts} = repo.prepare_query(:stream, query, opts)
     query = attach_prefix(query, opts)
 
-    query_cache? = Keyword.get(opts, :query_cache, true)
+    if unsatisfiable_wheres?(query) do
+      Stream.concat([])
+    else
+      query_cache? = Keyword.get(opts, :query_cache, true)
 
-    {query_meta, prepared, cast_params, dump_params} =
-      Planner.query(query, :all, cache, adapter, 0, query_cache?)
+      {query_meta, prepared, cast_params, dump_params} =
+        Planner.query(query, :all, cache, adapter, 0, query_cache?)
 
-    opts = [cast_params: cast_params] ++ opts
+      opts = [cast_params: cast_params] ++ opts
 
-    case query_meta do
-      %{select: nil} ->
-        adapter_meta
-        |> adapter.stream(query_meta, prepared, dump_params, opts)
-        |> Stream.flat_map(fn {_, nil} -> [] end)
+      case query_meta do
+        %{select: nil} ->
+          adapter_meta
+          |> adapter.stream(query_meta, prepared, dump_params, opts)
+          |> Stream.flat_map(fn {_, nil} -> [] end)
 
-      %{select: select, preloads: preloads} ->
-        %{
-          assocs: assocs,
-          preprocess: preprocess,
-          postprocess: postprocess,
-          take: take,
-          from: from
-        } = select
+        %{select: select, preloads: preloads} ->
+          %{
+            assocs: assocs,
+            preprocess: preprocess,
+            postprocess: postprocess,
+            take: take,
+            from: from
+          } = select
 
-        if preloads != [] or assocs != [] do
-          raise Ecto.QueryError, query: query, message: "preloads are not supported on streams"
-        end
+          if preloads != [] or assocs != [] do
+            raise Ecto.QueryError, query: query, message: "preloads are not supported on streams"
+          end
 
-        preprocessor = preprocessor(from, preprocess, adapter)
-        stream = adapter.stream(adapter_meta, query_meta, prepared, dump_params, opts)
-        postprocessor = postprocessor(from, postprocess, take, adapter)
+          preprocessor = preprocessor(from, preprocess, adapter)
+          stream = adapter.stream(adapter_meta, query_meta, prepared, dump_params, opts)
+          postprocessor = postprocessor(from, postprocess, take, adapter)
 
-        stream
-        |> Stream.flat_map(fn {_, rows} -> rows end)
-        |> Stream.map(preprocessor)
-        |> Stream.map(postprocessor)
+          stream
+          |> Stream.flat_map(fn {_, rows} -> rows end)
+          |> Stream.map(preprocessor)
+          |> Stream.map(postprocessor)
+      end
     end
   end
 
@@ -131,11 +135,23 @@ defmodule Ecto.Repo.Queryable do
   end
 
   def aggregate(name, queryable, aggregate, opts) do
-    one!(name, query_for_aggregate(queryable, aggregate), opts)
+    queryable = Queryable.to_query(queryable)
+
+    if unsatisfiable_wheres?(queryable) do
+      empty_aggregate(aggregate)
+    else
+      one!(name, query_for_aggregate(queryable, aggregate), opts)
+    end
   end
 
   def aggregate(name, queryable, aggregate, field, opts) do
-    one!(name, query_for_aggregate(queryable, aggregate, field), opts)
+    queryable = Queryable.to_query(queryable)
+
+    if unsatisfiable_wheres?(queryable) do
+      empty_aggregate(aggregate)
+    else
+      one!(name, query_for_aggregate(queryable, aggregate, field), opts)
+    end
   end
 
   def exists?(name, queryable, opts) do
@@ -224,36 +240,101 @@ defmodule Ecto.Repo.Queryable do
     {query, opts} = repo.prepare_query(operation, query, opts)
     query = attach_prefix(query, opts)
 
-    query_cache? = Keyword.get(opts, :query_cache, true)
+    if unsatisfiable_wheres?(query) do
+      empty_execute_result(operation)
+    else
+      query_cache? = Keyword.get(opts, :query_cache, true)
 
-    {query_meta, prepared, cast_params, dump_params} =
-      Planner.query(query, operation, cache, adapter, 0, query_cache?)
+      {query_meta, prepared, cast_params, dump_params} =
+        Planner.query(query, operation, cache, adapter, 0, query_cache?)
 
-    opts = [cast_params: cast_params] ++ opts
+      opts = [cast_params: cast_params] ++ opts
 
-    case query_meta do
-      %{select: nil} ->
-        adapter.execute(adapter_meta, query_meta, prepared, dump_params, opts)
+      case query_meta do
+        %{select: nil} ->
+          adapter.execute(adapter_meta, query_meta, prepared, dump_params, opts)
 
-      %{select: select, sources: sources, preloads: preloads} ->
-        %{
-          preprocess: preprocess,
-          postprocess: postprocess,
-          take: take,
-          assocs: assocs,
-          from: from
-        } = select
+        %{select: select, sources: sources, preloads: preloads} ->
+          %{
+            preprocess: preprocess,
+            postprocess: postprocess,
+            take: take,
+            assocs: assocs,
+            from: from
+          } = select
 
-        preprocessor = preprocessor(from, preprocess, adapter)
-        {count, rows} = adapter.execute(adapter_meta, query_meta, prepared, dump_params, opts)
-        postprocessor = postprocessor(from, postprocess, take, adapter)
+          preprocessor = preprocessor(from, preprocess, adapter)
+          {count, rows} = adapter.execute(adapter_meta, query_meta, prepared, dump_params, opts)
+          postprocessor = postprocessor(from, postprocess, take, adapter)
 
-        {count,
-         rows
-         |> Ecto.Repo.Assoc.query(assocs, sources, preprocessor)
-         |> Ecto.Repo.Preloader.query(name, preloads, take, assocs, postprocessor, tuplet)}
+          {count,
+           rows
+           |> Ecto.Repo.Assoc.query(assocs, sources, preprocessor)
+           |> Ecto.Repo.Preloader.query(name, preloads, take, assocs, postprocessor, tuplet)}
+      end
     end
   end
+
+  defp empty_execute_result(:all), do: {0, []}
+  defp empty_execute_result(:update_all), do: {0, nil}
+  defp empty_execute_result(:delete_all), do: {0, nil}
+
+  defp empty_aggregate(:count), do: 0
+  defp empty_aggregate(_aggregate), do: nil
+
+  # When a set of WHERE clauses can be proven to be unsatisfiable (e.g. `where: x in []`),
+  # we can avoid hitting the database entirely.
+  defp unsatisfiable_wheres?(%{combinations: [_ | _]}), do: false
+  defp unsatisfiable_wheres?(%{wheres: []}), do: false
+
+  defp unsatisfiable_wheres?(%{wheres: [%Query.BooleanExpr{} = first | rest]}) do
+    Enum.reduce_while(rest, static_bool(first), fn %Query.BooleanExpr{op: op} = expr, acc ->
+      case combine_static(acc, op, static_bool(expr)) do
+        false -> {:cont, false}
+        other -> {:halt, other}
+      end
+    end) == false
+  end
+
+  defp combine_static(l, :and, r) when l == false or r == false, do: false
+  defp combine_static(true, :and, other), do: other
+  defp combine_static(other, :and, true), do: other
+  defp combine_static(l, :or, r) when l == true or r == true, do: true
+  defp combine_static(false, :or, other), do: other
+  defp combine_static(other, :or, false), do: other
+  defp combine_static(l, _, r) when l == :unknown or r == :unknown, do: :unknown
+
+  defp static_bool(%Query.BooleanExpr{expr: expr, params: params}), do: static_bool(expr, params)
+  defp static_bool(true, _params), do: true
+  defp static_bool(false, _params), do: false
+
+  defp static_bool({:not, _, [inner]}, params) do
+    case static_bool(inner, params) do
+      true -> false
+      false -> true
+      :unknown -> :unknown
+    end
+  end
+
+  defp static_bool({:and, _, [left, right]}, params) do
+    combine_static(static_bool(left, params), :and, static_bool(right, params))
+  end
+
+  defp static_bool({:or, _, [left, right]}, params) do
+    combine_static(static_bool(left, params), :or, static_bool(right, params))
+  end
+
+  defp static_bool({:in, _, [_, {:^, _, [ix]}]}, params) do
+    case Enum.at(params, ix) do
+      {[], _type} -> false
+      _other -> :unknown
+    end
+  end
+
+  defp static_bool({:in, _, [_, %Query.Tagged{value: []}]}, _), do: false
+  defp static_bool({:in, _, [_, []]}, _), do: false
+  defp static_bool({:in, _, _}, _), do: :unknown
+  defp static_bool(_other, _params), do: :unknown
 
   defp preprocessor({_, {:source, {source, schema}, prefix, types}}, preprocess, adapter) do
     struct = Ecto.Schema.Loader.load_struct(schema, prefix, source)
