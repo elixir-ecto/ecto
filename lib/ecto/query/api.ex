@@ -829,6 +829,25 @@ defmodule Ecto.Query.API do
   def map(source, fields), do: doc!([source, fields])
 
   @doc """
+  Used in `select` to return a source as a map.
+
+  Ordinarly, selecting a source will return the result as a struct:
+
+      # Returns [%Post{}, ...]
+      Repo.all(from p in Post, select: p)
+
+  There may be situations where you would like to return the result as a map instead.
+  For example, if you would like to immediately encode your results to JSON without
+  needing to handle the Ecto specific metadata fields.
+
+  To this end, you can use `map/1` in the following way:
+
+      # Returns [%{...}, ...] with all of the query fields in the schema
+      Repo.all(from p in Post, select: map(p))
+  """
+  def map(source), do: doc!([source])
+
+  @doc """
   Merges the map on the right over the map on the left.
 
   If the map on the left side is a struct, Ecto will check

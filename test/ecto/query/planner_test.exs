@@ -2566,9 +2566,67 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "normalize: select source on fragment with columns" do
-    query = from f in fragment("select 1", columns: [:x])
+    query = from(f in fragment("select 1", columns: [:x]))
     {_, _, _, select} = normalize_with_params(query)
     assert %{from: {_, {:map, [x: {:value, :any}]}}} = select
+  end
+
+  test "normalize: select with map/1" do
+    {query, _, _, %{from: from}} = Post |> select([p], map(p)) |> normalize_with_params()
+    assert query.select.expr == {:&, [map: true], [0]}
+
+    assert query.select.fields ==
+             select_fields(
+               [
+                 :id,
+                 :post_title,
+                 :text,
+                 :code,
+                 :posted,
+                 :visits,
+                 :links,
+                 :preferences,
+                 :status,
+                 :parameterized_map,
+                 :meta,
+                 :metas
+               ],
+               0
+             )
+
+    assert {_, {:source, {"posts", nil}, _, _}} = from
+  end
+
+  test "normalize: select_merge with map/1" do
+    {query, _, _, %{from: from}} =
+      Post
+      |> select([p], map(p))
+      |> select_merge([p], map(p, [:payload]))
+      |> normalize_with_params()
+
+    assert query.select.expr == {:merge, [], [{:&, [map: true], [0]}, {:&, [], [0]}]}
+
+    assert query.select.fields ==
+             select_fields(
+               [
+                 :payload,
+                 :id,
+                 :post_title,
+                 :text,
+                 :code,
+                 :posted,
+                 :visits,
+                 :links,
+                 :preferences,
+                 :status,
+                 :parameterized_map,
+                 :meta,
+                 :metas
+               ],
+               0
+             )
+
+    assert {_, {:source, {"posts", nil}, _, _}} = from
   end
 
   test "normalize: select with map/2" do

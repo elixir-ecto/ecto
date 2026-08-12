@@ -498,10 +498,10 @@ defmodule Ecto.Query.Planner do
     {name, fields}
   end
 
-  defp subquery_select({:%{}, _, [{:|, _, [{:&, [], [ix]}, pairs]}]} = expr, take, query) do
+  defp subquery_select({:%{}, _, [{:|, _, [{:&, meta, [ix]}, pairs]}]} = expr, take, query) do
     assert_subquery_fields!(query, expr, pairs)
     drop = Map.new(pairs, fn {key, _} -> {key, nil} end)
-    {source, _} = source_take!(:select, query, take, ix, ix, drop)
+    {source, _} = source_take!(:select, query, take, ix, ix, drop, meta[:map])
 
     # In case of map updates, we need to remove duplicated fields
     # at query time because we use the field names as aliases and
@@ -515,8 +515,8 @@ defmodule Ecto.Query.Planner do
     {nil, pairs}
   end
 
-  defp subquery_select({:&, _, [ix]}, take, query) do
-    {source, _} = source_take!(:select, query, take, ix, ix, %{})
+  defp subquery_select({:&, meta, [ix]}, take, query) do
+    {source, _} = source_take!(:select, query, take, ix, ix, %{}, meta[:map])
     fields = subquery_source_fields(source)
     {keep_source_or_struct(source), subquery_fields(fields, ix)}
   end
@@ -1886,13 +1886,13 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp collect_fields({:&, _, [0]}, fields, :none, query, take, _keep_literals?, drop) do
-    {expr, taken} = source_take!(:select, query, take, 0, 0, drop)
+  defp collect_fields({:&, meta, [0]}, fields, :none, query, take, _keep_literals?, drop) do
+    {expr, taken} = source_take!(:select, query, take, 0, 0, drop, meta[:map])
     {{:source, :from}, fields, {{:source, :from}, expr, taken, drop}}
   end
 
   defp collect_fields(
-         {:&, _, [0]},
+         {:&, meta, [0]},
          fields,
          {from_expr, _, _, cached_drop} = from,
          query,
@@ -1908,15 +1908,15 @@ defmodule Ecto.Query.Planner do
       if drop == cached_drop do
         from
       else
-        {from_source, from_fields} = source_take!(:select, query, take, 0, 0, drop)
+        {from_source, from_fields} = source_take!(:select, query, take, 0, 0, drop, meta[:map])
         {from_expr, from_source, from_fields, drop}
       end
 
     {{:source, :from}, fields, from}
   end
 
-  defp collect_fields({:&, _, [ix]}, fields, from, query, take, _keep_literals?, drop) do
-    {expr, taken} = source_take!(:select, query, take, ix, ix, drop)
+  defp collect_fields({:&, meta, [ix]}, fields, from, query, take, _keep_literals?, drop) do
+    {expr, taken} = source_take!(:select, query, take, ix, ix, drop, meta[:map])
     {expr, Enum.reverse(taken, fields), from}
   end
 
@@ -2229,7 +2229,7 @@ defmodule Ecto.Query.Planner do
   defp collect_assocs(exprs, fields, query, tag, take, [{assoc, {ix, children}} | tail]) do
     to_take = get_preload_source!(query, ix)
     {fetch, take_children} = fetch_assoc(tag, take, assoc)
-    {expr, taken} = take!(to_take, query, fetch, assoc, ix, %{})
+    {expr, taken} = take!(to_take, query, fetch, assoc, ix, %{}, false)
     exprs = [expr | exprs]
     fields = Enum.reverse(taken, fields)
     {exprs, fields} = collect_assocs(exprs, fields, query, tag, take_children, children)
@@ -2248,12 +2248,12 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp source_take!(kind, query, take, field, ix, drop) do
+  defp source_take!(kind, query, take, field, ix, drop, map_source?) do
     source = get_source!(kind, query, ix)
-    take!(source, query, Access.fetch(take, field), field, ix, drop)
+    take!(source, query, Access.fetch(take, field), field, ix, drop, map_source?)
   end
 
-  defp take!(source, query, fetched, field, ix, drop) do
+  defp take!(source, query, fetched, field, ix, drop, map_source?) do
     case {fetched, source} do
       {{:ok, {:struct, _}}, {:fragment, _, _}} ->
         error!(query, "it is not possible to return a struct subset of a fragment")
@@ -2310,6 +2310,7 @@ defmodule Ecto.Query.Planner do
         {types, fields} =
           select_dump(schema.__schema__(:query_fields), schema.__schema__(:dump), ix, drop)
 
+        schema = if map_source?, do: nil, else: schema
         {{:source, {source, schema}, prefix || query.prefix, types}, fields}
 
       {:error, %Ecto.SubQuery{select: select}} ->
