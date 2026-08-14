@@ -359,6 +359,40 @@ defmodule Ecto.SchemaTest do
              [{[:updated_at], {:m, :f, [:a]}}]
   end
 
+  defmodule TimestampsWritableDefault do
+    use Ecto.Schema
+
+    schema "timestamps" do
+      timestamps()
+    end
+  end
+
+  defmodule TimestampsWritableCustom do
+    use Ecto.Schema
+
+    schema "timestamps" do
+      timestamps(inserted_at_writable: :insert, inserted_at_on_writable_violation: :raise)
+    end
+  end
+
+  test "timestamps with writable options" do
+    assert TimestampsWritableDefault.__schema__(:updatable_fields) == {[:updated_at, :inserted_at, :id], []}
+    assert TimestampsWritableDefault.__schema__(:on_writable_violation, :inserted_at) == :nothing
+
+    assert TimestampsWritableCustom.__schema__(:updatable_fields) == {[:updated_at, :id], [:inserted_at]}
+    assert TimestampsWritableCustom.__schema__(:on_writable_violation, :inserted_at) == :raise
+
+    assert_raise ArgumentError, ":inserted_at_writable option cannot be set to :never as `inserted_at` will never be populated", fn ->
+      defmodule TimestampsWritableNever do
+        use Ecto.Schema
+
+        schema "timestamps" do
+          timestamps(inserted_at_writable: :never)
+        end
+      end
+    end
+  end
+
   defmodule TimestampsCustom do
     use Ecto.Schema
 
