@@ -475,7 +475,8 @@ defmodule Ecto.Changeset.Relation do
 
   defp primary_keys(%{related: mod}), do: mod.__schema__(:primary_key)
 
-  defp on_cast_default(%{related: module}) do
+  @doc false
+  def on_cast_default(%{related: module}) do
     fn struct, params ->
       try do
         module.changeset(struct, params)
