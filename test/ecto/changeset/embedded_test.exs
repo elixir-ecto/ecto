@@ -379,6 +379,17 @@ defmodule Ecto.Changeset.EmbeddedTest do
     assert changeset.valid?
   end
 
+  test "cast embeds_one stores the default changeset function" do
+    changeset = cast(%Author{profile: %Profile{}}, %{}, :profile)
+    on_cast = (changeset.types.profile |> elem(1)).on_cast
+
+    assert is_function(on_cast, 2)
+
+    assert on_cast.(%Profile{}, %{}).errors == [
+             name: {"can't be blank", [validation: :required]}
+           ]
+  end
+
   test "cast embeds_one keeps appropriate action from changeset" do
     changeset =
       cast(

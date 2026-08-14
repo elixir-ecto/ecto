@@ -1387,7 +1387,7 @@ defmodule Ecto.Changeset do
       end
 
     relation = relation!(:cast, type, key, Map.get(types, key))
-    on_cast = Keyword.get(opts, :with)
+    on_cast = Keyword.get_lazy(opts, :with, fn -> Relation.on_cast_default(relation) end)
     sort = opts_key_from_params(:sort_param, opts, params)
     drop = opts_key_from_params(:drop_param, opts, params)
 
