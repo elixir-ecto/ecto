@@ -39,6 +39,7 @@ defmodule Ecto.EmbeddedTest do
 
     embedded_schema do
       field :dark_mode, :boolean, default: false
+      field :n, :integer, virtual: true
       embeds_one :default_post, Post, defaults_to_struct: true
     end
   end
@@ -77,6 +78,9 @@ defmodule Ecto.EmbeddedTest do
 
     assert %Settings{dark_mode: false, default_post: nil} =
              Ecto.embedded_load(Settings, %{"default_post" => nil}, :json)
+
+    assert %Settings{n: 1} =
+      Ecto.embedded_load(Settings, %{"n" => 1}, :json)
 
     assert_raise ArgumentError,
                  ~s[cannot load `"ABC"` as type Ecto.UUID for field `uuid` in schema Ecto.EmbeddedTest.UUIDSchema],
