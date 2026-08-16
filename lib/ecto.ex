@@ -723,14 +723,14 @@ defmodule Ecto do
   @spec embedded_load(
           module_or_map :: module | map(),
           data :: map(),
-          format :: atom()
+          format :: atom() | (Ecto.Type.t(), term -> {:ok, term} | :error)
         ) :: Ecto.Schema.t() | map()
-  def embedded_load(schema_or_types, data, format) do
-    Ecto.Schema.Loader.unsafe_load(
-      schema_or_types,
-      data,
-      &Ecto.Type.embedded_load(&1, &2, format)
-    )
+  def embedded_load(schema_or_types, data, format) when is_atom(format) do
+    embedded_load(schema_or_types, data, &Ecto.Type.embedded_load(&1, &2, format))
+  end
+
+  def embedded_load(schema_or_types, data, loader) when is_function(loader, 2) do
+    Ecto.Schema.Loader.unsafe_load(schema_or_types, data, loader)
   end
 
   @doc """
@@ -743,12 +743,15 @@ defmodule Ecto do
       %{title: "hello"}
 
   """
-  @spec embedded_dump(Ecto.Schema.t(), format :: atom()) :: map()
-  def embedded_dump(%schema{} = data, format) do
-    Ecto.Schema.Loader.safe_dump(
-      data,
-      schema.__schema__(:dump),
-      &Ecto.Type.embedded_dump(&1, &2, format)
-    )
+  @spec embedded_dump(
+          Ecto.Schema.t(),
+          format :: atom() | (Ecto.Type.t(), term -> {:ok, term} | :error)
+        ) :: map()
+  def embedded_dump(data, format) when is_atom(format) do
+    embedded_dump(data, &Ecto.Type.embedded_dump(&1, &2, format))
+  end
+
+  def embedded_dump(%schema{} = data, dumper) when is_function(dumper, 2) do
+    Ecto.Schema.Loader.safe_dump(data, schema.__schema__(:dump), dumper)
   end
 end
