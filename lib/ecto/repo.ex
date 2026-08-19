@@ -2488,15 +2488,14 @@ defmodule Ecto.Repo do
       ** (Postgrex.Error) ERROR 25P02 (in_failed_sql_transaction) current transaction is aborted, commands ignored until end of transaction block
 
   If the changeset is invalid before it reaches the database due to a validation error,
-  no statement is sent to the database, an `:error` tuple is returned, and `Repo.insert(%Status{value: "failure"})`
-  operation will execute as usual.
+  no statement is sent to the database, an `:error` tuple is returned, and
+  `Repo.insert(%Status{value: "failure"})` operation will execute as usual.
 
   We have two options to deal with such scenarios:
 
-  If you don't want to change the semantics of your code,  you can also use the savepoints
-  feature by passing the `:mode` option like this: `Repo.insert(changeset, mode: :savepoint)`.
-  In case of an exception, the transaction will rollback to the savepoint and prevent
-  the transaction from failing.
+  One option is to use the savepoints feature by passing the `:mode` option like this:
+  `Repo.insert(changeset, mode: :savepoint)`. In case of an exception, the transaction
+  will rollback to the savepoint and prevent the transaction from failing.
 
   Another alternative is to handle this operation outside of the transaction:
 
