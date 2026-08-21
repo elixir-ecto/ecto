@@ -1,6 +1,12 @@
 defmodule Ecto.Embedded do
   @moduledoc """
-  The embedding struct for `embeds_one` and `embeds_many`.
+  Provide embedded functionality to Ecto.
+
+  It provides `one/2` and `many/2` for defining embeds in schemaless changesets.
+
+  ## Struct
+
+  This The embedding struct for `embeds_one` and `embeds_many`.
 
   This module also provides `one/2` and `many/2` for defining embeds in
   schemaless changesets.
