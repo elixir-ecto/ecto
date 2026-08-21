@@ -156,7 +156,7 @@ defmodule Ecto.Query.Builder.Windows do
   end
 
   defp build_runtime_window({name, compile_acc, runtime_acc, params, acc}, _env) do
-    {:{}, [], [name, Enum.reverse(compile_acc), runtime_acc, Enum.reverse(params), {:%{}, [], Map.to_list(acc)}]}
+    {:{}, [], [name, Enum.reverse(compile_acc), runtime_acc, Enum.reverse(params), {:%{}, [], Enum.sort(Map.to_list(acc))}]}
   end
 
   @doc """

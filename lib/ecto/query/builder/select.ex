@@ -318,7 +318,7 @@ defmodule Ecto.Query.Builder.Select do
     {query, binding} = Builder.escape_binding(query, binding, env)
     {expr, {params, acc}} = escape(expr, binding, env)
     params = Builder.escape_params(params)
-    take = {:%{}, [], Map.to_list(acc.take)}
+    take = {:%{}, [], Enum.sort(Map.to_list(acc.take))}
     aliases = escape_aliases(acc.aliases)
 
     select = quote do: %Ecto.Query.SelectExpr{
@@ -340,7 +340,7 @@ defmodule Ecto.Query.Builder.Select do
     end
   end
 
-  defp escape_aliases(%{} = aliases), do: {:%{}, [], Map.to_list(aliases)}
+  defp escape_aliases(%{} = aliases), do: {:%{}, [], Enum.sort(Map.to_list(aliases))}
   defp escape_aliases(aliases), do: aliases
 
   @doc """
