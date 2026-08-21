@@ -1,6 +1,15 @@
 defmodule Ecto.Embedded do
   @moduledoc """
-  The embedding struct for `embeds_one` and `embeds_many`.
+  Provide embedded functionality to Ecto.
+
+  It provides `one/2` and `many/2` for defining embeds in schemaless changesets.
+
+  ## Struct
+
+  This The embedding struct for `embeds_one` and `embeds_many`.
+
+  This module also provides `one/2` and `many/2` for defining embeds in
+  schemaless changesets.
 
   Its fields are:
 
@@ -33,6 +42,63 @@ defmodule Ecto.Embedded do
     ordered: true
   ]
 
+  @doc """
+  Defines an embeds-one type for a schemaless changeset.
+
+  The field value may be `nil` when there is no existing embed or a struct of
+  the related schema when there is one. Schemaless changesets do not initialize
+  default values, so the data should explicitly contain `nil` for an empty
+  embed. The returned type can be passed in the types map accepted by
+  `Ecto.Changeset.cast/4` and then cast with `Ecto.Changeset.cast_embed/3`:
+
+      types = %{profile: Ecto.Embedded.one(Profile)}
+
+      {%{profile: nil}, types}
+      |> Ecto.Changeset.cast(params, [])
+      |> Ecto.Changeset.cast_embed(:profile)
+
+  The supported option is `:on_replace`, with the same values supported by
+  `Ecto.Schema.embeds_one/3`.
+  """
+  @spec one(module(), keyword()) :: {:embed, %Embedded{}}
+  def one(related, opts \\ []) when is_atom(related) do
+    init_schemaless(:one, related, opts)
+  end
+
+  @doc """
+  Defines an embeds-many type for a schemaless changeset.
+
+  The field value may be an empty list or a list of structs of the related
+  schema. Schemaless changesets do not initialize default values, so the data
+  should explicitly contain an empty list when there are no existing embeds.
+  The returned type can be passed in the types map accepted by
+  `Ecto.Changeset.cast/4` and then cast with `Ecto.Changeset.cast_embed/3`:
+
+      types = %{posts: Ecto.Embedded.many(Post)}
+
+      {%{posts: []}, types}
+      |> Ecto.Changeset.cast(params, [])
+      |> Ecto.Changeset.cast_embed(:posts)
+
+  The supported option is `:on_replace`, with the same values supported by
+  `Ecto.Schema.embeds_many/3`.
+  """
+  @spec many(module(), keyword()) :: {:embed, %Embedded{}}
+  def many(related, opts \\ []) when is_atom(related) do
+    init_schemaless(:many, related, opts)
+  end
+
+  defp init_schemaless(cardinality, related, opts) do
+    case Keyword.keys(opts) -- [:on_replace] do
+      [] ->
+        opts = [cardinality: cardinality, related: related] ++ opts
+        {:embed, init(opts)}
+
+      [option | _] ->
+        raise ArgumentError, "invalid option #{inspect(option)} for #{cardinality}/2"
+    end
+  end
+
   ## Parameterized API
 
   # We treat even embed_many as maps, as that's often the
@@ -49,8 +115,10 @@ defmodule Ecto.Embedded do
       if cardinality == :one, do: @embeds_one_on_replace_opts, else: @on_replace_opts
 
     unless opts[:on_replace] in on_replace_opts do
+      field = if field = opts[:field], do: " for #{inspect(field)}", else: ""
+
       raise ArgumentError,
-            "invalid `:on_replace` option for #{inspect(Keyword.fetch!(opts, :field))}. " <>
+            "invalid `:on_replace` option#{field}. " <>
               "The only valid options are: " <>
               Enum.map_join(on_replace_opts, ", ", &"`#{inspect(&1)}`")
     end
