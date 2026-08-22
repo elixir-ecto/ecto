@@ -124,6 +124,7 @@ defimpl Inspect, for: Ecto.Query do
     updates = kw_exprs(:update, query.updates, names)
 
     lock = kw_inspect(:lock, query.lock)
+    comments = comments(query.comments)
     offset = kw_expr(:offset, query.offset, names)
     select = kw_expr(:select, query.select, names)
     distinct = kw_expr(:distinct, query.distinct, names)
@@ -140,6 +141,7 @@ defimpl Inspect, for: Ecto.Query do
       limit,
       offset,
       lock,
+      comments,
       distinct,
       updates,
       select,
@@ -247,6 +249,10 @@ defimpl Inspect, for: Ecto.Query do
 
   defp kw_inspect(_key, nil), do: []
   defp kw_inspect(key, val), do: [{key, inspect(val)}]
+
+  defp comments(comments) do
+    for {position, comment} <- comments, do: {:"#{position}_comment", inspect(comment)}
+  end
 
   defp kw_as_and_prefix(%{as: as, prefix: prefix}) do
     kw_inspect(:as, as) ++ kw_inspect(:prefix, prefix)
