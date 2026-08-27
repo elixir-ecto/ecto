@@ -56,7 +56,7 @@ jobs:
         run: mix deps.unlock --check-unused
         if: ${{ matrix.lint }}
       - name: Compile lint
-        run: mix compile --warning-as-errors
+        run: mix compile --warnings-as-errors
         if: ${{ matrix.lint }}
       - name: Run tests
         run: mix test
