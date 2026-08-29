@@ -33,14 +33,14 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Install Elixir and Erlang
         uses: erlef/setup-beam@v1
         with:
           elixir-version: ${{ matrix.elixir }}
           otp-version: ${{ matrix.otp }}
       - name: Restore deps and _build cache
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: |
             deps
@@ -75,6 +75,6 @@ jobs:
           - "1.15.6-erlang-24.3.4.9-alpine-3.20.9"
     steps:
       - uses: earthly/actions-setup@v1
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
       - name: ecto integration-test under ${{matrix.elixirbase}}
         run: earthly -P --ci --build-arg ELIXIR_BASE=${{matrix.elixirbase}} +integration-test
