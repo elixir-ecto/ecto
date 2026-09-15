@@ -1114,6 +1114,13 @@ defmodule Ecto.Type do
     end
   end
 
+  defp cast_time(%DateTime{} = datetime) do
+    case cast_utc_datetime(datetime) do
+      {:ok, datetime} -> {:ok, DateTime.to_time(datetime)}
+      :error -> :error
+    end
+  end
+
   defp cast_time(%{"hour" => empty, "minute" => empty}) when empty in ["", nil],
     do: {:ok, nil}
 

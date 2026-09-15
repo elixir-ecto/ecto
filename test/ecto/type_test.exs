@@ -532,6 +532,9 @@ defmodule Ecto.TypeTest do
 
       assert Ecto.Type.cast(:time, ~D[2016-11-11]) ==
                :error
+
+      assert Ecto.Type.cast(:time, @non_utc_datetime) ==
+               {:ok, ~T[22:30:07]}
     end
 
     test "dump" do
@@ -607,6 +610,8 @@ defmodule Ecto.TypeTest do
     test "cast from DateTime" do
       utc_datetime = DateTime.from_naive!(~N[2016-11-11 23:30:10], "Etc/UTC")
       assert Ecto.Type.cast(:time_usec, utc_datetime) == {:ok, ~T[23:30:10.000000]}
+
+      assert Ecto.Type.cast(:time_usec, @non_utc_datetime) == {:ok, ~T[22:30:07.008000]}
     end
 
     test "cast from Date" do
