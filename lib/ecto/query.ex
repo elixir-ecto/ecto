@@ -3,7 +3,7 @@ defmodule Ecto.SubQuery do
   A struct representing subqueries.
 
   Users of Ecto must consider this struct as opaque
-  and not access its field. Authors of adapters may
+  and not access its fields. Authors of adapters may
   read its contents, but never modify them.
 
   See `Ecto.Query.subquery/2` for more information.
@@ -593,7 +593,7 @@ defmodule Ecto.Query do
 
   ## `where`, `having` and a `join`'s `on`
 
-  The `dynamic` macro can be interpolated at the root of a `where`,
+  The [`dynamic`](`dynamic/2`) macro can be interpolated at the root of a `where`,
   `having` or a `join`'s `on`.
 
   For example, assuming the `conditions` variable defined in the
@@ -935,7 +935,7 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  Resets a previously set field on a query.
+  Resets a previously set field or fields on a query.
 
   It can reset many fields except the query source (`from`). When excluding
   a `:join`, it will remove *all* types of joins. If you prefer to remove a
@@ -959,6 +959,11 @@ defmodule Ecto.Query do
       Ecto.Query.exclude(query, :update)
       Ecto.Query.exclude(query, :windows)
 
+  You can remove multiple things at once by passing a list
+
+      Ecto.Query.exclude(query, [:join, :where])
+      Ecto.Query.exclude(query, [:limit, :offset])
+
   You can remove specific joins such as `left_join` and `inner_join`:
 
       Ecto.Query.exclude(query, :inner_join)
@@ -980,10 +985,17 @@ defmodule Ecto.Query do
 
   If a window was referenced elsewhere, for example in `select` or `order_by`,
   it won't be removed. You must recreate the expressions manually.
-
   """
-  def exclude(%Ecto.Query{} = query, field), do: do_exclude(query, field)
-  def exclude(query, field), do: do_exclude(Ecto.Queryable.to_query(query), field)
+  def exclude(%Ecto.Query{} = query, field), do: maybe_exclude_list(query, field)
+  def exclude(query, field), do: maybe_exclude_list(Ecto.Queryable.to_query(query), field)
+
+  defp maybe_exclude_list(query, list) when is_list(list) do
+    Enum.reduce(list, query, &do_exclude(&2, &1))
+  end
+
+  defp maybe_exclude_list(query, field) do
+    do_exclude(query, field)
+  end
 
   defp do_exclude(%Ecto.Query{} = query, :join) do
     %{query | joins: [], aliases: Map.take(query.aliases, [query.from.as])}
@@ -1076,7 +1088,10 @@ defmodule Ecto.Query do
       from(f in fragment("my_table_valued_function(arg)"), select: f.x)
 
       # Fragment with built-in function and undefined columns
-      from(f in fragment("select generate_series(?::integer, ?::integer) as x", ^0, ^10), select: f.x)
+      from(f in fragment("generate_series(?::integer, ?::integer)", ^0, ^10, columns: [:x]), select: f.x)
+
+      # Fragment with schema
+      from(f in {fragment("my_table_valued_function(arg)"), Schema})
 
   ## Expressions examples
 
@@ -1090,7 +1105,7 @@ defmodule Ecto.Query do
       {"cities", Source} |> select([c], c)
 
       # Ecto.Query
-      from(c in Cities) |> select([c], c)
+      from(c in City) |> select([c], c)
 
   ## Examples
 
@@ -1981,7 +1996,7 @@ defmodule Ecto.Query do
   works with the macro-based query syntax and not the keyword-based
   query syntax.
 
-  For example, the following will generate a query that orders by `human_popluation`
+  For example, the following will generate a query that orders by `human_population`
   and then `name`:
 
       City |> order_by([c], c.name) |> prepend_order_by([c], c.human_population)
@@ -2858,7 +2873,7 @@ defmodule Ecto.Query do
 
   ## Dynamic preloads
 
-  Preloads can also be specified dynamically using the `dynamic` macro:
+  Preloads can also be specified dynamically using the [`dynamic`](`dynamic/2`) macro:
 
         preloads = [comments: dynamic([comments: c], c)]
 

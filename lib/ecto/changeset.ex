@@ -1,30 +1,66 @@
 defmodule Ecto.Changeset do
   @moduledoc ~S"""
-  Changesets allow filtering, casting, validation and
-  definition of constraints when manipulating structs.
+  Changesets allow filtering, type casting, validation, and
+  constraints when manipulating structs, usually in preparation
+  for inserting and updating entries into a database.
 
-  There is an example of working with changesets in the introductory
-  documentation in the `Ecto` module. The functions `cast/4` and
-  `change/2` are the usual entry points for creating changesets.
-  The first one is used to cast and validate external parameters,
-  such as parameters sent through a form, API, command line, etc.
-  The second one is used to change data directly from your application.
+  Let's break down what those features mean. Imagine the common
+  scenario where you want to receive data from a user submitted
+  web form to create or update entries in the database. Once you
+  receive this data on the server, changesets will help you perform
+  the following actions:
 
-  The remaining functions in this module, such as validations,
-  constraints, association handling, are about manipulating
+    * **filtering** - because you are receiving external data from
+      a third-party, you must explicitly list which data you accept.
+      For example, you most likely don't want to allow a user to set
+      its own "is_admin" field to true
+
+    * **type casting** - a web form sends most of its data as strings.
+      When the user types the number "100", Ecto will receive it as
+      the string "100", which must then be converted to 100.
+      Changesets are responsible for converting these values to the
+      types defined in your `Ecto.Schema`, support even complex types
+      such as datetimes
+
+    * **validations** - the data the user submits may not correct.
+      For example, the user may type an invalid email address, with
+      a trailing dot. Or say the date for a future meeting would
+      happen in the last year. You must validate the data and give
+      feedback to the user
+
+    * **constraints** - some validations can only happen with the
+      help of the database. For example, in order to know if a user
+      email is already taken or not, you must query the database.
+      Constraints help you do that in a way that respects data
+      integrity
+
+  Although we have used a web form as an example, changesets can be used
+  for APIs and many other scenarios. Changesets may also be used to work
+  with data even if it won't be written to a database. We will cover
+  these scenarios in the documentation below. There is also an introductory
+  example of working with changesets and how it relates to schemas and
+  repositories [in the `Ecto` module](`Ecto#module-changesets`).
+
+  In a nutshell, there are two main functions for creating a changeset.
+  The `cast/4` function is used to receive external parameters from a
+  form, API or command line, and convert them to the types defined in
+  your `Ecto.Schema`. `change/2` is used to modify data directly from
+  your application, assuming the data given is valid and matches the
+  existing types. The remaining functions in this module, such as
+  validations, constraints, association handling, are about manipulating
   changesets.
 
   ## External vs internal data
 
   Changesets allow working with two kinds of data:
 
+    * external to the application - for example user input from
+      a form that needs to be type-converted and properly validated. This
+      use case is primarily covered by the `cast/4` function.
+
     * internal to the application - for example programmatically generated,
       or coming from other subsystems. This use case is primarily covered
       by the `change/2` and `put_change/3` functions.
-
-    * external to the application - for example data provided by the user in
-      a form that needs to be type-converted and properly validated. This
-      use case is primarily covered by the `cast/4` function.
 
   When working with external data, the data is typically provided
   as maps with string keys (also known as parameters). On the other hand,
@@ -115,40 +151,27 @@ defmodule Ecto.Changeset do
   return `{:error, changeset}`, but rather raise an error at the end of the
   transaction.
 
-  ## Empty values
+  ## Trimming and empty values
 
   Many times, the data given on cast needs to be further pruned, specially
   regarding empty values. For example, if you are gathering data to be
   cast from the command line or through an HTML form or any other text-based
   format, it is likely those means cannot express nil values. For
-  those reasons, changesets include the concept of empty values.
+  those reasons, changesets include the ability of trimming values through
+  the `:trim_values` function.
 
-  When applying changes using `cast/4`, an empty value will be automatically
-  converted to the field's default value. If the field is an array type, any
-  empty value inside the array will be removed. When a plain map is used in
-  the data portion of a schemaless changeset, every field's default value is
-  considered to be `nil`. For example:
-
-      iex> data = %{name: "Bob"}
-      iex> types = %{name: :string}
-      iex> params = %{name: ""}
-      iex> changeset = Ecto.Changeset.cast({data, types}, params, Map.keys(types))
-      iex> changeset.changes
-      %{name: nil}
-
-  Empty values are stored as a list in the changeset's `:empty_values` field.
-  The list contains elements of type `t:empty_value/0`. Those are either values,
-  which will be considered empty if they
-  match, or a function that must return a boolean if the value is empty or
-  not. By default, Ecto uses `Ecto.Changeset.empty_values/0` which will mark
-  a field as empty if it is a string made only of whitespace characters.
-  You can also pass the `:empty_values` option to `cast/4` in case you want
-  to change how a particular `cast/4` work.
+  When applying changes using `cast/4`, values are automatically trimmed
+  and then checked if they are empty by checking if they belong to the
+  `changeset.empty_values` field (which defaults to `[""]`).
+  If they are empty, then the field is set to its default value.
+  If the field is an array type, any empty value inside the array will
+  be removed. You can set the default empty values with `:empty_values`
+  option or directly in your changeset.
 
   ## Associations, embeds, and on replace
 
-  Using changesets you can work with associations as well as with embedded
-  structs. There are two primary APIs:
+  Using changesets you can work with associations as well as with
+  [embedded](embedded-schemas.html) structs. There are two primary APIs:
 
     * `cast_assoc/3` and `cast_embed/3` - those functions are used when
       working with external data. In particular, they allow you to change
@@ -346,7 +369,7 @@ defmodule Ecto.Changeset do
   alias Ecto.Changeset.Relation
   alias Ecto.Schema.Metadata
 
-  @empty_values [&Ecto.Type.empty_trimmed_string?/1]
+  @empty_values [""]
 
   # If a new field is added here, def merge must be adapted
   defstruct valid?: false,
@@ -397,15 +420,6 @@ defmodule Ecto.Changeset do
   @type types :: %{atom => Ecto.Type.t() | {:assoc, term()} | {:embed, term()}}
   @type traverse_result :: %{atom => [term] | traverse_result}
   @type validation :: {atom, term}
-
-  @typedoc """
-  A possible value that you can pass to the `:empty_values` option.
-
-  See `empty_values/0` and the [*Empty values* section](#module-empty-values) in
-  the module documentation for more information.
-  """
-  @typedoc since: "3.11.0"
-  @type empty_value :: (term() -> boolean()) | binary() | list() | map() | tuple()
 
   @number_validators %{
     less_than: {&</2, "must be less than %{number}"},
@@ -567,6 +581,8 @@ defmodule Ecto.Changeset do
     end
   end
 
+  defp relation_changed?(:one, nil), do: true
+
   defp relation_changed?(:one, changeset) do
     changeset.action != :update or changeset.changes != %{}
   end
@@ -576,22 +592,10 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Returns the default empty values used by `Ecto.Changeset`.
+  The default list of empty values used by Ecto.
 
-  By default, Ecto marks a field as empty if it is a string made
-  only of whitespace characters. If you want to provide your
-  additional empty values on top of the default, such as an empty
-  list, you can write:
-
-      @empty_values [[]] ++ Ecto.Changeset.empty_values()
-
-  Then, you can pass `empty_values: @empty_values` on `cast/3`.
-
-  See also the [*Empty values* section](#module-empty-values) for more
-  information.
+  Defaults to `[""]`.
   """
-  @doc since: "3.10.0"
-  @spec empty_values() :: [empty_value()]
   def empty_values do
     @empty_values
   end
@@ -620,11 +624,13 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:empty_values` - a list of values to be considered as empty when casting.
-      Empty values are always replaced by the default value of the respective field.
-      If the field is an array type, any empty value inside of the array will be removed.
-      To set this option while keeping the current default, use `empty_values/0` and add
-      your additional empty values
+    * `:trim_values` - a two arity function that trims values before checking if they
+      belong to `changeset.empty_values`. Values that belong to empty values are replaced
+      by the default value of the respective field (which is always nil for schemaless
+      changesets). The default function is `&Ecto.Type.trim/2`
+
+    * `:empty_values` - a list of values which are considered empty after trimming,
+      defaults to `[""]`
 
     * `:force_changes` - a boolean indicating whether to include values that don't alter
       the current data in `:changes`. See `force_change/3` for more information, Defaults
@@ -732,47 +738,43 @@ defmodule Ecto.Changeset do
   end
 
   def cast({data, types}, params, permitted, opts) when is_map(data) do
-    cast(data, types, %{}, params, permitted, opts)
+    cast(data, types, %{}, params, permitted, @empty_values, opts)
   end
 
   def cast(%Changeset{} = changeset, params, permitted, opts) do
     %{changes: changes, data: data, types: types, empty_values: empty_values} = changeset
-
-    opts =
-      cond do
-        opts[:empty_values] ->
-          opts
-
-        empty_values != empty_values() ->
-          # TODO: Remove changeset.empty_values field in Ecto v3.14
-          IO.warn(
-            "Changing the empty_values field of Ecto.Changeset is deprecated, " <>
-              "please pass the :empty_values option on cast instead"
-          )
-
-          [empty_values: empty_values] ++ opts
-
-        true ->
-          [empty_values: empty_values] ++ opts
-      end
-
-    new_changeset = cast(data, types, changes, params, permitted, opts)
+    new_changeset = cast(data, types, changes, params, permitted, empty_values, opts)
     cast_merge(changeset, new_changeset)
   end
 
   def cast(%{__struct__: module} = data, params, permitted, opts) do
-    cast(data, module.__changeset__(), %{}, params, permitted, opts)
+    cast(data, module.__changeset__(), %{}, params, permitted, @empty_values, opts)
   end
 
-  defp cast(%{} = data, %{} = types, %{} = changes, :invalid, permitted, _opts)
+  defp cast(%{} = data, %{} = types, %{} = changes, :invalid, permitted, _empty_values, _opts)
        when is_list(permitted) do
     _ = Enum.each(permitted, &cast_key/1)
     %Changeset{params: nil, data: data, valid?: false, errors: [], changes: changes, types: types}
   end
 
-  defp cast(%{} = data, %{} = types, %{} = changes, %{} = params, permitted, opts)
+  defp cast(%{} = data, %{} = types, %{} = changes, %{} = params, permitted, empty_values, opts)
        when is_list(permitted) do
-    empty_values = Keyword.get(opts, :empty_values, @empty_values)
+    trim_values = Keyword.get(opts, :trim_values, &Ecto.Type.trim/2)
+
+    empty_values =
+      if custom_empty_values = Keyword.get(opts, :empty_values) do
+        if Enum.any?(custom_empty_values, &is_function/1) do
+          raise ArgumentError,
+                "passing functions in :empty_values is no longer support, use :trim_values instead"
+        end
+
+        custom_empty_values
+      else
+        empty_values
+      end
+
+    filter_values = fn type, value -> trim_values.(type, value) in empty_values end
+
     force? = Keyword.get(opts, :force_changes, false)
     params = convert_params(params)
     msg_func = Keyword.get(opts, :message, fn _, _ -> nil end)
@@ -792,7 +794,7 @@ defmodule Ecto.Changeset do
       Enum.reduce(
         permitted,
         {changes, [], true},
-        &process_param(&1, params, types, data, empty_values, defaults, force?, msg_func, &2)
+        &process_param(&1, params, types, data, filter_values, defaults, force?, msg_func, &2)
       )
 
     %Changeset{
@@ -801,11 +803,12 @@ defmodule Ecto.Changeset do
       valid?: valid?,
       errors: Enum.reverse(errors),
       changes: changes,
-      types: types
+      types: types,
+      empty_values: empty_values
     }
   end
 
-  defp cast(%{}, %{}, %{}, params, permitted, _opts) when is_list(permitted) do
+  defp cast(%{}, %{}, %{}, params, permitted, _empty_values, _opts) when is_list(permitted) do
     raise Ecto.CastError,
       type: :map,
       value: params,
@@ -817,7 +820,7 @@ defmodule Ecto.Changeset do
          params,
          types,
          data,
-         empty_values,
+         filter_values,
          defaults,
          force?,
          msg_func,
@@ -832,7 +835,17 @@ defmodule Ecto.Changeset do
         _ -> Map.get(data, key)
       end
 
-    case cast_field(key, param_key, type, params, current, empty_values, defaults, force?, valid?) do
+    case cast_field(
+           key,
+           param_key,
+           type,
+           params,
+           current,
+           filter_values,
+           defaults,
+           force?,
+           valid?
+         ) do
       {:ok, value, valid?} ->
         {Map.put(changes, key, value), errors, valid?}
 
@@ -880,10 +893,10 @@ defmodule Ecto.Changeset do
     raise ArgumentError, "cast/3 expects a list of atom keys, got key: `#{inspect(key)}`"
   end
 
-  defp cast_field(key, param_key, type, params, current, empty_values, defaults, force?, valid?) do
+  defp cast_field(key, param_key, type, params, current, filter_values, defaults, force?, valid?) do
     case params do
       %{^param_key => value} ->
-        value = filter_empty_values(type, value, empty_values, defaults, key)
+        value = filter_values(type, value, filter_values, defaults, key)
 
         case Ecto.Type.cast(type, value) do
           {:ok, value} ->
@@ -905,45 +918,31 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp filter_empty_values(type, value, empty_values, defaults, key) do
-    case filter_empty_values(type, value, empty_values) do
+  defp filter_values(type, value, filter_values, defaults, key) do
+    case filter_values(type, value, filter_values) do
       :empty -> Map.get(defaults, key)
       {:ok, value} -> value
     end
   end
 
-  defp filter_empty_values({:array, type}, value, empty_values) when is_list(value) do
+  defp filter_values({:array, type}, value, filter_values) when is_list(value) do
     value =
       for elem <- value,
-          {:ok, elem} <- [filter_empty_values(type, elem, empty_values)],
+          {:ok, elem} <- [filter_values(type, elem, filter_values)],
           do: elem
 
-    if value in empty_values do
-      :empty
-    else
-      {:ok, value}
-    end
-  end
-
-  defp filter_empty_values(_type, value, empty_values) do
-    filter_empty_value(empty_values, value)
-  end
-
-  defp filter_empty_value([head | tail], value) when is_function(head) do
-    case head.(value) do
+    case filter_values.({:array, type}, value) do
       true -> :empty
-      false -> filter_empty_value(tail, value)
+      false -> {:ok, value}
     end
   end
 
-  defp filter_empty_value([value | _tail], value),
-    do: :empty
-
-  defp filter_empty_value([_head | tail], value),
-    do: filter_empty_value(tail, value)
-
-  defp filter_empty_value([], value),
-    do: {:ok, value}
+  defp filter_values(type, value, filter_values) do
+    case filter_values.(type, value) do
+      true -> :empty
+      false -> {:ok, value}
+    end
+  end
 
   # We only look at the first element because traversing the whole map
   # can be expensive and it was showing up during profiling. This means
@@ -1154,6 +1153,22 @@ defmodule Ecto.Changeset do
       changeset
       |> cast_assoc(:children, sort_param: ..., with: &child_changeset/3)
 
+  When using `:drop_param`, the remaining elements are re-indexed sequentially
+  starting from 0. For example, if you have the following parameters:
+
+      %{
+        "addresses" => %{
+          0 => %{"street" => "First St"},
+          1 => %{"street" => "Second St"},
+          2 => %{"street" => "Third St"}
+        },
+        "addresses_drop" => [1]
+      }
+
+  The element originally at index `2` ("Third St") will be passed to the `:with`
+  function with position `1`, because the list is compacted after the drop
+  operation.
+
   These parameters can be powerful in certain UIs as it allows you to decouple
   the sorting and replacement of the data from its representation.
 
@@ -1199,6 +1214,109 @@ defmodule Ecto.Changeset do
   @spec cast_assoc(t, atom, Keyword.t()) :: t
   def cast_assoc(changeset, name, opts \\ []) when is_atom(name) do
     cast_relation(:assoc, changeset, name, opts)
+  end
+
+  @doc """
+  Reorders the changes for a given association.
+
+  This function should be used when wanting to re-order the list of changes
+  for an association with cardinality `:many` before writing to the database.
+  The 2-arity version sorts the changes in a way that is safe for use with
+  unique constraints.
+
+  For example, if you have a unique constraint on the field `:name` and your list
+  of changes might introduce conflicts, you can use this to sort changes by deletes
+  first, then updates and then inserts. The `:on_replace` behaviour will be
+  handled automatically.
+
+  Using this function is preferable to relying on deferred constraints because the
+  resulting error cannot be mapped back into the correct changeset and your transaction
+  will simply raise.
+
+  Care must be taken when using this in conjunction with the `:sort_param` option
+  in `cast_assoc/3`. They both change the internal ordering of the association so you
+  must isolate the effects of this function to only the database operation.
+
+  See `reorder_assoc/3` if you would like to use a custom sorting function.
+
+  ## Example
+      iex> # assume `:comments` association has `on_replace: delete`
+      iex> cs = %Post{comments: [%Comment{id: 1, body: "hello"}, %Comment{id: 2, body: "bye"}]}
+      ...> |> change()
+      ...> |> put_assoc(:comments, [%Comment{id: 3, body: ""}, %Comment{id: 2, body: "hello"}])
+      ...> |> reorder_assoc(:comments, sort_fn)
+      iex> cs.changes.comments
+      [%Ecto.Changeset{data: %Comment{id: 1}}, %Ecto.Changeset{data: %Comment{id: 2}}, %Ecto.Changeset{data: %Comment{id: 3}}]
+  """
+  @spec reorder_assoc(t, atom()) :: t
+  def reorder_assoc(%Changeset{} = changeset, name) when is_atom(name) do
+    %{types: types, changes: changes} = changeset
+    refl = relation!(:reorder, :assoc, name, Map.get(types, name))
+    reorder_assoc(changeset, name, changes, &unique_safe_sort(refl, &1, &2))
+  end
+
+  @doc """
+  Reorders the changes for a given association using a custom sorting function.
+
+  Behaviour is similar to `reorder_assoc/2` except it allows the user to define
+  their own sorting function. It must be of arity 2 where the two arguments are
+  the changesets to be compared. You must return `true` if the first changeset
+  precedes or is in the same place as the second changeset and `false` otherwise.
+
+  ## Example
+
+      iex> sort_fn = cs1, _cs2 ->
+      ...>   # ensure inserts come first
+      ...>   case cs1.action do
+      ...>     :insert -> true
+      ...>      _ -> false
+      ...>   end
+      ...> end
+      iex> cs = %Post{comments: [%Comment{id: 1, body: "hello"}]}
+      ...> |> change()
+      ...> |> put_assoc(:comments, [%Comment{id: 2, body: "hello"}, %Comment{id: 1, body: ""}])
+      ...> |> reorder_assoc(:comments, sort_fn)
+      iex> cs.changes.comments
+      [%Ecto.Changeset{data: %Comment{id: 1}}, %Ecto.Changeset{data: %Comment{id: 2}}]
+  """
+  @spec reorder_assoc(t, atom(), (t, t -> boolean())) :: t
+  def reorder_assoc(%Changeset{} = changeset, name, sort_fn)
+      when is_atom(name) and is_function(sort_fn, 2) do
+    %{types: types, changes: changes} = changeset
+    _ = relation!(:reorder, :assoc, name, Map.get(types, name))
+    reorder_assoc(changeset, name, changes, sort_fn)
+  end
+
+  defp reorder_assoc(changeset, name, changes, sort_fn) do
+    assoc_changes =
+      case changes do
+        %{^name => changes} when is_list(changes) ->
+          changes
+
+        _ ->
+          raise ArgumentError,
+                "`reorder_assoc/3` requires an association with `:many` cardinality and a list of associated changes"
+      end
+
+    sorted_assoc_changes = Enum.sort(assoc_changes, &sort_fn.(&1, &2))
+    updated_changes = Map.put(changeset.changes, name, sorted_assoc_changes)
+    %{changeset | changes: updated_changes}
+  end
+
+  defp unique_safe_sort(refl, changeset1, changeset2) do
+    action_sort_rank(changeset1.action, refl) <= action_sort_rank(changeset2.action, refl)
+  end
+
+  defp action_sort_rank(action, refl) do
+    case action do
+      :delete -> 0
+      :replace when refl.on_replace == :delete -> 0
+      :update -> 1
+      :replace when refl.on_replace == :nilify -> 1
+      :insert -> 2
+      # For things like `:ignore` we lump them at the end
+      _ -> 3
+    end
   end
 
   @doc """
@@ -1259,7 +1377,6 @@ defmodule Ecto.Changeset do
   defp cast_relation(type, %Changeset{} = changeset, key, opts) do
     {key, param_key} = cast_key(key)
     %{data: data, types: types, params: params, changes: changes} = changeset
-    %{related: related} = relation = relation!(:cast, type, key, Map.get(types, key))
     params = params || %{}
 
     {changeset, required?} =
@@ -1269,7 +1386,8 @@ defmodule Ecto.Changeset do
         {changeset, false}
       end
 
-    on_cast = Keyword.get_lazy(opts, :with, fn -> on_cast_default(type, related) end)
+    relation = relation!(:cast, type, key, Map.get(types, key))
+    on_cast = Keyword.get_lazy(opts, :with, fn -> Relation.on_cast_default(relation) end)
     sort = opts_key_from_params(:sort_param, opts, params)
     drop = opts_key_from_params(:drop_param, opts, params)
 
@@ -1278,14 +1396,14 @@ defmodule Ecto.Changeset do
         value = Map.get(params, param_key)
         original = Map.get(data, key)
         current = Relation.load!(data, original)
-        value = cast_params(relation, value, sort, drop)
+        value = cast_params(relation.cardinality, value, sort, drop)
 
         case Relation.cast(relation, data, value, current, on_cast) do
           {:ok, change, relation_valid?} when change != original ->
             valid? = changeset.valid? and relation_valid?
             changes = Map.put(changes, key, change)
             changeset = %{force_update(changeset, opts) | changes: changes, valid?: valid?}
-            missing_relation(changeset, key, current, required?, relation, opts)
+            missing_relation(changeset, key, required?, relation, opts)
 
           {:error, {message, meta}} ->
             meta = [validation: type] ++ meta
@@ -1294,10 +1412,10 @@ defmodule Ecto.Changeset do
 
           # ignore or ok with change == original
           _ ->
-            missing_relation(changeset, key, current, required?, relation, opts)
+            missing_relation(changeset, key, required?, relation, opts)
         end
       else
-        missing_relation(changeset, key, Map.get(data, key), required?, relation, opts)
+        missing_relation(changeset, key, required?, relation, opts)
       end
 
     update_in(changeset.types[key], fn {type, relation} ->
@@ -1305,12 +1423,11 @@ defmodule Ecto.Changeset do
     end)
   end
 
-  defp cast_params(%{cardinality: :many} = relation, nil, sort, drop)
-       when is_list(sort) or is_list(drop) do
-    cast_params(relation, %{}, sort, drop)
+  defp cast_params(:many, nil, sort, drop) when is_list(sort) or is_list(drop) do
+    cast_params(:many, %{}, sort, drop)
   end
 
-  defp cast_params(%{cardinality: :many}, value, sort, drop) when is_map(value) do
+  defp cast_params(:many, value, sort, drop) when is_map(value) do
     drop = if is_list(drop), do: drop, else: []
 
     {sorted, pending} =
@@ -1328,7 +1445,7 @@ defmodule Ecto.Changeset do
        |> Enum.map(&elem(&1, 1)))
   end
 
-  defp cast_params(%{cardinality: :one}, value, sort, drop) do
+  defp cast_params(:one, value, sort, drop) do
     if sort do
       raise ArgumentError, ":sort_param not supported for belongs_to/has_one"
     end
@@ -1340,7 +1457,7 @@ defmodule Ecto.Changeset do
     value
   end
 
-  defp cast_params(_relation, value, _sort, _drop) do
+  defp cast_params(_cardinality, value, _sort, _drop) do
     value
   end
 
@@ -1361,38 +1478,9 @@ defmodule Ecto.Changeset do
 
   defp key_as_int(key_val), do: key_val
 
-  defp on_cast_default(type, module) do
-    fn struct, params ->
-      try do
-        module.changeset(struct, params)
-      rescue
-        e in UndefinedFunctionError ->
-          case __STACKTRACE__ do
-            [{^module, :changeset, args_or_arity, _}]
-            when args_or_arity == 2
-            when length(args_or_arity) == 2 ->
-              raise ArgumentError, """
-              the module #{inspect(module)} does not define a changeset/2 function,
-              which is used by cast_#{type}/3. You need to either:
-
-                1. implement the #{type}.changeset/2 function
-                2. pass the :with option to cast_#{type}/3 with an anonymous
-                   function of arity 2 (or possibly arity 3, if using has_many or
-                   embeds_many)
-
-              When using an inline embed, the :with option must be given
-              """
-
-            stacktrace ->
-              reraise e, stacktrace
-          end
-      end
-    end
-  end
-
-  defp missing_relation(changeset, name, current, required?, relation, opts) do
-    %{changes: changes, errors: errors} = changeset
-    current_changes = Map.get(changes, name, current)
+  defp missing_relation(changeset, name, required?, relation, opts) do
+    %{data: data, changes: changes, errors: errors} = changeset
+    current_changes = Map.get_lazy(changes, name, fn -> Map.get(data, name) end)
 
     if required? and Relation.empty?(relation, current_changes) do
       errors = [
@@ -1461,6 +1549,8 @@ defmodule Ecto.Changeset do
     * `required` - required fields are merged; all the fields that appear
       in the required list of both changesets are moved to the required
       list of the resulting changeset.
+    * `prepare` - prepare callbacks are concatenated in the order of the
+      changesets being merged.
 
   ## Examples
 
@@ -1481,11 +1571,15 @@ defmodule Ecto.Changeset do
 
   def merge(%Changeset{data: data} = cs1, %Changeset{data: data} = cs2) do
     new_repo = merge_identical(cs1.repo, cs2.repo, "repos")
-    new_repo_opts = Keyword.merge(cs1.repo_opts, cs2.repo_opts)
     new_action = merge_identical(cs1.action, cs2.action, "actions")
+    new_repo_opts = Keyword.merge(cs1.repo_opts, cs2.repo_opts)
     new_filters = Map.merge(cs1.filters, cs2.filters)
     new_validations = cs1.validations ++ cs2.validations
     new_constraints = cs1.constraints ++ cs2.constraints
+    new_prepare = cs2.prepare ++ cs1.prepare
+
+    # They are always set, so they should never be nil
+    _ = merge_identical(cs1.empty_values, cs2.empty_values, "empty values")
 
     cast_merge(
       %{
@@ -1495,7 +1589,8 @@ defmodule Ecto.Changeset do
           filters: new_filters,
           action: new_action,
           validations: new_validations,
-          constraints: new_constraints
+          constraints: new_constraints,
+          prepare: new_prepare
       },
       cs2
     )
@@ -1919,7 +2014,7 @@ defmodule Ecto.Changeset do
   comments at once, automatically computing inserts/updates/deletes by
   comparing the data that you gave with the one already in the database.
   If your goal is to manage individual resources, such as adding a new
-  comment to a post, or update post linked to a comment, tnen it is not
+  comment to a post, or update post linked to a comment, then it is not
   necessary to use this function. We will explore this later in the
   ["Example: Adding a comment to a post" section](#put_assoc/4-example-adding-a-comment-to-a-post).
 
@@ -1967,7 +2062,7 @@ defmodule Ecto.Changeset do
       New comments or comments not associated to any post will be correctly
       associated. Currently associated comments that do not have a matching ID
       in the list of changesets will act according to the `:on_replace` association
-      configuration (you can chose to raise, ignore the operation, update or delete
+      configuration (you can choose to raise, ignore the operation, update or delete
       them). If there are changes in any of the changesets, they will be
       persisted too.
 
@@ -1979,7 +2074,7 @@ defmodule Ecto.Changeset do
       New comments or comments not associated to any post will be correctly
       associated. Currently associated comments that do not have a matching ID
       in the list of changesets will act according to the `:on_replace`
-      association configuration (you can chose to raise, ignore the operation,
+      association configuration (you can choose to raise, ignore the operation,
       update or delete them). Different to passing changesets, structs are not
       change tracked in any fashion. In other words, if you change a comment
       struct and give it to `put_assoc/4`, the updates in the struct won't be
@@ -2478,22 +2573,11 @@ defmodule Ecto.Changeset do
   You can pass a single field name or a list of field names that
   are required.
 
-  If the value of a field is `nil` or a string made only of whitespace,
+  If the value of a field is `nil` or matches any of the values
+  configured in `changeset.empty_values` (by default `[]` and `""`),
   the changeset is marked as invalid, the field is removed from the
-  changeset's changes, and an error is added. An error won't be added if
-  the field already has an error.
-
-  If a field is given to `validate_required/3` but it has not been passed
-  as parameter during `cast/3` (i.e. it has not been changed), then
-  `validate_required/3` will check for its current value in the data.
-  If the data contains a non-empty value for the field, then no error is
-  added. This allows developers to use `validate_required/3` to perform
-  partial updates. For example, on `insert` all fields would be required,
-  because their default values on the data are all `nil`, but on `update`,
-  if you don't want to change a field that has been previously set,
-  you are not required to pass it as a parameter, since `validate_required/3`
-  won't add an error for missing changes as long as the value in the
-  data given to the `changeset` is not empty.
+  changeset's changes, and an error is added. An error won't be added
+  if the field already has an error.
 
   Do not use this function to validate associations that are required,
   instead pass the `:required` option to `cast_assoc/3` or `cast_embed/3`.
@@ -2551,8 +2635,8 @@ defmodule Ecto.Changeset do
   @doc """
   Determines whether a field is missing in a changeset.
 
-  The field passed into this function will have its presence evaluated
-  according to the same rules as `validate_required/3`.
+  A field is considered missing if it is `nil` or it matches any
+  of the values configured in `changeset.empty_values`.
 
   This is useful when performing complex validations that are not possible with
   `validate_required/3`. For example, evaluating whether at least one field
@@ -2573,9 +2657,9 @@ defmodule Ecto.Changeset do
 
   """
   @spec field_missing?(t(), atom()) :: boolean()
-  def field_missing?(%Changeset{} = changeset, field) when not is_nil(field) do
-    ensure_field_not_many!(changeset.types, field) && missing?(changeset, field) &&
-      ensure_field_exists!(changeset, changeset.types, field)
+  def field_missing?(%Changeset{types: types} = changeset, field) when not is_nil(field) do
+    ensure_field_not_many!(types, field) && missing?(changeset, field) &&
+      ensure_field_exists!(changeset, types, field)
   end
 
   @doc """
@@ -2800,7 +2884,7 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp missing?(changeset, field) when is_atom(field) do
+  defp missing?(%{empty_values: empty_values} = changeset, field) when is_atom(field) do
     case get_field(changeset, field) do
       %{__struct__: Ecto.Association.NotLoaded} ->
         raise ArgumentError,
@@ -2809,14 +2893,8 @@ defmodule Ecto.Changeset do
                 "before calling validate_required/3 or field_missing?/2. " <>
                 "You may also consider passing the :required option to Ecto.Changeset.cast_assoc/3"
 
-      value when is_binary(value) ->
-        value == ""
-
-      nil ->
-        true
-
-      _ ->
-        false
+      value ->
+        value == nil or value in empty_values
     end
   end
 
@@ -2966,21 +3044,22 @@ defmodule Ecto.Changeset do
   @doc """
   Validates a change is a string or list of the given length.
 
-  Note that the length of a string is counted in graphemes by default. If using
-  this validation to match a character limit of a database backend,
-  it's likely that the limit ignores graphemes and limits the number
-  of unicode characters. Then consider using the `:count` option to
-  limit the number of codepoints (`:codepoints`), or limit the number of bytes (`:bytes`).
-
   The validation only runs if a change for the given `field` exists and the
   change value is not `nil`.
+
+  > #### Counting characters {: .info}
+  >
+  > The length of a string is counted in codepoints by default since v3.15.0,
+  > aligning the validation with how databases typically enforce length limits.
+  > Use the `:count` option to count graphemes (`:graphemes`) or bytes (`:bytes`)
+  > instead.
 
   ## Options
 
     * `:is` - the length must be exactly this value
     * `:min` - the length must be greater than or equal to this value
     * `:max` - the length must be less than or equal to this value
-    * `:count` - what length to count for string, `:graphemes` (default), `:codepoints` or `:bytes`
+    * `:count` - what length to count for string, `:codepoints` (default), `:graphemes` or `:bytes`
     * `:message` - the message on failure, depending on the validation, is one of:
       * for strings:
         * "should be %{count} character(s)"
@@ -3011,7 +3090,7 @@ defmodule Ecto.Changeset do
   def validate_length(changeset, field, opts) when is_list(opts) do
     validate_change(changeset, field, {:length, opts}, fn
       _, value ->
-        count_type = opts[:count] || :graphemes
+        count_type = opts[:count] || :codepoints
 
         {type, length} =
           case {value, count_type} do
@@ -4251,11 +4330,13 @@ defmodule Ecto.Changeset do
 
     acc = Map.put(acc, key, relation_changed)
 
-    with %Ecto.Association.BelongsTo{related_key: related_key} <- relation,
-         %{^related_key => id} <- relation_changed do
-      Map.put(acc, relation.owner_key, id)
-    else
-      _ -> acc
+    case relation do
+      %Ecto.Association.BelongsTo{related_key: related_key, owner_key: owner_key} ->
+        id = relation_changed && Map.fetch!(relation_changed, related_key)
+        Map.put(acc, owner_key, id)
+
+      _ ->
+        acc
     end
   end
 

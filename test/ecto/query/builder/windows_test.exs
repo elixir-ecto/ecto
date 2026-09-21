@@ -6,31 +6,60 @@ defmodule Ecto.Query.Builder.WindowsTest do
 
   import Ecto.Query
 
+  defp subquery_sources(%{subqueries: subqueries}) do
+    Enum.map(subqueries, fn subquery -> elem(subquery.query.from.source, 0) end)
+  end
+
+  defmacrop rows_between_preceding(count) do
+    quote do
+      fragment(unquote("ROWS BETWEEN #{count} PRECEDING AND CURRENT ROW"))
+    end
+  end
+
+  defmacro invalid_frame do
+    quote do
+      [rows: -3, exclude: :current]
+    end
+  end
+
   describe "escape" do
     test "handles expressions and params" do
-      assert {Macro.escape(quote do [partition_by: [&0.y()]] end), [], {[], %{}}} ==
-             escape(quote do [partition_by: x.y()] end, {[], %{}}, [x: 0], __ENV__)
+      assert {Macro.escape(quote(do: [partition_by: [&0.y()]])), [], {[], %{}}} ==
+               escape(quote(do: [partition_by: x.y]), {[], %{}}, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do [partition_by: [&0.y()]] end), [], {[], %{}}} ==
-             escape(quote do [partition_by: :y] end, {[], %{}}, [x: 0], __ENV__)
+      assert {Macro.escape(quote(do: [partition_by: [&0.y()]])), [], {[], %{}}} ==
+               escape(quote(do: [partition_by: :y]), {[], %{}}, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do [order_by: [asc: &0.y()]] end), [], {[], %{}}} ==
-             escape(quote do [order_by: x.y()] end, {[], %{}}, [x: 0], __ENV__)
+      assert {Macro.escape(quote(do: [order_by: [asc: &0.y()]])), [], {[], %{}}} ==
+               escape(quote(do: [order_by: x.y]), {[], %{}}, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do [order_by: [asc: &0.y()]] end), [], {[], %{}}} ==
-             escape(quote do [order_by: :y] end, {[], %{}}, [x: 0], __ENV__)
+      assert {Macro.escape(quote(do: [order_by: [asc: &0.y()]])), [], {[], %{}}} ==
+               escape(quote(do: [order_by: :y]), {[], %{}}, [x: 0], __ENV__)
     end
 
     test "supports frames" do
-      assert {Macro.escape(quote(do: [frame: fragment({:raw, "ROWS 3 PRECEDING EXCLUDE CURRENT ROW"})])), [], {[], %{}}} ==
-               escape(quote do [frame: fragment("ROWS 3 PRECEDING EXCLUDE CURRENT ROW")] end, {[], %{}}, [], __ENV__)
+      assert {Macro.escape(
+                quote(do: [frame: fragment({:raw, "ROWS 3 PRECEDING EXCLUDE CURRENT ROW"})])
+              ), [], {[], %{}}} ==
+               escape(
+                 quote(do: [frame: fragment("ROWS 3 PRECEDING EXCLUDE CURRENT ROW")]),
+                 {[], %{}},
+                 [],
+                 __ENV__
+               )
 
-      assert {Macro.escape(quote(do: [frame: fragment({:raw, "ROWS "}, {:expr, ^0}, {:raw, " PRECEDING"})])),
-               [], {[{quote(do: start_frame), :any}], %{}}} ==
-               escape(quote do [frame: fragment("ROWS ? PRECEDING", ^start_frame)] end, {[], %{}}, [], __ENV__)
+      assert {Macro.escape(
+                quote(do: [frame: fragment({:raw, "ROWS "}, {:expr, ^0}, {:raw, " PRECEDING"})])
+              ), [], {[{quote(do: start_frame), :any}], %{}}} ==
+               escape(
+                 quote(do: [frame: fragment("ROWS ? PRECEDING", ^start_frame)]),
+                 {[], %{}},
+                 [],
+                 __ENV__
+               )
 
       assert_raise Ecto.Query.CompileError, ~r"expected a dynamic or fragment in `:frame`", fn ->
-        escape(quote do [frame: [rows: -3, exclude: :current]] end, {[], %{}}, [], __ENV__)
+        escape(quote(do: [frame: [rows: -3, exclude: :current]]), {[], %{}}, [], __ENV__)
       end
     end
   end
@@ -49,6 +78,26 @@ defmodule Ecto.Query.Builder.WindowsTest do
     test "defines frame" do
       query = "q" |> windows([p], w: [frame: fragment("FOOBAR")])
       assert query.windows[:w].expr[:frame] == {:fragment, [], [raw: "FOOBAR"]}
+    end
+
+    test "defines frame with macro that expands to fragment" do
+      query = "q" |> windows([p], w: [frame: rows_between_preceding(6)])
+
+      assert query.windows[:w].expr[:frame] ==
+               {:fragment, [], [raw: "ROWS BETWEEN 6 PRECEDING AND CURRENT ROW"]}
+    end
+
+    test "raises on frame macro that does not expand to fragment" do
+      assert_raise Ecto.Query.CompileError, ~r"expected a dynamic or fragment in `:frame`", fn ->
+        Code.eval_quoted(
+          quote do
+            import Ecto.Query
+            import unquote(__MODULE__)
+
+            "q" |> windows([p], w: [frame: invalid_frame()])
+          end
+        )
+      end
     end
   end
 
@@ -78,23 +127,89 @@ defmodule Ecto.Query.Builder.WindowsTest do
     end
 
     test "supports subqueries" do
-      partition_by = [dynamic([p], exists(from other_q in "q", where: other_q.title == parent_as(:q).title))]
+      partition_by = [
+        dynamic([p], exists(from other_q in "q", where: other_q.title == parent_as(:q).title))
+      ]
 
       query = "q" |> windows([p], w: [partition_by: ^partition_by])
 
       assert query.windows[:w].expr[:partition_by] == [{:exists, [], [subquery: 0]}]
       assert [_] = query.windows[:w].subqueries
 
-      query = "q" |> windows([p], w: [partition_by: exists(from other_q in "q", where: other_q.title == parent_as(:q).title)])
+      partition_by = [
+        dynamic([p], exists(from f in "foos", where: f.title == parent_as(:q).title)),
+        dynamic([p], exists(from b in "bars", where: b.title == parent_as(:q).title))
+      ]
+
+      query = "q" |> windows([p], w: [partition_by: ^partition_by])
+
+      assert query.windows[:w].expr[:partition_by] == [
+               {:exists, [], [subquery: 0]},
+               {:exists, [], [subquery: 1]}
+             ]
+
+      assert subquery_sources(query.windows[:w]) == ["foos", "bars"]
+
+      query =
+        "q"
+        |> windows([p],
+          w: [
+            partition_by: exists(from other_q in "q", where: other_q.title == parent_as(:q).title)
+          ]
+        )
 
       assert query.windows[:w].expr[:partition_by] == [{:exists, [], [subquery: 0]}]
       assert [_] = query.windows[:w].subqueries
+
+      query =
+        "q"
+        |> windows([p],
+          w: [
+            partition_by: [
+              exists(from f in "foos", where: f.title == parent_as(:q).title),
+              exists(from b in "bars", where: b.title == parent_as(:q).title)
+            ]
+          ]
+        )
+
+      assert query.windows[:w].expr[:partition_by] == [
+               {:exists, [], [subquery: 0]},
+               {:exists, [], [subquery: 1]}
+             ]
+
+      assert subquery_sources(query.windows[:w]) == ["foos", "bars"]
+
+      order_by = [
+        asc: dynamic([p], exists(from baz in "bazs", where: baz.title == parent_as(:q).title))
+      ]
+
+      query =
+        "q"
+        |> windows([p],
+          w: [
+            partition_by: [
+              exists(from f in "foos", where: f.title == parent_as(:q).title),
+              exists(from b in "bars", where: b.title == parent_as(:q).title)
+            ],
+            order_by: ^order_by
+          ]
+        )
+
+      assert query.windows[:w].expr[:partition_by] == [
+               {:exists, [], [subquery: 0]},
+               {:exists, [], [subquery: 1]}
+             ]
+
+      assert query.windows[:w].expr[:order_by] == [asc: {:exists, [], [subquery: 2]}]
+      assert subquery_sources(query.windows[:w]) == ["foos", "bars", "bazs"]
     end
 
     test "raises on invalid partition by" do
-      assert_raise ArgumentError, ~r"expected a list of fields and dynamics in `partition_by`", fn ->
-        windows("q", w: [partition_by: ^[1]])
-      end
+      assert_raise ArgumentError,
+                   ~r"expected a list of fields and dynamics in `partition_by`",
+                   fn ->
+                     windows("q", w: [partition_by: ^[1]])
+                   end
     end
 
     test "allows interpolation on order by" do
@@ -119,14 +234,19 @@ defmodule Ecto.Query.Builder.WindowsTest do
     end
 
     test "raises on invalid order by" do
-      assert_raise ArgumentError, ~r"`order_by` interpolated on root expects a field or a keyword list", fn ->
-        windows("q", w: [order_by: ^[1]])
-      end
+      assert_raise ArgumentError,
+                   ~r"`order_by` interpolated on root expects a field or a keyword list",
+                   fn ->
+                     windows("q", w: [order_by: ^[1]])
+                   end
     end
 
     test "allows dynamic on frame" do
       frame = dynamic(fragment("ROWS ? PRECEDING EXCLUDE CURRENT ROW", ^"foo"))
-      query = "q" |> windows([p], w: [partition_by: [p.bar == ^"bar"], order_by: [p.baz], frame: ^frame])
+
+      query =
+        "q"
+        |> windows([p], w: [partition_by: [p.bar == ^"bar"], order_by: [p.baz], frame: ^frame])
 
       assert Keyword.keys(query.windows[:w].expr) == [:partition_by, :order_by, :frame]
 
@@ -137,7 +257,8 @@ defmodule Ecto.Query.Builder.WindowsTest do
                [{:asc, {{:., [], [{:&, [], [0]}, :baz]}, [], []}}]
 
       assert query.windows[:w].expr[:frame] ==
-               {:fragment, [], [raw: "ROWS ", expr: {:^, [], [1]}, raw: " PRECEDING EXCLUDE CURRENT ROW"]}
+               {:fragment, [],
+                [raw: "ROWS ", expr: {:^, [], [1]}, raw: " PRECEDING EXCLUDE CURRENT ROW"]}
 
       assert query.windows[:w].params == [{"bar", {0, :bar}}, {"foo", :any}]
     end
@@ -188,7 +309,8 @@ defmodule Ecto.Query.Builder.WindowsTest do
                  [{:asc, {:==, [], [{{:., [], [{:&, [], [0]}, :bar]}, [], []}, {:^, [], [1]}]}}]
 
         assert query.windows[:w].expr[:frame] ==
-                 {:fragment, [], [raw: "ROWS ", expr: {:^, [], [2]}, raw: " PRECEDING EXCLUDE CURRENT ROW"]}
+                 {:fragment, [],
+                  [raw: "ROWS ", expr: {:^, [], [2]}, raw: " PRECEDING EXCLUDE CURRENT ROW"]}
 
         assert query.windows[:w].params == [{"foo", {0, :foo}}, {"bar", {0, :bar}}, {"baz", :any}]
       end

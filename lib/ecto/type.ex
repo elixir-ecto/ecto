@@ -31,7 +31,6 @@ defmodule Ecto.Type do
     internal: Internal Data
     database: Database Data
     external --> internal: cast/1
-    external --> database: dump/1
     internal --> database: dump/1
     database --> internal: load/1
   ```
@@ -106,7 +105,7 @@ defmodule Ecto.Type do
   >
   > When you `use Ecto.Type`, it will set `@behaviour Ecto.Type` and define
   > default, overridable implementations for `c:embed_as/1` and `c:equal?/2`.
-  > You must implement your own `c:embed_as/1` function if you want 
+  > You must implement your own `c:embed_as/1` function if you want
   > your `c:dump/1` to be called when exporting from Ecto.
 
   ## Custom types and primary keys
@@ -1000,10 +999,13 @@ defmodule Ecto.Type do
 
   defp same_duration(_), do: :error
 
-  @doc false
-  def empty_trimmed_string?(value) do
-    is_binary(value) and String.trim_leading(value) == ""
-  end
+  @doc """
+  Trims a value according to its type.
+
+  It currently trims all strings, unless the type is `:binary`.
+  """
+  def trim(type, value) when is_binary(value) and type != :binary, do: String.trim_leading(value)
+  def trim(_, value), do: value
 
   ## Adapter related
 
@@ -1067,6 +1069,13 @@ defmodule Ecto.Type do
     end
   end
 
+  defp cast_date(%DateTime{} = datetime) do
+    case cast_utc_datetime(datetime) do
+      {:ok, datetime} -> {:ok, DateTime.to_date(datetime)}
+      :error -> :error
+    end
+  end
+
   defp cast_date(%{"year" => empty, "month" => empty, "day" => empty}) when empty in ["", nil],
     do: {:ok, nil}
 
@@ -1102,6 +1111,13 @@ defmodule Ecto.Type do
     case Time.from_iso8601(binary) do
       {:ok, _} = ok -> ok
       {:error, _} -> :error
+    end
+  end
+
+  defp cast_time(%DateTime{} = datetime) do
+    case cast_utc_datetime(datetime) do
+      {:ok, datetime} -> {:ok, DateTime.to_time(datetime)}
+      :error -> :error
     end
   end
 
@@ -1187,6 +1203,13 @@ defmodule Ecto.Type do
     case NaiveDateTime.from_iso8601(binary) do
       {:ok, _} = ok -> ok
       {:error, _} -> :error
+    end
+  end
+
+  defp cast_naive_datetime(%DateTime{} = datetime) do
+    case cast_utc_datetime(datetime) do
+      {:ok, datetime} -> {:ok, DateTime.to_naive(datetime)}
+      :error -> :error
     end
   end
 
@@ -1408,7 +1431,7 @@ defmodule Ecto.Type do
     end
   end
 
-  def format({composite, type}) when composite in [:array, :map] do
+  def format({composite, type}) when composite in [:array, :map, :in] do
     "{#{inspect(composite)}, #{format(type)}}"
   end
 

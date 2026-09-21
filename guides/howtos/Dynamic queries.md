@@ -120,7 +120,7 @@ Post
 |> order_by(^order_by)
 ```
 
-The `dynamic` macro allows us to build dynamic expressions that are later interpolated into the query. `dynamic` expressions can also be interpolated into dynamic expressions, allowing developers to build complex expressions dynamically without hassle.
+The [`dynamic`](`Ecto.Query.dynamic/2`) macro allows us to build dynamic expressions that are later interpolated into the query. `dynamic` expressions can also be interpolated into dynamic expressions, allowing developers to build complex expressions dynamically without hassle.
 
 By using dynamic fragments, we can decouple the processing of parameters from the query generation. Let's see a more complex example.
 

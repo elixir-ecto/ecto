@@ -1,3 +1,9 @@
+defmodule Ecto.Repo.SensitiveData do
+  @moduledoc false
+  @derive {Inspect, only: []}
+  defstruct [:data]
+end
+
 defmodule Ecto.Repo.Supervisor do
   @moduledoc false
   use Supervisor
@@ -111,7 +117,7 @@ defmodule Ecto.Repo.Supervisor do
       raise Ecto.InvalidURLError, url: url, message: "path should be a database name"
     end
 
-    destructure [username, password], info.userinfo && String.split(info.userinfo, ":")
+    destructure [username, password], info.userinfo && String.split(info.userinfo, ":", parts: 2)
     "/" <> database = info.path
 
     url_opts = [
@@ -209,6 +215,10 @@ defmodule Ecto.Repo.Supervisor do
     end
   end
 
+  def start_child(%Ecto.Repo.SensitiveData{data: {mod, fun, args}}, name, adapter, meta) do
+    start_child({mod, fun, args}, name, adapter, meta)
+  end
+
   def start_child({mod, fun, args}, name, adapter, meta) do
     case apply(mod, fun, args) do
       {:ok, pid} ->
@@ -222,6 +232,6 @@ defmodule Ecto.Repo.Supervisor do
   end
 
   defp wrap_child_spec(%{start: start} = spec, args) do
-    %{spec | start: {__MODULE__, :start_child, [start | args]}}
+    %{spec | start: {__MODULE__, :start_child, [%Ecto.Repo.SensitiveData{data: start} | args]}}
   end
 end

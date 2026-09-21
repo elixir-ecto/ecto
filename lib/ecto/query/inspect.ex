@@ -1,7 +1,7 @@
 import Inspect.Algebra
 import Kernel, except: [to_string: 1]
 
-alias Ecto.Query.{DynamicExpr, JoinExpr, QueryExpr, WithExpr, LimitExpr}
+alias Ecto.Query.{BooleanExpr, DynamicExpr, JoinExpr, WithExpr, LimitExpr}
 
 defimpl Inspect, for: Ecto.Query.DynamicExpr do
   def inspect(%DynamicExpr{binding: binding} = dynamic, opts) do
@@ -96,6 +96,11 @@ defimpl Inspect, for: Ecto.Query do
     end)
   end
 
+  @doc false
+  def inspect_fragment({:fragment, _, parts}) do
+    Macro.to_string({:fragment, [], unmerge_fragments(parts, "", [])})
+  end
+
   defp to_list(query) do
     names =
       query
@@ -165,7 +170,8 @@ defimpl Inspect, for: Ecto.Query do
     "values (#{Enum.join(fields, ", ")})"
   end
 
-  defp inspect_source(%{source: {source, schema}}, _names) do
+  defp inspect_source(%{source: {source, schema}} = part, names) do
+    source = if is_binary(source), do: source, else: "#{expr(source, names, part)}"
     inspect(if source == schema.__schema__(:source), do: schema, else: {source, schema})
   end
 
@@ -185,8 +191,8 @@ defimpl Inspect, for: Ecto.Query do
     [{join_qual(qual), string}] ++ kw_as_and_prefix(join) ++ [on: expr(on, names)]
   end
 
-  defp maybe_on(%QueryExpr{expr: true}, _names), do: []
-  defp maybe_on(%QueryExpr{} = on, names), do: [on: expr(on, names)]
+  defp maybe_on(%BooleanExpr{expr: true}, _names), do: []
+  defp maybe_on(%BooleanExpr{} = on, names), do: [on: expr(on, names)]
 
   defp preloads([]), do: []
   defp preloads(preloads), do: [preload: inspect(preloads)]

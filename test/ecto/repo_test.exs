@@ -3,7 +3,8 @@ defmodule Ecto.RepoTest do
 
   import Ecto.Query
   import Ecto, only: [put_meta: 2]
-  require Ecto.TestRepo, as: TestRepo
+  import ExUnit.CaptureLog
+  alias Ecto.TestRepo
 
   defmodule MyParent do
     use Ecto.Schema
@@ -181,6 +182,35 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  defmodule MySchemaWritableWarn do
+    use Ecto.Schema
+
+    schema "my_schema" do
+      field :never, :integer, writable: :never, on_writable_violation: :warn
+      field :always, :integer, writable: :always
+      field :insert, :integer, writable: :insert, on_writable_violation: :warn
+    end
+  end
+
+  defmodule MySchemaWritableRaise do
+    use Ecto.Schema
+
+    schema "my_schema" do
+      field :never, :integer, writable: :never, on_writable_violation: :raise
+      field :always, :integer, writable: :always
+      field :insert, :integer, writable: :insert, on_writable_violation: :raise
+    end
+  end
+
+  defmodule MySchemaOneField do
+    use Ecto.Schema
+
+    @primary_key false
+    schema "my_schema" do
+      field :n, :integer
+    end
+  end
+
   test "defines child_spec/1" do
     assert TestRepo.child_spec([]) == %{
              id: TestRepo,
@@ -341,6 +371,14 @@ defmodule Ecto.RepoTest do
       TestRepo.reload(struct_with_custom_source)
       assert_received {:all, %{from: %{source: {"custom_schema", MySchema}}}}
     end
+
+    test "returns empty list when given empty list" do
+      assert TestRepo.reload([]) == []
+    end
+
+    test "reload! returns empty list when given empty list" do
+      assert TestRepo.reload!([]) == []
+    end
   end
 
   defmodule DefaultOptionRepo do
@@ -374,13 +412,6 @@ defmodule Ecto.RepoTest do
       assert_received {:all, query}
       assert query.from.source == {"my_parent", Ecto.RepoTest.MyParent}
       assert query.prefix == "fallback_schema"
-    end
-
-    test "raises if options aren't a keyword list" do
-      assert_raise FunctionClauseError, fn ->
-        {:ok, _pid} = DefaultOptionRepo.start_link(url: "ecto://user:pass@local/hello")
-        DefaultOptionRepo.all(MySchema, [1])
-      end
     end
   end
 
@@ -526,26 +557,37 @@ defmodule Ecto.RepoTest do
                "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, limit: 1, select: 1>"
     end
 
-    test "removes order by from query without distinct/limit/offset" do
+    test "keeps order by from query" do
       from(MySchema, order_by: :id) |> TestRepo.exists?()
+      assert_received {:all, query}
+
+      assert inspect(query) ==
+               "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, order_by: [asc: m0.id], limit: 1, select: 1>"
+    end
+
+    test "overrides any select without combinations" do
+      from(MySchema, select: true) |> TestRepo.exists?()
       assert_received {:all, query}
 
       assert inspect(query) ==
                "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, limit: 1, select: 1>"
     end
 
-    test "overrides any select" do
-      from(MySchema, select: true) |> TestRepo.exists?()
-      assert_received {:all, query}
+    test "wraps combinations in a subquery before overriding the select" do
+      query = from(m in MySchema, select: m.id, distinct: true)
+      combination = from(m in MySchema, select: m.id)
 
-      assert inspect(query) ==
-               "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, limit: 1, select: 1>"
+      for type <- [:union, :union_all, :except, :except_all, :intersect, :intersect_all] do
+        TestRepo.exists?(%{query | combinations: [{type, combination}]})
+        assert_received {:all, exists_query}
 
-      from(MySchema, union: ^from(MySchema, select: true)) |> TestRepo.exists?()
-      assert_received {:all, query}
-
-      assert inspect(query) ==
-               "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, union: (from m0 in Ecto.RepoTest.MySchema,\n  select: 1), limit: 1, select: 1>"
+        assert %{from: %{source: %Ecto.SubQuery{query: inner_query}}, combinations: []} = exists_query
+        assert %{select: %{expr: 1}, limit: %{expr: 1}, distinct: nil} = exists_query
+        assert [{^type, inner_combination}] = inner_query.combinations
+        assert inner_query.select.expr != 1
+        assert inner_query.distinct != nil
+        assert inner_combination.select.expr != 1
+      end
     end
   end
 
@@ -717,7 +759,9 @@ defmodule Ecto.RepoTest do
       query = from s in MySchema, select: s
       TestRepo.insert_all(MySchema, query)
 
-      assert_received {:insert_all, %{source: "my_schema", header: header}, {%Ecto.Query{}, _params}}
+      assert_received {:insert_all, %{source: "my_schema", header: header},
+                       {%Ecto.Query{}, _params}}
+
       assert header == [:id, :x, :yyy, :z, :array, :map]
     end
 
@@ -725,7 +769,9 @@ defmodule Ecto.RepoTest do
       query = from p in MyParent, join: a in MySchemaWithAssoc, on: true, select: a
       TestRepo.insert_all(MySchemaWithAssoc, query)
 
-      assert_received {:insert_all, %{source: "my_schema", header: header}, {%Ecto.Query{}, _params}}
+      assert_received {:insert_all, %{source: "my_schema", header: header},
+                       {%Ecto.Query{}, _params}}
+
       assert header == [:id, :n, :parent_id]
     end
 
@@ -733,7 +779,8 @@ defmodule Ecto.RepoTest do
       query = from s in MySchema, select: %{s | x: "x"}
       TestRepo.insert_all(MySchema, query)
 
-      assert_received {:insert_all, %{source: "my_schema", header: header}, {%Ecto.Query{} = query, _params}}
+      assert_received {:insert_all, %{source: "my_schema", header: header},
+                       {%Ecto.Query{} = query, _params}}
 
       unchanged_fields = [:id, :yyy, :z, :array, :map]
       updated_fields = [:x]
@@ -747,7 +794,8 @@ defmodule Ecto.RepoTest do
       query = from s in MySchema, select: %{s | x: ^"x"}
       TestRepo.insert_all(MySchema, query)
 
-      assert_received {:insert_all, %{source: "my_schema", header: header}, {%Ecto.Query{} = query, _params}}
+      assert_received {:insert_all, %{source: "my_schema", header: header},
+                       {%Ecto.Query{} = query, _params}}
 
       unchanged_fields = [:id, :yyy, :z, :array, :map]
       updated_fields = [:x]
@@ -758,10 +806,13 @@ defmodule Ecto.RepoTest do
     end
 
     test "takes query selecting on source with join column update" do
-      query = from p in MyParent, join: a in MySchemaWithAssoc, on: true, select: %{p | id: a.parent_id}
+      query =
+        from p in MyParent, join: a in MySchemaWithAssoc, on: true, select: %{p | id: a.parent_id}
+
       TestRepo.insert_all(MySchemaWithAssoc, query)
 
-      assert_received {:insert_all, %{source: "my_schema", header: header}, {%Ecto.Query{} = query, _params}}
+      assert_received {:insert_all, %{source: "my_schema", header: header},
+                       {%Ecto.Query{} = query, _params}}
 
       unchanged_fields = [:n]
       updated_fields = [:id]
@@ -818,7 +869,8 @@ defmodule Ecto.RepoTest do
       query = from s in MySchema, select: %{map(s, [:id, :x, :z]) | x: "x"}
       TestRepo.insert_all(MySchema, query)
 
-      assert_received {:insert_all, %{source: "my_schema", header: header}, {%Ecto.Query{} = query, _params}}
+      assert_received {:insert_all, %{source: "my_schema", header: header},
+                       {%Ecto.Query{} = query, _params}}
 
       unchanged_fields = [:id, :z]
       updated_fields = [:x]
@@ -919,9 +971,9 @@ defmodule Ecto.RepoTest do
     test "Repo.insert_all raises when placeholder key is used for different types" do
       placeholders = %{uuid_key: Ecto.UUID.generate()}
       ph_key = {:placeholder, :uuid_key}
-      entries = [%{bid: ph_key, string: ph_key}]
+      entries = [%{bid: ph_key, str: ph_key}]
 
-      assert_raise ArgumentError, fn ->
+      assert_raise ArgumentError, ~r/a placeholder key can only be used with columns of the same type/, fn ->
         TestRepo.insert_all(MySchemaWithBinaryId, entries, placeholders: placeholders)
       end
     end
@@ -1563,7 +1615,9 @@ defmodule Ecto.RepoTest do
     assert schema = TestRepo.get(MySchemaWithNonStringPrefix, 123, prefix: %{key: :public})
     assert schema.__meta__.prefix == %{key: :private}
 
-    assert schema = TestRepo.get_by(MySchemaWithNonStringPrefix, [id: 123], prefix: %{key: :public})
+    assert schema =
+             TestRepo.get_by(MySchemaWithNonStringPrefix, [id: 123], prefix: %{key: :public})
+
     assert schema.__meta__.prefix == %{key: :private}
 
     assert schema = TestRepo.one(MySchemaWithNonStringPrefix, prefix: %{key: :public})
@@ -1572,8 +1626,67 @@ defmodule Ecto.RepoTest do
     assert [schema] = TestRepo.all(MySchemaWithNonStringPrefix, prefix: %{key: :public})
     assert schema.__meta__.prefix == %{key: :private}
 
-    assert [schema] = TestRepo.all_by(MySchemaWithNonStringPrefix, [id: 123], prefix: %{key: :public})
+    assert [schema] =
+             TestRepo.all_by(MySchemaWithNonStringPrefix, [id: 123], prefix: %{key: :public})
+
     assert schema.__meta__.prefix == %{key: :private}
+  end
+
+  test "get, get_by, one, all, all_by, exists?, stream, and delete_all raise an error when given Ecto.Query-like opts" do
+    for {unsupported_option, bad_opts} <- [
+          {:where, [where: [user_id: Ecto.UUID.generate()]]},
+          {:preload, [preload: :users]},
+          {:order_by, [order_by: :name]},
+          {:limit, [limit: 10]}
+        ] do
+      assert_raise ArgumentError,
+                   ~r"unsupported option #{inspect(unsupported_option)} for Repo.get",
+                   fn ->
+                     TestRepo.get(MySchema, 123, bad_opts)
+                   end
+
+      assert_raise ArgumentError,
+                   ~r"unsupported option #{inspect(unsupported_option)} for Repo.get_by",
+                   fn ->
+                     TestRepo.get_by(MySchema, [id: 123], bad_opts)
+                   end
+
+      assert_raise ArgumentError,
+                   ~r"unsupported option #{inspect(unsupported_option)} for Repo.one",
+                   fn ->
+                     TestRepo.one(MySchema, bad_opts)
+                   end
+
+      assert_raise ArgumentError,
+                   ~r"unsupported option #{inspect(unsupported_option)} for Repo.all",
+                   fn ->
+                     TestRepo.all(MySchema, bad_opts)
+                   end
+
+      assert_raise ArgumentError,
+                   ~r"unsupported option #{inspect(unsupported_option)} for Repo.all_by",
+                   fn ->
+                     TestRepo.all_by(MySchema, [id: 123], bad_opts)
+                   end
+
+      assert_raise ArgumentError,
+                   ~r"unsupported option #{inspect(unsupported_option)} for Repo.exists?",
+                   fn ->
+                     TestRepo.exists?(MySchema, bad_opts)
+                   end
+
+      assert_raise ArgumentError,
+                   ~r"unsupported option #{inspect(unsupported_option)} for Repo.stream",
+                   fn ->
+                     TestRepo.stream(MySchema, bad_opts)
+                   end
+
+      assert_raise ArgumentError,
+                   ~r"unsupported option #{inspect(unsupported_option)} for Repo.delete_all",
+                   fn ->
+                     TestRepo.delete_all(MySchema, bad_opts)
+                   end
+    end
   end
 
   describe "changeset prepare" do
@@ -1593,13 +1706,13 @@ defmodule Ecto.RepoTest do
 
     test "does not run transaction without prepare" do
       TestRepo.insert!(%MySchema{id: 1})
-      refute_received {:transaction, _}
+      refute_received {:transaction, _, _}
     end
 
     test "insert runs prepare callbacks in transaction" do
       changeset = prepare_changeset()
       TestRepo.insert!(changeset)
-      assert_received {:transaction, _}
+      assert_received {:transaction, _, _}
       assert Process.get(:ecto_repo) == TestRepo
       assert Process.get(:ecto_counter) == 2
     end
@@ -1652,7 +1765,7 @@ defmodule Ecto.RepoTest do
     test "update runs prepare callbacks in transaction" do
       changeset = prepare_changeset()
       TestRepo.update!(changeset)
-      assert_received {:transaction, _}
+      assert_received {:transaction, _, _}
       assert Process.get(:ecto_repo) == TestRepo
       assert Process.get(:ecto_counter) == 2
     end
@@ -1705,7 +1818,7 @@ defmodule Ecto.RepoTest do
     test "delete runs prepare callbacks in transaction" do
       changeset = prepare_changeset()
       TestRepo.delete!(changeset)
-      assert_received {:transaction, _}
+      assert_received {:transaction, _, _}
       assert Process.get(:ecto_repo) == TestRepo
       assert Process.get(:ecto_counter) == 2
     end
@@ -1760,7 +1873,7 @@ defmodule Ecto.RepoTest do
 
       %MySchemaEmbedsMany{embeds: [embed]} = TestRepo.insert!(changeset)
       assert embed.x == "ONE"
-      assert_received {:transaction, _}
+      assert_received {:transaction, _, _}
       assert Process.get(:ecto_repo) == TestRepo
       assert Process.get(:ecto_counter) == 2
     end
@@ -1904,6 +2017,65 @@ defmodule Ecto.RepoTest do
       assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], []}}}
     end
 
+    test "does not pass conflict target to :replace_all_except" do
+      fields = [:map, :z, :yyy, :x]
+
+      TestRepo.insert(%MySchema{id: 1},
+        on_conflict: {:replace_all_except, [:array]},
+        conflict_target: [:id]
+      )
+
+      assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], [:id]}}}
+    end
+
+    test "passes conflict target to :replace_all_except when replace_changed is false" do
+      fields = [:map, :z, :yyy, :x, :id]
+
+      TestRepo.insert(%MySchema{id: 1},
+        on_conflict: {:replace_all_except, [:array]},
+        conflict_target: [:id],
+        replace_changed: false
+      )
+
+      assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], [:id]}}}
+    end
+
+    test "raises on empty-list of fields to update when :replace_all_except is given" do
+      msg = "empty list of fields to update, use the `:replace` option instead"
+
+      assert_raise ArgumentError, msg, fn ->
+        TestRepo.insert(%MySchema{id: 1},
+          on_conflict: {:replace_all_except, [:array, :map, :z, :y, :x]},
+          conflict_target: [:id]
+        )
+      end
+    end
+
+    test "excludes conflict target from :replace_all" do
+      fields = [:map, :array, :z, :yyy, :x]
+      TestRepo.insert(%MySchema{id: 1}, on_conflict: :replace_all, conflict_target: [:id])
+      assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], [:id]}}}
+    end
+
+    test "includes conflict target in :replace_all when replace_changed is false" do
+      fields = [:map, :array, :z, :yyy, :x, :id]
+
+      TestRepo.insert(%MySchema{id: 1}, on_conflict: :replace_all, conflict_target: [:id], replace_changed: false)
+
+      assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], [:id]}}}
+    end
+
+    test "raises on empty-list of fields to update when :replace_all is given" do
+      msg = "empty list of fields to update, use the `:replace` option instead"
+
+      assert_raise ArgumentError, msg, fn ->
+        TestRepo.insert(%MySchemaOneField{n: 1},
+          on_conflict: :replace_all,
+          conflict_target: [:n]
+        )
+      end
+    end
+
     test "converts keyword list into query" do
       TestRepo.insert(%MySchema{id: 1}, on_conflict: [set: [x: "123", y: "456"]])
       assert_received {:insert, %{source: "my_schema", on_conflict: {query, ["123", "456"], []}}}
@@ -1975,6 +2147,11 @@ defmodule Ecto.RepoTest do
 
       assert_raise ArgumentError, msg, fn ->
         TestRepo.preload(%MySchema{id: 1}, children: union(query, ^query))
+      end
+
+      assert_raise ArgumentError, msg, fn ->
+        combination_query = query |> union(^query) |> union(^query)
+        TestRepo.preload(%MySchema{id: 1}, children: combination_query)
       end
 
       msg = ~r"`union_all` queries must be wrapped inside of a subquery"
@@ -2153,14 +2330,15 @@ defmodule Ecto.RepoTest do
     test "no transaction functions generated on repo without adapter support" do
       assert function_exported?(NoTransactionRepo, :config, 0)
       refute function_exported?(NoTransactionRepo, :transaction, 2)
+      refute function_exported?(NoTransactionRepo, :transact, 2)
       refute function_exported?(NoTransactionRepo, :in_transaction?, 2)
       refute function_exported?(NoTransactionRepo, :rollback, 1)
     end
   end
 
   describe "dynamic repo" do
-    setup do
-      {:ok, pid} = TestRepo.start_link(name: nil)
+    setup config do
+      {:ok, pid} = TestRepo.start_link(name: config.test)
       TestRepo = TestRepo.put_dynamic_repo(pid)
       :ok
     end
@@ -2185,7 +2363,15 @@ defmodule Ecto.RepoTest do
       assert Process.get(:ecto_prepared)
     end
 
-    test "keeps the proper repo in  multi" do
+    test "keeps the proper repo in transact rollback", config do
+      assert TestRepo.transact(fn -> {:error, :oops} end) == {:error, :oops}
+
+      # Also check it works with named repos
+      TestRepo.put_dynamic_repo(config.test)
+      assert TestRepo.transact(fn -> {:error, :oops} end) == {:error, :oops}
+    end
+
+    test "keeps the proper repo in multi" do
       fun = fn repo, _changes -> {:ok, repo} end
       multi = Ecto.Multi.new() |> Ecto.Multi.run(:run, fun)
       assert {:ok, changes} = TestRepo.transaction(multi)
@@ -2281,20 +2467,61 @@ defmodule Ecto.RepoTest do
       assert_received {:callback_ran, pid2} when pid2 != self()
       assert pid1 != pid2
     end
+
+    # Logger.{put,get,delete}_process_level were added in Elixir 1.15.
+    if Version.match?(System.version(), ">= 1.15.0") do
+      test "preload tasks inherit the caller's Logger level" do
+        Logger.put_process_level(self(), :warning)
+        on_exit(fn -> Logger.delete_process_level(self()) end)
+
+        test_process = self()
+        fun = fn -> send(test_process, {:level, Logger.get_process_level(self())}) end
+
+        %MySchemaWithMultiAssoc{parent_id: 1, mother_id: 2}
+        |> PrepareRepo.preload([:parent, :mother], on_preloader_spawn: fun)
+
+        assert_received {:level, :warning}
+        assert_received {:level, :warning}
+      end
+    end
+  end
+
+  describe "prepare_transaction" do
+    defmodule PrepareTransactionRepo do
+      use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter, stacktrace: true
+
+      def prepare_transaction(fun_or_multi, opts) do
+        send(self(), {:prepare_transaction, fun_or_multi, opts})
+        {fun_or_multi, Keyword.put(opts, :commit_comment, "my_comment")}
+      end
+    end
+
+    setup do
+      _ = PrepareTransactionRepo.start_link(url: "ecto://user:pass@local/hello")
+      :ok
+    end
+
+    test "transaction" do
+      fun = fn -> :ok end
+      opts = [commit_comment: "my_comment"]
+      assert {:ok, :ok} = PrepareTransactionRepo.transaction(fun)
+      assert_received {:prepare_transaction, _, _}
+      assert_received {:transaction, _fun, ^opts}
+    end
   end
 
   describe "transaction" do
     test "an arity zero function will be executed any it's value returned" do
       fun = fn -> :ok end
       assert {:ok, :ok} = TestRepo.transaction(fun)
-      assert_received {:transaction, _}
+      assert_received {:transaction, _, _}
     end
 
     test "an arity one function will be passed the repo as first argument" do
       fun = fn repo -> repo end
 
       assert {:ok, TestRepo} = TestRepo.transaction(fun)
-      assert_received {:transaction, _}
+      assert_received {:transaction, _, _}
     end
   end
 
@@ -2319,13 +2546,86 @@ defmodule Ecto.RepoTest do
              ]
     end
 
-
-    test "update only saves changes for writable: :always" do
-      %MySchemaWritable{id: 1}
-      |> Ecto.Changeset.change(%{always: 10, never: 11, insert: 12})
-      |> TestRepo.update()
+    test "update with on_writable_violation: :nothing saves changes for writable: :always and ignores changes for writable: :insert/:never" do
+      %{always: 10, never: nil, insert: nil} =
+        %MySchemaWritable{id: 1}
+        |> Ecto.Changeset.change(%{always: 10, never: 11, insert: 12})
+        |> TestRepo.update!()
 
       assert_received {:update, %{changes: [always: 10]}}
+    end
+
+    test "update with on_writable_violation: :warn saves changes for writable: :always, ignores changes for writable: :insert/:never, and logs a warning" do
+      log = capture_log(fn ->
+        %{always: 10, never: nil, insert: nil} =
+          %MySchemaWritableWarn{id: 1}
+          |> Ecto.Changeset.change(%{always: 10, never: 11, insert: 12})
+          |> TestRepo.update!()
+
+        assert_received {:update, %{changes: [always: 10]}}
+      end)
+
+      assert log =~ ~r"""
+      you are attempting to write to the field :insert of #{inspect(__MODULE__.MySchemaWritableWarn)} but
+      the `:writable` option of this field indicates the field should not be written to during an update.
+      """
+
+      assert log =~ ~r"""
+      you are attempting to write to the field :never of #{inspect(__MODULE__.MySchemaWritableWarn)} but
+      the `:writable` option of this field indicates the field should not be written to during an update.
+      """
+    end
+
+    test "update with on_writable_violation: :raise saves changes for writable: :always and raises for changes for writable: :insert/:never" do
+      never_message = ~r"""
+      you are attempting to write to the field :never of #{inspect(__MODULE__.MySchemaWritableRaise)} but
+      the `:writable` option of this field indicates the field should not be written to during an update.
+      """
+
+      assert_raise ArgumentError, never_message, fn ->
+        %MySchemaWritableRaise{id: 1}
+        |> Ecto.Changeset.change(%{never: 10})
+        |> TestRepo.update!()
+      end
+
+      insert_message = ~r"""
+      you are attempting to write to the field :insert of #{inspect(__MODULE__.MySchemaWritableRaise)} but
+      the `:writable` option of this field indicates the field should not be written to during an update.
+      """
+
+      assert_raise ArgumentError, insert_message, fn ->
+        %MySchemaWritableRaise{id: 2}
+        |> Ecto.Changeset.change(%{insert: 11})
+        |> TestRepo.update!()
+      end
+
+      %MySchemaWritableRaise{id: 3}
+      |> Ecto.Changeset.change(%{always: 12})
+      |> TestRepo.update!()
+
+      assert_received {:update, %{changes: [always: 12]}}
+    end
+
+    test "update enforces writable fields added by prepare_changes" do
+      %{always: 10, never: nil} =
+        %MySchemaWritable{id: 1}
+        |> Ecto.Changeset.change(%{always: 10})
+        |> Ecto.Changeset.prepare_changes(&Ecto.Changeset.put_change(&1, :never, 11))
+        |> TestRepo.update!()
+
+      assert_received {:update, %{changes: [always: 10]}}
+
+      message = ~r"""
+      you are attempting to write to the field :never of #{inspect(__MODULE__.MySchemaWritableRaise)} but
+      the `:writable` option of this field indicates the field should not be written to during an update.
+      """
+
+      assert_raise ArgumentError, message, fn ->
+        %MySchemaWritableRaise{id: 2}
+        |> Ecto.Changeset.change(%{always: 12})
+        |> Ecto.Changeset.prepare_changes(&Ecto.Changeset.put_change(&1, :never, 13))
+        |> TestRepo.update!()
+      end
     end
 
     test "update is a no-op when updatable fields are not changed" do
@@ -2354,18 +2654,134 @@ defmodule Ecto.RepoTest do
 
       update_query = from w in MySchemaWritable, update: [set: [insert: 10]]
 
-      assert_raise Ecto.QueryError,  ~r/cannot update non-updatable field `:insert` in query/, fn ->
-        TestRepo.update_all(update_query, [])
-      end
+      assert_raise Ecto.QueryError,
+                   ~r/cannot update non-updatable field `:insert` in query/,
+                   fn ->
+                     TestRepo.update_all(update_query, [])
+                   end
     end
 
-    test "insert only saves changes for writable: :always/:insert" do
-      %MySchemaWritable{id: 1}
-      |> Ecto.Changeset.change(%{always: 10, never: 11, insert: 12})
-      |> TestRepo.insert()
+    test "insert with surfaced changes on_writable_violation: :nothing saves changes for writable: :always/:insert and ignores changes for writable: :never" do
+      # For surfaced changes from the underlying struct, the value in the returned struct is
+      # maintained even though the underlying write was not performed, as opposed to "normal" changes
+      # provided via a changeset.
+      %{always: 10, never: 11, insert: 12} =
+        %MySchemaWritable{id: 1, always: 10, never: 11, insert: 12}
+        |> Ecto.Changeset.change(%{})
+        |> TestRepo.insert!()
 
       assert_received {:insert, %{fields: inserted_fields}}
       assert Enum.sort(inserted_fields) == [always: 10, id: 1, insert: 12]
+    end
+
+    test "insert with on_writable_violation: :nothing saves changes for writable: :always/:insert and ignores changes for writable: :never" do
+      %{always: 10, never: nil, insert: 12} =
+        %MySchemaWritable{id: 1}
+        |> Ecto.Changeset.change(%{always: 10, never: 11, insert: 12})
+        |> TestRepo.insert!()
+
+      assert_received {:insert, %{fields: inserted_fields}}
+      assert Enum.sort(inserted_fields) == [always: 10, id: 1, insert: 12]
+    end
+
+    test "insert with surfaced changes and on_writable_violation: :warn saves changes for writable: :always/:insert, ignores changes for writable: :never, and logs a warning" do
+      log = capture_log(fn ->
+        # For surfaced changes from the underlying struct, the value in the returned struct is
+        # maintained even though the underlying write was not performed, as opposed to "normal" changes
+        # provided via a changeset.
+        %{always: 10, never: 11, insert: 12} =
+          %MySchemaWritableWarn{id: 1, always: 10, never: 11, insert: 12}
+          |> Ecto.Changeset.change(%{})
+          |> TestRepo.insert!()
+
+        assert_received {:insert, %{fields: inserted_fields}}
+        assert Enum.sort(inserted_fields) == [always: 10, id: 1, insert: 12]
+      end)
+
+      assert log =~ ~r"""
+      you are attempting to write to the field :never of #{inspect(__MODULE__.MySchemaWritableWarn)} but
+      the `:writable` option of this field indicates the field should not be written to during an insert.
+      """
+    end
+
+    test "insert with on_writable_violation: :warn saves changes for writable: :always/:insert, ignores changes for writable: :never, and logs a warning" do
+      log = capture_log(fn ->
+        %{always: 10, never: nil, insert: 12} =
+          %MySchemaWritableWarn{id: 1}
+          |> Ecto.Changeset.change(%{always: 10, never: 11, insert: 12})
+          |> TestRepo.insert!()
+
+        assert_received {:insert, %{fields: inserted_fields}}
+        assert Enum.sort(inserted_fields) == [always: 10, id: 1, insert: 12]
+      end)
+
+      assert log =~ ~r"""
+      you are attempting to write to the field :never of #{inspect(__MODULE__.MySchemaWritableWarn)} but
+      the `:writable` option of this field indicates the field should not be written to during an insert.
+      """
+    end
+
+    test "insert with surfaced changes and on_writable_violation: :raise saves changes for writable: :always/:insert and raises for changes for writable: :never" do
+      message = ~r"""
+      you are attempting to write to the field :never of #{inspect(__MODULE__.MySchemaWritableRaise)} but
+      the `:writable` option of this field indicates the field should not be written to during an insert.
+      """
+
+      assert_raise ArgumentError, message, fn ->
+        %MySchemaWritableRaise{id: 1, never: 10}
+        |> Ecto.Changeset.change(%{})
+        |> TestRepo.insert!()
+      end
+
+      %MySchemaWritableRaise{id: 2, insert: 11, always: 12}
+      |> Ecto.Changeset.change(%{})
+      |> TestRepo.insert!()
+
+      assert_received {:insert, %{fields: inserted_fields}}
+      assert Enum.sort(inserted_fields) == [always: 12, id: 2, insert: 11]
+    end
+
+    test "insert with on_writable_violation: :raise saves changes for writable: :always/:insert and raises for changes for writable: :never" do
+      message = ~r"""
+      you are attempting to write to the field :never of #{inspect(__MODULE__.MySchemaWritableRaise)} but
+      the `:writable` option of this field indicates the field should not be written to during an insert.
+      """
+
+      assert_raise ArgumentError, message, fn ->
+        %MySchemaWritableRaise{id: 1}
+        |> Ecto.Changeset.change(%{never: 10})
+        |> TestRepo.insert!()
+      end
+
+      %MySchemaWritableRaise{id: 2}
+      |> Ecto.Changeset.change(%{insert: 11, always: 12})
+      |> TestRepo.insert!()
+
+      assert_received {:insert, %{fields: inserted_fields}}
+      assert Enum.sort(inserted_fields) == [always: 12, id: 2, insert: 11]
+    end
+
+    test "insert enforces writable fields added by prepare_changes" do
+      %{always: 10, never: nil} =
+        %MySchemaWritable{id: 1}
+        |> Ecto.Changeset.change(%{always: 10})
+        |> Ecto.Changeset.prepare_changes(&Ecto.Changeset.put_change(&1, :never, 11))
+        |> TestRepo.insert!()
+
+      assert_received {:insert, %{fields: inserted_fields}}
+      assert Enum.sort(inserted_fields) == [always: 10, id: 1]
+
+      message = ~r"""
+      you are attempting to write to the field :never of #{inspect(__MODULE__.MySchemaWritableRaise)} but
+      the `:writable` option of this field indicates the field should not be written to during an insert.
+      """
+
+      assert_raise ArgumentError, message, fn ->
+        %MySchemaWritableRaise{id: 2}
+        |> Ecto.Changeset.change(%{always: 12})
+        |> Ecto.Changeset.prepare_changes(&Ecto.Changeset.put_change(&1, :never, 13))
+        |> TestRepo.insert!()
+      end
     end
 
     test "insert with returning" do
@@ -2382,9 +2798,11 @@ defmodule Ecto.RepoTest do
       # conflict query
       on_conflict = from w in MySchemaWritable, update: [set: [insert: 10]]
 
-      assert_raise Ecto.QueryError, ~r/cannot update non-updatable field `:insert` in query/, fn ->
-        TestRepo.insert(%MySchemaWritable{}, on_conflict: on_conflict)
-      end
+      assert_raise Ecto.QueryError,
+                   ~r/cannot update non-updatable field `:insert` in query/,
+                   fn ->
+                     TestRepo.insert(%MySchemaWritable{}, on_conflict: on_conflict)
+                   end
 
       # conflict keyword
       assert_raise Ecto.QueryError, ~r/cannot update non-updatable field `:never` in query/, fn ->
@@ -2392,9 +2810,13 @@ defmodule Ecto.RepoTest do
       end
 
       # conflict replace
-      assert_raise ArgumentError, ~r/cannot replace non-updatable field `:never` in :on_conflict option/, fn ->
-        TestRepo.insert(%MySchemaWritable{}, on_conflict: {:replace, [:always, :never]})
-      end
+      assert_raise ArgumentError,
+                   ~r/cannot replace non-updatable field `:never` in :on_conflict option/,
+                   fn ->
+                     TestRepo.insert(%MySchemaWritable{},
+                       on_conflict: {:replace, [:always, :never]}
+                     )
+                   end
     end
 
     test "insert with on_conflict = replace_all and returning" do
@@ -2420,7 +2842,10 @@ defmodule Ecto.RepoTest do
       msg = "cannot select unwritable field `:never` for insert_all"
 
       assert_raise ArgumentError, msg, fn ->
-        query = from w in MySchemaWritable, select: %{always: w.always, insert: w.insert, never: w.insert}
+        query =
+          from w in MySchemaWritable,
+            select: %{always: w.always, insert: w.insert, never: w.insert}
+
         TestRepo.insert_all(MySchemaWritable, query)
       end
 

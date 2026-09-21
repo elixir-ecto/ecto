@@ -562,6 +562,26 @@ defmodule Ecto.EnumTest do
     end
   end
 
+  describe "cast_value/3" do
+    test "returns correct values" do
+      assert Ecto.Enum.cast_value(EnumSchema, :my_enum, "foo") == {:ok, :foo}
+      assert Ecto.Enum.cast_value(EnumSchema, :my_enum, :foo) == {:ok, :foo}
+      assert Ecto.Enum.cast_value(EnumSchema, :my_enum, "qux") == :error
+      assert Ecto.Enum.cast_value(EnumSchema, :my_enum, :qux) == :error
+
+      assert Ecto.Enum.cast_value(EnumSchema, :my_integer_enum, 1) == {:ok, :foo}
+      assert Ecto.Enum.cast_value(EnumSchema, :my_integer_enum, :foo) == {:ok, :foo}
+      assert Ecto.Enum.cast_value(EnumSchema, :my_integer_enum, 6) == :error
+      assert Ecto.Enum.cast_value(EnumSchema, :my_integer_enum, "qux") == :error
+      assert Ecto.Enum.cast_value(EnumSchema, :my_integer_enum, :qux) == :error
+
+      assert Ecto.Enum.cast_value(EnumSchema, :my_string_enum, "fooo") == {:ok, :foo}
+      assert Ecto.Enum.cast_value(EnumSchema, :my_string_enum, :foo) == {:ok, :foo}
+      assert Ecto.Enum.cast_value(EnumSchema, :my_string_enum, "quux") == :error
+      assert Ecto.Enum.cast_value(EnumSchema, :my_string_enum, :qux) == :error
+    end
+  end
+
   describe "mappings/2" do
     test "returns correct values" do
       assert Ecto.Enum.mappings(EnumSchema, :my_enum) == [foo: "foo", bar: "bar", baz: "baz"]

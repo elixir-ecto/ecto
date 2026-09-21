@@ -75,13 +75,13 @@ defmodule Ecto.Query.Builder.OrderBy do
 
   defp do_escape({dir, expr}, params_acc, kind, vars, env) do
     fun = &escape_expansion(kind, &1, &2, &3, &4, &5)
-    {ast, params_acc} = Builder.escape(expr, :any, params_acc, vars, {env, fun})
+    {ast, params_acc} = Builder.escape(expr, :any, params_acc, vars, {get_env(env), fun})
     {[{quoted_dir!(kind, dir), ast}], params_acc}
   end
 
   defp do_escape(expr, params_acc, kind, vars, env) do
     fun = &escape_expansion(kind, &1, &2, &3, &4, &5)
-    {ast, params_acc} = Builder.escape(expr, :any, params_acc, vars, {env, fun})
+    {ast, params_acc} = Builder.escape(expr, :any, params_acc, vars, {get_env(env), fun})
 
     if is_list(ast) do
       {ast, params_acc}
@@ -89,6 +89,9 @@ defmodule Ecto.Query.Builder.OrderBy do
       {[{:asc, ast}], params_acc}
     end
   end
+
+  defp get_env({env, _}), do: env
+  defp get_env(env), do: env
 
   defp escape_expansion(kind, expr, _type, params_acc, vars, env) when is_list(expr) do
     escape(kind, expr, params_acc, vars, env)
@@ -156,8 +159,14 @@ defmodule Ecto.Query.Builder.OrderBy do
   Shared between order_by and distinct.
   """
   def order_by_or_distinct!(kind, query, exprs, params) do
+    {expr, params, subqueries} = order_by_or_distinct!(kind, query, exprs, params, [])
+    {expr, params, Enum.reverse(subqueries)}
+  end
+
+  @doc false
+  def order_by_or_distinct!(kind, query, exprs, params, subqueries) do
     {expr, {params, _, subqueries}} =
-      Enum.map_reduce(List.wrap(exprs), {params, length(params), []}, fn
+      Enum.map_reduce(List.wrap(exprs), {params, length(params), subqueries}, fn
         {dir, expr}, params_count when dir in @directions ->
           {expr, params} = dynamic_or_field!(kind, expr, query, params_count)
           {{dir, expr}, params}
@@ -245,7 +254,7 @@ defmodule Ecto.Query.Builder.OrderBy do
       quote do: %Ecto.Query.ByExpr{
               expr: unquote(expr),
               params: unquote(params),
-              subqueries: unquote(acc.subqueries),
+              subqueries: unquote(Enum.reverse(acc.subqueries)),
               file: unquote(env.file),
               line: unquote(env.line)
             }

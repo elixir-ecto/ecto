@@ -160,7 +160,8 @@ defmodule Ecto.Query.WindowAPI do
 
   @doc """
   Applies the given expression as a FILTER clause against an
-  aggregate. This is currently only supported by Postgres.
+  aggregate. Not all databases support this operation. Please
+  check your database documentation.
 
       from p in Post,
            select: avg(p.value)

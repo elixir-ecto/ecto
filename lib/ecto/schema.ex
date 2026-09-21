@@ -40,7 +40,7 @@ defmodule Ecto.Schema do
       end
 
   By default, a schema will automatically generate a primary key which is named
-  `id` and of type `:integer`. The `field` macro defines a field in the schema
+  `id` and of type `:integer`. The [`field`](`field/3`) macro defines a field in the schema
   with given name and type. `has_many` associates many posts with the user
   schema. Schemas are regular structs and can be created and manipulated directly
   using Elixir's struct API:
@@ -130,6 +130,9 @@ defmodule Ecto.Schema do
   inspect on the schema unless the schema module is tagged with
   the option `@derive_inspect_for_redacted_fields false`.
 
+  A schema module tagged with `@schema_redact :all_except_primary_keys` will
+  redact all fields except primary keys.
+
   ## Schema attributes
 
   Supported attributes for configuring the defined schema. They must
@@ -155,12 +158,17 @@ defmodule Ecto.Schema do
       which generates structs and queries without context. Context are not used
       by the built-in SQL adapters.
 
+    * `@schema_redact` - If set to `:all_except_primary_keys`, Ecto will
+      treat all non-primary key fields as if they were individually marked
+      as redacted. Defaults to `false`, as no fields are redacted by default.
+      The value set here can be changed per field through the `:redact` option.
+
     * `@foreign_key_type` - configures the default foreign key type
       used by `belongs_to` associations. It must be set in the same
       module that defines the `belongs_to`. Defaults to `:id`;
 
-    * `@timestamps_opts` - configures the default timestamps type
-      used by `timestamps`. Defaults to `[type: :naive_datetime]`;
+    * `@timestamps_opts` - configures the default timestamps options
+      used by the [`timestamps`](`timestamps/1`) macro. Defaults to `[type: :naive_datetime]`;
 
     * `@derive` - the same as `@derive` available in `Kernel.defstruct/1`
       as the schema defines a struct behind the scenes;
@@ -172,8 +180,12 @@ defmodule Ecto.Schema do
     * `@field_source_mapper` - a function that receives the current field name
       and returns the mapping of this field name in the underlying source.
       In other words, it is a mechanism to automatically generate the `:source`
-      option for the `field` macro. It defaults to `fn x -> x end`, where no
-      field transformation is done;
+      option for the [`field`](`field/3`) macro. It defaults to `fn x -> x end`,
+      where no field transformation is done;
+
+    * `@on_writable_violation` - configures the default value of `:on_writable_violation`
+      for all fields in the schema. The value set here can be changed per field through
+      the `:on_writable_violation` option.
 
   The advantage of configuring the schema via those attributes is
   that they can be set with a macro to configure application wide
@@ -517,6 +529,7 @@ defmodule Ecto.Schema do
       Module.register_attribute(__MODULE__, :ecto_autogenerate, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_autoupdate, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_redact_fields, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_on_writable_violation, accumulate: true)
     end
   end
 
@@ -536,7 +549,8 @@ defmodule Ecto.Schema do
     :where,
     :references,
     :skip_default_validation,
-    :writable
+    :writable,
+    :on_writable_violation
   ]
 
   @doc """
@@ -657,6 +671,7 @@ defmodule Ecto.Schema do
 
     * `:autogenerate` - a `{module, function, args}` tuple for a function
       to call to generate the field value before insertion if value is not set.
+      A list of options is passed as first argument `{type, :autogenerate, [options]}`.
       A shorthand value of `true` is equivalent to `{type, :autogenerate, []}`.
 
     * `:read_after_writes` - When true, the field is always read back
@@ -691,6 +706,12 @@ defmodule Ecto.Schema do
       be further modified, even in an upsert. If set to `:never`, the field becomes
       read only. Defaults to `:always`.
 
+    * `:on_writable_violation` - Defines what action to take when performing an insert or update
+      attempts to modify a field that should not be modified according to it's `:writable` value.
+      Must be one of `:nothing`, `:warn`, or `:raise`. If set to `:nothing`, the modification is
+      silently ignored. If set to `:warn`, the modification is ignored and a warning is logged. If set
+      to `:raise`, an exception is raised and the operation is aborted. Defaults to `:nothing`.
+
   """
   defmacro field(name, type \\ :string, opts \\ []) do
     quote do
@@ -709,6 +730,11 @@ defmodule Ecto.Schema do
     * `:inserted_at` - the Ecto schema name of the field for insertion times or `false`
     * `:updated_at` - the Ecto schema name of the field for update times or `false`
     * `:inserted_at_source` - the name of the database column for insertion times or `false`
+    * `:inserted_at_writable` - the value of the Ecto schema `:writable` option for the
+      `inserted_at` field generated by this macro. Raises if `:never` is provided,
+      as Ecto must be able to automatically set the field at insertion.
+    * `:inserted_at_on_writable_violation` - the value of the Ecto schema `:on_writable_violation`
+      option for the `inserted_at` field generated by this macro.
     * `:updated_at_source` - the name of the database column for update times or `false`
     * `:type` - the timestamps type, defaults to `:naive_datetime`.
     * `:autogenerate` - a module-function-args tuple used for generating
@@ -778,6 +804,8 @@ defmodule Ecto.Schema do
       For example, if you set `Post.has_many :comments, preload_order: [asc: :content]`,
       whenever the `:comments` associations is preloaded,
       the comments will be ordered by the `:content` field.
+      Note that if you provide a custom query with its own `order_by` clause,
+      the custom ordering will take precedence and the `:preload_order` will not be applied.
       See `Ecto.Query.order_by/3` to learn more about ordering expressions.
 
   ## Examples
@@ -1311,6 +1339,12 @@ defmodule Ecto.Schema do
       associated records. See `Ecto.Changeset`'s section on related data
       for more info.
 
+    * `:on_join_through_conflict` - If the association is part of an insert, Ecto
+      will automatically try to create the appropriate entry in the `:join_through`
+      table. This option allows you to configure the conflict resolution behaviour
+      when the record already exists. The allowed values are `:raise` or `:nothing`.
+      Defaults to `:raise`
+
     * `:defaults` - Default values to use when building the association.
       It may be a keyword list of options that override the association schema
       or an `atom`/`{module, function, args}` that receives the association struct
@@ -1344,6 +1378,8 @@ defmodule Ecto.Schema do
       It may be a keyword list/list of fields or an MFA tuple, such as `{Mod, fun, []}`.
       Both cases must resolve to a valid `order_by` expression. See `Ecto.Query.order_by/3`
       to learn more about ordering expressions.
+      Note that if you provide a custom query with its own `order_by` clause,
+      the custom ordering will take precedence and the `:preload_order` will not be applied.
       See the [preload order](#many_to_many/3-preload-order) section below to learn how
       this option can be utilized
 
@@ -1579,9 +1615,13 @@ defmodule Ecto.Schema do
   ## Options
 
     * `:primary_key` - The `:primary_key` option can be used with the same arguments
-      as `@primary_key` (see the [Schema attributes](https://hexdocs.pm/ecto/Ecto.Schema.html#module-schema-attributes)
-      section for more info). Primary keys are automatically set up for embedded schemas as well,
-      defaulting to  `{:id,  :binary_id, autogenerate:   true}`.
+      as `@primary_key` (see the [Schema attributes](#module-schema-attributes)
+      section for more info). Primary keys are automatically set up for embedded
+      schemas as well, defaulting to `{:id,  :binary_id, autogenerate: true}`.
+      This will generate the default UUID v4. You can use UUID v7 instead by setting
+      the primary key to `{:id, Ecto.UUID, autogenerate: [version: 7]}`
+      Note `:primary_key`s are not automatically read back on `insert/2`,
+      unless one of `autogenerate: true` or `read_after_writes: true` is set.
 
     * `:on_replace` - The action taken on associations when the embed is
       replaced when casting or manipulating parent changeset. May be
@@ -1974,7 +2014,7 @@ defmodule Ecto.Schema do
     # better to raise unknown type first than unsupported option.
     type = check_field_type!(mod, name, type, opts)
 
-    if type == :any && !opts[:virtual] do
+    if type == :any && !opts[:virtual] && Module.get_attribute(mod, :ecto_source) do
       raise ArgumentError,
             "only virtual fields can have type :any, " <>
               "invalid type for field #{inspect(name)}"
@@ -1992,7 +2032,17 @@ defmodule Ecto.Schema do
     writable = opts[:writable] || :always
     put_struct_field(mod, name, Keyword.get(opts, :default))
 
-    if Keyword.get(opts, :redact, false) do
+    on_writable_violation = Keyword.get(opts, :on_writable_violation)
+
+    redact_field? =
+      Keyword.get_lazy(opts, :redact, fn ->
+        case Module.get_attribute(mod, :schema_redact, false) do
+          :all_except_primary_keys -> not pk?
+          false -> false
+        end
+      end)
+
+    if redact_field? do
       Module.put_attribute(mod, :ecto_redact_fields, name)
     end
 
@@ -2020,6 +2070,10 @@ defmodule Ecto.Schema do
         {_, _, _} ->
           store_mfa_autogenerate!(mod, name, type, gen)
 
+        autogenerate_opts when is_list(autogenerate_opts) ->
+          mfa = {autogenerate_module(type), :autogenerate, [autogenerate_opts]}
+          store_mfa_autogenerate!(mod, name, type, mfa)
+
         true ->
           store_type_autogenerate!(mod, name, source || name, type, pk?)
 
@@ -2033,6 +2087,10 @@ defmodule Ecto.Schema do
 
       if writable != :always && gen do
         raise ArgumentError, "autogenerated fields must always be writable"
+      end
+
+      if on_writable_violation do
+        Module.put_attribute(mod, :ecto_on_writable_violation, {name, on_writable_violation})
       end
 
       if pk? do
@@ -2058,6 +2116,23 @@ defmodule Ecto.Schema do
 
     if inserted_at do
       opts = if source = timestamps[:inserted_at_source], do: [source: source], else: []
+
+      opts = if writable = timestamps[:inserted_at_writable] do
+        if writable == :never do
+          raise ArgumentError, ":inserted_at_writable option cannot be set to :never as `inserted_at` will never be populated"
+        end
+
+        Keyword.put(opts, :writable, writable)
+      else
+        opts
+      end
+
+      opts = if on_writable_violation = timestamps[:inserted_at_on_writable_violation] do
+        Keyword.put(opts, :on_writable_violation, on_writable_violation)
+      else
+        opts
+      end
+
       Ecto.Schema.__field__(mod, inserted_at, type, opts)
     end
 
@@ -2074,7 +2149,7 @@ defmodule Ecto.Schema do
     :ok
   end
 
-  @valid_has_options [
+  @valid_has_many_options [
     :foreign_key,
     :references,
     :through,
@@ -2088,22 +2163,32 @@ defmodule Ecto.Schema do
   @doc false
   def __has_many__(mod, name, queryable, opts) do
     if is_list(queryable) and Keyword.has_key?(queryable, :through) do
-      check_options!(queryable, @valid_has_options, "has_many/3")
+      check_options!(queryable, @valid_has_many_options, "has_many/3")
       association(mod, :many, name, Ecto.Association.HasThrough, queryable)
     else
-      check_options!(opts, @valid_has_options, "has_many/3")
+      check_options!(opts, @valid_has_many_options, "has_many/3")
       struct = association(mod, :many, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
       Module.put_attribute(mod, :ecto_changeset_fields, {name, {:assoc, struct}})
     end
   end
 
+  @valid_has_one_options [
+    :foreign_key,
+    :references,
+    :through,
+    :on_delete,
+    :defaults,
+    :on_replace,
+    :where
+  ]
+
   @doc false
   def __has_one__(mod, name, queryable, opts) do
     if is_list(queryable) and Keyword.has_key?(queryable, :through) do
-      check_options!(queryable, @valid_has_options, "has_one/3")
+      check_options!(queryable, @valid_has_one_options, "has_one/3")
       association(mod, :one, name, Ecto.Association.HasThrough, queryable)
     else
-      check_options!(opts, @valid_has_options, "has_one/3")
+      check_options!(opts, @valid_has_one_options, "has_one/3")
       struct = association(mod, :one, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
       Module.put_attribute(mod, :ecto_changeset_fields, {name, {:assoc, struct}})
     end
@@ -2155,6 +2240,7 @@ defmodule Ecto.Schema do
     :on_delete,
     :defaults,
     :on_replace,
+    :on_join_through_conflict,
     :unique,
     :where,
     :join_where,
@@ -2256,6 +2342,7 @@ defmodule Ecto.Schema do
     end
 
     Module.put_attribute(module, :ecto_schema_defined, line)
+    Module.put_attribute(module, :ecto_source, source)
 
     if Code.can_await_module_compilation?() do
       Module.put_attribute(module, :after_verify, Ecto.Schema)
@@ -2321,12 +2408,16 @@ defmodule Ecto.Schema do
     autoupdate = Module.get_attribute(module, :ecto_autoupdate) |> Enum.reverse()
     read_after_writes = Module.get_attribute(module, :ecto_raw) |> Enum.reverse()
     autogenerate_id = Module.get_attribute(module, :ecto_autogenerate_id)
+    on_writable_violation = Module.get_attribute(module, :ecto_on_writable_violation)
+    on_writable_violation_default = Module.get_attribute(module, :on_writable_violation, :nothing)
 
     struct_fields = Module.get_attribute(module, :ecto_struct_fields) |> Enum.reverse()
-    derive = Module.get_attribute(module, :derive)
 
-    if redacted_fields != [] and not List.keymember?(derive, Inspect, 0) and
-         derive_inspect?(module) do
+    # Reading @derive makes every module named in its options a compile-time
+    # dependency of the schema. Keep the read last so it is skipped unless a
+    # redacted field actually requires deriving Inspect.
+    if redacted_fields != [] and derive_inspect?(module) and
+         not List.keymember?(Module.get_attribute(module, :derive), Inspect, 0) do
       Module.put_attribute(module, :derive, {Inspect, except: redacted_fields})
     end
 
@@ -2423,12 +2514,19 @@ defmodule Ecto.Schema do
       {[:type, quote(do: _)], nil},
       {[:virtual_type, quote(do: _)], nil},
       {[:association, quote(do: _)], nil},
-      {[:embed, quote(do: _)], nil}
+      {[:embed, quote(do: _)], nil},
+      {[:on_writable_violation, quote(do: _)], on_writable_violation_default}
     ]
+
+    on_writable_violation_quoted =
+      for {name, value} <- on_writable_violation do
+        {[:on_writable_violation, name], value}
+      end
 
     bags_of_clauses =
       [
         single_arg,
+        on_writable_violation_quoted,
         field_sources_quoted,
         types_quoted,
         virtual_types_quoted,
@@ -2561,6 +2659,14 @@ defmodule Ecto.Schema do
   end
 
   defp composite?(_type, _name), do: false
+
+  defp autogenerate_module({:parameterized, {type, _params}}), do: type
+
+  defp autogenerate_module({composite, nested_type} = type) do
+    if Ecto.Type.composite?(composite), do: autogenerate_module(nested_type), else: type
+  end
+
+  defp autogenerate_module(type), do: type
 
   defp store_mfa_autogenerate!(mod, name, type, mfa) do
     if autogenerate_id?(type) do

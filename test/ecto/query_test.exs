@@ -773,6 +773,25 @@ defmodule Ecto.QueryTest do
       assert excluded_query.offset == base.offset
       assert excluded_query.lock == base.lock
       assert excluded_query.updates == base.updates
+
+      # excluding lists
+
+      assert excluded_query ==
+               exclude(query, [
+                 :with_ctes,
+                 :join,
+                 :where,
+                 :order_by,
+                 :group_by,
+                 :having,
+                 :distinct,
+                 :select,
+                 :combinations,
+                 :limit,
+                 :offset,
+                 :lock,
+                 :update
+               ])
     end
 
     test "works on any queryable" do
@@ -783,14 +802,9 @@ defmodule Ecto.QueryTest do
 
     test "resets both preloads and assocs if :preloads is passed in" do
       base = %Ecto.Query{}
-
       query = from p in "posts", join: c in assoc(p, :comments), preload: [:author, comments: c]
 
-      refute query.preloads == base.preloads
-      refute query.assocs == base.assocs
-
       excluded_query = query |> exclude(:preload)
-
       assert excluded_query.preloads == base.preloads
       assert excluded_query.assocs == base.assocs
     end
@@ -806,15 +820,6 @@ defmodule Ecto.QueryTest do
       full_query = from p in "posts", full_join: b in "blogs", on: true
       inner_lateral_query = from p in "posts", inner_lateral_join: b in "blogs", on: true
       left_lateral_query = from p in "posts", left_lateral_join: b in "blogs", on: true
-
-      refute inner_query.joins == base.joins
-      refute cross_query.joins == base.joins
-      refute cross_lateral_query.joins == base.joins
-      refute left_query.joins == base.joins
-      refute right_query.joins == base.joins
-      refute full_query.joins == base.joins
-      refute inner_lateral_query.joins == base.joins
-      refute left_lateral_query.joins == base.joins
 
       excluded_inner_query = exclude(inner_query, :inner_join)
       assert excluded_inner_query.joins == base.joins
@@ -1049,6 +1054,12 @@ defmodule Ecto.QueryTest do
   end
 
   describe "fragment/1" do
+    defmacro concat_ws(sep, args) do
+      quote do
+        fragment("concat_ws(?,?)", unquote(sep), splice(unquote(args)))
+      end
+    end
+
     test "raises at runtime when interpolation is not a keyword list" do
       assert_raise ArgumentError,
                    ~r/fragment\(...\) does not allow strings to be interpolated/s,
@@ -1094,8 +1105,8 @@ defmodule Ecto.QueryTest do
 
       assert {:fragment, _, select_parts} = query.select.expr
       assert {:fragment, _, limit_parts} = query.limit.expr
-      assert [raw: "", expr: {:constant, _, ["hi"]}, raw: ""] = select_parts
-      assert [raw: "", expr: {:constant, _, [1]}, raw: ""] = limit_parts
+      assert [raw: "", expr: "hi", raw: ""] = select_parts
+      assert [raw: "", expr: 1, raw: ""] = limit_parts
 
       msg = "constant(^value) expects `value` to be a string or a number, got `%{}`"
 
@@ -1104,21 +1115,25 @@ defmodule Ecto.QueryTest do
       end
     end
 
-    test "supports list splicing" do
+    test "supports interpolated list splicing" do
       two = 2
       three = 3
 
       query =
-        from p in "posts", where: p.id in fragment("(?, ?, ?)", ^1, splice(^[two, three, 4]), ^5)
+        from p in "posts", where: p.id in fragment("(?,?,?)", ^1, splice(^[two, three, 4]), ^5)
 
       assert {:in, _, [_, {:fragment, _, parts}]} = hd(query.wheres).expr
 
       assert [
                raw: "(",
                expr: {:^, _, [0]},
-               raw: ", ",
-               expr: {:splice, _, [{:^, _, [1]}, 3]},
-               raw: ", ",
+               raw: ",",
+               expr: {:^, _, [1]},
+               raw: ",",
+               expr: {:^, _, [1]},
+               raw: ",",
+               expr: {:^, _, [1]},
+               raw: ",",
                expr: {:^, _, [2]},
                raw: ")"
              ] = parts
@@ -1126,6 +1141,122 @@ defmodule Ecto.QueryTest do
       assert_raise ArgumentError, "splice(^value) expects `value` to be a list, got `234`", fn ->
         from p in "posts", where: p.id in fragment("(?)", splice(^234))
       end
+    end
+
+    test "supports compile-time list splicing" do
+      query =
+        from p in "posts",
+          where: p.id in fragment("(?,?,?)", ^1, splice([2, p.id, p.id + ^3]), ^5)
+
+      assert {:in, _, [_, {:fragment, _, parts}]} = hd(query.wheres).expr
+
+      assert [
+               raw: "(",
+               expr: {:^, _, [0]},
+               raw: ",",
+               expr: 2,
+               raw: ",",
+               expr: {{:., _, [{:&, _, [0]}, :id]}, _, _},
+               raw: ",",
+               expr: {:+, _, [{{:., _, [{:&, _, [0]}, :id]}, _, _}, {:^, _, [1]}]},
+               raw: ",",
+               expr: {:^, _, [2]},
+               raw: ")"
+             ] = parts
+    end
+
+    test "supports compile-time list splicing with fragment modifiers" do
+      query =
+        from p in "posts", where: p.id in fragment("(?,?,?)", ^1, splice([2, constant(^3)]), ^5)
+
+      assert {:in, _, [_, {:fragment, _, parts}]} = hd(query.wheres).expr
+
+      assert [
+               raw: "(",
+               expr: {:^, _, [0]},
+               raw: ",",
+               expr: 2,
+               raw: ",",
+               expr: 3,
+               raw: ",",
+               expr: {:^, _, [1]},
+               raw: ")"
+             ] = parts
+    end
+
+    test "supports compile-time list splicing with nested splicing" do
+      # nested runtime splice
+      list = [3, 4]
+
+      query =
+        from p in "posts", where: p.id in fragment("(?,?,?)", ^1, splice([2, splice(^list)]), ^5)
+
+      assert {:in, _, [_, {:fragment, _, parts}]} = hd(query.wheres).expr
+
+      assert [
+               raw: "(",
+               expr: {:^, _, [0]},
+               raw: ",",
+               expr: 2,
+               raw: ",",
+               expr: {:^, _, [1]},
+               raw: ",",
+               expr: {:^, _, [1]},
+               raw: ",",
+               expr: {:^, _, [2]},
+               raw: ")"
+             ] = parts
+
+      # nested compile-time splice
+      query =
+        from p in "posts",
+          where: p.id in fragment("(?,?,?)", ^1, splice([2, splice([3, 4]), 5]), ^6)
+
+      assert {:in, _, [_, {:fragment, _, parts}]} = hd(query.wheres).expr
+
+      assert [
+               raw: "(",
+               expr: {:^, _, [0]},
+               raw: ",",
+               expr: 2,
+               raw: ",",
+               expr: 3,
+               raw: ",",
+               expr: 4,
+               raw: ",",
+               expr: 5,
+               raw: ",",
+               expr: {:^, _, [1]},
+               raw: ")"
+             ] = parts
+    end
+
+    test "supports compile-time splicing with macro" do
+      query = from p in "posts", select: concat_ws(":", [p.author, ^2000])
+      assert {:fragment, _, parts} = query.select.expr
+
+      assert [
+               raw: "concat_ws(",
+               expr: ":",
+               raw: ",",
+               expr: {{:., _, [{:&, _, [0]}, :author]}, _, _},
+               raw: ",",
+               expr: {:^, _, [0]},
+               raw: ")"
+             ] = parts
+    end
+
+    test "evaluates interpolated expressions before runtime splicing once" do
+      Process.put(:fragment_eval_count, 0)
+
+      value = fn ->
+        Process.put(:fragment_eval_count, Process.get(:fragment_eval_count) + 1)
+        1
+      end
+
+      from p in "posts", select: fragment("(?, ?)", ^value.(), splice(^[2, 3]))
+
+      assert Process.get(:fragment_eval_count) == 1
     end
 
     test "keeps UTF-8 encoding" do

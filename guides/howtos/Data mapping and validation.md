@@ -74,10 +74,10 @@ if changeset.valid? do
   account = Registration.to_account(registration)
   profile = Registration.to_profile(registration)
 
-  MyApp.Repo.transaction fn ->
-    MyApp.Repo.insert_all "accounts", [account]
-    MyApp.Repo.insert_all "profiles", [profile]
-  end
+  MyApp.Repo.transact(fn ->
+    MyApp.Repo.insert_all("accounts", [account])
+    MyApp.Repo.insert_all("profiles", [profile])
+  end)
 
   {:ok, registration}
 else

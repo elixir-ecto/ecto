@@ -41,7 +41,7 @@ integration-test:
     WORKDIR /src/ecto_sql
 
     ARG PG_IMG="postgres:11.11"
-    ARG MCR_IMG="mcr.microsoft.com/mssql/server:2017-latest"
+    ARG MCR_IMG="mcr.microsoft.com/mssql/server:2019-latest"
     ARG MYSQL_IMG="mysql:5.7"
 
     # then run the tests
@@ -56,7 +56,7 @@ integration-test:
 
             # wait for mssql to start
             while ! sqlcmd -C -S tcp:127.0.0.1,1433 -U sa -P 'some!Password' -Q "SELECT 1" >/dev/null 2>&1; do \
-                test "$(date +%s)" -le "$timeout" || (echo "timed out waiting for mysql"; exit 1); \
+                test "$(date +%s)" -le "$timeout" || (echo "timed out waiting for mssql"; exit 1); \
                 echo "waiting for mssql"; \
                 sleep 1; \
             done; \

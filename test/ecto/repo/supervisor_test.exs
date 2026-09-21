@@ -152,6 +152,12 @@ defmodule Ecto.Repo.SupervisorTest do
       refute Keyword.has_key?(url, :password)
     end
 
+    test "parses password containing colons" do
+      url = parse_url("ecto://user:top:secret@host:12345/mydb")
+      assert {:password, "top:secret"} in url
+      assert {:username, "user"} in url
+    end
+
     test "parses multiple query string options" do
       encoded_url = URI.encode("ecto://eric:it+й@host:12345/mydb?ssl=true&timeout=1515")
       url = parse_url(encoded_url)

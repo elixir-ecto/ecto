@@ -39,8 +39,10 @@ defmodule Ecto.Repo.Queryable do
     {query, opts} = repo.prepare_query(:stream, query, opts)
     query = attach_prefix(query, opts)
 
+    query_cache? = Keyword.get(opts, :query_cache, true)
+
     {query_meta, prepared, cast_params, dump_params} =
-      Planner.query(query, :all, cache, adapter, 0)
+      Planner.query(query, :all, cache, adapter, 0, query_cache?)
 
     opts = [cast_params: cast_params] ++ opts
 
@@ -90,6 +92,8 @@ defmodule Ecto.Repo.Queryable do
     one!(name, query_for_get_by(queryable, clauses), opts)
   end
 
+  def reload(_name, [], _opts), do: []
+
   def reload(name, [head | _] = structs, opts) when is_list(structs) do
     results = all(name, query_for_reload(structs), opts)
 
@@ -104,6 +108,8 @@ defmodule Ecto.Repo.Queryable do
   def reload(name, struct, opts) do
     one(name, query_for_reload([struct]), opts)
   end
+
+  def reload!(_name, [], _opts), do: []
 
   def reload!(name, [head | _] = structs, opts) when is_list(structs) do
     query = query_for_reload(structs)
@@ -134,13 +140,12 @@ defmodule Ecto.Repo.Queryable do
 
   def exists?(name, queryable, opts) do
     queryable =
-      Query.exclude(queryable, :select)
-      |> Query.exclude(:preload)
-      |> Query.exclude(:order_by)
+      Query.exclude(queryable, :preload)
+      |> rewrite_combinations()
+      |> Query.exclude(:select)
       |> Query.exclude(:distinct)
       |> Query.select(1)
       |> Query.limit(1)
-      |> rewrite_combinations()
 
     case all(name, queryable, opts) do
       [1] -> true
@@ -150,13 +155,10 @@ defmodule Ecto.Repo.Queryable do
 
   defp rewrite_combinations(%{combinations: []} = query), do: query
 
-  defp rewrite_combinations(%{combinations: combinations} = query) do
-    combinations =
-      Enum.map(combinations, fn {type, query} ->
-        {type, query |> Query.exclude(:select) |> Query.select(1)}
-      end)
-
-    %{query | combinations: combinations}
+  defp rewrite_combinations(query) do
+    query
+    |> Query.subquery()
+    |> Queryable.Ecto.SubQuery.to_query()
   end
 
   def one(name, queryable, tuplet) do
@@ -203,11 +205,11 @@ defmodule Ecto.Repo.Queryable do
     struct_load!(types, values, [{field, value} | acc], all_nil?, struct, adapter)
   end
 
-  def struct_load!([], values, _acc, true, _struct, _adapter) do
+  def struct_load!([], values, _acc, true, struct, _adapter) when struct != %{} do
     {nil, values}
   end
 
-  def struct_load!([], values, acc, false, struct, _adapter) do
+  def struct_load!([], values, acc, _all_nil?, struct, _adapter) do
     {Map.merge(struct, Map.new(acc)), values}
   end
 
@@ -219,8 +221,10 @@ defmodule Ecto.Repo.Queryable do
     {query, opts} = repo.prepare_query(operation, query, opts)
     query = attach_prefix(query, opts)
 
+    query_cache? = Keyword.get(opts, :query_cache, true)
+
     {query_meta, prepared, cast_params, dump_params} =
-      Planner.query(query, operation, cache, adapter, 0)
+      Planner.query(query, operation, cache, adapter, 0, query_cache?)
 
     opts = [cast_params: cast_params] ++ opts
 
@@ -353,7 +357,8 @@ defmodule Ecto.Repo.Queryable do
         process_update(data, args, row, from, adapter)
 
       {data, _row} ->
-        raise BadStructError, struct: struct, term: data
+        raise ArgumentError,
+              "expected a struct named #{inspect(struct)}, got: #{inspect(data)}"
     end
   end
 

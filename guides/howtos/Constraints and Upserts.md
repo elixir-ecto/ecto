@@ -4,7 +4,7 @@ In this guide we will learn how to use constraints and upserts. To showcase thos
 
 ## put_assoc vs cast_assoc
 
-Imagine we are building an application that has blog posts and such posts may have many tags. Not only that, a given tag may also belong to many posts. This is a classic scenario where we would use `many_to_many` associations. Our migrations would look like:
+Imagine we are building an application that has blog posts and such posts may have many tags. Not only that, a given tag may also belong to many posts. This is a classic scenario where we would use [`many_to_many`](`Ecto.Schema.many_to_many/3`) associations. Our migrations would look like:
 
 ```elixir
 create table(:posts) do
@@ -30,11 +30,11 @@ Note we added a unique index to the tag name because we don't want to have dupli
 
 Now let's also imagine we want the user to input such tags as a list of words split by comma, such as: "elixir, erlang, ecto". Once this data is received in the server, we will break it apart into multiple tags and associate them to the post, creating any tag that does not yet exist in the database.
 
-While the constraints above sound reasonable, that's exactly what put us in trouble with `cast_assoc/3`. The `cast_assoc/3` changeset function was designed to receive external parameters and compare them with the associated data in our structs. To do so correctly, Ecto requires tags to be sent as a list of maps. We can see an example of this in [Polymorphic associations with many to many](Polymorphic associations with many to many.md). However, here we expect tags to be sent in a string separated by comma.
+While the constraints above sound reasonable, that's exactly what put us in trouble with [`cast_assoc/3`](`Ecto.Changeset.cast_assoc/3`). The `cast_assoc/3` changeset function was designed to receive external parameters and compare them with the associated data in our structs. To do so correctly, Ecto requires tags to be sent as a list of maps. We can see an example of this in [Polymorphic associations with many to many](Polymorphic associations with many to many.md). However, here we expect tags to be sent in a string separated by comma.
 
 Furthermore, `cast_assoc/3` relies on the primary key field for each tag sent in order to decide if it should be inserted, updated or deleted. Again, because the user is simply passing a string, we don't have the ID information at hand.
 
-When we can't cope with `cast_assoc/3`, it is time to use `put_assoc/4`. In `put_assoc/4`, we give Ecto structs or changesets instead of parameters, giving us the ability to manipulate the data as we want. Let's define the schema and the changeset function for a post which may receive tags as a string:
+When we can't cope with `cast_assoc/3`, it is time to use [`put_assoc/4`](`Ecto.Changeset.put_assoc/4`). In `put_assoc/4`, we give Ecto structs or changesets instead of parameters, giving us the ability to manipulate the data as we want. Let's define the schema and the changeset function for a post which may receive tags as a string:
 
 ```elixir
 defmodule MyApp.Post do
@@ -74,9 +74,9 @@ end
 
 In the changeset function above, we moved all the handling of tags to a separate function, called `parse_tags/1`, which checks for the parameter, breaks each tag apart via `String.split/2`, then removes any left over whitespace with `String.trim/1`, rejects any empty string and finally checks if the tag exists in the database or not, creating one in case none exists.
 
-The `parse_tags/1` function is going to return a list of `MyApp.Tag` structs which are then passed to `put_assoc/4`. By calling `put_assoc/4`, we are telling Ecto those should be the tags associated to the post from now on. In case a previous tag was associated to the post and not given in `put_assoc/4`, Ecto will invoke the behaviour defined in the `:on_replace` option, which we have set to `:delete`. The `:delete` behaviour will remove the association between the post and the removed tag from the database.
+The `parse_tags/1` function is going to return a list of `MyApp.Tag` structs which are then passed to [`put_assoc/4`](`Ecto.Changeset.put_assoc/4`). By calling `put_assoc/4`, we are telling Ecto those should be the tags associated to the post from now on. In case a previous tag was associated to the post and not given in `put_assoc/4`, Ecto will invoke the behaviour defined in the `:on_replace` option, which we have set to `:delete`. The `:delete` behaviour will remove the association between the post and the removed tag from the database.
 
-And that's all we need to use `many_to_many` associations with `put_assoc/4`. `put_assoc/4` is very useful when we want to have more explicit control over our associations and it also works with `has_many`, `belongs_to` and all others association types.
+And that's all we need to use [`many_to_many`](`Ecto.Schema.many_to_many/3`) associations with `put_assoc/4`. `put_assoc/4` is very useful when we want to have more explicit control over our associations and it also works with [`has_many`](`Ecto.Schema.has_many/3`), [`belongs_to`](`Ecto.Schema.belongs_to/3`) and all others association types.
 
 However, our code is not yet ready for production. Let's see why.
 
@@ -84,7 +84,7 @@ However, our code is not yet ready for production. Let's see why.
 
 Remember we added a unique index to the tag `:name` column when creating the tags table. We did so to protect us from having duplicate tags in the database.
 
-By adding the unique index and then using `get_by` with a `insert!` to get or insert a tag, we introduced a potential error in our application. If two posts are submitted at the same time with a similar tag, there is a chance we will check if the tag exists at the same time, leading both submissions to believe there is no such tag in the database. When that happens, only one of the submissions will succeed while the other one will fail. That's a race condition: your code will error from time to time, only when certain conditions are met. And those conditions are time sensitive.
+By adding the unique index and then using [`Repo.get_by`](`c:Ecto.Repo.get_by/3`) with a [`Repo.insert!`](`c:Ecto.Repo.insert!/2`) to get or insert a tag, we introduced a potential error in our application. If two posts are submitted at the same time with a similar tag, there is a chance we will check if the tag exists at the same time, leading both submissions to believe there is no such tag in the database. When that happens, only one of the submissions will succeed while the other one will fail. That's a race condition: your code will error from time to time, only when certain conditions are met. And those conditions are time sensitive.
 
 Luckily Ecto gives us a mechanism to handle constraint errors from the database.
 
@@ -105,7 +105,7 @@ defp get_or_insert_tag(name) do
 end
 ```
 
-Instead of inserting the tag directly, we now build a changeset, which allows us to use the `unique_constraint` annotation. Now if the `Repo.insert` operation fails because the unique index for `:name` is violated, Ecto won't raise, but return an `{:error, changeset}` tuple. Therefore, if `Repo.insert` succeeds, it is because the tag was saved, otherwise the tag already exists, which we then fetch with `Repo.get_by!`.
+Instead of inserting the tag directly, we now build a changeset, which allows us to use the `unique_constraint` annotation. Now if the [`Repo.insert`](`c:Ecto.Repo.insert/2`) operation fails because the unique index for `:name` is violated, Ecto won't raise, but return an `{:error, changeset}` tuple. Therefore, if `Repo.insert` succeeds, it is because the tag was saved, otherwise the tag already exists, which we then fetch with [`Repo.get_by!`](`c:Ecto.Repo.get_by!/3`).
 
 While the mechanism above fixes the race condition, it is a quite expensive one: we need to perform two queries for every tag that already exists in the database: the (failed) insert and then the repository lookup. Given that's the most common scenario, we may want to rewrite it to the following:
 
@@ -228,6 +228,6 @@ defmodule MyApp.Post do
 end
 ```
 
-Instead of getting and inserting each tag individually, the code above works on all tags at once, first by building a list of maps which is given to `insert_all`. Then we look up all tags with the given names. Regardless of how many tags are sent, we will perform only 2 queries - unless no tag is sent, in which we return an empty list back promptly. This solution is only possible thanks to the `:on_conflict` option, which guarantees `insert_all` won't fail in case a unique index is violated, such as from duplicate tag names. Remember, `insert_all` won't autogenerate values like timestamps. That's why we define a timestamp placeholder and reuse it across `inserted_at` and `updated_at` fields.
+Instead of getting and inserting each tag individually, the code above works on all tags at once, first by building a list of maps which is given to [`Repo.insert_all`](`c:Ecto.Repo.insert_all/3`). Then we look up all tags with the given names. Regardless of how many tags are sent, we will perform only 2 queries - unless no tag is sent, in which we return an empty list back promptly. This solution is only possible thanks to the `:on_conflict` option, which guarantees `insert_all` won't fail in case a unique index is violated, such as from duplicate tag names. Remember, `insert_all` won't autogenerate values like timestamps. That's why we define a timestamp placeholder and reuse it across `inserted_at` and `updated_at` fields.
 
 Finally, keep in mind that we haven't used transactions in any of the examples so far. That decision was deliberate as we relied on the fact that getting or inserting tags is an idempotent operation, i.e. we can repeat it many times for a given input and it will always give us the same result back. Therefore, even if we fail to introduce the post to the database due to a validation error, the user will be free to resubmit the form and we will just attempt to get or insert the same tags once again. The downside of this approach is that tags will be created even if creating the post fails, which means some tags may not have posts associated to them. In case that's not desired, the whole operation could be wrapped in a transaction or modeled with `Ecto.Multi`.

@@ -87,6 +87,21 @@ MyApp.Repo.one(query)
 
 Because the query does not specify a `:select` clause, it will return `select: p` where `p` is controlled by `MyApp.Post` schema. Since the query will return all fields in `MyApp.Post`, when we convert it to a subquery, all of the fields from `MyApp.Post` will be available on the parent query, such as `q.visits`. In fact, Ecto will keep the schema properties across queries. For example, if you write `q.field_that_does_not_exist`, your Ecto query won't compile.
 
+If you need to reference the parent in the subquery, you can do so using named bindings in the parent query and `Ecto.Query.API.parent_as/1` in the subquery. Here is an example:
+
+```elixir
+inner_query =
+  from c in Comment,
+    where: parent_as(:posts).id == c.post_id
+
+query =
+  from p in Post,
+    as: :posts,
+    inner_lateral_join: c in subquery(inner_query)
+
+MyApp.Repo.one(query)
+```
+
 Ecto also allows an Elixir map to be returned from a subquery, making the map keys directly available to the parent query.
 
 Let's see one last example. Imagine you manage a library (as in an actual library in the real world) and there is a table that logs every time the library lends a book. The "lendings" table uses an auto-incrementing primary key and can be backed by the following schema:

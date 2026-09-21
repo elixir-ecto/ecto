@@ -78,6 +78,13 @@ defmodule Ecto.EmbeddedTest do
     assert %Settings{dark_mode: false, default_post: nil} =
              Ecto.embedded_load(Settings, %{"default_post" => nil}, :json)
 
+    assert %Settings{dark_mode: false, default_post: nil} =
+             Ecto.embedded_load(
+               Settings,
+               %{"default_post" => nil},
+               &Ecto.Type.embedded_load(&1, &2, :json)
+             )
+
     assert_raise ArgumentError,
                  ~s[cannot load `"ABC"` as type Ecto.UUID for field `uuid` in schema Ecto.EmbeddedTest.UUIDSchema],
                  fn ->
@@ -100,6 +107,12 @@ defmodule Ecto.EmbeddedTest do
     assert [author1 | _] = dumped.authors
     assert not Map.has_key?(author1, :__struct__)
     assert not Map.has_key?(author1, :__meta__)
+
+    assert %{uuid: ^uuid} =
+             Ecto.embedded_dump(
+               %UUIDSchema{uuid: uuid},
+               &Ecto.Type.embedded_dump(&1, &2, :json)
+             )
   end
 
   test "embedded schemas are not queryable" do

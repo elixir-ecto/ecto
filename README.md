@@ -92,7 +92,7 @@ You need to add both Ecto and the database adapter as a dependency to your `mix.
 | MSSQL      | Ecto.Adapters.Tds        | [ecto_sql][ecto_sql] + [tds][tds]                |
 | SQLite3    | Ecto.Adapters.SQLite3    | [ecto_sqlite3][ecto_sqlite3]                     |
 | ClickHouse | Ecto.Adapters.ClickHouse | [ecto_ch][ecto_ch]                               |
-| ETS        | Etso                     | [etso][etso]                                     |
+| ETS        | Etso                     | [etso][etso]                                     |
 
 [ecto_sql]: https://github.com/elixir-ecto/ecto_sql
 [postgrex]: https://github.com/elixir-ecto/postgrex
@@ -122,6 +122,20 @@ defmodule MyApp.Repo do
   use Ecto.Repo,
     otp_app: :my_app,
     adapter: Ecto.Adapters.Postgres,
+  ...
+```
+
+### IPv6 support
+
+If your database's host resolves to ipv6 address you should
+add `socket_options: [:inet6]` to configuration block like below:
+
+```elixir
+import Mix.Config
+
+config :my_app, MyApp.Repo,
+  hostname: "db12.dc0.comp.any",
+  socket_options: [:inet6],
   ...
 ```
 

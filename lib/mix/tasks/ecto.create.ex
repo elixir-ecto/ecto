@@ -8,7 +8,9 @@ defmodule Mix.Tasks.Ecto.Create do
     quiet: :boolean,
     repo: [:string, :keep],
     no_compile: :boolean,
-    no_deps_check: :boolean
+    no_deps_check: :boolean,
+    no_timezone: :boolean,
+    timezone: :string
   ]
 
   @aliases [
@@ -38,6 +40,10 @@ defmodule Mix.Tasks.Ecto.Create do
     * `--quiet` - do not log output
     * `--no-compile` - do not compile before creating
     * `--no-deps-check` - do not compile before creating
+    * `--timezone` - the timezone of the database. By default,
+      it is Etc/UTC. Of the default database adapters, only
+      PostgreSQL supports timezone. Use `--no-timezone` to use
+      the default timezone of the database
 
   """
 
@@ -55,7 +61,16 @@ defmodule Mix.Tasks.Ecto.Create do
         "create storage for #{inspect(repo)}"
       )
 
-      case repo.__adapter__().storage_up(repo.config()) do
+      opts =
+        if Keyword.get(opts, :no_timezone) do
+          Keyword.put(opts, :timezone, nil)
+        else
+          opts
+        end
+
+      config_opts = Keyword.take(opts, [:timezone]) ++ repo.config()
+
+      case repo.__adapter__().storage_up(config_opts) do
         :ok ->
           unless opts[:quiet] do
             Mix.shell().info("The database for #{inspect(repo)} has been created")

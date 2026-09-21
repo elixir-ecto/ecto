@@ -143,6 +143,15 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  defmodule Barebone do
+    use Ecto.Schema
+
+    @primary_key false
+    schema "barebone" do
+      field :num, :integer
+    end
+  end
+
   defp plan(query, operation \\ :all) do
     {query, params, key} = Planner.plan(query, operation, Ecto.TestAdapter)
     {cast_params, dump_params} = Enum.unzip(params)
@@ -163,6 +172,12 @@ defmodule Ecto.Query.PlannerTest do
 
     {query, cast_params, dump_params, select}
   end
+
+  defp flatten_boolean({op, _, [left, right]}, op) do
+    flatten_boolean(left, op) ++ flatten_boolean(right, op)
+  end
+
+  defp flatten_boolean(expr, _op), do: [expr]
 
   defp select_fields(fields, ix) do
     for field <- fields do
@@ -482,67 +497,34 @@ defmodule Ecto.Query.PlannerTest do
              ~r"&1.post_id\(\) == &0.id\(\) and not[\s\(]is_nil\(&1.text\(\)\)\)?"
   end
 
-  # TODO: AST is represented as string differently on versions pre 1.13
-  if Version.match?(System.version(), ">= 1.13.0-dev") do
-    test "plan: nested joins associations with custom queries" do
-      query =
-        from(p in Post,
-          join: c1 in assoc(p, :special_comments),
-          join: p2 in assoc(c1, :post),
-          join: cp in assoc(c1, :comment_posts),
-          join: c2 in assoc(cp, :special_comment),
-          join: c3 in assoc(cp, :special_long_comment)
-        )
-        |> plan
-        |> elem(0)
+  test "plan: nested joins associations with custom queries" do
+    query =
+      from(p in Post,
+        join: c1 in assoc(p, :special_comments),
+        join: p2 in assoc(c1, :post),
+        join: cp in assoc(c1, :comment_posts),
+        join: c2 in assoc(cp, :special_comment),
+        join: c3 in assoc(cp, :special_long_comment)
+      )
+      |> plan
+      |> elem(0)
 
-      assert [join1, join2, join3, join4, join5] = query.joins
+    assert [join1, join2, join3, join4, join5] = query.joins
 
-      assert {{"posts", _, _}, {"comments", _, _}, {"posts", _, _}, {"comment_posts", _, _},
-              {"comments", _, _}, {"comments", _, _}} = query.sources
+    assert {{"posts", _, _}, {"comments", _, _}, {"posts", _, _}, {"comment_posts", _, _},
+            {"comments", _, _}, {"comments", _, _}} = query.sources
 
-      assert Macro.to_string(join1.on.expr) =~
-               ~r"&1.post_id\(\) == &0.id\(\) and not[\s\(]is_nil\(&1.text\(\)\)\)?"
+    assert Macro.to_string(join1.on.expr) =~
+             ~r"&1.post_id\(\) == &0.id\(\) and not[\s\(]is_nil\(&1.text\(\)\)\)?"
 
-      assert Macro.to_string(join2.on.expr) == "&2.id() == &1.post_id()"
-      assert Macro.to_string(join3.on.expr) == "&3.comment_id() == &1.id()"
+    assert Macro.to_string(join2.on.expr) == "&2.id() == &1.post_id()"
+    assert Macro.to_string(join3.on.expr) == "&3.comment_id() == &1.id()"
 
-      assert Macro.to_string(join4.on.expr) ==
-               "&4.id() == &3.special_comment_id() and is_nil(&4.text())"
+    assert Macro.to_string(join4.on.expr) ==
+             "&4.id() == &3.special_comment_id() and is_nil(&4.text())"
 
-      assert Macro.to_string(join5.on.expr) ==
-               "&5.id() == &3.special_long_comment_id() and\n  fragment({:raw, \"LEN(\"}, {:expr, &5.text()}, {:raw, \") > 100\"})"
-    end
-  else
-    test "plan: nested joins associations with custom queries" do
-      query =
-        from(p in Post,
-          join: c1 in assoc(p, :special_comments),
-          join: p2 in assoc(c1, :post),
-          join: cp in assoc(c1, :comment_posts),
-          join: c2 in assoc(cp, :special_comment),
-          join: c3 in assoc(cp, :special_long_comment)
-        )
-        |> plan
-        |> elem(0)
-
-      assert [join1, join2, join3, join4, join5] = query.joins
-
-      assert {{"posts", _, _}, {"comments", _, _}, {"posts", _, _}, {"comment_posts", _, _},
-              {"comments", _, _}, {"comments", _, _}} = query.sources
-
-      assert Macro.to_string(join1.on.expr) =~
-               ~r"&1.post_id\(\) == &0.id\(\) and not[\s\(]is_nil\(&1.text\(\)\)\)?"
-
-      assert Macro.to_string(join2.on.expr) == "&2.id() == &1.post_id()"
-      assert Macro.to_string(join3.on.expr) == "&3.comment_id() == &1.id()"
-
-      assert Macro.to_string(join4.on.expr) ==
-               "&4.id() == &3.special_comment_id() and is_nil(&4.text())"
-
-      assert Macro.to_string(join5.on.expr) ==
-               "&5.id() == &3.special_long_comment_id() and fragment({:raw, \"LEN(\"}, {:expr, &5.text()}, {:raw, \") > 100\"})"
-    end
+    assert Macro.to_string(join5.on.expr) ==
+             "&5.id() == &3.special_long_comment_id() and\n  fragment({:raw, \"LEN(\"}, {:expr, &5.text()}, {:raw, \") > 100\"})"
   end
 
   test "plan: raises on invalid binding index in join" do
@@ -631,7 +613,7 @@ defmodule Ecto.Query.PlannerTest do
              {:where, [{:and, {:is_nil, [], [nil]}}, {:or, {:is_nil, [], [nil]}}]},
              {:join,
               [
-                {:inner, {"comments", Comment, 38_292_156, "world"}, true, ["join hint"]}
+                {:inner, {"comments", Comment, 38_292_156, "world"}, {:and, true}, ["join hint"]}
               ]},
              {:from, {"posts", Post, 50_009_106, "hello"}, ["hint"]},
              {:select, 1}
@@ -664,6 +646,69 @@ defmodule Ecto.Query.PlannerTest do
     query = from(v in values([%{id: 1}], %{id: :integer}))
     {_query, _params, key} = Planner.plan(query, :all, Ecto.TestAdapter)
     assert key == :nocache
+  end
+
+  test "plan: interpolated join query with a subquery in where" do
+    subquery = from(s in "subposts", select: s.id)
+    join_query = from(p in "posts", where: p.id in subquery(subquery))
+    query = from(p in Post, join: p2 in ^join_query, on: true)
+
+    {planned, _, _, _} = plan(query)
+
+    assert [
+             %{
+               on: %{
+                 expr: {:in, _, [_, {:subquery, 0}]},
+                 subqueries: [%Ecto.SubQuery{}]
+               }
+             }
+           ] = planned.joins
+
+    assert [%{on: %Ecto.Query.BooleanExpr{expr: {:in, _, [_, %Ecto.SubQuery{}]}}}] =
+             normalize(query).joins
+  end
+
+  test "plan: join cache includes subqueries from interpolated wheres" do
+    first_subquery = from(s in "first_subposts", select: s.id)
+    second_subquery = from(s in "second_subposts", select: s.id)
+
+    first_query =
+      from(p in Post,
+        join: p2 in ^from(p in "posts", where: p.id in subquery(first_subquery)),
+        on: true
+      )
+
+    second_query =
+      from(p in Post,
+        join: p2 in ^from(p in "posts", where: p.id in subquery(second_subquery)),
+        on: true
+      )
+
+    {_, _, _, first_key} = plan(first_query)
+    {_, _, _, second_key} = plan(second_query)
+
+    refute first_key == second_key
+  end
+
+  test "plan: merges subqueries from interpolated join wheres" do
+    first_subquery = from(s in "first_subposts", where: s.id == ^1, select: s.id)
+    second_subquery = from(s in "second_subposts", where: s.id == ^2, select: s.id)
+
+    join_query =
+      from(p in "posts",
+        where: p.id in subquery(first_subquery),
+        or_where: p.id in subquery(second_subquery)
+      )
+
+    {query, cast_params, dump_params, _} =
+      from(p in Post, join: p2 in ^join_query, on: true) |> plan()
+
+    assert cast_params == [1, 2]
+    assert dump_params == [1, 2]
+
+    assert [%{on: %{expr: {:or, _, [_, _]}, subqueries: [first, second]}}] = query.joins
+    assert %Ecto.SubQuery{query: %{from: %{source: {"first_subposts", nil}}}} = first
+    assert %Ecto.SubQuery{query: %{from: %{source: {"second_subposts", nil}}}} = second
   end
 
   test "plan: normalizes prefixes" do
@@ -972,6 +1017,66 @@ defmodule Ecto.Query.PlannerTest do
              ]
   end
 
+  test "plan: tuple source with fragment" do
+    query =
+      from f1 in {fragment("? as num", ^0), Barebone},
+        join: f2 in {fragment("? as visits", ^0), Post},
+        on: f1.num == f2.visits,
+        select: {f1, f2}
+
+    {query, cast_params, dump_params, cache_key} = plan(query)
+
+    assert {from_source, join_source} = query.sources
+    assert {{:fragment, [], _}, Barebone, nil} = from_source
+    assert {{:fragment, [], _}, Post, nil} = join_source
+    assert cast_params == [0, 0]
+    assert dump_params == [0, 0]
+
+    assert [
+             :all,
+             {:join, [{:inner, {{:fragment, _, _}, Post, _, _}, {:and, {:==, _, _}}, []}]},
+             {:from, {{:fragment, _, _}, Barebone, _, _}, []},
+             {:select, {:{}, [], [{:&, [], [0]}, {:&, [], [1]}]}}
+           ] = cache_key
+  end
+
+  test "plan: tuple source with fragment and take" do
+    {query, cast_params, dump_params, cache_key} =
+      plan(from f in {fragment("? as text", ^"hi"), Post}, select: struct(f, [:text]))
+
+    assert query.select.take == %{0 => {:struct, [:text]}}
+    assert {{{:fragment, [], _}, Post, nil}} = query.sources
+    assert cast_params == ["hi"]
+    assert dump_params == ["hi"]
+
+    assert [
+             :all,
+             {:take, %{0 => {:struct, [:text]}}},
+             {:from, {{:fragment, _, _}, Post, _, _}, []},
+             {:select, {:&, [], [0]}}
+           ] = cache_key
+  end
+
+  test "plan: tuple source with fragment numbers later placeholders after the source" do
+    good_query =
+      from(f in fragment("some_sql_function(?)", ^"value"),
+        where: f.visits in ^[1, 2],
+        select: f
+      )
+      |> normalize()
+
+    assert Macro.to_string(hd(good_query.wheres).expr) == "&0.visits() in ^(1, 2)"
+
+    bad_query =
+      from(f in {fragment("some_sql_function(?)", ^"value"), Post},
+        where: f.visits in ^[1, 2],
+        select: f
+      )
+      |> normalize()
+
+    assert Macro.to_string(hd(bad_query.wheres).expr) == "&0.visits() in ^(1, 2)"
+  end
+
   describe "plan: CTEs" do
     test "with uncacheable queries are uncacheable" do
       {_, _, _, cache} =
@@ -1072,6 +1177,93 @@ defmodule Ecto.Query.PlannerTest do
                {:order_by, [[desc: _]]},
                {:from, {"comments", Comment, _, nil}, []},
                {:select, {:&, [], [0]}}
+             ] = cte_cache
+    end
+
+    test "on update_all with data-modifying CTE" do
+      update_comments =
+        from(c in Comment,
+          where: c.id == ^10,
+          update: [set: [text: ^"Root"]],
+          select: c.id
+        )
+
+      {_, ["Root", 10], ["Root", 10], cache} =
+        "updated_comments"
+        |> with_cte("updated_comments", as: ^update_comments, operation: :update_all)
+        |> select([c], c.id)
+        |> plan()
+
+      assert [
+               :all,
+               {:from, {{"updated_comments", nil}, nil}, []},
+               {:select, {{:., [], [{:&, [], [0]}, :id]}, [], []}},
+               {:non_recursive_cte, "updated_comments", nil, :update_all, cte_cache}
+             ] = cache
+
+      assert [
+               :update_all,
+               {:select, {{:., [], [{:&, [], [0]}, :id]}, [], []}},
+               {:where, _},
+               {:update, [[set: [text: {:^, [], [0]}]]]},
+               {:from, {"comments", Comment, _, nil}, []}
+             ] = cte_cache
+    end
+
+    test "on update_all with data-modifying CTE keeps update expressions in cache key" do
+      update_comments_1 =
+        from(c in Comment,
+          update: [set: [visits: 1]],
+          select: c.id
+        )
+
+      update_comments_2 =
+        from(c in Comment,
+          update: [set: [visits: 2]],
+          select: c.id
+        )
+
+      {_, _, _, cache_1} =
+        "updated_comments"
+        |> with_cte("updated_comments", as: ^update_comments_1, operation: :update_all)
+        |> select([c], c.id)
+        |> plan()
+
+      {_, _, _, cache_2} =
+        "updated_comments"
+        |> with_cte("updated_comments", as: ^update_comments_2, operation: :update_all)
+        |> select([c], c.id)
+        |> plan()
+
+      assert cache_1 != cache_2
+    end
+
+    test "on delete_all with data-modifying CTE keeps params in delete order" do
+      delete_comments =
+        from(c in "comments",
+          where: c.id == ^10,
+          select: %{id: c.id, text: ^"deleted"}
+        )
+
+      {_, [10, "deleted"], [10, "deleted"], cache} =
+        "deleted_comments"
+        |> with_cte("deleted_comments", as: ^delete_comments, operation: :delete_all)
+        |> select([c], c.id)
+        |> plan()
+
+      assert [
+               :all,
+               {:from, {{"deleted_comments", nil}, nil}, []},
+               {:select, {{:., [], [{:&, [], [0]}, :id]}, [], []}},
+               {:non_recursive_cte, "deleted_comments", nil, :delete_all, cte_cache}
+             ] = cache
+
+      assert [
+               :delete_all,
+               {:select,
+                {:%{}, [], [id: {{:., [], [{:&, [], [0]}, :id]}, [], []}, text: {:^, [], [0]}]}},
+               {:where, _},
+               {:from, {{"comments", nil}, nil}, []}
              ] = cte_cache
     end
 
@@ -1428,7 +1620,9 @@ defmodule Ecto.Query.PlannerTest do
 
     child = from(c in Comment, select: %{map: field(parent_as(^as), "posted")})
     query = from(Post, as: :posts, join: c in subquery(child), on: true) |> normalize()
-    assert Macro.to_string(hd(query.joins).source.query.select.expr) == "%{map: parent_as(:posts) . \"posted\"()}"
+
+    assert Macro.to_string(hd(query.joins).source.query.select.expr) ==
+             "%{map: parent_as(:posts) . \"posted\"()}"
 
     child = from(c in Comment, where: parent_as(^as).visits == ^"123")
 
@@ -1455,7 +1649,9 @@ defmodule Ecto.Query.PlannerTest do
     {query, cast_params, _, _} =
       from(Post, as: :posts, join: c in subquery(child), on: true) |> normalize_with_params()
 
-    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) == "parent_as(:posts) . \"visits\"() == ^0"
+    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) ==
+             "parent_as(:posts) . \"visits\"() == ^0"
+
     assert cast_params == ["123"]
   end
 
@@ -1663,6 +1859,18 @@ defmodule Ecto.Query.PlannerTest do
     query = from(Post, []) |> select([p], p.metas[0]["slug"])
     normalize(query)
 
+    query = from(Post, []) |> select([p], p.meta[p.title])
+    normalize(query)
+
+    query = from(Post, []) |> select([p], p.meta[p.title]["author"])
+    normalize(query)
+
+    query = from(Post, []) |> select([p], p.meta["author"][p.title])
+    normalize(query)
+
+    query = from(Post, []) |> select([p], p.metas[p.visits]["slug"])
+    normalize(query)
+
     query = from(Post, []) |> select([p], p.payload["unknown_field"])
     normalize(query)
 
@@ -1716,6 +1924,13 @@ defmodule Ecto.Query.PlannerTest do
                  end
 
     assert_raise RuntimeError,
+                 "field `unknown_field` does not exist in Ecto.Query.PlannerTest.PostMeta",
+                 fn ->
+                   query = from(Post, []) |> select([p], p.metas[p.visits]["unknown_field"])
+                   normalize(query)
+                 end
+
+    assert_raise RuntimeError,
                  "field `0` does not exist in Ecto.Query.PlannerTest.PostMeta",
                  fn ->
                    query = from(Post, []) |> select([p], p.meta[0])
@@ -1739,8 +1954,9 @@ defmodule Ecto.Query.PlannerTest do
     assert_raise Ecto.Query.CompileError,
                  ~s(expected `path` to be a list in json_extract_path/2, got: `"id"`),
                  fn ->
-                   query = from(p in Post, select: json_extract_path(p.metas, ^"id"))
-                   normalize(query)
+                   from(p in Post,
+                     select: json_extract_path(p.metas, ^Process.get(:unused, "id"))
+                   )
                  end
   end
 
@@ -1879,9 +2095,96 @@ defmodule Ecto.Query.PlannerTest do
     assert dump_params == [1, 2, 3, 4, 5]
 
     {:in, _, [_, {:fragment, _, parts}]} = hd(query.wheres).expr
-    assert [_, _, _, {:expr, {:splice, _, [{:^, _, [start_ix, length]}]}}, _, _, _] = parts
-    assert start_ix == 1
-    assert length == 3
+
+    assert [
+             _,
+             {:expr, {:^, _, [0]}},
+             _,
+             {:expr, {:^, _, [1]}},
+             _,
+             {:expr, {:^, _, [2]}},
+             _,
+             {:expr, {:^, _, [3]}},
+             _,
+             {:expr, {:^, _, [4]}},
+             _
+           ] = parts
+  end
+
+  test "normalize: fragment with nested splicing" do
+    list = [3, 4]
+
+    {query, cast_params, dump_params, _} =
+      from(c in Comment)
+      |> where([c], c.id in fragment("(?, ?, ?)", ^1, splice([2, splice(^list)]), ^5))
+      |> normalize_with_params()
+
+    assert cast_params == [1, 3, 4, 5]
+    assert dump_params == [1, 3, 4, 5]
+
+    {:in, _, [_, {:fragment, _, parts}]} = hd(query.wheres).expr
+
+    assert [
+             _,
+             {:expr, {:^, _, [0]}},
+             _,
+             {:expr, 2},
+             _,
+             {:expr, {:^, _, [1]}},
+             _,
+             {:expr, {:^, _, [2]}},
+             _,
+             {:expr, {:^, _, [3]}},
+             _
+           ] = parts
+  end
+
+  test "normalize: params around splicing inside dynamic" do
+    list = [1, 2, 3]
+    ids = [10, 11]
+
+    dynamic =
+      dynamic(
+        [p],
+        p.title == ^"a" and fragment("? = ANY(?)", p.id, splice(^list)) and
+          p.visits > ^1 and fragment("? = ANY(?)", p.id, splice(^ids))
+      )
+
+    {query, cast_params, dump_params, _} =
+      from(p in Post, select: p.id)
+      |> where(^dynamic)
+      |> normalize_with_params()
+
+    assert cast_params == ["a", 1, 2, 3, 1, 10, 11]
+    assert dump_params == ["a", 1, 2, 3, 1, 10, 11]
+
+    [title_expr, {:fragment, _, first_fragment}, visits_expr, {:fragment, _, second_fragment}] =
+      flatten_boolean(hd(query.wheres).expr, :and)
+
+    assert Macro.to_string(title_expr) == "&0.post_title() == ^0"
+    assert Macro.to_string(visits_expr) == "&0.visits() > ^4"
+
+    assert [
+             _,
+             {:expr, {{:., _, [{:&, _, [0]}, :id]}, _, []}},
+             _,
+             {:expr, {:^, _, [1]}},
+             _,
+             {:expr, {:^, _, [2]}},
+             _,
+             {:expr, {:^, _, [3]}},
+             _
+           ] = first_fragment
+
+    assert [
+             _,
+             {:expr, {{:., _, [{:&, _, [0]}, :id]}, _, []}},
+             _,
+             {:expr, {:^, _, [5]}},
+             _,
+             {:expr, {:^, _, [6]}},
+             _
+           ] = second_fragment
   end
 
   test "normalize: from values list" do
@@ -1893,7 +2196,11 @@ defmodule Ecto.Query.PlannerTest do
     start_param_ix = 0
     native_types = %{bid: :uuid, num: :integer}
     types_kw = Enum.map(types, fn {field, _} -> {field, native_types[field]} end)
-    field_ast = Enum.map(types, fn {field, _} -> {{:., [writable: :always], [{:&, [], [0]}, field]}, [], []} end)
+
+    field_ast =
+      Enum.map(types, fn {field, _} ->
+        {{:., [writable: :always], [{:&, [], [0]}, field]}, [], []}
+      end)
 
     assert q.from.source == {:values, [], [types_kw, start_param_ix, length(values)]}
     assert q.select.fields == field_ast
@@ -1911,7 +2218,12 @@ defmodule Ecto.Query.PlannerTest do
     start_param_ix = 1
     native_types = %{bid: :uuid, num: :integer}
     types_kw = Enum.map(types, fn {field, _} -> {field, native_types[field]} end)
-    field_ast = Enum.map(types, fn {field, _} -> {{:., [writable: :always], [{:&, [], [1]}, field]}, [], []} end)
+
+    field_ast =
+      Enum.map(types, fn {field, _} ->
+        {{:., [writable: :always], [{:&, [], [1]}, field]}, [], []}
+      end)
+
     [join] = q.joins
 
     assert join.source == {:values, [], [types_kw, start_param_ix, length(values)]}
@@ -2253,6 +2565,12 @@ defmodule Ecto.Query.PlannerTest do
                  end
   end
 
+  test "normalize: select source on fragment with columns" do
+    query = from f in fragment("select 1", columns: [:x])
+    {_, _, _, select} = normalize_with_params(query)
+    assert %{from: {_, {:map, [x: {:value, :any}]}}} = select
+  end
+
   test "normalize: select with map/2" do
     query = Post |> select([p], map(p, [:id, :title])) |> normalize()
     assert query.select.expr == {:&, [], [0]}
@@ -2352,6 +2670,20 @@ defmodule Ecto.Query.PlannerTest do
            ] = query.select.fields
   end
 
+  test "normalze: select list of fields from subquery source" do
+    {_, _, _, select} = subquery(Post) |> select([p], [:title]) |> normalize_with_params()
+    %{from: {_, {:source, {_, postprocess_schema}, _, types}}} = select
+    assert postprocess_schema == Post
+    assert types == [title: :string]
+  end
+
+  test "normalze: select map/2 from subquery source" do
+    {_, _, _, select} = subquery(Post) |> select([p], map(p, [:title])) |> normalize_with_params()
+    %{from: {_, {:source, {_, postprocess_schema}, _, types}}} = select
+    assert postprocess_schema == nil
+    assert types == [title: :string]
+  end
+
   test "normalize: select with :%{}" do
     query = Post |> select([p], %{p | title: "foo"}) |> normalize()
     assert query.select.expr == {:%{}, [], [{:|, [], [{:&, [], [0]}, [title: "foo"]]}]}
@@ -2420,6 +2752,81 @@ defmodule Ecto.Query.PlannerTest do
                0
              ) ++
                select_fields([:id, :posted, :uuid, :crazy_comment, :post_id, :crazy_post_id], 1)
+  end
+
+  test "normalize: map update does not drop fields from another full source reference" do
+    fields =
+      select_fields(
+        [
+          :id,
+          :post_title,
+          :text,
+          :code,
+          :posted,
+          :visits,
+          :links,
+          :preferences,
+          :status,
+          :parameterized_map,
+          :meta,
+          :metas
+        ],
+        0
+      )
+
+    query = Post |> select([p], {%{p | title: nil}, p}) |> normalize()
+    assert query.select.fields == fields
+
+    query = Post |> select([p], {p, %{p | title: nil}}) |> normalize()
+    assert query.select.fields == fields
+  end
+
+  test "normalize: map updates only drop fields overwritten by every source reference" do
+    query =
+      Post
+      |> select([p], {%{p | title: nil}, %{p | title: nil, posted: nil}})
+      |> normalize()
+
+    assert query.select.fields ==
+             select_fields(
+               [
+                 :id,
+                 :text,
+                 :code,
+                 :posted,
+                 :visits,
+                 :links,
+                 :preferences,
+                 :status,
+                 :parameterized_map,
+                 :meta,
+                 :metas
+               ],
+               0
+             )
+  end
+
+  test "normalize: struct update does not drop fields from another full source reference" do
+    query = Post |> select([p], {%Post{p | title: nil}, p}) |> normalize()
+
+    assert query.select.fields ==
+             select_fields(
+               [
+                 :id,
+                 :post_title,
+                 :text,
+                 :code,
+                 :posted,
+                 :visits,
+                 :links,
+                 :preferences,
+                 :status,
+                 :parameterized_map,
+                 :meta,
+                 :metas
+               ],
+               0
+             )
   end
 
   test "normalize: select single dynamic value interpolated at root level" do
@@ -2584,6 +2991,38 @@ defmodule Ecto.Query.PlannerTest do
     assert_raise Ecto.QueryError, message, fn ->
       from(p in Post, order_by: p.title) |> normalize(:delete_all)
     end
+  end
+
+  test "normalize: tuple source with fragment" do
+    query =
+      from f1 in {fragment("? as num", ^0), Barebone},
+        join: f2 in {fragment("? as num", ^0), Barebone},
+        on: f1.num == f2.num,
+        select: {f1, f2}
+
+    {query, _, _, select} = normalize_with_params(query)
+
+    %{from: {_, {:source, {{:fragment, _, _}, Barebone}, nil, from_types}}} = select
+    assert from_types == [num: :integer]
+    assert {{:fragment, _, _}, Barebone} = query.from.source
+    assert [%{source: {{:fragment, _, _}, Barebone}}] = query.joins
+
+    assert query.select.fields == [
+             {{:., [writable: :always], [{:&, [], [0]}, :num]}, [], []},
+             {{:., [writable: :always], [{:&, [], [1]}, :num]}, [], []}
+           ]
+  end
+
+  test "normalize: tuple source with fragment and take" do
+    {query, _, _, select} =
+      normalize_with_params(
+        from f in {fragment("? as text", ^"hi"), Post}, select: struct(f, [:text])
+      )
+
+    %{from: {_, {:source, {{:fragment, _, _}, Post}, nil, types}}} = select
+    assert types == [text: :string]
+    assert {{:fragment, _, _}, Post} = query.from.source
+    assert query.select.fields == [{{:., [writable: :always], [{:&, [], [0]}, :text]}, [], []}]
   end
 
   describe "normalize: subqueries in boolean expressions" do
@@ -2760,6 +3199,31 @@ defmodule Ecto.Query.PlannerTest do
         cte_query = from(s in "schema", select: %{x1: selected_as(s.x, :integer), integer: s.x})
         Comment |> with_cte("schema_cte", as: ^cte_query) |> normalize()
       end
+    end
+  end
+
+  describe "query: query_cache option" do
+    setup do
+      cache = Planner.new_query_cache(__MODULE__)
+      {:ok, cache: cache}
+    end
+
+    test "uses cache if true", %{cache: cache} do
+      query = from(p in Post, where: p.title == ^"hello")
+
+      {_meta, {:cache, _update, _prepared}, _cast, _dump} =
+        Planner.query(query, :all, cache, Ecto.CachingTestAdapter, 0, true)
+
+      assert :ets.info(cache, :size) == 1
+    end
+
+    test "bypasses cache if false", %{cache: cache} do
+      query = from(p in Post, where: p.title == ^"hello")
+
+      {_meta1, {:nocache, _prepared}, _cast1, _dump1} =
+        Planner.query(query, :all, cache, Ecto.CachingTestAdapter, 0, false)
+
+      assert :ets.info(cache, :size) == 0
     end
   end
 end

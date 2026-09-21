@@ -280,6 +280,53 @@ defmodule Ecto.Enum do
   end
 
   @doc """
+  Casts a value from the given `schema` and `field`.
+
+  ## Examples
+
+  Assuming this schema:
+
+      defmodule MySchema do
+        use Ecto.Schema
+
+        schema "my_schema" do
+          field :my_string_enum, Ecto.Enum, values: [:foo, :bar, :baz]
+          field :my_integer_enum, Ecto.Enum, values: [foo: 1, bar: 2, baz: 5]
+        end
+      end
+
+  Then:
+
+      Ecto.Enum.cast_value(MySchema, :my_string_enum, "foo")
+      #=> {:ok, :foo}
+
+      Ecto.Enum.cast_value(MySchema, :my_string_enum, :foo)
+      #=> {:ok, :foo}
+
+      Ecto.Enum.cast_value(MySchema, :my_string_enum, "qux")
+      #=> :error
+
+      Ecto.Enum.cast_value(MySchema, :my_integer_enum, 1)
+      #=> {:ok, :foo}
+
+      Ecto.Enum.cast_value(MySchema, :my_integer_enum, :foo)
+      #=> {:ok, :foo}
+
+      Ecto.Enum.cast_value(MySchema, :my_integer_enum, 6)
+      #=> :error
+
+  `schema_or_types` can also be a types map. See `mappings/2` for more information.
+  """
+  @spec cast_value(module | map, atom, binary | atom | integer) :: {:ok, atom} | :error
+  def cast_value(schema_or_types, field, value) do
+    params = get_params(schema_or_types, field)
+    case cast(value, params) do
+      {:ok, casted_value} -> {:ok, casted_value}
+      {:error, _reason} -> :error
+    end
+  end
+
+  @doc """
   Returns the mappings between values and dumped values.
 
   ## Examples
@@ -317,25 +364,30 @@ defmodule Ecto.Enum do
 
   """
   @spec mappings(module | map, atom) :: keyword(String.t() | integer())
-  def mappings(schema_or_types, field)
-
-  def mappings(types, field) when is_map(types) do
-    case types do
-      %{^field => {:parameterized, {Ecto.Enum, %{mappings: mappings}}}} -> mappings
-      %{^field => {_, {:parameterized, {Ecto.Enum, %{mappings: mappings}}}}} -> mappings
-      %{^field => _} -> raise ArgumentError, "#{field} is not an Ecto.Enum field"
-      %{} -> raise ArgumentError, "#{field} does not exist"
-    end
+  def mappings(schema_or_types, field) do
+    get_params(schema_or_types, field)
+    |> Map.fetch!(:mappings)
   end
 
-  def mappings(schema, field) when is_atom(schema) do
+  defp get_params(schema_or_types, field)
+
+  defp get_params(schema, field) when is_atom(schema) do
     try do
       schema.__changeset__()
     rescue
       _ in UndefinedFunctionError ->
         raise ArgumentError, "#{inspect(schema)} is not an Ecto schema or types map"
     else
-      %{} = types -> mappings(types, field)
+      %{} = types -> get_params(types, field)
+    end
+  end
+
+  defp get_params(types, field) when is_map(types) do
+    case types do
+      %{^field => {:parameterized, {Ecto.Enum, params}}} -> params
+      %{^field => {_, {:parameterized, {Ecto.Enum, params}}}} -> params
+      %{^field => _} -> raise ArgumentError, "#{field} is not an Ecto.Enum field"
+      %{} -> raise ArgumentError, "#{field} does not exist"
     end
   end
 end

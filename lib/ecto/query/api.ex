@@ -164,7 +164,7 @@ defmodule Ecto.Query.API do
             )
           )
 
-  This is best used in conjunction with `parent_as` to correlate the subquery
+  This is best used in conjunction with `parent_as/1` to correlate the subquery
   with the parent query to test some condition on related rows in a different table.
   In the above example the query returns posts which have at least one comment that
   has more than 5 replies.
@@ -278,7 +278,8 @@ defmodule Ecto.Query.API do
 
   @doc """
   Applies the given expression as a FILTER clause against an
-  aggregate. This is currently only supported by Postgres.
+  aggregate. Not all databases support this operation. Please
+  check your database documentation.
 
       from p in Payment, select: filter(avg(p.value), p.value > 0 and p.value < 100)
 
@@ -399,28 +400,33 @@ defmodule Ecto.Query.API do
 
       fragment("lower(?)", p.title) == type(^title, :string)
 
-  ## Literals
+  ## Identifiers and Constants
 
-  Sometimes you need to interpolate a literal value into a fragment,
-  instead of a parameter. For example, you may need to pass a table
-  name or a collation, such as:
+  Sometimes you need to interpolate an identifier or a constant value into a fragment,
+  instead of a query parameter. The latter can happen if your database does not allow
+  parameterizing certain clauses. For example:
 
       collation = "es_ES"
       fragment("? COLLATE ?", ^name, ^collation)
 
-  The example above won't work because `collation` will be passed
-  as a parameter, while it has to be a literal part of the query.
+      limit = "10"
+      "posts" |> select([p], p.title) |> limit(fragment("?", ^limit))
 
-  You can address this by telling Ecto that variable is a literal:
+  The first example above won't work because `collation` needs to be quoted as an identifier. 
+  The second example won't work on databases that do not allow passing query parameters
+  as part of `limit`.
 
-      fragment("? COLLATE ?", ^name, literal(^collation))
+  You can address this by telling Ecto to treat these values differently than a query parameter:
 
-  Ecto will then escape it and make it part of the query.
+      fragment("? COLLATE ?", ^name, identifier(^collation))
+      "posts" |> select([p], p.title) |> limit(fragment("?", ^constant(limit))
 
-  > #### Literals and query caching {: .warning}
+  Ecto will make these values directly part of the query, handling quoting and escaping where necessary.
+
+  > #### Query caching {: .warning}
   >
-  > Because literals are made part of the query, each interpolated
-  > literal will generate a separate query, with its own cache.
+  > Because identifiers and constants are made part of the query, each different
+  > value will generate a separate query, with its own cache.
 
   ## Splicing
 
@@ -468,6 +474,42 @@ defmodule Ecto.Query.API do
   inspecting the Elixir query.  Other than that, it should be
   equivalent to a built-in Ecto query function.
 
+  ## Defining column names for fragment sources
+
+  When using a fragment as a query source, you are required to
+  define the column names so that they can be referenced in other
+  parts of the query. For example:
+
+      from(f in fragment("select generate_series(?::integer, ?::integer) as x", ^0, ^10), select: f.x)
+
+  In this fragment the column name `x` was hard-coded directly into the string.
+  This can become quite verbose, but more importantly it does not lend itself to
+  re-use.
+
+  The best way to define column names on a fragment source is to use the `:columns`
+  keyword as the last argument to the fragment:
+
+      from(f in fragment("generate_series(?, ?)", ^0, ^10, columns: [:x]))
+
+  where the column value is a non-empty list of atoms. This lends itself particularly
+  well to defining custom macros for complicated database functions. For example, the
+  variadic Postgres function `unnest` could be encapsulated into a macro as follows:
+
+    defmacro unnest(data, columns) do
+      quote do
+        fragment("unnest(?)", splice(unquote(data)), columns: unquote(columns))
+      end
+    end
+
+    nums = [1, 2, 3, 4, 5]
+    str = ["a", "b", "c", "d", "e"]
+
+    from u in unnest(
+          [type(^nums, {:array, :integer}), type(^str, {:array, :string})],
+          [:num, :text]
+        ),
+        select: {u.num, u.text}
+
   ## Keyword fragments
 
   In order to support databases that do not have string-based
@@ -483,7 +525,7 @@ defmodule Ecto.Query.API do
   Allows a dynamic identifier to be injected into a fragment:
 
       collation = "es_ES"
-      select("posts", [p], fragment("? COLLATE ?", p.title, identifier(^"es_ES")))
+      select("posts", [p], fragment("? COLLATE ?", p.title, identifier(^collation)))
 
   The example above will inject the value of `collation` directly
   into the query instead of treating it as a query parameter. It will
@@ -514,16 +556,61 @@ defmodule Ecto.Query.API do
   @doc """
   Allows a list argument to be spliced into a fragment.
 
+  Dynamic lists can be spliced into a query using interpolation
+
       from p in Post, where: fragment("? in (?)", p.id, splice(^[1, 2, 3]))
 
-  The example above will be transformed at runtime into the following:
+  Note that each element of the list will be treated as a separate query parameter.
+  The example above will be transformed at runtime into the following
 
       from p in Post, where: fragment("? in (?,?,?)", p.id, ^1, ^2, ^3)
 
-  You may only splice runtime values. For example, this would not work because
-  query bindings are compile-time constructs:
+  You may also splice compile-time lists. This allows you to combine query parameters
+  with literals and constructs like query bindings
 
-      from p in Post, where: fragment("concat(?)", splice(^[p.count, " ", "count"]))
+      sep = " "
+      from p in Post, select: fragment("concat(?)", splice([p.count, ^sep, "count"]))
+
+  The above example will be transformed into
+
+      sep = " "
+      from p in Post, select: fragment("concat(?,?,?)", p.count, ^sep, "count")
+
+  This is especially useful if you would like to create re-usable macros to inject
+  variadic database functions into queries. For example, you may create a macro for
+  the Postgres function `concat_ws` like below
+
+      defmacro concat_ws(sep, args) do
+        quote do
+          fragment("concat_ws(?,?)", unquote(sep), splice(unquote(args)))
+        end
+      end
+
+  Then you may call it from your application with argument lists of any size
+
+      from p in Post, select: concat_ws(":", [p.author, ^year, p.title])
+      from s in Sequences, select: concat_ws(".", ["public", s.relname])
+
+  Or you may want to create re-usable macros for [Postgres's row constructor
+  comparison syntax](https://www.postgresql.org/docs/current/functions-comparisons.html#ROW-WISE-COMPARISON)
+  to support multi-column cursor-based pagination:
+
+      defmacro row_gt(columns, values) do
+        quote do
+          fragment("(?) >= (?)", splice(unquote(columns)), splice(unquote(values)))
+        end
+      end
+
+      from(p in Post, where: row_gt([p.visits, p.id], [^lower_visits, ^lower_id]))
+
+  You may nest others splices and fragment modifiers such as `identifier/1` and
+  `constant/1` inside of compile-time splices
+
+      from p in Post, where: fragment("? in (?)", p.id, splice([constant(^1), splice(^[2, 3])]))
+
+  This would be transformed into
+
+      from p in Post, where: fragment(? in (?,?,?), p.id, constant(^1), ^2, ^3)
   """
   def splice(list), do: doc!([list])
 
@@ -598,6 +685,10 @@ defmodule Ecto.Query.API do
   @doc """
   Allows a field to be dynamically accessed.
 
+  The source name can be a binding (`p` in `from p in Post`) or a named binding
+  using `as/1` or `parent_as/1`. The named binding maybe a literal atom or an
+  interpolation.
+
   The field name can be given as either an atom or a string. In a schemaless
   query, the two types of names behave the same. However, when referencing
   a field from a schema the behaviours are different.
@@ -626,6 +717,16 @@ defmodule Ecto.Query.API do
       def at_least_four(doors_or_tires) do
         from c in Car,
           where: field(c, ^doors_or_tires) >= 4
+      end
+
+      def at_least_four(query, doors_or_tires) do
+        from q in query,
+          where: field(as(:car), ^doors_or_tires) >= 4
+      end
+
+      def at_least_four(query, binding, doors_or_tires) do
+        from q in query,
+          where: field(as(^binding), ^doors_or_tires) >= 4
       end
 
   In the example above, `at_least_four(:doors)` and `at_least_four("num_doors")`
@@ -765,10 +866,18 @@ defmodule Ecto.Query.API do
 
       from(post in Post, select: post.meta["tags"][0]["name"])
 
+  Some adapters allow path elements to be references to query source fields
+
+      from(post in Post, select: post.meta[p.title])
+      from(p in Post, join: u in User, on: p.user_id == u.id, select: p.meta[u.name])
+
   Any element of the path can be dynamic:
 
       field = "name"
       from(post in Post, select: post.meta["author"][^field])
+
+      source_field = :source_column
+      from(post in Post, select: post.meta["author"][field(p, ^source_field)])
 
   ## Warning: indexes on PostgreSQL
 
@@ -862,7 +971,7 @@ defmodule Ecto.Query.API do
   @doc """
   Refer to a named atom binding.
 
-  See the "Named bindings" section in `Ecto.Query` for more information.
+  See [Named Bindings](Ecto.Query.html#module-named-bindings) for more information.
   """
   def as(binding), do: doc!([binding])
 
@@ -871,7 +980,7 @@ defmodule Ecto.Query.API do
 
   This is available only inside subqueries.
 
-  See the "Named bindings" section in `Ecto.Query` for more information.
+  See [Named Bindings](Ecto.Query.html#module-named-bindings) for more information.
   """
   def parent_as(binding), do: doc!([binding])
 

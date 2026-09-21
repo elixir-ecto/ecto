@@ -4,7 +4,7 @@ defmodule Ecto.Query.Builder.Join do
   @moduledoc false
 
   alias Ecto.Query.Builder
-  alias Ecto.Query.{JoinExpr, QueryExpr}
+  alias Ecto.Query.{BooleanExpr, JoinExpr}
 
   @doc """
   Escapes a join expression (not including the `on` expression).
@@ -42,7 +42,8 @@ defmodule Ecto.Query.Builder.Join do
       {:x, {:{}, [], [:fragment, [], [raw: "foo"]]}, nil, nil, []}
 
   """
-  @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {atom, Macro.t | nil, Macro.t | nil, list}
+  @spec escape(Macro.t(), Keyword.t(), Macro.Env.t()) ::
+          {atom, Macro.t() | nil, Macro.t() | nil, list}
   def escape({:in, _, [{var, _, context}, expr]}, vars, env)
       when is_atom(var) and is_atom(context) do
     {_, expr, assoc, prelude, params} = escape(expr, vars, env)
@@ -76,14 +77,26 @@ defmodule Ecto.Query.Builder.Join do
         {:_, {string, schema}, nil, nil, []}
 
       _ ->
-        Builder.error! "malformed join `#{Macro.to_string(join)}` in query expression"
+        Builder.error!("malformed join `#{Macro.to_string(join)}` in query expression")
+    end
+  end
+
+  def escape({{:fragment, _, _} = fragment, schema} = join, vars, env) do
+    {_, expr, _, _, params} = escape(fragment, vars, env)
+
+    case Macro.expand(schema, env) do
+      schema when is_atom(schema) ->
+        {:_, {expr, schema}, nil, nil, params}
+
+      _ ->
+        Builder.error!("malformed join `#{Macro.to_string(join)}` in query expression")
     end
   end
 
   def escape({:assoc, _, [{var, _, context}, field]}, vars, _env)
       when is_atom(var) and is_atom(context) do
     ensure_field!(field)
-    var   = Builder.find_var!(var, vars)
+    var = Builder.find_var!(var, vars)
     field = Builder.quoted_atom!(field, "field/2")
     {:_, nil, {var, field}, nil, []}
   end
@@ -103,7 +116,8 @@ defmodule Ecto.Query.Builder.Join do
   def escape(join, vars, env) do
     case Macro.expand(join, env) do
       ^join ->
-        Builder.error! "malformed join `#{Macro.to_string(join)}` in query expression"
+        Builder.error!("malformed join `#{Macro.to_string(join)}` in query expression")
+
       join ->
         escape(join, vars, env)
     end
@@ -114,10 +128,13 @@ defmodule Ecto.Query.Builder.Join do
   """
   def join!(expr) when is_atom(expr),
     do: {nil, expr}
+
   def join!(expr) when is_binary(expr),
     do: {expr, nil}
+
   def join!({source, module}) when is_binary(source) and is_atom(module),
     do: {source, module}
+
   def join!(expr),
     do: Ecto.Queryable.to_query(expr)
 
@@ -128,8 +145,19 @@ defmodule Ecto.Query.Builder.Join do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t, atom, [Macro.t], Macro.t, Macro.t, Macro.t, atom, nil | {:ok, Ecto.Schema.prefix}, nil | String.t | [String.t], Macro.Env.t) ::
-              {Macro.t, Keyword.t, non_neg_integer | nil}
+  @spec build(
+          Macro.t(),
+          atom,
+          [Macro.t()],
+          Macro.t(),
+          Macro.t(),
+          Macro.t(),
+          atom,
+          nil | {:ok, Ecto.Schema.prefix()},
+          nil | String.t() | [String.t()],
+          Macro.Env.t()
+        ) ::
+          {Macro.t(), Keyword.t(), non_neg_integer | nil}
   def build(query, qual, binding, expr, count_bind, on, as, prefix, maybe_hints, env) do
     {:ok, prefix} = prefix || {:ok, nil}
     hints = List.wrap(maybe_hints)
@@ -141,18 +169,36 @@ defmodule Ecto.Query.Builder.Join do
       )
     end
 
-    prefix = case prefix do
-      nil -> nil
-      prefix when is_binary(prefix) -> prefix
-      {:^, _, [prefix]} -> prefix
-      prefix -> Builder.error!("`prefix` must be a compile time string or an interpolated value using ^, got: #{Macro.to_string(prefix)}")
-    end
+    prefix =
+      case prefix do
+        nil ->
+          nil
 
-    as = case as do
-      {:^, _, [as]} -> as
-      as when is_atom(as) -> as
-      as -> Builder.error!("`as` must be a compile time atom or an interpolated value using ^, got: #{Macro.to_string(as)}")
-    end
+        prefix when is_binary(prefix) ->
+          prefix
+
+        {:^, _, [prefix]} ->
+          prefix
+
+        prefix ->
+          Builder.error!(
+            "`prefix` must be a compile time string or an interpolated value using ^, got: #{Macro.to_string(prefix)}"
+          )
+      end
+
+    as =
+      case as do
+        {:^, _, [as]} ->
+          as
+
+        as when is_atom(as) ->
+          as
+
+        as ->
+          Builder.error!(
+            "`as` must be a compile time atom or an interpolated value using ^, got: #{Macro.to_string(as)}"
+          )
+      end
 
     {query, binding} = Builder.escape_binding(query, binding, env)
     {join_bind, join_source, join_assoc, join_prelude, join_params} = escape(expr, binding, env)
@@ -163,13 +209,14 @@ defmodule Ecto.Query.Builder.Join do
 
     {count_bind, query} =
       if is_nil(count_bind) do
+        var = Macro.unique_var(:query, env.module)
+
         query =
           quote do
-            query = Ecto.Queryable.to_query(unquote(query))
-            join_count = Builder.count_binds(query)
-            query
+            unquote(var) = Ecto.Queryable.to_query(unquote(query))
           end
-        {quote(do: join_count), query}
+
+        {quote(do: Builder.count_binds(unquote(var))), query}
       else
         {count_bind, query}
       end
@@ -215,7 +262,7 @@ defmodule Ecto.Query.Builder.Join do
 
       Ecto.Query.Builder.Join.join!(
         query,
-        %JoinExpr{unquote_splicing(join), on: %QueryExpr{}},
+        %JoinExpr{unquote_splicing(join), on: %BooleanExpr{op: :and}},
         unquote(var),
         unquote(as),
         unquote(count_bind),
@@ -239,7 +286,8 @@ defmodule Ecto.Query.Builder.Join do
 
             %JoinExpr{
               unquote_splicing(join),
-              on: %QueryExpr{
+              on: %BooleanExpr{
+                op: :and,
                 expr: unquote(on_expr),
                 params: unquote(on_params),
                 line: unquote(env.line),
@@ -254,10 +302,11 @@ defmodule Ecto.Query.Builder.Join do
 
   defp ensure_on(on, _assoc, _qual, _source, _env) when on != nil, do: on
 
-  defp ensure_on(nil, _assoc = nil, qual, source, env) when qual not in [:cross, :cross_lateral] do
+  defp ensure_on(nil, _assoc = nil, qual, source, env)
+       when qual not in [:cross, :cross_lateral] do
     maybe_source =
       with {source, alias} <- source,
-        source when source != nil <- source || alias do
+           source when source != nil <- source || alias do
         " on #{inspect(source)}"
       else
         _ -> ""
@@ -277,6 +326,7 @@ defmodule Ecto.Query.Builder.Join do
   def apply(%Ecto.Query{joins: joins} = query, expr, nil, _count_bind) do
     %{query | joins: joins ++ [expr]}
   end
+
   def apply(%Ecto.Query{joins: joins, aliases: aliases} = query, expr, as, count_bind) do
     aliases =
       case aliases do
@@ -286,6 +336,7 @@ defmodule Ecto.Query.Builder.Join do
 
     %{query | joins: joins ++ [expr], aliases: aliases}
   end
+
   def apply(query, expr, as, count_bind) do
     apply(Ecto.Queryable.to_query(query), expr, as, count_bind)
   end
@@ -297,7 +348,7 @@ defmodule Ecto.Query.Builder.Join do
 
   def runtime_aliases(aliases, name, join_count) when is_integer(join_count) do
     if Map.has_key?(aliases, name) do
-      Builder.error! "alias `#{inspect name}` already exists"
+      Builder.error!("alias `#{inspect(name)}` already exists")
     else
       Map.put(aliases, name, join_count)
     end
@@ -305,12 +356,16 @@ defmodule Ecto.Query.Builder.Join do
 
   defp compile_aliases({:%{}, meta, aliases}, name, join_count)
        when is_atom(name) and is_integer(join_count) do
-    {:%{}, meta, aliases |> Map.new |> runtime_aliases(name, join_count) |> Map.to_list}
+    {:%{}, meta, aliases |> Map.new() |> runtime_aliases(name, join_count) |> Map.to_list()}
   end
 
   defp compile_aliases(aliases, name, join_count) do
     quote do
-      Ecto.Query.Builder.Join.runtime_aliases(unquote(aliases), unquote(name), unquote(join_count))
+      Ecto.Query.Builder.Join.runtime_aliases(
+        unquote(aliases),
+        unquote(name),
+        unquote(join_count)
+      )
     end
   end
 
@@ -321,9 +376,20 @@ defmodule Ecto.Query.Builder.Join do
     # join without expanded :on is built and applied to the query,
     # so that expansion of dynamic :on accounts for the new binding
     {on_expr, on_params, on_file, on_line} =
-      Ecto.Query.Builder.Filter.filter!(:on, apply(query, join, as, count_bind), expr, count_bind, file, line)
+      Ecto.Query.Builder.Filter.filter!(
+        :on,
+        apply(query, join, as, count_bind),
+        expr,
+        count_bind,
+        file,
+        line
+      )
 
-    join = %{join | on: %QueryExpr{expr: on_expr, params: on_params, line: on_line, file: on_file}}
+    join = %{
+      join
+      | on: %BooleanExpr{op: :and, expr: on_expr, params: on_params, line: on_line, file: on_file}
+    }
+
     apply(query, join, as, count_bind)
   end
 
@@ -337,24 +403,37 @@ defmodule Ecto.Query.Builder.Join do
 
   defp validate_bind(bind, all) do
     if bind != :_ and bind in all do
-      Builder.error! "variable `#{bind}` is already defined in query"
+      Builder.error!("variable `#{bind}` is already defined in query")
     end
   end
 
-  @qualifiers [:inner, :inner_lateral, :left, :left_lateral, :right, :full, :cross, :cross_lateral]
+  @qualifiers [
+    :inner,
+    :inner_lateral,
+    :left,
+    :left_lateral,
+    :right,
+    :full,
+    :cross,
+    :cross_lateral
+  ]
 
   @doc """
   Called at runtime to check dynamic qualifier.
   """
   def qual!(qual) when qual in @qualifiers, do: qual
+
   def qual!(qual) do
     raise ArgumentError,
-      "invalid join qualifier `#{inspect qual}`, accepted qualifiers are: " <>
-      Enum.map_join(@qualifiers, ", ", &"`#{inspect &1}`")
+          "invalid join qualifier `#{inspect(qual)}`, accepted qualifiers are: " <>
+            Enum.map_join(@qualifiers, ", ", &"`#{inspect(&1)}`")
   end
 
   defp ensure_field!({var, _, _}) when var != :^ do
-    Builder.error! "you passed the variable `#{var}` to `assoc/2`. Did you mean to pass the atom `:#{var}`?"
+    Builder.error!(
+      "you passed the variable `#{var}` to `assoc/2`. Did you mean to pass the atom `:#{var}`?"
+    )
   end
+
   defp ensure_field!(_), do: true
 end

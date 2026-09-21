@@ -72,8 +72,21 @@ defmodule Ecto.Query.Builder.Windows do
   defp escape_frame({:fragment, _, _} = fragment, params_acc, vars, env) do
     Builder.escape(fragment, :any, params_acc, vars, env)
   end
-  defp escape_frame(other, _, _, _) do
-    Builder.error!("expected a dynamic or fragment in `:frame`, got: `#{inspect other}`")
+
+  defp escape_frame(other, params_acc, vars, env) do
+    macro_env =
+      case env do
+        {env, _} -> env
+        env -> env
+      end
+
+    case Macro.expand_once(other, macro_env) do
+      ^other ->
+        Builder.error!("expected a dynamic or fragment in `:frame`, got: `#{inspect other}`")
+
+      expanded ->
+        escape_frame(expanded, params_acc, vars, env)
+    end
   end
 
   defp error!(other) do
@@ -135,7 +148,7 @@ defmodule Ecto.Query.Builder.Windows do
        %Ecto.Query.ByExpr{
          expr: unquote(compile_acc),
          params: unquote(params),
-         subqueries: unquote(acc.subqueries),
+         subqueries: unquote(Enum.reverse(acc.subqueries)),
          file: unquote(env.file),
          line: unquote(env.line)
        }
@@ -143,7 +156,7 @@ defmodule Ecto.Query.Builder.Windows do
   end
 
   defp build_runtime_window({name, compile_acc, runtime_acc, params, acc}, _env) do
-    {:{}, [], [name, Enum.reverse(compile_acc), runtime_acc, Enum.reverse(params), {:%{}, [], Map.to_list(acc)}]}
+    {:{}, [], [name, Enum.reverse(compile_acc), runtime_acc, Enum.reverse(params), {:%{}, [], Enum.sort(Map.to_list(acc))}]}
   end
 
   @doc """
@@ -153,7 +166,7 @@ defmodule Ecto.Query.Builder.Windows do
     windows =
       Enum.map(runtime, fn {name, compile_acc, runtime_acc, params, escape_acc} ->
         {{acc, subqueries}, params} = do_runtime_window!(runtime_acc, query, {compile_acc, escape_acc.subqueries}, params)
-        expr = %Ecto.Query.ByExpr{expr: Enum.reverse(acc), params: Enum.reverse(params), file: file, line: line, subqueries: subqueries}
+        expr = %Ecto.Query.ByExpr{expr: Enum.reverse(acc), params: Enum.reverse(params), file: file, line: line, subqueries: Enum.reverse(subqueries)}
         {name, expr}
       end)
 
@@ -161,15 +174,15 @@ defmodule Ecto.Query.Builder.Windows do
   end
 
   defp do_runtime_window!([{:order_by, order_by} | kw], query, {acc, subqueries_acc}, params) do
-    {order_by, params, subqueries} = OrderBy.order_by_or_distinct!(:order_by, query, order_by, params)
+    {order_by, params, subqueries} = OrderBy.order_by_or_distinct!(:order_by, query, order_by, params, subqueries_acc)
 
-    do_runtime_window!(kw, query, {[{:order_by, order_by} | acc], subqueries_acc ++ subqueries}, params)
+    do_runtime_window!(kw, query, {[{:order_by, order_by} | acc], subqueries}, params)
   end
 
   defp do_runtime_window!([{:partition_by, partition_by} | kw], query, {acc, subqueries_acc}, params) do
-    {partition_by, params, subqueries} = GroupBy.group_or_partition_by!(:partition_by, query, partition_by, params)
+    {partition_by, params, subqueries} = GroupBy.group_or_partition_by!(:partition_by, query, partition_by, params, subqueries_acc)
 
-    do_runtime_window!(kw, query, {[{:partition_by, partition_by} | acc], subqueries_acc ++ subqueries}, params)
+    do_runtime_window!(kw, query, {[{:partition_by, partition_by} | acc], subqueries}, params)
   end
 
   defp do_runtime_window!([{:frame, frame} | kw], query, {acc, subqueries_acc}, params) do

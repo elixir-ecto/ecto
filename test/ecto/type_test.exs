@@ -378,6 +378,20 @@ defmodule Ecto.TypeTest do
   @date ~D[2015-12-31]
   @leap_date ~D[2000-02-29]
   @date_unix_epoch ~D[1970-01-01]
+  @non_utc_datetime %DateTime{
+    calendar: Calendar.ISO,
+    year: 2020,
+    month: 6,
+    day: 1,
+    hour: 0,
+    minute: 30,
+    second: 7,
+    microsecond: {8000, 6},
+    std_offset: 3600,
+    utc_offset: 3600,
+    time_zone: "Europe/Berlin",
+    zone_abbr: "CEST"
+  }
 
   describe "date" do
     test "cast" do
@@ -421,6 +435,9 @@ defmodule Ecto.TypeTest do
 
       assert Ecto.Type.cast(:date, DateTime.from_unix!(10)) ==
                {:ok, @date_unix_epoch}
+
+      assert Ecto.Type.cast(:date, @non_utc_datetime) ==
+               {:ok, ~D[2020-05-31]}
 
       assert Ecto.Type.cast(:date, ~N[1970-01-01 12:23:34]) ==
                {:ok, @date_unix_epoch}
@@ -515,6 +532,9 @@ defmodule Ecto.TypeTest do
 
       assert Ecto.Type.cast(:time, ~D[2016-11-11]) ==
                :error
+
+      assert Ecto.Type.cast(:time, @non_utc_datetime) ==
+               {:ok, ~T[22:30:07]}
     end
 
     test "dump" do
@@ -590,6 +610,8 @@ defmodule Ecto.TypeTest do
     test "cast from DateTime" do
       utc_datetime = DateTime.from_naive!(~N[2016-11-11 23:30:10], "Etc/UTC")
       assert Ecto.Type.cast(:time_usec, utc_datetime) == {:ok, ~T[23:30:10.000000]}
+
+      assert Ecto.Type.cast(:time_usec, @non_utc_datetime) == {:ok, ~T[22:30:07.008000]}
     end
 
     test "cast from Date" do
@@ -773,6 +795,9 @@ defmodule Ecto.TypeTest do
       assert Ecto.Type.cast(:naive_datetime, DateTime.from_unix!(10, :second)) ==
                {:ok, ~N[1970-01-01 00:00:10]}
 
+      assert Ecto.Type.cast(:naive_datetime, @non_utc_datetime) ==
+               {:ok, ~N[2020-05-31 22:30:07]}
+
       assert Ecto.Type.cast(:naive_datetime, @time) == :error
       assert Ecto.Type.cast(:naive_datetime, 1) == :error
     end
@@ -915,6 +940,9 @@ defmodule Ecto.TypeTest do
     test "cast from DateTime" do
       assert Ecto.Type.cast(:naive_datetime_usec, DateTime.from_unix!(10, :second)) ==
                {:ok, ~N[1970-01-01 00:00:10.000000]}
+
+      assert Ecto.Type.cast(:naive_datetime_usec, @non_utc_datetime) ==
+               {:ok, ~N[2020-05-31 22:30:07.008000]}
     end
 
     test "cast from Time" do
@@ -1433,19 +1461,18 @@ defmodule Ecto.TypeTest do
       assert Ecto.Type.format({:array, with_format_defined}) ==
                "{:array, #CustomParameterizedTypeWithFormat<:custom>}"
 
-      assert Ecto.Type.format({:array, without_format_defined}) ==
-               "{:array, #Ecto.TypeTest.CustomParameterizedTypeWithoutFormat<%{}>}"
+      assert Ecto.Type.format({:in, without_format_defined}) ==
+               "{:in, #Ecto.TypeTest.CustomParameterizedTypeWithoutFormat<%{}>}"
     end
 
     test "non parameterized type" do
-      # fallback to `inspect(type)`
       assert Ecto.Type.format(:id) == ":id"
     end
 
     test "composite non parameterized type" do
-      # fallback to `inspect(type)`
       assert Ecto.Type.format({:array, :id}) == "{:array, :id}"
       assert Ecto.Type.format({:array, {:map, :integer}}) == "{:array, {:map, :integer}}"
+      assert Ecto.Type.format({:in, :binary}) == "{:in, :binary}"
     end
   end
 

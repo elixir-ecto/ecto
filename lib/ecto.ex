@@ -238,7 +238,7 @@ defmodule Ecto do
       # Returns maps as defined in select
       Repo.all(query)
 
-  Queries are defined and extended with the `from` macro. The supported
+  Queries are defined and extended with the [`from`](`Ecto.Query.from/2`) macro. The supported
   keywords are:
 
     * `:distinct`
@@ -265,10 +265,10 @@ defmodule Ecto do
         from u in User, where: u.age > ^min
       end
 
-  Besides `Repo.all/1` which returns all entries, repositories also
-  provide `Repo.one/1` which returns one entry or nil, `Repo.one!/1`
-  which returns one entry or raises, `Repo.get/2` which fetches
-  entries for a particular ID and more.
+  Besides [`Repo.all/1`](`c:Ecto.Repo.all/2`) which returns all entries, repositories
+  also provide [`Repo.one/1`](`c:Ecto.Repo.one/2`) which returns one entry or `nil`,
+  [`Repo.one!/1`](`c:Ecto.Repo.one!/2`)) which returns one entry or raises,
+  [`Repo.get/2`](`c:Ecto.Repo.get/3`) which fetches entries for a particular ID and more.
 
   Finally, if you need an escape hatch, Ecto provides fragments
   (see `Ecto.Query.API.fragment/1`) to inject SQL (and non-SQL)
@@ -340,14 +340,14 @@ defmodule Ecto do
   Another function in `Ecto` is `build_assoc/3`, which allows
   someone to build an associated struct with the proper fields:
 
-      Repo.transaction fn ->
+      Repo.transact(fn ->
         post = Repo.insert!(%Post{title: "Hello", body: "world"})
 
         # Build a comment from post
         comment = Ecto.build_assoc(post, :comments, body: "Excellent!")
 
         Repo.insert!(comment)
-      end
+      end)
 
   In the example above, `Ecto.build_assoc/3` is equivalent to:
 
@@ -602,6 +602,13 @@ defmodule Ecto do
 
   @doc """
   Gets the metadata from the given struct.
+
+  For example, to check whether it has been persisted:
+
+      iex> Ecto.get_meta(changeset.data, :state)
+      :built
+
+  See `Ecto.Schema.Metadata`.
   """
   def get_meta(struct, :context),
     do: struct.__meta__.context
@@ -625,7 +632,7 @@ defmodule Ecto do
     * `:context` - changes the struct meta context
     * `:state` - changes the struct state
 
-  Please refer to the `Ecto.Schema.Metadata` module for more information.
+  See `Ecto.Schema.Metadata`.
   """
   @spec put_meta(Ecto.Schema.schema(), meta) :: Ecto.Schema.schema()
         when meta: [
@@ -716,14 +723,14 @@ defmodule Ecto do
   @spec embedded_load(
           module_or_map :: module | map(),
           data :: map(),
-          format :: atom()
+          format :: atom() | (Ecto.Type.t(), term -> {:ok, term} | :error)
         ) :: Ecto.Schema.t() | map()
-  def embedded_load(schema_or_types, data, format) do
-    Ecto.Schema.Loader.unsafe_load(
-      schema_or_types,
-      data,
-      &Ecto.Type.embedded_load(&1, &2, format)
-    )
+  def embedded_load(schema_or_types, data, format) when is_atom(format) do
+    embedded_load(schema_or_types, data, &Ecto.Type.embedded_load(&1, &2, format))
+  end
+
+  def embedded_load(schema_or_types, data, loader) when is_function(loader, 2) do
+    Ecto.Schema.Loader.unsafe_load(schema_or_types, data, loader)
   end
 
   @doc """
@@ -736,12 +743,15 @@ defmodule Ecto do
       %{title: "hello"}
 
   """
-  @spec embedded_dump(Ecto.Schema.t(), format :: atom()) :: map()
-  def embedded_dump(%schema{} = data, format) do
-    Ecto.Schema.Loader.safe_dump(
-      data,
-      schema.__schema__(:dump),
-      &Ecto.Type.embedded_dump(&1, &2, format)
-    )
+  @spec embedded_dump(
+          Ecto.Schema.t(),
+          format :: atom() | (Ecto.Type.t(), term -> {:ok, term} | :error)
+        ) :: map()
+  def embedded_dump(data, format) when is_atom(format) do
+    embedded_dump(data, &Ecto.Type.embedded_dump(&1, &2, format))
+  end
+
+  def embedded_dump(%schema{} = data, dumper) when is_function(dumper, 2) do
+    Ecto.Schema.Loader.safe_dump(data, schema.__schema__(:dump), dumper)
   end
 end

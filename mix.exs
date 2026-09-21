@@ -2,7 +2,7 @@ defmodule Ecto.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/elixir-ecto/ecto"
-  @version "3.13.0-dev"
+  @version "3.15.0-dev"
 
   def project do
     [
@@ -19,7 +19,7 @@ defmodule Ecto.MixProject do
 
       # Docs
       name: "Ecto",
-      docs: docs()
+      docs: &docs/0
     ]
   end
 
@@ -33,9 +33,9 @@ defmodule Ecto.MixProject do
   defp deps do
     [
       {:telemetry, "~> 0.4 or ~> 1.0"},
-      {:decimal, "~> 2.0"},
+      {:decimal, "~> 3.0"},
       {:jason, "~> 1.0", optional: true},
-      {:ex_doc, "~> 0.20", only: :docs}
+      {:ex_doc, "~> 0.38", only: :docs}
     ]
   end
 
@@ -43,7 +43,10 @@ defmodule Ecto.MixProject do
     [
       maintainers: ["Eric Meadows-Jönsson", "José Valim", "Felipe Stival", "Greg Rychlewski"],
       licenses: ["Apache-2.0"],
-      links: %{"GitHub" => @source_url},
+      links: %{
+        "GitHub" => @source_url,
+        "Changelog" => "https://hexdocs.pm/ecto/changelog.html"
+      },
       files:
         ~w(.formatter.exs mix.exs README.md CHANGELOG.md lib) ++
           ~w(integration_test/cases integration_test/support)
@@ -52,6 +55,17 @@ defmodule Ecto.MixProject do
 
   defp docs do
     [
+      search: [
+        %{
+          name: "Latest",
+          help: "Search latest versions of Ecto + Ecto.SQL",
+          packages: [:ecto, :ecto_sql]
+        },
+        %{
+          name: "Current version",
+          help: "Search only this project"
+        }
+      ],
       main: "Ecto",
       source_ref: "v#{@version}",
       logo: "guides/images/e.png",
@@ -60,14 +74,6 @@ defmodule Ecto.MixProject do
       skip_undefined_reference_warnings_on: ["CHANGELOG.md"],
       extras: extras(),
       groups_for_extras: groups_for_extras(),
-      groups_for_docs: [
-        group_for_function("Query API"),
-        group_for_function("Schema API"),
-        group_for_function("Transaction API"),
-        group_for_function("Process API"),
-        group_for_function("Config API"),
-        group_for_function("User callbacks")
-      ],
       groups_for_modules: [
         # Ecto,
         # Ecto.Changeset,
@@ -143,7 +149,6 @@ defmodule Ecto.MixProject do
     [
       "guides/introduction/Getting Started.md",
       "guides/howtos/Aggregates and subqueries.md",
-      "guides/howtos/Composable transactions with Multi.md",
       "guides/howtos/Constraints and Upserts.md",
       "guides/howtos/Data mapping and validation.md",
       "guides/howtos/Duration Types with Postgrex.md",
@@ -159,11 +164,10 @@ defmodule Ecto.MixProject do
       "guides/testing/Testing with Ecto.md",
       "guides/cheatsheets/crud.cheatmd",
       "guides/cheatsheets/associations.cheatmd",
-      "CHANGELOG.md"
+      "CHANGELOG.md",
+      {"Ecto SQL guides", %{url: "https://hexdocs.pm/ecto_sql"}}
     ]
   end
-
-  defp group_for_function(group), do: {String.to_atom(group), &(&1[:group] == group)}
 
   defp groups_for_extras do
     [

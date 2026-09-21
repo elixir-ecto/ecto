@@ -192,6 +192,37 @@ defmodule Ecto.SchemaTest do
     refute inspect(%Schema{temp: "hunter2"}) =~ "hunter2"
   end
 
+  defmodule SchemaWithRedactAllExceptPrimaryKeys do
+    use Ecto.Schema
+
+    @schema_redact :all_except_primary_keys
+    schema "my_schema" do
+      field :password, :string
+      field :temp, :any, default: "temp", virtual: true
+    end
+  end
+
+  test "schema with @schema_redact: :all_except_primary_keys derives inspect for all non-primary-key fields" do
+    inspected_schema = inspect(%SchemaWithRedactAllExceptPrimaryKeys{password: "hunter2"})
+
+    assert inspected_schema =~ "id"
+    refute inspected_schema =~ "hunter2"
+    refute inspected_schema =~ "temp"
+  end
+
+  defmodule SchemaWithRedactFalse do
+    use Ecto.Schema
+
+    @schema_redact false
+    schema "my_schema" do
+      field :name, :string
+    end
+  end
+
+  test "schema with @schema_redact: false doesn't derive inspect" do
+    assert inspect(%SchemaWithRedactFalse{name: "Hunter"}) =~ "Hunter"
+  end
+
   defmodule SchemaWithoutDeriveInspect do
     use Ecto.Schema
 
@@ -326,6 +357,40 @@ defmodule Ecto.SchemaTest do
 
     assert TimestampsAutoGen.__schema__(:autoupdate) ==
              [{[:updated_at], {:m, :f, [:a]}}]
+  end
+
+  defmodule TimestampsWritableDefault do
+    use Ecto.Schema
+
+    schema "timestamps" do
+      timestamps()
+    end
+  end
+
+  defmodule TimestampsWritableCustom do
+    use Ecto.Schema
+
+    schema "timestamps" do
+      timestamps(inserted_at_writable: :insert, inserted_at_on_writable_violation: :raise)
+    end
+  end
+
+  test "timestamps with writable options" do
+    assert TimestampsWritableDefault.__schema__(:updatable_fields) == {[:updated_at, :inserted_at, :id], []}
+    assert TimestampsWritableDefault.__schema__(:on_writable_violation, :inserted_at) == :nothing
+
+    assert TimestampsWritableCustom.__schema__(:updatable_fields) == {[:updated_at, :id], [:inserted_at]}
+    assert TimestampsWritableCustom.__schema__(:on_writable_violation, :inserted_at) == :raise
+
+    assert_raise ArgumentError, ":inserted_at_writable option cannot be set to :never as `inserted_at` will never be populated", fn ->
+      defmodule TimestampsWritableNever do
+        use Ecto.Schema
+
+        schema "timestamps" do
+          timestamps(inserted_at_writable: :never)
+        end
+      end
+    end
   end
 
   defmodule TimestampsCustom do
@@ -483,6 +548,49 @@ defmodule Ecto.SchemaTest do
 
     sc = %AssocCompositeKeys{student_id: 1, course_ref_id: 2}
     assert Ecto.primary_key!(sc) == [student_id: 1, course_ref_id: 2]
+  end
+
+  ## Default on_writable_violation
+
+  defmodule SchemaWithOnWritableViolation do
+    use Ecto.Schema
+
+    @on_writable_violation :raise
+    schema "on_writable_violation" do
+      field :a, :string, writable: :insert
+      field :b, :string, writable: :insert
+      field :c, :string, writable: :insert, on_writable_violation: :nothing
+      field :d, :string, writable: :insert, on_writable_violation: :warn
+    end
+  end
+
+  defmodule SchemaWithoutOnWritableViolation do
+    use Ecto.Schema
+
+    schema "on_writable_violation" do
+      field :a, :string, writable: :insert
+      field :b, :string, writable: :insert
+      field :c, :string, writable: :insert, on_writable_violation: :warn
+      field :d, :string, writable: :insert, on_writable_violation: :raise
+    end
+  end
+
+  test "schema with @on_writable_violation defaults :on_writable_violation" do
+    assert SchemaWithOnWritableViolation.__schema__(:on_writable_violation, :a) == :raise
+    assert SchemaWithOnWritableViolation.__schema__(:on_writable_violation, :b) == :raise
+    assert SchemaWithOnWritableViolation.__schema__(:on_writable_violation, :c) == :nothing
+    assert SchemaWithOnWritableViolation.__schema__(:on_writable_violation, :d) == :warn
+    assert SchemaWithOnWritableViolation.__schema__(:on_writable_violation, :unknown) == :raise
+  end
+
+  test "schema without @on_writable_violation uses the field-level default (:nothing)" do
+    assert SchemaWithoutOnWritableViolation.__schema__(:on_writable_violation, :a) == :nothing
+    assert SchemaWithoutOnWritableViolation.__schema__(:on_writable_violation, :b) == :nothing
+    assert SchemaWithoutOnWritableViolation.__schema__(:on_writable_violation, :c) == :warn
+    assert SchemaWithoutOnWritableViolation.__schema__(:on_writable_violation, :d) == :raise
+
+    assert SchemaWithoutOnWritableViolation.__schema__(:on_writable_violation, :unknown) ==
+             :nothing
   end
 
   ## Errors
@@ -1152,6 +1260,15 @@ defmodule Ecto.SchemaTest do
           schema "anything" do
             field :json, :any
           end
+        end
+      end
+
+      # :any is allowed on embedded schema
+      defmodule EmbeddedFieldAny do
+        use Ecto.Schema
+
+        embedded_schema do
+          field :json, :any
         end
       end
     end

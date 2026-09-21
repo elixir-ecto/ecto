@@ -309,6 +309,7 @@ defmodule Ecto.Query.Builder.Preload do
 
   defp assert_query_or_fun!(%Ecto.Query{}, _key), do: :ok
   defp assert_query_or_fun!(fun, _key) when is_function(fun, 1), do: :ok
+  defp assert_query_or_fun!(fun, _key) when is_function(fun, 2), do: :ok
 
   defp assert_query_or_fun!(other, key) do
     raise ArgumentError,

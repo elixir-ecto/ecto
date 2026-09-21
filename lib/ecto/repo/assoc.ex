@@ -33,14 +33,24 @@ defmodule Ecto.Repo.Assoc do
   end
 
   defp merge([struct|sub_structs], {primary_keys, cache, dict, sub_dicts}, parent_key) do
-    child_key =
+    {struct, child_key} =
       if struct do
-        for primary_key <- primary_keys do
-          case Map.get(struct, primary_key) do
-            nil -> raise Ecto.NoPrimaryKeyValueError, struct: struct
-            value -> value
-          end
-        end
+        {child_key, all_nil?} =
+          Enum.map_reduce(primary_keys, true, fn primary_key, all_nil? ->
+            case struct do
+              %_{^primary_key => nil} -> raise Ecto.NoPrimaryKeyValueError, struct: struct
+              # We allow maps to be returned with all `nil` values in queries without
+              # preloads. For preloads we have to treat maps with all `nil` values as
+              # `nil` instead of a map otherwise we can't associate the missing
+              # association to the parent struct
+              %{^primary_key => value} -> {value, all_nil? and value == nil}
+              %{} -> raise Ecto.NoPrimaryKeyValueError, struct: struct
+            end
+          end)
+
+        if all_nil?, do: {nil, nil}, else: {struct, child_key}
+      else
+        {nil, nil}
       end
 
     # Traverse sub_structs adding one by one to the tree.
