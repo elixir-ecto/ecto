@@ -318,72 +318,62 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp insert_all_source_fields(query, ix, fields, updated_set, updated_count, dumper) do
-    {source_fields, source_dumper} = insert_all_source_projection(query, ix)
-    source_fields =
-      source_fields
-      |> Enum.filter(&is_atom/1)
-      |> Enum.reject(&MapSet.member?(updated_set, &1))
+    case elem(query.sources, ix) do
+      {_, schema, _} when is_atom(schema) and not is_nil(schema) ->
+        source_fields =
+          case query.select.take do
+            %{^ix => {_fun, selected_fields}} -> selected_fields
+            _ -> schema.__schema__(:query_fields)
+          end
+          |> Enum.filter(&is_atom/1)
+          |> Enum.reject(&MapSet.member?(updated_set, &1))
 
-    {source_exprs, updated_exprs} = Enum.split(fields, length(source_fields))
+        {source_exprs, updated_exprs} = Enum.split(fields, length(source_fields))
 
-    if length(source_exprs) != length(source_fields) or length(updated_exprs) != updated_count do
-      insert_all_select_error!(query)
-    end
-
-    # The planner expands source fields to physical columns in this order.
-    Enum.zip_with(source_fields, source_exprs, fn
-      field, {{:., _, [{:&, _, [^ix]}, source]}, [], []} ->
-        {expected_source, _, _} = Map.get(source_dumper, field, {field, :any, :always})
-
-        if source != expected_source do
+        if length(source_exprs) != length(source_fields) or length(updated_exprs) != updated_count do
           insert_all_select_error!(query)
         end
 
-        if dumper, do: insert_all_select_dump!(field, dumper), else: source
+        source_dumper = schema.__schema__(:dump)
 
-      _, _ ->
-        insert_all_select_error!(query)
-    end)
-  end
+        Enum.zip_with(source_fields, source_exprs, fn field, expr ->
+          source = insert_all_source_field!(query, ix, expr)
+          {expected_source, _, _} = Map.get(source_dumper, field, {field, :any, :always})
 
-  defp insert_all_source_projection(query, ix) do
-    source = elem(query.sources, ix)
+          if source != expected_source do
+            insert_all_select_error!(query)
+          end
 
-    fields =
-      case query.select.take do
-        %{^ix => {_fun, fields}} -> fields
-        _ -> nil
-      end
+          if dumper, do: insert_all_select_dump!(field, dumper), else: source
+        end)
 
-    projection =
-      case source do
-        {_, schema, _} when is_atom(schema) and not is_nil(schema) ->
-          {fields || schema.__schema__(:query_fields), schema.__schema__(:dump)}
+      _ ->
+        {source_exprs, updated_exprs} = split_updated_fields(fields, updated_count)
 
-        %Ecto.SubQuery{select: {:source, _, _, types}} ->
-          {fields || Keyword.keys(types), %{}}
+        if length(updated_exprs) != updated_count do
+          insert_all_select_error!(query)
+        end
 
-        %Ecto.SubQuery{select: {:struct, _, types}} ->
-          {fields || Keyword.keys(types), %{}}
+        Enum.map(source_exprs, fn expr ->
+          field = insert_all_source_field!(query, ix, expr)
 
-        %Ecto.SubQuery{select: {:map, types}} ->
-          {fields || Keyword.keys(types), %{}}
+          if MapSet.member?(updated_set, field) do
+            insert_all_select_error!(query)
+          end
 
-        {{:fragment, meta, _}, nil, _} ->
-          {fields || meta[:column_names], %{}}
-
-        {:values, _, [types, _]} ->
-          {fields || Keyword.keys(types), %{}}
-
-        _ ->
-          {fields, %{}}
-      end
-
-    case projection do
-      {nil, _} -> insert_all_select_error!(query)
-      projection -> projection
+          insert_all_select_dump!(field, dumper)
+        end)
     end
   end
+
+  defp split_updated_fields(fields, 0), do: {fields, []}
+  defp split_updated_fields(fields, count), do: Enum.split(fields, -count)
+
+  defp insert_all_source_field!(query, ix, {{:., _, [{:&, _, [expr_ix]}, field]}, [], []}) do
+    if expr_ix == ix, do: field, else: insert_all_select_error!(query)
+  end
+
+  defp insert_all_source_field!(query, _ix, _expr), do: insert_all_select_error!(query)
 
   defp insert_all_select_error!(query) do
     raise ArgumentError, """

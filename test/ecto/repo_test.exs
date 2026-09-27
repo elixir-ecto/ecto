@@ -846,6 +846,49 @@ defmodule Ecto.RepoTest do
       assert_received {:insert_all, %{header: [:renamed_name, :value]}, {%Ecto.Query{}, _params}}
     end
 
+    test "maps fragment columns through the destination schema" do
+      query =
+        from f in fragment("select 1 as name, 2 as value", columns: [:name, :value]), select: f
+
+      TestRepo.insert_all(InsertSelectRenamed, query)
+
+      assert_received {:insert_all, %{header: [:renamed_name, :value]}, {%Ecto.Query{}, _params}}
+    end
+
+    test "maps subquery fields through the destination schema" do
+      inner = from s in InsertSelectSource, select: %{name: s.name, value: s.value}
+      query = from s in subquery(inner), select: s
+      TestRepo.insert_all(InsertSelectRenamed, query)
+
+      assert_received {:insert_all, %{header: [:renamed_name, :value]}, {%Ecto.Query{}, _params}}
+    end
+
+    test "rejects a map update that repeats a subquery field" do
+      inner = from s in InsertSelectSource, select: %{name: s.name, value: s.value}
+      query = from s in subquery(inner), select: %{s | value: "new"}
+
+      assert_raise ArgumentError,
+                   ~r/cannot generate a fields list for insert_all from the given source query:/,
+                   fn -> TestRepo.insert_all(InsertSelectRenamed, query) end
+    end
+
+    test "maps values fields through the destination schema" do
+      query =
+        from v in values([%{name: "n", value: "v"}], %{name: :string, value: :string}),
+          select: %{v | value: "new"}
+
+      TestRepo.insert_all(InsertSelectRenamed, query)
+
+      assert_received {:insert_all, %{header: [:renamed_name, :value]}, {%Ecto.Query{}, _params}}
+    end
+
+    test "maps a joined binding through the destination schema" do
+      query = from x in "other", join: s in InsertSelectSource, on: true, select: s
+      TestRepo.insert_all(InsertSelectRenamed, query)
+
+      assert_received {:insert_all, %{header: [:renamed_name, :value]}, {%Ecto.Query{}, _params}}
+    end
+
     test "keeps source columns when the destination has no schema" do
       query = from s in InsertSelectMappedSource, select: s
       TestRepo.insert_all("insert_select_renamed", query)
@@ -924,7 +967,7 @@ defmodule Ecto.RepoTest do
              ] = fields
     end
 
-    test "allows destination-only map updates and reports source-only fields" do
+    test "allows destination-only map updates" do
       query =
         from s in InsertSelectDisjointSource,
           select: %{map(s, [:b, :c]) | a: s.c, only_destination: s.b}
@@ -933,7 +976,9 @@ defmodule Ecto.RepoTest do
 
       assert_received {:insert_all, %{header: [:dst_b, :dst_c, :a, :only_destination]},
                        {%Ecto.Query{}, _params}}
+    end
 
+    test "reports source-only fields" do
       query = from s in InsertSelectDisjointSource, select: s
 
       assert_raise ArgumentError,
