@@ -211,6 +211,50 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  defmodule InsertSelectRenamed do
+    use Ecto.Schema
+
+    @primary_key false
+    schema "insert_select_renamed" do
+      field :name, :string, source: :renamed_name
+      field :value, :string
+    end
+  end
+
+  defmodule InsertSelectReadOnly do
+    use Ecto.Schema
+
+    @primary_key false
+    schema "insert_select_read_only" do
+      field :name, :string, source: :source_name, writable: :never
+      field :value, :string
+    end
+  end
+
+  defmodule InsertSelectDisjointSource do
+    use Ecto.Schema
+
+    @primary_key false
+    schema "insert_select_disjoint_source" do
+      field :b, :string, source: :src_b
+      field :c, :string, source: :src_c
+      field :a, :string, source: :src_a
+      field :only_source, :string
+    end
+  end
+
+  defmodule InsertSelectDisjointDestination do
+    use Ecto.Schema
+
+    @primary_key false
+    schema "insert_select_disjoint_destination" do
+      field :only_destination, :string
+      field :a, :string
+      field :c, :string, source: :dst_c
+      field :b, :string, source: :dst_b
+    end
+  end
+
   test "defines child_spec/1" do
     assert TestRepo.child_spec([]) == %{
              id: TestRepo,
@@ -763,6 +807,167 @@ defmodule Ecto.RepoTest do
                        {%Ecto.Query{}, _params}}
 
       assert header == [:id, :x, :yyy, :z, :array, :map]
+    end
+
+    test "maps read-only source fields through the writable destination schema" do
+      query = from s in InsertSelectReadOnly, select: s
+      TestRepo.insert_all(InsertSelectRenamed, query)
+
+      assert_received {:insert_all, %{header: [:renamed_name, :value]},
+                       {%Ecto.Query{select: %{fields: fields}}, _params}}
+
+      assert [
+               {{:., _, [{:&, _, [0]}, :source_name]}, [], []},
+               {{:., _, [{:&, _, [0]}, :value]}, [], []}
+             ] = fields
+    end
+
+    test "maps fragment columns through the destination schema" do
+      query =
+        from f in fragment("select 1 as name, 2 as value", columns: [:name, :value]), select: f
+
+      TestRepo.insert_all(InsertSelectRenamed, query)
+
+      assert_received {:insert_all, %{header: [:renamed_name, :value]}, {%Ecto.Query{}, _params}}
+    end
+
+    test "maps subquery fields through the destination schema" do
+      inner = from s in InsertSelectReadOnly, select: %{name: s.name, value: s.value}
+      query = from s in subquery(inner), select: s
+      TestRepo.insert_all(InsertSelectRenamed, query)
+
+      assert_received {:insert_all, %{header: [:renamed_name, :value]}, {%Ecto.Query{}, _params}}
+    end
+
+    test "rejects a map update that repeats a subquery field" do
+      inner = from s in InsertSelectReadOnly, select: %{name: s.name, value: s.value}
+      query = from s in subquery(inner), select: %{s | value: "new"}
+
+      # This query shape still projects the overwritten field from the subquery.
+      # Reject the duplicate projection; this does not add support for subquery map updates.
+      assert_raise ArgumentError,
+                   ~r/cannot generate a fields list for insert_all from the given source query:/,
+                   fn -> TestRepo.insert_all(InsertSelectRenamed, query) end
+    end
+
+    test "maps values fields through the destination schema" do
+      query =
+        from v in values([%{name: "n", value: "v"}], %{name: :string, value: :string}),
+          select: %{v | value: "new"}
+
+      TestRepo.insert_all(InsertSelectRenamed, query)
+
+      assert_received {:insert_all, %{header: [:renamed_name, :value]}, {%Ecto.Query{}, _params}}
+    end
+
+    test "maps a joined binding through the destination schema" do
+      query = from x in "other", join: s in InsertSelectReadOnly, on: true, select: s
+      TestRepo.insert_all(InsertSelectRenamed, query)
+
+      assert_received {:insert_all, %{header: [:renamed_name, :value]}, {%Ecto.Query{}, _params}}
+    end
+
+    test "keeps source columns when the destination has no schema" do
+      query = from s in InsertSelectReadOnly, select: s
+      TestRepo.insert_all("insert_select_renamed", query)
+
+      assert_received {:insert_all, %{header: [:source_name, :value]}, {%Ecto.Query{}, _params}}
+    end
+
+    test "rejects full source fields that are unwritable in the destination" do
+      query = from s in InsertSelectRenamed, select: s
+
+      assert_raise ArgumentError,
+                   "cannot select unwritable field `:name` for insert_all",
+                   fn -> TestRepo.insert_all(InsertSelectReadOnly, query) end
+    end
+
+    test "maps unchanged map update fields through the destination schema" do
+      query = from s in InsertSelectReadOnly, select: %{s | value: s.value}
+      TestRepo.insert_all(InsertSelectRenamed, query)
+
+      assert_received {:insert_all, %{header: [:renamed_name, :value]},
+                       {%Ecto.Query{select: %{fields: fields}}, _params}}
+
+      assert [
+               {{:., _, [{:&, _, [0]}, :source_name]}, [], []},
+               {{:., _, [{:&, _, [0]}, :value]}, [], []}
+             ] = fields
+    end
+
+    test "does not include an overwritten source field twice when columns differ" do
+      query = from s in InsertSelectReadOnly, select: %{s | name: s.name}
+      TestRepo.insert_all(InsertSelectRenamed, query)
+
+      assert_received {:insert_all, %{header: [:value, :renamed_name]}, {%Ecto.Query{}, _params}}
+    end
+
+    test "rejects unchanged map update fields that are unwritable in the destination" do
+      query = from s in InsertSelectRenamed, select: %{s | value: s.value}
+
+      assert_raise ArgumentError,
+                   "cannot select unwritable field `:name` for insert_all",
+                   fn -> TestRepo.insert_all(InsertSelectReadOnly, query) end
+    end
+
+    test "rejects map updates whose values expand to multiple select fields" do
+      query = from s in InsertSelectReadOnly, select: %{s | value: {s.name, s.value}}
+
+      assert_raise ArgumentError,
+                   ~r/cannot generate a fields list for insert_all from the given source query:/,
+                   fn -> TestRepo.insert_all(InsertSelectRenamed, query) end
+    end
+
+    test "maps a reordered source subset independently of destination field order" do
+      query =
+        from s in InsertSelectDisjointSource,
+          select: %{map(s, [:b, :c, :a]) | a: fragment("'x'")}
+
+      TestRepo.insert_all(InsertSelectDisjointDestination, query)
+
+      assert_received {:insert_all, %{header: [:dst_b, :dst_c, :a]},
+                       {%Ecto.Query{select: %{fields: fields}}, _params}}
+
+      assert [
+               {{:., _, [{:&, _, [0]}, :src_b]}, [], []},
+               {{:., _, [{:&, _, [0]}, :src_c]}, [], []},
+               {:fragment, _, _}
+             ] = fields
+    end
+
+    test "allows destination-only map updates" do
+      query =
+        from s in InsertSelectDisjointSource,
+          select: %{map(s, [:b, :c]) | a: s.c, only_destination: s.b}
+
+      TestRepo.insert_all(InsertSelectDisjointDestination, query)
+
+      assert_received {:insert_all, %{header: [:dst_b, :dst_c, :a, :only_destination]},
+                       {%Ecto.Query{}, _params}}
+    end
+
+    test "reports source-only fields" do
+      query = from s in InsertSelectDisjointSource, select: s
+
+      assert_raise ArgumentError,
+                   "cannot select unknown field `:only_source` for insert_all",
+                   fn -> TestRepo.insert_all(InsertSelectDisjointDestination, query) end
+    end
+
+    test "rejects whole schemaless bindings with a select error" do
+      query = from s in "insert_select_source", select: s
+
+      assert_raise ArgumentError,
+                   ~r/cannot generate a fields list for insert_all from the given source query:/,
+                   fn -> TestRepo.insert_all(InsertSelectRenamed, query) end
+    end
+
+    test "rejects non-atom insert select keys with a clear error" do
+      query = from s in InsertSelectReadOnly, select: %{"name" => s.name}
+
+      assert_raise ArgumentError,
+                   "cannot select non-atom field `\"name\"` for insert_all",
+                   fn -> TestRepo.insert_all(InsertSelectRenamed, query) end
     end
 
     test "takes query selecting on source with join" do

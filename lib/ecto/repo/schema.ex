@@ -175,19 +175,11 @@ defmodule Ecto.Repo.Schema do
 
     header =
       case query.select do
-        %Ecto.Query.SelectExpr{expr: {:%{}, [], [{:|, _, [{:&, _, [ix]}, args]}]}, fields: fields} ->
-          {updated_fields, updated_set} =
-            Enum.map_reduce(args, MapSet.new(), fn {field, _}, set ->
-              dumped_field = insert_all_select_dump!(field, dumper)
-              {dumped_field, MapSet.put(set, dumped_field)}
-            end)
+        %Ecto.Query.SelectExpr{expr: {:%{}, [], [{:|, _, [{:&, _, [ix]}, args]}]}} ->
+          updated_fields =
+            Enum.map(args, fn {field, _} -> insert_all_select_dump!(field, dumper) end)
 
-          unchanged_fields =
-            for {{:., _, [{:&, _, [^ix]}, field]}, [], []} = expr <- fields,
-                not MapSet.member?(updated_set, field),
-                do: insert_all_select_dump!(expr)
-
-          unchanged_fields ++ updated_fields
+          insert_all_source_fields(query, ix, args, dumper) ++ updated_fields
 
         %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}} ->
           Enum.map(args, fn {field, _} -> insert_all_select_dump!(field, dumper) end)
@@ -195,28 +187,11 @@ defmodule Ecto.Repo.Schema do
         %Ecto.Query.SelectExpr{take: %{^ix => {_fun, fields}}} ->
           Enum.map(fields, &insert_all_select_dump!(&1, dumper))
 
-        %Ecto.Query.SelectExpr{expr: {:&, _, [_ix]}, fields: fields} ->
-          Enum.map(fields, &insert_all_select_dump!(&1))
+        %Ecto.Query.SelectExpr{expr: {:&, _, [ix]}} ->
+          insert_all_source_fields(query, ix, [], dumper)
 
         _ ->
-          raise ArgumentError, """
-          cannot generate a fields list for insert_all from the given source query:
-
-            #{inspect(query)}
-
-          The select clause must be one of the following:
-
-            * A single `map/2` or several `map/2` expressions combined with `select_merge`
-            * A single `struct/2` or several `struct/2` expressions combined with `select_merge`
-            * A source such as `p` in the query `from p in Post`
-            * A single literal map or several literal maps combined with `select_merge`. If
-              combining several literal maps, there cannot be any query interpolations
-              except in the last `select_merge`. Consider using `Ecto.Query.exclude/2`
-              to rebuild the select expression from scratch if you need multiple `select_merge`
-              statements with interpolations
-
-          All keys must exist in the schema that is being inserted into
-          """
+          insert_all_select_error!(query)
       end
 
     counter = fn -> length(dump_params) end
@@ -336,12 +311,77 @@ defmodule Ecto.Repo.Schema do
     {rows, Enum.reverse(cast_params), counter}
   end
 
-  defp insert_all_select_dump!({{:., dot_meta, [{:&, _, [_]}, field]}, [], []}) do
-    if dot_meta[:writable] == :never do
-      raise ArgumentError, "cannot select unwritable field `#{inspect(field)}` for insert_all"
-    else
-      field
+  defp insert_all_source_fields(query, ix, updates, dumper) do
+    fields = query.select.fields
+    count = length(fields) - length(updates)
+    if count < 0, do: insert_all_select_error!(query)
+    fields = Enum.take(fields, count)
+    updates = Map.new(updates)
+
+    # Schema fields are logical names; SELECT fields contain physical column names.
+    case elem(query.sources, ix) do
+      {_, schema, _} when is_atom(schema) and not is_nil(schema) ->
+        selected =
+          case query.select.take do
+            %{^ix => {_, selected}} -> selected
+            _ -> schema.__schema__(:query_fields)
+          end
+
+        source_dumper = schema.__schema__(:dump)
+
+        {header, leftover} =
+          for field <- selected, is_atom(field), not is_map_key(updates, field), reduce: {[], fields} do
+            {header, fields} ->
+              source =
+                case source_dumper do
+                  %{^field => {source, _, _}} -> source
+                  _ -> field
+                end
+
+              case fields do
+                [{{:., _, [{:&, _, [^ix]}, ^source]}, [], []} | fields] ->
+                  field = insert_all_select_dump!(if(dumper, do: field, else: source), dumper)
+                  {[field | header], fields}
+
+                _ ->
+                  insert_all_select_error!(query)
+              end
+          end
+
+        if leftover != [], do: insert_all_select_error!(query)
+        Enum.reverse(header)
+
+      _ ->
+        Enum.map(fields, fn
+          {{:., _, [{:&, _, [^ix]}, field]}, [], []} ->
+            if is_map_key(updates, field), do: insert_all_select_error!(query)
+            insert_all_select_dump!(field, dumper)
+
+          _ ->
+            insert_all_select_error!(query)
+        end)
     end
+  end
+
+  defp insert_all_select_error!(query) do
+    raise ArgumentError, """
+    cannot generate a fields list for insert_all from the given source query:
+
+      #{inspect(query)}
+
+    The select clause must be one of the following:
+
+      * A single `map/2` or several `map/2` expressions combined with `select_merge`
+      * A single `struct/2` or several `struct/2` expressions combined with `select_merge`
+      * A source such as `p` in the query `from p in Post`
+      * A single literal map or several literal maps combined with `select_merge`. If
+        combining several literal maps, there cannot be any query interpolations
+        except in the last `select_merge`. Consider using `Ecto.Query.exclude/2`
+        to rebuild the select expression from scratch if you need multiple `select_merge`
+        statements with interpolations
+
+    All keys must exist in the schema that is being inserted into
+    """
   end
 
   defp insert_all_select_dump!(field, dumper) when is_atom(field) do
@@ -349,12 +389,19 @@ defmodule Ecto.Repo.Schema do
       %{^field => {source, _, writable}} when writable != :never ->
         source
 
-      %{} ->
+      %{^field => {_, _, :never}} ->
         raise ArgumentError, "cannot select unwritable field `#{inspect(field)}` for insert_all"
+
+      %{} ->
+        raise ArgumentError, "cannot select unknown field `#{inspect(field)}` for insert_all"
 
       nil ->
         field
     end
+  end
+
+  defp insert_all_select_dump!(field, _dumper) do
+    raise ArgumentError, "cannot select non-atom field `#{inspect(field)}` for insert_all"
   end
 
   defp autogenerate_id(nil, fields, header, _adapter) do
