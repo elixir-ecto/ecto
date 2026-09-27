@@ -175,17 +175,11 @@ defmodule Ecto.Repo.Schema do
 
     header =
       case query.select do
-        %Ecto.Query.SelectExpr{expr: {:%{}, [], [{:|, _, [{:&, _, [ix]}, args]}]}, fields: fields} ->
-          {updated_fields, updated_set} =
-            Enum.map_reduce(args, MapSet.new(), fn {field, _}, set ->
-              dumped_field = insert_all_select_dump!(field, dumper)
-              {dumped_field, MapSet.put(set, field)}
-            end)
+        %Ecto.Query.SelectExpr{expr: {:%{}, [], [{:|, _, [{:&, _, [ix]}, args]}]}} ->
+          updated_fields =
+            Enum.map(args, fn {field, _} -> insert_all_select_dump!(field, dumper) end)
 
-          unchanged_fields =
-            insert_all_source_fields(query, ix, fields, updated_set, length(args), dumper)
-
-          unchanged_fields ++ updated_fields
+          insert_all_source_fields(query, ix, args, dumper) ++ updated_fields
 
         %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}} ->
           Enum.map(args, fn {field, _} -> insert_all_select_dump!(field, dumper) end)
@@ -193,8 +187,8 @@ defmodule Ecto.Repo.Schema do
         %Ecto.Query.SelectExpr{take: %{^ix => {_fun, fields}}} ->
           Enum.map(fields, &insert_all_select_dump!(&1, dumper))
 
-        %Ecto.Query.SelectExpr{expr: {:&, _, [ix]}, fields: fields} ->
-          insert_all_source_fields(query, ix, fields, MapSet.new(), 0, dumper)
+        %Ecto.Query.SelectExpr{expr: {:&, _, [ix]}} ->
+          insert_all_source_fields(query, ix, [], dumper)
 
         _ ->
           insert_all_select_error!(query)
@@ -317,65 +311,57 @@ defmodule Ecto.Repo.Schema do
     {rows, Enum.reverse(cast_params), counter}
   end
 
-  defp insert_all_source_fields(query, ix, fields, updated_set, updated_count, dumper) do
-    # Keep insert headers aligned with the planner's SELECT fields by checking the
-    # physical source column before mapping each logical field to its destination.
+  defp insert_all_source_fields(query, ix, updates, dumper) do
+    fields = query.select.fields
+    count = length(fields) - length(updates)
+    if count < 0, do: insert_all_select_error!(query)
+    fields = Enum.take(fields, count)
+    updates = Map.new(updates)
+
+    # Schema fields are logical names; SELECT fields contain physical column names.
     case elem(query.sources, ix) do
       {_, schema, _} when is_atom(schema) and not is_nil(schema) ->
-        source_fields =
+        selected =
           case query.select.take do
-            %{^ix => {_fun, selected_fields}} -> selected_fields
+            %{^ix => {_, selected}} -> selected
             _ -> schema.__schema__(:query_fields)
           end
-          |> Enum.filter(&is_atom/1)
-          |> Enum.reject(&MapSet.member?(updated_set, &1))
-
-        {source_exprs, updated_exprs} = Enum.split(fields, length(source_fields))
-
-        if length(source_exprs) != length(source_fields) or length(updated_exprs) != updated_count do
-          insert_all_select_error!(query)
-        end
 
         source_dumper = schema.__schema__(:dump)
 
-        Enum.zip_with(source_fields, source_exprs, fn field, expr ->
-          source = insert_all_source_field!(query, ix, expr)
-          {expected_source, _, _} = Map.get(source_dumper, field, {field, :any, :always})
+        {header, leftover} =
+          for field <- selected, is_atom(field), not is_map_key(updates, field), reduce: {[], fields} do
+            {header, fields} ->
+              source =
+                case source_dumper do
+                  %{^field => {source, _, _}} -> source
+                  _ -> field
+                end
 
-          if source != expected_source do
-            insert_all_select_error!(query)
+              case fields do
+                [{{:., _, [{:&, _, [^ix]}, ^source]}, [], []} | fields] ->
+                  field = insert_all_select_dump!(if(dumper, do: field, else: source), dumper)
+                  {[field | header], fields}
+
+                _ ->
+                  insert_all_select_error!(query)
+              end
           end
 
-          if dumper, do: insert_all_select_dump!(field, dumper), else: source
-        end)
+        if leftover != [], do: insert_all_select_error!(query)
+        Enum.reverse(header)
 
       _ ->
-        {source_exprs, updated_exprs} = split_updated_fields(fields, updated_count)
+        Enum.map(fields, fn
+          {{:., _, [{:&, _, [^ix]}, field]}, [], []} ->
+            if is_map_key(updates, field), do: insert_all_select_error!(query)
+            insert_all_select_dump!(field, dumper)
 
-        if length(updated_exprs) != updated_count do
-          insert_all_select_error!(query)
-        end
-
-        Enum.map(source_exprs, fn expr ->
-          field = insert_all_source_field!(query, ix, expr)
-
-          if MapSet.member?(updated_set, field) do
+          _ ->
             insert_all_select_error!(query)
-          end
-
-          insert_all_select_dump!(field, dumper)
         end)
     end
   end
-
-  defp split_updated_fields(fields, 0), do: {fields, []}
-  defp split_updated_fields(fields, count), do: Enum.split(fields, -count)
-
-  defp insert_all_source_field!(query, ix, {{:., _, [{:&, _, [expr_ix]}, field]}, [], []}) do
-    if expr_ix == ix, do: field, else: insert_all_select_error!(query)
-  end
-
-  defp insert_all_source_field!(query, _ix, _expr), do: insert_all_select_error!(query)
 
   defp insert_all_select_error!(query) do
     raise ArgumentError, """
