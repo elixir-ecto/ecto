@@ -141,15 +141,20 @@ defmodule Ecto.Embedded do
 
   ## End of parameterized API
 
+  # Callback invoked by repository to check if any embed has
+  # prepare callbacks, in which case a transaction is required.
+  #
+  # It must mirror the traversal done by prepare/4 below,
+  # including surfacing embeds from the data on insert.
   @doc false
-  def prepare?(changeset, embeds) do
+  def prepare?(changeset, embeds, repo_action) do
     %{changes: changes, types: types} = changeset
 
     Enum.any?(embeds, fn name ->
       case changes do
         %{^name => value} ->
-          {:embed, %{related: related}} = Map.fetch!(types, name)
-          value |> List.wrap() |> Enum.any?(&changeset_prepare?(&1, related))
+          {:embed, embed} = Map.fetch!(types, name)
+          value |> List.wrap() |> Enum.any?(&prepare_each?(embed, &1, repo_action))
 
         %{} ->
           false
@@ -157,12 +162,28 @@ defmodule Ecto.Embedded do
     end)
   end
 
-  defp changeset_prepare?(%Changeset{prepare: [_ | _]}, _related), do: true
+  defp prepare_each?(_embed, %Changeset{prepare: [_ | _]}, _repo_action), do: true
 
-  defp changeset_prepare?(%Changeset{data: %{__struct__: related}} = changeset, related),
-    do: prepare?(changeset, related.__schema__(:embeds))
+  defp prepare_each?(embed, %Changeset{} = changeset, repo_action) do
+    action = normalize_action(changeset.action, repo_action, embed)
+    to_struct_prepare?(changeset, action, embed)
+  end
 
-  defp changeset_prepare?(_changeset, _related), do: false
+  defp to_struct_prepare?(%Changeset{valid?: false}, _action, _embed), do: false
+
+  defp to_struct_prepare?(%Changeset{data: %{__struct__: actual}}, _action, %{related: expected})
+       when actual != expected,
+       do: false
+
+  defp to_struct_prepare?(%Changeset{changes: changes}, :update, _embed) when changes == %{},
+    do: false
+
+  defp to_struct_prepare?(%Changeset{}, :delete, _embed), do: false
+
+  defp to_struct_prepare?(%Changeset{data: data} = changeset, action, %{related: schema}) do
+    changeset = maybe_surface_changes(changeset, data, schema, action)
+    prepare?(changeset, schema.__schema__(:embeds), action)
+  end
 
   # Callback invoked by repository to prepare embeds.
   #

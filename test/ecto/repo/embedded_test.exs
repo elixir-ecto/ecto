@@ -266,6 +266,32 @@ defmodule Ecto.Repo.EmbeddedTest do
     assert_received {:prepared_in_transaction?, true}
   end
 
+  test "runs embed prepare callbacks surfaced from struct data in transaction" do
+    sub_embed = embed_changeset_with_prepare(%SubEmbed{y: "xyz"})
+
+    changeset =
+      %MySchema{}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:embed, %MyEmbed{x: "xyz", sub_embed: sub_embed})
+
+    TestRepo.insert!(changeset)
+    assert_received {:transaction, _, _}
+    assert_received {:prepared_in_transaction?, true}
+
+    TestRepo.insert!(%MySchema{embeds: [%MyEmbed{x: "xyz", sub_embed: sub_embed}]})
+    assert_received {:transaction, _, _}
+    assert_received {:prepared_in_transaction?, true}
+
+    changeset =
+      %MySchema{id: 1}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:embed, %MyEmbed{x: "xyz", sub_embed: sub_embed})
+
+    TestRepo.update!(changeset)
+    assert_received {:transaction, _, _}
+    assert_received {:prepared_in_transaction?, true}
+  end
+
   test "raises on embed changesets for another struct" do
     changeset = Ecto.Changeset.change(%MySchema{})
     embed = %Ecto.Changeset{data: %URI{}, valid?: true}

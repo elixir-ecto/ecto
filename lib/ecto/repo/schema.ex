@@ -1345,7 +1345,8 @@ defmodule Ecto.Repo.Schema do
 
     # Computed lazily as it walks the whole embed tree
     relations_changed? = fn ->
-      Enum.any?(assocs, &Map.has_key?(changes, &1)) or Ecto.Embedded.prepare?(changeset, embeds)
+      Enum.any?(assocs, &Map.has_key?(changes, &1)) or
+        Ecto.Embedded.prepare?(changeset, embeds, changeset.action)
     end
 
     wrap_in_transaction(adapter, adapter_meta, opts, relations_changed?, prepare, fun)
