@@ -143,17 +143,26 @@ defmodule Ecto.Embedded do
 
   @doc false
   def prepare?(changeset, embeds) do
-    %{changes: changes} = changeset
+    %{changes: changes, types: types} = changeset
 
-    Enum.any?(embeds, fn embed ->
-      changes |> Map.get(embed) |> List.wrap() |> Enum.any?(&changeset_prepare?/1)
+    Enum.any?(embeds, fn name ->
+      case changes do
+        %{^name => value} ->
+          {:embed, %{related: related}} = Map.fetch!(types, name)
+          value |> List.wrap() |> Enum.any?(&changeset_prepare?(&1, related))
+
+        %{} ->
+          false
+      end
     end)
   end
 
-  defp changeset_prepare?(%Changeset{prepare: [_ | _]}), do: true
+  defp changeset_prepare?(%Changeset{prepare: [_ | _]}, _related), do: true
 
-  defp changeset_prepare?(%Changeset{data: %schema{}} = changeset),
-    do: prepare?(changeset, schema.__schema__(:embeds))
+  defp changeset_prepare?(%Changeset{data: %{__struct__: related}} = changeset, related),
+    do: prepare?(changeset, related.__schema__(:embeds))
+
+  defp changeset_prepare?(_changeset, _related), do: false
 
   # Callback invoked by repository to prepare embeds.
   #

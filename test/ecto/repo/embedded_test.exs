@@ -266,6 +266,16 @@ defmodule Ecto.Repo.EmbeddedTest do
     assert_received {:prepared_in_transaction?, true}
   end
 
+  test "raises on embed changesets for another struct" do
+    changeset = Ecto.Changeset.change(%MySchema{})
+    embed = %Ecto.Changeset{data: %URI{}, valid?: true}
+    changeset = %{changeset | changes: %{embed: embed}}
+
+    assert_raise ArgumentError, ~r/expected changeset for embedded schema/, fn ->
+      TestRepo.insert!(changeset)
+    end
+  end
+
   ## update
 
   test "skips embeds on update when not changing" do
