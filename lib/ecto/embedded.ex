@@ -145,20 +145,15 @@ defmodule Ecto.Embedded do
   # prepare callbacks, in which case a transaction is required.
   #
   # It must mirror the traversal done by prepare/4 below,
-  # including surfacing embeds from the data on insert.
+  # including surfacing embeds (but not other fields, which
+  # are not traversed) from the data on insert.
   @doc false
   def prepare?(changeset, embeds, repo_action) do
     %{changes: changes, types: types} = changeset
 
-    Enum.any?(embeds, fn name ->
-      case changes do
-        %{^name => value} ->
-          {:embed, embed} = Map.fetch!(types, name)
-          value |> List.wrap() |> Enum.any?(&prepare_each?(embed, &1, repo_action))
-
-        %{} ->
-          false
-      end
+    Enum.any?(Map.take(changes, embeds), fn {name, value} ->
+      {:embed, embed} = Map.fetch!(types, name)
+      value |> List.wrap() |> Enum.any?(&prepare_each?(embed, &1, repo_action))
     end)
   end
 
@@ -175,14 +170,12 @@ defmodule Ecto.Embedded do
        when actual != expected,
        do: false
 
-  defp to_struct_prepare?(%Changeset{changes: changes}, :update, _embed) when changes == %{},
-    do: false
-
   defp to_struct_prepare?(%Changeset{}, :delete, _embed), do: false
 
   defp to_struct_prepare?(%Changeset{data: data} = changeset, action, %{related: schema}) do
-    changeset = maybe_surface_changes(changeset, data, schema, action)
-    prepare?(changeset, schema.__schema__(:embeds), action)
+    embeds = schema.__schema__(:embeds)
+    changeset = maybe_surface_changes(changeset, data, embeds, action)
+    prepare?(changeset, embeds, action)
   end
 
   # Callback invoked by repository to prepare embeds.
@@ -250,7 +243,7 @@ defmodule Ecto.Embedded do
   defp to_struct(%Changeset{data: data} = changeset, action, %{related: schema}, adapter) do
     %{data: struct, changes: changes} =
       changeset =
-      maybe_surface_changes(changeset, data, schema, action)
+      maybe_surface_changes(changeset, data, schema.__schema__(:fields), action)
 
     embeds = prepare(changeset, schema.__schema__(:embeds), adapter, action)
 
@@ -261,11 +254,11 @@ defmodule Ecto.Embedded do
     |> apply_embeds(struct)
   end
 
-  defp maybe_surface_changes(changeset, data, schema, :insert) do
-    Relation.surface_changes(changeset, data, schema.__schema__(:fields))
+  defp maybe_surface_changes(changeset, data, fields, :insert) do
+    Relation.surface_changes(changeset, data, fields)
   end
 
-  defp maybe_surface_changes(changeset, _data, _schema, _action) do
+  defp maybe_surface_changes(changeset, _data, _fields, _action) do
     changeset
   end
 
