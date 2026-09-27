@@ -843,7 +843,13 @@ defmodule Ecto.RepoTest do
       query = from s in InsertSelectSource, select: s
       TestRepo.insert_all(InsertSelectRenamed, query)
 
-      assert_received {:insert_all, %{header: [:renamed_name, :value]}, {%Ecto.Query{}, _params}}
+      assert_received {:insert_all, %{header: [:renamed_name, :value]},
+                       {%Ecto.Query{select: %{fields: fields}}, _params}}
+
+      assert [
+               {{:., _, [{:&, _, [0]}, :name]}, [], []},
+               {{:., _, [{:&, _, [0]}, :value]}, [], []}
+             ] = fields
     end
 
     test "maps fragment columns through the destination schema" do
@@ -867,6 +873,8 @@ defmodule Ecto.RepoTest do
       inner = from s in InsertSelectSource, select: %{name: s.name, value: s.value}
       query = from s in subquery(inner), select: %{s | value: "new"}
 
+      # This query shape still projects the overwritten field from the subquery.
+      # Reject the duplicate projection; this does not add support for subquery map updates.
       assert_raise ArgumentError,
                    ~r/cannot generate a fields list for insert_all from the given source query:/,
                    fn -> TestRepo.insert_all(InsertSelectRenamed, query) end
@@ -916,7 +924,13 @@ defmodule Ecto.RepoTest do
       query = from s in InsertSelectMappedSource, select: %{s | value: s.value}
       TestRepo.insert_all(InsertSelectRenamed, query)
 
-      assert_received {:insert_all, %{header: [:renamed_name, :value]}, {%Ecto.Query{}, _params}}
+      assert_received {:insert_all, %{header: [:renamed_name, :value]},
+                       {%Ecto.Query{select: %{fields: fields}}, _params}}
+
+      assert [
+               {{:., _, [{:&, _, [0]}, :source_name]}, [], []},
+               {{:., _, [{:&, _, [0]}, :value]}, [], []}
+             ] = fields
     end
 
     test "maps unchanged fields from a map subset through the destination schema" do

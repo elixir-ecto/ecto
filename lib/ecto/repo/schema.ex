@@ -318,6 +318,8 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp insert_all_source_fields(query, ix, fields, updated_set, updated_count, dumper) do
+    # Keep insert headers aligned with the planner's SELECT fields by checking the
+    # physical source column before mapping each logical field to its destination.
     case elem(query.sources, ix) do
       {_, schema, _} when is_atom(schema) and not is_nil(schema) ->
         source_fields =
