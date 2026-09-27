@@ -182,10 +182,8 @@ defmodule Ecto.Repo.Schema do
               {dumped_field, MapSet.put(set, field)}
             end)
 
-          source_fields = Enum.take(fields, length(fields) - length(args))
-
           unchanged_fields =
-            insert_all_source_fields(query, ix, source_fields, updated_set, dumper)
+            insert_all_source_fields(query, ix, fields, updated_set, length(args), dumper)
 
           unchanged_fields ++ updated_fields
 
@@ -196,7 +194,7 @@ defmodule Ecto.Repo.Schema do
           Enum.map(fields, &insert_all_select_dump!(&1, dumper))
 
         %Ecto.Query.SelectExpr{expr: {:&, _, [ix]}, fields: fields} ->
-          insert_all_source_fields(query, ix, fields, MapSet.new(), dumper)
+          insert_all_source_fields(query, ix, fields, MapSet.new(), 0, dumper)
 
         _ ->
           insert_all_select_error!(query)
@@ -319,38 +317,72 @@ defmodule Ecto.Repo.Schema do
     {rows, Enum.reverse(cast_params), counter}
   end
 
-  defp insert_all_select_source!({{:., _, [{:&, _, [_]}, field]}, [], []}), do: field
-
-  defp insert_all_source_fields(_query, _ix, fields, _updated_set, nil) do
-    Enum.map(fields, &insert_all_select_source!/1)
-  end
-
-  defp insert_all_source_fields(query, ix, fields, updated_set, dumper) do
+  defp insert_all_source_fields(query, ix, fields, updated_set, updated_count, dumper) do
+    {source_fields, source_dumper} = insert_all_source_projection(query, ix)
     source_fields =
-      case elem(query.sources, ix) do
-        {_, schema, _} when is_atom(schema) and not is_nil(schema) ->
-          case query.select.take do
-            %{^ix => {_fun, selected_fields}} -> selected_fields
-            _ -> schema.__schema__(:query_fields)
-          end
-          |> Enum.filter(&is_atom/1)
-          |> Enum.reject(&MapSet.member?(updated_set, &1))
+      source_fields
+      |> Enum.filter(&is_atom/1)
+      |> Enum.reject(&MapSet.member?(updated_set, &1))
 
-        _ ->
-          Enum.map(fields, &insert_all_select_source!/1)
-      end
+    {source_exprs, updated_exprs} = Enum.split(fields, length(source_fields))
 
-    if length(source_fields) != length(fields) do
+    if length(source_exprs) != length(source_fields) or length(updated_exprs) != updated_count do
       insert_all_select_error!(query)
     end
 
-    Enum.zip_with(source_fields, fields, fn
-      field, {{:., _, [{:&, _, [^ix]}, _]}, [], []} ->
-        insert_all_select_dump!(field, dumper)
+    # The planner expands source fields to physical columns in this order.
+    Enum.zip_with(source_fields, source_exprs, fn
+      field, {{:., _, [{:&, _, [^ix]}, source]}, [], []} ->
+        {expected_source, _, _} = Map.get(source_dumper, field, {field, :any, :always})
+
+        if source != expected_source do
+          insert_all_select_error!(query)
+        end
+
+        if dumper, do: insert_all_select_dump!(field, dumper), else: source
 
       _, _ ->
         insert_all_select_error!(query)
     end)
+  end
+
+  defp insert_all_source_projection(query, ix) do
+    source = elem(query.sources, ix)
+
+    fields =
+      case query.select.take do
+        %{^ix => {_fun, fields}} -> fields
+        _ -> nil
+      end
+
+    projection =
+      case source do
+        {_, schema, _} when is_atom(schema) and not is_nil(schema) ->
+          {fields || schema.__schema__(:query_fields), schema.__schema__(:dump)}
+
+        %Ecto.SubQuery{select: {:source, _, _, types}} ->
+          {fields || Keyword.keys(types), %{}}
+
+        %Ecto.SubQuery{select: {:struct, _, types}} ->
+          {fields || Keyword.keys(types), %{}}
+
+        %Ecto.SubQuery{select: {:map, types}} ->
+          {fields || Keyword.keys(types), %{}}
+
+        {{:fragment, meta, _}, nil, _} ->
+          {fields || meta[:column_names], %{}}
+
+        {:values, _, [types, _]} ->
+          {fields || Keyword.keys(types), %{}}
+
+        _ ->
+          {fields, %{}}
+      end
+
+    case projection do
+      {nil, _} -> insert_all_select_error!(query)
+      projection -> projection
+    end
   end
 
   defp insert_all_select_error!(query) do
@@ -379,12 +411,19 @@ defmodule Ecto.Repo.Schema do
       %{^field => {source, _, writable}} when writable != :never ->
         source
 
-      %{} ->
+      %{^field => {_, _, :never}} ->
         raise ArgumentError, "cannot select unwritable field `#{inspect(field)}` for insert_all"
+
+      %{} ->
+        raise ArgumentError, "cannot select unknown field `#{inspect(field)}` for insert_all"
 
       nil ->
         field
     end
+  end
+
+  defp insert_all_select_dump!(field, _dumper) do
+    raise ArgumentError, "cannot select non-atom field `#{inspect(field)}` for insert_all"
   end
 
   defp autogenerate_id(nil, fields, header, _adapter) do

@@ -261,6 +261,30 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  defmodule InsertSelectDisjointSource do
+    use Ecto.Schema
+
+    @primary_key false
+    schema "insert_select_disjoint_source" do
+      field :b, :string, source: :src_b
+      field :c, :string, source: :src_c
+      field :a, :string, source: :src_a
+      field :only_source, :string
+    end
+  end
+
+  defmodule InsertSelectDisjointDestination do
+    use Ecto.Schema
+
+    @primary_key false
+    schema "insert_select_disjoint_destination" do
+      field :only_destination, :string
+      field :a, :string
+      field :c, :string, source: :dst_c
+      field :b, :string, source: :dst_b
+    end
+  end
+
   test "defines child_spec/1" do
     assert TestRepo.child_spec([]) == %{
              id: TestRepo,
@@ -880,6 +904,56 @@ defmodule Ecto.RepoTest do
 
       assert_raise ArgumentError,
                    ~r/cannot generate a fields list for insert_all from the given source query:/,
+                   fn -> TestRepo.insert_all(InsertSelectRenamed, query) end
+    end
+
+    test "maps a reordered source subset independently of destination field order" do
+      query =
+        from s in InsertSelectDisjointSource,
+          select: %{map(s, [:b, :c, :a]) | a: fragment("'x'")}
+
+      TestRepo.insert_all(InsertSelectDisjointDestination, query)
+
+      assert_received {:insert_all, %{header: [:dst_b, :dst_c, :a]},
+                       {%Ecto.Query{select: %{fields: fields}}, _params}}
+
+      assert [
+               {{:., _, [{:&, _, [0]}, :src_b]}, [], []},
+               {{:., _, [{:&, _, [0]}, :src_c]}, [], []},
+               {:fragment, _, _}
+             ] = fields
+    end
+
+    test "allows destination-only map updates and reports source-only fields" do
+      query =
+        from s in InsertSelectDisjointSource,
+          select: %{map(s, [:b, :c]) | a: s.c, only_destination: s.b}
+
+      TestRepo.insert_all(InsertSelectDisjointDestination, query)
+
+      assert_received {:insert_all, %{header: [:dst_b, :dst_c, :a, :only_destination]},
+                       {%Ecto.Query{}, _params}}
+
+      query = from s in InsertSelectDisjointSource, select: s
+
+      assert_raise ArgumentError,
+                   "cannot select unknown field `:only_source` for insert_all",
+                   fn -> TestRepo.insert_all(InsertSelectDisjointDestination, query) end
+    end
+
+    test "rejects whole schemaless bindings with a select error" do
+      query = from s in "insert_select_source", select: s
+
+      assert_raise ArgumentError,
+                   ~r/cannot generate a fields list for insert_all from the given source query:/,
+                   fn -> TestRepo.insert_all(InsertSelectRenamed, query) end
+    end
+
+    test "rejects non-atom insert select keys with a clear error" do
+      query = from s in InsertSelectSource, select: %{"name" => s.name}
+
+      assert_raise ArgumentError,
+                   "cannot select non-atom field `\"name\"` for insert_all",
                    fn -> TestRepo.insert_all(InsertSelectRenamed, query) end
     end
 
