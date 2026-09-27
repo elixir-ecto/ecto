@@ -188,6 +188,84 @@ defmodule Ecto.Repo.EmbeddedTest do
     end
   end
 
+  ## transactions
+
+  defp embed_changeset_with_prepare(embed) do
+    embed
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.prepare_changes(fn changeset ->
+      send(self(), {:prepared_in_transaction?, changeset.repo.in_transaction?()})
+      changeset
+    end)
+  end
+
+  test "does not run transaction for embeds without prepare callbacks" do
+    TestRepo.insert!(%MySchema{embed: %MyEmbed{x: "xyz"}, embeds: [%MyEmbed{x: "xyz"}]})
+    refute_received {:transaction, _, _}
+
+    embed =
+      %MyEmbed{x: "xyz"}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:sub_embed, %SubEmbed{y: "xyz"})
+
+    changeset =
+      %MySchema{id: 1, embed: %MyEmbed{x: "xyz", id: @uuid}}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:embed, embed)
+      |> Ecto.Changeset.put_embed(:embeds, [%MyEmbed{x: "abc"}])
+
+    TestRepo.update!(changeset)
+    refute_received {:transaction, _, _}
+  end
+
+  test "runs embed prepare callbacks in transaction" do
+    changeset =
+      %MySchema{}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:embed, embed_changeset_with_prepare(%MyEmbed{x: "xyz"}))
+
+    TestRepo.insert!(changeset)
+    assert_received {:transaction, _, _}
+    assert_received {:prepared_in_transaction?, true}
+
+    changeset =
+      %MySchema{id: 1}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:embed, embed_changeset_with_prepare(%MyEmbed{x: "xyz"}))
+
+    TestRepo.update!(changeset)
+    assert_received {:transaction, _, _}
+    assert_received {:prepared_in_transaction?, true}
+
+    changeset =
+      %MySchema{}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:embeds, [
+        %MyEmbed{x: "abc"},
+        embed_changeset_with_prepare(%MyEmbed{x: "xyz"})
+      ])
+
+    TestRepo.insert!(changeset)
+    assert_received {:transaction, _, _}
+    assert_received {:prepared_in_transaction?, true}
+  end
+
+  test "runs nested embed prepare callbacks in transaction" do
+    embed =
+      %MyEmbed{x: "xyz"}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:sub_embed, embed_changeset_with_prepare(%SubEmbed{y: "xyz"}))
+
+    changeset =
+      %MySchema{}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:embed, embed)
+
+    TestRepo.insert!(changeset)
+    assert_received {:transaction, _, _}
+    assert_received {:prepared_in_transaction?, true}
+  end
+
   ## update
 
   test "skips embeds on update when not changing" do

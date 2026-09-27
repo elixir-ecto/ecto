@@ -141,6 +141,20 @@ defmodule Ecto.Embedded do
 
   ## End of parameterized API
 
+  @doc false
+  def prepare?(changeset, embeds) do
+    %{changes: changes} = changeset
+
+    Enum.any?(embeds, fn embed ->
+      changes |> Map.get(embed) |> List.wrap() |> Enum.any?(&changeset_prepare?/1)
+    end)
+  end
+
+  defp changeset_prepare?(%Changeset{prepare: [_ | _]}), do: true
+
+  defp changeset_prepare?(%Changeset{data: %schema{}} = changeset),
+    do: prepare?(changeset, schema.__schema__(:embeds))
+
   # Callback invoked by repository to prepare embeds.
   #
   # It replaces the changesets for embeds inside changes
