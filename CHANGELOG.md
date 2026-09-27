@@ -12,6 +12,7 @@
   * [Ecto.Query] Fix subqueries in interpolated join filters (this changes the representation of `JoinExpr.on` fields to a `BooleanExpr`)
   * [Ecto.Query] Fix selecting lists of fields and using `map/2` from subqueries
   * [Ecto.Type] Normalize `DateTime` casts to UTC for `:time` and `:time_usec`
+  * [Ecto.Type] Normalize ISO 8601 strings with a UTC offset to UTC when casting to `:date`, `:naive_datetime` and `:naive_datetime_usec`
 
 ## v3.14.2 (2026-08-14)
 

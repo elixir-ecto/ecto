@@ -1062,9 +1062,9 @@ defmodule Ecto.Type do
         ok
 
       {:error, _} ->
-        case NaiveDateTime.from_iso8601(binary) do
+        case parse_naive_datetime(binary) do
           {:ok, naive_datetime} -> {:ok, NaiveDateTime.to_date(naive_datetime)}
-          {:error, _} -> :error
+          :error -> :error
         end
     end
   end
@@ -1199,12 +1199,8 @@ defmodule Ecto.Type do
     end
   end
 
-  defp cast_naive_datetime(binary) when is_binary(binary) do
-    case NaiveDateTime.from_iso8601(binary) do
-      {:ok, _} = ok -> ok
-      {:error, _} -> :error
-    end
-  end
+  defp cast_naive_datetime(binary) when is_binary(binary),
+    do: parse_naive_datetime(binary)
 
   defp cast_naive_datetime(%DateTime{} = datetime) do
     case cast_utc_datetime(datetime) do
@@ -1238,6 +1234,20 @@ defmodule Ecto.Type do
 
   defp cast_naive_datetime(_) do
     :error
+  end
+
+  # A string with a UTC offset is normalized to UTC, like a %DateTime{}.
+  defp parse_naive_datetime(binary) do
+    case DateTime.from_iso8601(binary) do
+      {:ok, datetime, _offset} ->
+        {:ok, DateTime.to_naive(datetime)}
+
+      {:error, _} ->
+        case NaiveDateTime.from_iso8601(binary) do
+          {:ok, _} = ok -> ok
+          {:error, _} -> :error
+        end
+    end
   end
 
   ## UTC datetime
