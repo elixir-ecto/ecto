@@ -4,6 +4,7 @@
 
 ### Enhancements
 
+  * [Ecto] Allow passing custom loader and dumper functions to `embedded_load/3` and `embedded_dump/2`
   * [Ecto.Changeset] Make `validate_length/3` count codepoints by default, aligning it with how databases typically enforce string length limits
   * [Ecto.Query] Allow assigning column names to fragment sources
 
@@ -11,7 +12,10 @@
 
   * [Ecto.Query] Fix subqueries in interpolated join filters (this changes the representation of `JoinExpr.on` fields to a `BooleanExpr`)
   * [Ecto.Query] Fix selecting lists of fields and using `map/2` from subqueries
-  * [Ecto.Type] Normalize `DateTime` casts to UTC for `:time` and `:time_usec`
+  * [Ecto.Query] Sort escaped map and struct fields for deterministic compilation output
+  * [Ecto.Repo] Fix `exists?/2` semantics for queries with combinations such as `union`, `intersect`, and `except`
+  * [Ecto.Repo] Map fields from source queries in `insert_all/3` through the destination schema, respecting column names and writable settings
+  * [Ecto.Type] Make DateTime handling in cast consistent with Elixir's standard library
 
 ## v3.14.2 (2026-08-14)
 
@@ -30,7 +34,7 @@
   * [Ecto.Repo] Enforce writable fields after `prepare_changes` callbacks
   * [Ecto.Schema] Fix autogeneration options for composite types
   * [Ecto.Schema] Avoid compile-time dependencies on modules named in `@derive`
-  * [Ecto.Type] Normalize `DateTime` casts to UTC
+  * [Ecto.Type] Normalize `DateTime` casts to UTC (note: reverted in the next release)
 
 ## v3.14.1 (2026-07-09)
 
