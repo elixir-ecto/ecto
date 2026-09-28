@@ -1069,13 +1069,6 @@ defmodule Ecto.Type do
     end
   end
 
-  defp cast_date(%DateTime{} = datetime) do
-    case cast_utc_datetime(datetime) do
-      {:ok, datetime} -> {:ok, DateTime.to_date(datetime)}
-      :error -> :error
-    end
-  end
-
   defp cast_date(%{"year" => empty, "month" => empty, "day" => empty}) when empty in ["", nil],
     do: {:ok, nil}
 
@@ -1111,13 +1104,6 @@ defmodule Ecto.Type do
     case Time.from_iso8601(binary) do
       {:ok, _} = ok -> ok
       {:error, _} -> :error
-    end
-  end
-
-  defp cast_time(%DateTime{} = datetime) do
-    case cast_utc_datetime(datetime) do
-      {:ok, datetime} -> {:ok, DateTime.to_time(datetime)}
-      :error -> :error
     end
   end
 
@@ -1203,13 +1189,6 @@ defmodule Ecto.Type do
     case NaiveDateTime.from_iso8601(binary) do
       {:ok, _} = ok -> ok
       {:error, _} -> :error
-    end
-  end
-
-  defp cast_naive_datetime(%DateTime{} = datetime) do
-    case cast_utc_datetime(datetime) do
-      {:ok, datetime} -> {:ok, DateTime.to_naive(datetime)}
-      :error -> :error
     end
   end
 

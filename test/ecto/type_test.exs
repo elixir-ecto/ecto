@@ -437,7 +437,7 @@ defmodule Ecto.TypeTest do
                {:ok, @date_unix_epoch}
 
       assert Ecto.Type.cast(:date, @non_utc_datetime) ==
-               {:ok, ~D[2020-05-31]}
+               {:ok, ~D[2020-06-01]}
 
       assert Ecto.Type.cast(:date, ~N[1970-01-01 12:23:34]) ==
                {:ok, @date_unix_epoch}
@@ -534,7 +534,7 @@ defmodule Ecto.TypeTest do
                :error
 
       assert Ecto.Type.cast(:time, @non_utc_datetime) ==
-               {:ok, ~T[22:30:07]}
+               {:ok, ~T[00:30:07]}
     end
 
     test "dump" do
@@ -611,7 +611,7 @@ defmodule Ecto.TypeTest do
       utc_datetime = DateTime.from_naive!(~N[2016-11-11 23:30:10], "Etc/UTC")
       assert Ecto.Type.cast(:time_usec, utc_datetime) == {:ok, ~T[23:30:10.000000]}
 
-      assert Ecto.Type.cast(:time_usec, @non_utc_datetime) == {:ok, ~T[22:30:07.008000]}
+      assert Ecto.Type.cast(:time_usec, @non_utc_datetime) == {:ok, ~T[00:30:07.008000]}
     end
 
     test "cast from Date" do
@@ -796,7 +796,7 @@ defmodule Ecto.TypeTest do
                {:ok, ~N[1970-01-01 00:00:10]}
 
       assert Ecto.Type.cast(:naive_datetime, @non_utc_datetime) ==
-               {:ok, ~N[2020-05-31 22:30:07]}
+               {:ok, ~N[2020-06-01 00:30:07]}
 
       assert Ecto.Type.cast(:naive_datetime, @time) == :error
       assert Ecto.Type.cast(:naive_datetime, 1) == :error
@@ -942,7 +942,7 @@ defmodule Ecto.TypeTest do
                {:ok, ~N[1970-01-01 00:00:10.000000]}
 
       assert Ecto.Type.cast(:naive_datetime_usec, @non_utc_datetime) ==
-               {:ok, ~N[2020-05-31 22:30:07.008000]}
+               {:ok, ~N[2020-06-01 00:30:07.008000]}
     end
 
     test "cast from Time" do
