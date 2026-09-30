@@ -7,6 +7,7 @@
   * [Ecto] Allow passing custom loader and dumper functions to `embedded_load/3` and `embedded_dump/2`
   * [Ecto.Changeset] Make `validate_length/3` count codepoints by default, aligning it with how databases typically enforce string length limits
   * [Ecto.Query] Allow assigning column names to fragment sources
+  * [Ecto.Query] Add PostgreSQL JSON object construction and ordered JSON aggregation with empty-array normalization (requires a compatible Ecto SQL adapter)
 
 ### Bug fixes
 

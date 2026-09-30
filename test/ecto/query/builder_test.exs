@@ -156,6 +156,116 @@ defmodule Ecto.Query.BuilderTest do
              )
   end
 
+  test "escape JSON constructors and ordered aggregates" do
+    expression =
+      quote do
+        json_agg(
+          json_build_object(%{:primary => x.primary, "name" => type(^"O'Brien", :string)}),
+          order_by: [desc_nulls_last: x.primary, asc: type(^2, :integer)]
+        )
+      end
+
+    {escaped, params} = escape(expression, [x: 0], __ENV__)
+    {ast, []} = Code.eval_quoted(escaped)
+
+    assert {:json_agg, [],
+            [
+              {:json_build_object, [],
+               [
+                 [
+                   {"primary", {{:., [], [{:&, [], [0]}, :primary]}, [], []}},
+                   {"name", {:type, [], [{:^, [], [0]}, :string]}}
+                 ]
+               ]},
+              [
+                desc_nulls_last: {{:., [], [{:&, [], [0]}, :primary]}, [], []},
+                asc: {:type, [], [{:^, [], [1]}, :integer]}
+              ]
+            ]} = ast
+
+    assert params == [{2, :integer}, {"O'Brien", :string}]
+    assert quoted_type(quote(do: json_build_object(%{})), []) == :map
+    assert quoted_type(quote(do: json_agg(x.id)), x: 0) == :any
+    assert quoted_type(quote(do: json_agg(x.id, order_by: [desc: x.id])), x: 0) == :any
+
+    {escaped, []} = escape(quote(do: json_build_object(%{})), [], __ENV__)
+    assert {{:json_build_object, [], [[]]}, []} = Code.eval_quoted(escaped)
+
+    {escaped, []} = escape(quote(do: json_agg(x.id)), [x: 0], __ENV__)
+    assert {{:json_agg, [], [_, []]}, []} = Code.eval_quoted(escaped)
+  end
+
+  test "JSON constructors reject invalid map shapes and duplicate normalized keys" do
+    expressions = [
+      quote(do: json_build_object(^%{name: "value"})),
+      quote(do: json_build_object(%{1 => x.id})),
+      quote(do: json_build_object(%{^"name" => x.id})),
+      quote(do: json_build_object(%{x | name: x.id})),
+      quote(do: json_build_object(%Post{name: x.id}))
+    ]
+
+    for expression <- expressions do
+      assert_raise Ecto.Query.CompileError, ~r/expects a literal map/, fn ->
+        escape(expression, [x: 0], __ENV__)
+      end
+    end
+
+    assert_raise Ecto.Query.CompileError, ~r/duplicate key "name"/, fn ->
+      escape(quote(do: json_build_object(%{"name" => x.id, name: x.id})), [x: 0], __ENV__)
+    end
+
+    for expression <- [
+          quote(do: json_build_object(%{nested: %{id: x.id}})),
+          quote(do: json_build_object(%{row: x})),
+          quote(do: json_agg(x))
+        ] do
+      assert_raise Ecto.Query.CompileError, ~r/expected a scalar JSON query expression/, fn ->
+        escape(expression, [x: 0], __ENV__)
+      end
+    end
+  end
+
+  test "JSON aggregates validate options, directions, and ordered windows" do
+    for options <- [
+          quote(do: :distinct),
+          quote(do: [unknown: []]),
+          quote(do: [order_by: [], order_by: []]),
+          quote(do: [order_by: ^ordering]),
+          quote(do: ^options)
+        ] do
+      assert_raise Ecto.Query.CompileError, ~r/expects a literal keyword list/, fn ->
+        escape(quote(do: json_agg(x.id, unquote(options))), [x: 0], __ENV__)
+      end
+    end
+
+    assert_raise Ecto.Query.CompileError, ~r/expected.*in `order_by`/, fn ->
+      escape(quote(do: json_agg(x.id, order_by: [invalid: x.id])), [x: 0], __ENV__)
+    end
+
+    for expression <- [
+          quote(do: over(json_agg(x.id, order_by: [desc: x.id]), [])),
+          quote(do: over(filter(json_agg(x.id, order_by: [desc: x.id]), x.primary), []))
+        ] do
+      assert_raise Ecto.Query.CompileError, ~r/aggregate-local order_by.*over\/2/, fn ->
+        escape(expression, [x: 0], __ENV__)
+      end
+    end
+
+    for expression <- [
+          quote(do: over(json_agg(x.id), [])),
+          quote(do: over(json_agg(x.id, order_by: []), [])),
+          quote(do: over(filter(json_agg(x.id), x.primary), [])),
+          quote(do: type(json_agg(x.id), :any)),
+          quote(do: type(json_build_object(%{id: x.id}), :map))
+        ] do
+      assert {_escaped, []} = escape(expression, [x: 0], __ENV__)
+    end
+
+    assert_raise Ecto.Query.CompileError, ~r/does not type check/, fn ->
+      escape(quote(do: type(json_build_object(%{id: x.id}), :integer)), [x: 0], __ENV__)
+    end
+  end
+
   test "escape json_extract_path" do
     expected = {Macro.escape(quote do: json_extract_path(&0.y(), ["a", "b"])), []}
 

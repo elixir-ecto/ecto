@@ -9,7 +9,8 @@ defmodule Ecto.Query.API do
     * Subquery operators: `any`, `all` and `exists`
     * Search functions: `like/2` and `ilike/2`
     * Null check functions: `is_nil/1`
-    * Aggregates: `count/0`, `count/1`, `avg/1`, `sum/1`, `min/1`, `max/1`
+    * Aggregates: `count/0`, `count/1`, `avg/1`, `sum/1`, `min/1`, `max/1`, `json_agg/1`, `json_agg/2`
+    * JSON construction: `json_build_object/1`
     * Date/time intervals: `datetime_add/3`, `date_add/3`, `from_now/2`, `ago/2`
     * Inside select: `struct/2`, `map/2`, `merge/2`, `selected_as/2` and literals (map, tuples, lists, etc)
     * General: `fragment/1`, `field/2`, `type/2`, `as/1`, `parent_as/1`, `selected_as/1`
@@ -264,6 +265,73 @@ defmodule Ecto.Query.API do
       from p in Post, select: count(p.id, :distinct)
   """
   def count(value, :distinct), do: doc!([value, :distinct])
+
+  @doc """
+  Builds a JSON object in the database from a literal map.
+
+      from p in Post,
+        select: json_build_object(%{id: p.id, title: p.title})
+
+  Only PostgreSQL with an Ecto SQL adapter supporting these expressions is
+  supported. Atom keys become strings, and string keys are preserved. Duplicate
+  keys after conversion, interpolated keys, runtime maps, map updates, and
+  structs are not supported. An empty map produces an empty JSON object.
+
+  Values must be scalar query expressions. For nested objects, use another
+  `json_build_object/1`. Null values remain in the object as JSON null.
+  PostgreSQL's polymorphic JSON functions cannot always infer parameter types;
+  explicitly type interpolated values:
+
+      from p in Post,
+        select: json_build_object(%{title: type(^title, :string), id: p.id})
+
+  The configured Postgrex JSON decoder must decode JSON objects to maps.
+  Returned keys are strings. Values follow database JSON conversion, not Ecto
+  schema loading; dates, custom field types, and structs are not reconstructed.
+  Unlike an ordinary map in `select`, this expression produces one SQL column.
+  Object member ordering is not guaranteed.
+  """
+  def json_build_object(map), do: doc!([map])
+
+  @doc """
+  Collects scalar query expression values into a JSON array.
+
+      from p in Post, select: json_agg(p.id)
+
+  Equivalent to `json_agg(value, [])`. See `json_agg/2` for ordering,
+  result types, and database support.
+  """
+  def json_agg(value), do: doc!([value])
+
+  @doc """
+  Collects scalar query expression values into a JSON array, optionally ordered.
+
+      from p in Post, select: json_agg(p.id, order_by: [asc: p.id])
+
+  Only PostgreSQL with an Ecto SQL adapter supporting these expressions is
+  supported. The configured Postgrex JSON decoder must decode arrays to lists.
+  Arrays may contain objects, scalars, nested arrays, and null values. Values
+  follow database JSON conversion rather than their Ecto schema types. Type
+  interpolated values explicitly, as described in `json_build_object/1`.
+
+  Empty input returns `[]`, including when `filter/2` excludes all rows. This
+  differs from native PostgreSQL `json_agg`, which returns null, and is
+  implemented by applying SQL COALESCE after the aggregate and its modifiers.
+  Null input values are included as JSON null, not omitted. Empty groups are
+  not created, and an empty outer query still returns no rows.
+
+  Options must be a literal keyword list containing only an `:order_by` list.
+  Directions and expressions follow `Ecto.Query.order_by/3`. Without local
+  ordering, or with an empty list, array order is unspecified. Outer query
+  ordering does not order aggregate elements, and ties require an explicit
+  tie-breaker if deterministic ordering is desired.
+
+  `filter/2` and unordered calls inside `over/2` are supported. PostgreSQL does
+  not support aggregate-local ordering inside `over/2`; use window ordering and
+  frame definitions instead. DISTINCT, whole-row conversion, JSONB variants,
+  and `c:Ecto.Repo.aggregate/4` support are not provided.
+  """
+  def json_agg(value, options), do: doc!([value, options])
 
   @doc """
   Takes the first value which is not null, or null if they both are.

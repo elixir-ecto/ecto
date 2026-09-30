@@ -33,6 +33,9 @@ defmodule Ecto.Query.Builder do
     count: {2, :integer},
     avg: {1, :any},
     sum: {1, :any},
+    json_agg: {1, :any},
+    json_agg: {2, :any},
+    json_build_object: {1, :map},
     row_number: {0, :integer},
     rank: {0, :integer},
     dense_rank: {0, :integer},
@@ -145,7 +148,8 @@ defmodule Ecto.Query.Builder do
   end
 
   def escape({:type, _, [{fun, _, args} = expr, type]}, _type, params_acc, vars, env)
-      when is_list(args) and fun in ~w(fragment avg count max min sum over filter)a do
+      when is_list(args) and
+             fun in ~w(fragment avg count max min sum json_agg json_build_object over filter)a do
     escape_with_type(expr, type, params_acc, vars, env)
   end
 
@@ -190,6 +194,7 @@ defmodule Ecto.Query.Builder do
           * fragments, such as fragment("foo(?)", value)
           * an arithmetic expression (+, -, *, /)
           * an aggregation or window expression (avg, count, min, max, sum, over, filter)
+          * a JSON constructor or aggregate (json_build_object, json_agg)
           * a conditional expression (coalesce)
           * access/json paths (p.column[0].field)
           * parent_as/1 (parent_as(:parent).field)
@@ -292,6 +297,57 @@ defmodule Ecto.Query.Builder do
   end
 
   # json
+  def escape({:json_build_object, _, [{:%{}, _, pairs}]} = expr, type, params_acc, vars, env)
+      when is_list(pairs) do
+    assert_type!(expr, type, :map)
+
+    {pairs, {params_acc, _keys}} =
+      Enum.map_reduce(pairs, {params_acc, MapSet.new()}, fn
+        {key, value}, {params_acc, keys} when is_atom(key) or is_binary(key) ->
+          key = if is_atom(key), do: Atom.to_string(key), else: key
+
+          if MapSet.member?(keys, key) do
+            error!("duplicate key #{inspect(key)} in json_build_object/1")
+          end
+
+          validate_json_value!(value, vars)
+          {value, params_acc} = escape(value, :any, params_acc, vars, env)
+          {{:{}, [], [key, value]}, {params_acc, MapSet.put(keys, key)}}
+
+        _, _ ->
+          error!("json_build_object/1 expects a literal map with atom or string keys")
+      end)
+
+    {{:{}, [], [:json_build_object, [], [pairs]]}, params_acc}
+  end
+
+  def escape({:json_build_object, _, [_]}, _type, _params_acc, _vars, _env) do
+    error!("json_build_object/1 expects a literal map with atom or string keys")
+  end
+
+  def escape({:json_agg, meta, [value]}, type, params_acc, vars, env) do
+    escape({:json_agg, meta, [value, []]}, type, params_acc, vars, env)
+  end
+
+  def escape({:json_agg, _, [value, options]} = expr, type, params_acc, vars, env) do
+    assert_type!(expr, type, :any)
+
+    order_by =
+      case options do
+        [] -> []
+        [order_by: order_by] when is_list(order_by) -> order_by
+        _ -> error!("json_agg/2 expects a literal keyword list with only an order_by list")
+      end
+
+    validate_json_value!(value, vars)
+    {value, params_acc} = escape(value, :any, params_acc, vars, env)
+
+    {order_by, params_acc} =
+      Ecto.Query.Builder.OrderBy.escape(:order_by, order_by, params_acc, vars, env)
+
+    {{:{}, [], [:json_agg, [], [value, order_by]]}, params_acc}
+  end
+
   def escape({:json_extract_path, _, [field, path]}, type, params_acc, vars, env) do
     validate_json_field!(field)
 
@@ -617,6 +673,19 @@ defmodule Ecto.Query.Builder do
   defp validate_json_field!(unsupported_field),
     do: error!("`#{Macro.to_string(unsupported_field)}` is not a valid json field")
 
+  defp validate_json_value!({kind, _, _} = value, _vars) when kind in [:%{}, :%] do
+    error!("expected a scalar JSON query expression, got: `#{Macro.to_string(value)}`")
+  end
+
+  defp validate_json_value!({var, _, context} = value, vars)
+       when is_atom(var) and is_atom(context) do
+    if Keyword.has_key?(vars, var) do
+      error!("expected a scalar JSON query expression, got: `#{Macro.to_string(value)}`")
+    end
+  end
+
+  defp validate_json_value!(_value, _vars), do: :ok
+
   defp wrap_nil(params, {:{}, _, [:^, _, [ix]]}, to_compare),
     do: wrap_nil(params, length(params) - ix - 1, to_compare, [])
 
@@ -688,10 +757,24 @@ defmodule Ecto.Query.Builder do
   end
 
   defp escape_window_function(expr, type, params_acc, vars, env) do
-    expr
-    |> validate_window_function!(env)
-    |> escape(type, params_acc, vars, env)
+    {expr, params_acc} =
+      expr
+      |> validate_window_function!(env)
+      |> escape(type, params_acc, vars, env)
+
+    validate_json_window!(expr)
+    {expr, params_acc}
   end
+
+  defp validate_json_window!({:{}, _, [:filter, _, [aggregate | _]]}),
+    do: validate_json_window!(aggregate)
+
+  defp validate_json_window!({:{}, _, [:json_agg, _, [_, order_by]]})
+       when order_by != [] do
+    error!("json_agg with aggregate-local order_by is not supported inside over/2")
+  end
+
+  defp validate_json_window!(_expr), do: :ok
 
   defp validate_window_function!({:fragment, _, _} = expr, _env), do: expr
 
