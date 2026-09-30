@@ -2990,6 +2990,43 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  describe ":comments option and the query cache" do
+    alias Ecto.CachingTestRepo
+
+    test "queries are cached by default" do
+      CachingTestRepo.all(MySchema)
+      assert_received {:cache_status, :cache}
+    end
+
+    test "comments disable the query cache" do
+      CachingTestRepo.all(MySchema, comments: [pre: "dyn_123"])
+      assert_received {:cache_status, :nocache}
+    end
+
+    test "explicit query_cache: true keeps caching with comments" do
+      CachingTestRepo.all(MySchema, comments: [pre: "static_tag"], query_cache: true)
+      assert_received {:cache_status, :cache}
+    end
+
+    test "explicit query_cache: false disables caching without comments" do
+      CachingTestRepo.all(MySchema, query_cache: false)
+      assert_received {:cache_status, :nocache}
+    end
+
+    test "comments from query expressions keep the default cache" do
+      MySchema |> Ecto.Query.pre_comment("from_macro") |> CachingTestRepo.all()
+      assert_received {:cache_status, :cache}
+    end
+
+    test "update_all and delete_all follow the same rule" do
+      CachingTestRepo.update_all(MySchema, [set: [x: "y"]], comments: [pre: "dyn"])
+      assert_received {:cache_status, :nocache}
+
+      CachingTestRepo.delete_all(MySchema, comments: [post: "dyn"])
+      assert_received {:cache_status, :nocache}
+    end
+  end
+
   defp select_fields(fields, ix) do
     for field <- fields do
       {{:., [writable: :always], [{:&, [], [ix]}, field]}, [], []}
