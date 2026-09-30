@@ -70,6 +70,21 @@ defmodule Ecto.Query.WindowAPI do
   def max(value), do: doc! [value]
 
   @doc """
+  Collects values into a JSON array in a window.
+
+      from p in Post,
+        select: json_agg(p.id) |> over(partition_by: p.category_id)
+
+  This function is only supported by PostgreSQL with a compatible Ecto SQL
+  adapter. Empty frames return `[]` and null values are included. Aggregate-local
+  ordering is not supported inside `over/2`; use the window's `:order_by`
+  and `:frame` to control window ordering and membership.
+
+  See `Ecto.Query.API.json_agg/2` for result types and parameter requirements.
+  """
+  def json_agg(value, options \\ []), do: doc!([value, options])
+
+  @doc """
   Defines a value based on the function and the window. See moduledoc for more information.
 
       from e in Employee, select: over(avg(e.salary), partition_by: e.depname)

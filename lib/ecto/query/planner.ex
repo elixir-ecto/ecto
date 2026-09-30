@@ -18,7 +18,7 @@ defmodule Ecto.Query.Planner do
   end
 
   @parent_as __MODULE__
-  @aggs ~w(count avg min max sum row_number rank dense_rank percent_rank cume_dist ntile lag lead first_value last_value nth_value)a
+  @aggs ~w(count avg min max sum json_agg row_number rank dense_rank percent_rank cume_dist ntile lag lead first_value last_value nth_value)a
 
   @doc """
   Converts a query to a list of joins.
@@ -1700,6 +1700,26 @@ defmodule Ecto.Query.Planner do
     {%Ecto.Query.Tagged{value: arg, tag: type, type: Ecto.Type.type(type)}, acc}
   end
 
+  defp prewalk({:json_build_object, meta, [pairs]}, kind, query, expr, acc, adapter) do
+    {pairs, acc} = prewalk(pairs, kind, query, expr, acc, adapter)
+    Enum.each(pairs, fn {_, value} -> assert_json_value!(value, query) end)
+    {{:json_build_object, meta, [pairs]}, acc}
+  end
+
+  defp prewalk({:json_agg, meta, [value, order_by]}, kind, query, expr, acc, adapter) do
+    {value, acc} = prewalk(value, kind, query, expr, acc, adapter)
+    assert_json_value!(value, query)
+    {order_by, acc} = prewalk(order_by, kind, query, expr, acc, adapter)
+    {{:json_agg, meta, [value, order_by]}, acc}
+  end
+
+  defp prewalk({:over, meta, [call, window]}, kind, query, expr, acc, adapter) do
+    {call, acc} = prewalk(call, kind, query, expr, acc, adapter)
+    assert_json_window!(call, query)
+    {window, acc} = prewalk(window, kind, query, expr, acc, adapter)
+    {{:over, meta, [call, window]}, acc}
+  end
+
   defp prewalk({:json_extract_path, meta, [json_field, path]}, kind, query, expr, acc, _adapter) do
     {{:., dot_meta, [left, field]}, expr_meta, []} = json_field
     {ix, ix_expr, ix_query} = get_ix!(left, kind, query)
@@ -1921,6 +1941,20 @@ defmodule Ecto.Query.Planner do
   end
 
   # Expression handling
+
+  defp collect_fields(
+         {fun, _, _} = expr,
+         fields,
+         from,
+         _query,
+         _take,
+         _keep_literals?,
+         _drop
+       )
+       when fun in [:json_build_object, :json_agg] do
+    type = if fun == :json_build_object, do: :map, else: :any
+    {{:value, type}, [expr | fields], from}
+  end
 
   defp collect_fields(
          {agg, _, [{{:., dot_meta, [{:&, _, [_]}, _]}, _, []} | _]} = expr,
@@ -2186,6 +2220,21 @@ defmodule Ecto.Query.Planner do
   defp collect_fields(expr, fields, from, _query, _take, _keep_literals?, _drop) do
     {{:value, :any}, [expr | fields], from}
   end
+
+  defp assert_json_window!({:filter, _, [aggregate, _]}, query),
+    do: assert_json_window!(aggregate, query)
+
+  defp assert_json_window!({:json_agg, _, [_, [_ | _]]}, query) do
+    error!(query, "json_agg with aggregate-local order_by is not supported inside over/2")
+  end
+
+  defp assert_json_window!(_expr, _query), do: :ok
+
+  defp assert_json_value!({kind, _, _} = value, query) when kind in [:&, :%{}, :%] do
+    error!(query, "expected a scalar JSON query expression, got: `#{Macro.to_string(value)}`")
+  end
+
+  defp assert_json_value!(_value, _query), do: :ok
 
   defp collect_kv([{key, value} | elems], fields, from, query, take, keep_literals?, acc) do
     {key, fields, from} = collect_fields(key, fields, from, query, take, keep_literals?, %{})

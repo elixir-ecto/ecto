@@ -3098,6 +3098,112 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  describe "JSON expressions" do
+    test "constructors and field aggregates retain one column and JSON result types" do
+      query =
+        from p in Post,
+          select: %{
+            object: json_build_object(%{title: p.title, nested: json_build_object(%{id: p.id})}),
+            array: json_agg(p.visits, order_by: [desc: p.title]),
+            filtered: filter(json_agg(p.visits), p.visits > 0),
+            windowed: over(filter(json_agg(p.visits), p.visits > 0), partition_by: p.title)
+          }
+
+      {query, _, _, select} = normalize_with_params(query)
+      assert length(query.select.fields) == 4
+      assert {:map, types} = select.postprocess
+      assert types[:object] == {:value, :map}
+      assert types[:array] == {:value, :any}
+      assert types[:filtered] == {:value, :any}
+      assert types[:windowed] == {:value, :any}
+      assert Macro.to_string(query.select.expr) =~ "post_title"
+    end
+
+    test "JSON aliases and types survive source subqueries and CTEs" do
+      inner =
+        from p in Post,
+          select: %{
+            object: json_build_object(%{title: p.title}),
+            array: json_agg(p.visits)
+          }
+
+      for query <- [
+            from(s in subquery(inner), select: %{object: s.object, array: s.array}),
+            from(s in "json_values", select: %{object: type(s.object, :map), array: s.array})
+            |> with_cte("json_values", as: ^inner)
+          ] do
+        {query, _, _, select} = normalize_with_params(query)
+        assert length(query.select.fields) == 2
+        assert select.postprocess == {:map, [object: {:value, :map}, array: {:value, :any}]}
+      end
+
+      {query, _, _, select} =
+        from(p in Post, select: %{title: p.title})
+        |> select_merge([p], %{object: json_build_object(%{title: p.title})})
+        |> normalize_with_params()
+
+      assert length(query.select.fields) == 2
+      assert select.postprocess == {:map, [title: {:value, :string}, object: {:value, :map}]}
+    end
+
+    test "correlated scalar JSON subqueries number parameters and resolve parent bindings" do
+      child =
+        from c in Comment,
+          where: c.post_id == parent_as(:post).id and c.text != ^"excluded",
+          select:
+            json_agg(
+              json_build_object(%{text: c.text, extra: type(^"value", :string)}),
+              order_by: [desc: c.id]
+            )
+
+      {query, params, _, select} =
+        from(p in Post, as: :post, limit: 100, select: %{id: p.id, comments: subquery(child)})
+        |> normalize_with_params()
+
+      assert params == ["value", "excluded"]
+      assert length(query.select.fields) == 2
+      assert {:map, types} = select.postprocess
+      assert types[:comments] == {:value, :any}
+      assert Enum.any?(query.select.fields, &match?(%Ecto.SubQuery{}, &1))
+    end
+
+    test "selected_as wraps JSON expressions without changing their type" do
+      {_, _, _, select} =
+        from(p in Post, select: selected_as(json_build_object(%{id: p.id}), :object))
+        |> normalize_with_params()
+
+      assert select.postprocess == {:value, :map}
+    end
+
+    test "dynamic composition cannot introduce whole rows or ordered window aggregates" do
+      row = dynamic([p], p)
+      object = dynamic([p], json_build_object(%{row: ^row}))
+
+      assert_raise Ecto.QueryError, ~r/expected a scalar JSON query expression/, fn ->
+        from(p in Post, select: ^object) |> normalize()
+      end
+
+      array = dynamic([p], json_agg(^row))
+
+      assert_raise Ecto.QueryError, ~r/expected a scalar JSON query expression/, fn ->
+        from(p in Post, select: ^array) |> normalize()
+      end
+
+      ordered = dynamic([p], json_agg(p.visits, order_by: [asc: p.id]))
+      windowed = dynamic([p], over(filter(^ordered, p.visits > 0), []))
+
+      assert_raise Ecto.QueryError, ~r/aggregate-local order_by.*over\/2/, fn ->
+        from(p in Post, select: ^windowed) |> normalize()
+      end
+
+      object = dynamic([p], json_build_object(%{window: ^windowed}))
+
+      assert_raise Ecto.QueryError, ~r/aggregate-local order_by.*over\/2/, fn ->
+        from(p in Post, select: ^object) |> normalize()
+      end
+    end
+  end
+
   describe "selected aliases" do
     test "with group_by" do
       # defined alias

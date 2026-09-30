@@ -11,6 +11,15 @@ defmodule Ecto.Query.Builder.DynamicTest do
   end
 
   describe "fully_expand/2" do
+    test "JSON expressions with nested dynamics and typed parameters" do
+      object = dynamic([p], json_build_object(%{title: p.title, label: type(^"label", :string)}))
+      aggregate = dynamic([p], json_agg(^object, order_by: [desc: p.id]))
+      assert {expr, _, params, [], _, _} = fully_expand(query(), aggregate)
+      assert {:json_agg, [], [{:json_build_object, [], [pairs]}, [_]]} = expr
+      assert {"label", {:type, [], [{:^, [], [0]}, :string]}} in pairs
+      assert params == [{"label", :string}]
+    end
+
     test "without params" do
       dynamic = dynamic([p], p.foo == true)
       assert {expr, _, params, [], _, _} = fully_expand(query(), dynamic)

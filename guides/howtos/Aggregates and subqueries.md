@@ -19,7 +19,7 @@ Behind the scenes, the query above translates to:
 MyApp.Repo.one(from p in MyApp.Post, select: avg(p.visits))
 ```
 
-The `c:Ecto.Repo.aggregate/4` function supports any of the aggregate operations listed in the `Ecto.Query.API` module.
+The `c:Ecto.Repo.aggregate/4` function supports `:count`, `:avg`, `:sum`, `:min`, and `:max`. Other query aggregates, such as `json_agg`, must be used in a query's `select`.
 
 At first, it looks like the implementation of `aggregate/4` is quite straight-forward. You could even start to wonder why it was added to Ecto in the first place. However, complexities start to arise on queries that rely on `limit`, `offset` or `distinct` clauses.
 
@@ -135,3 +135,36 @@ from l in Lending,
   join: v in assoc(l, :visitor),
   select: {b.name, v.name}
 ```
+
+## JSON aggregates
+
+With PostgreSQL and an Ecto SQL adapter supporting JSON aggregates, we can collect values into a JSON array using `json_agg`:
+
+```elixir
+query =
+  from p in MyApp.Post,
+    select: json_agg(p.id, order_by: [asc: p.id])
+
+MyApp.Repo.all(query)
+#=> [[1, 2, 3]]
+```
+
+In this example, the posts have IDs 1, 2, and 3. The aggregate returns one row containing an array, so `Repo.all` returns a list containing that array. Ordering inside `json_agg` controls the array's order; ordering the query itself does not.
+
+We can also combine `json_agg` with `json_build_object` to collect several fields from each post:
+
+```elixir
+query =
+  from p in MyApp.Post,
+    select:
+      json_agg(
+        json_build_object(%{id: p.id, title: p.title}),
+        order_by: [asc: p.id]
+      )
+
+MyApp.Repo.all(query)
+```
+
+Each object in the array has string keys, such as `"id"` and `"title"`. If there are no posts, `json_agg` returns `[]`, so `Repo.all` returns `[[]]`. This differs from native PostgreSQL `json_agg`, which returns `nil` for empty input. Null input values are included in the array.
+
+See `Ecto.Query.API.json_agg/2` and `Ecto.Query.API.json_build_object/1` for supported expressions, parameter types, and database requirements.
