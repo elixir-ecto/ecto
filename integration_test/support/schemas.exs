@@ -49,6 +49,8 @@ defmodule Ecto.Integration.Post do
     has_many :comments, Ecto.Integration.Comment, on_delete: :delete_all, on_replace: :delete
     has_many :force_comments, Ecto.Integration.Comment, on_replace: :delete_if_exists
     has_many :ordered_comments, Ecto.Integration.Comment, preload_order: [:text]
+    has_one :first_comment, Ecto.Integration.Comment, preload_order: [asc: :id]
+    has_one :last_comment, Ecto.Integration.Comment, preload_order: [desc: :id]
     # The post<->permalink relationship should be marked as uniq
     has_one :permalink, Ecto.Integration.Permalink, on_delete: :delete_all, on_replace: :delete
     has_one :force_permalink, Ecto.Integration.Permalink, on_replace: :delete_if_exists
