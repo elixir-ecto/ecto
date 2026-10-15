@@ -31,7 +31,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.insert(:comment, changeset)
 
-    assert multi.names == MapSet.new([:comment])
+    assert multi.names == %{:comment => true}
     assert multi.operations == [{:comment, {:changeset, %{changeset | action: :insert}, []}}]
   end
 
@@ -43,7 +43,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.insert(:comment, struct)
 
-    assert multi.names == MapSet.new([:comment])
+    assert multi.names == %{:comment => true}
     assert multi.operations == [{:comment, {:changeset, %{changeset | action: :insert}, []}}]
   end
 
@@ -55,7 +55,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.insert(:fun, fun)
 
-    assert multi.names == MapSet.new([:fun])
+    assert multi.names == %{:fun => true}
     assert [{:fun, {:run, _fun}}] = multi.operations
   end
 
@@ -66,7 +66,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.update(:comment, changeset)
 
-    assert multi.names == MapSet.new([:comment])
+    assert multi.names == %{:comment => true}
     assert multi.operations == [{:comment, {:changeset, %{changeset | action: :update}, []}}]
   end
 
@@ -78,7 +78,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.update(:fun, fun)
 
-    assert multi.names == MapSet.new([:fun])
+    assert multi.names == %{:fun => true}
     assert [{:fun, {:run, _fun}}] = multi.operations
   end
 
@@ -89,7 +89,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.insert_or_update(:comment, changeset)
 
-    assert multi.names == MapSet.new([:comment])
+    assert multi.names == %{:comment => true}
     assert multi.operations == [{:comment, {:changeset, %{changeset | action: :insert}, []}}]
   end
 
@@ -98,7 +98,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.inspect()
 
-    assert multi.names == MapSet.new([])
+    assert multi.names == %{}
     assert multi.operations == [{:inspect, {:inspect, []}}]
   end
 
@@ -110,7 +110,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.insert_or_update(:comment, changeset)
 
-    assert multi.names == MapSet.new([:comment])
+    assert multi.names == %{:comment => true}
     assert multi.operations == [{:comment, {:changeset, %{changeset | action: :update}, []}}]
   end
 
@@ -122,7 +122,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.insert_or_update(:fun, fun)
 
-    assert multi.names == MapSet.new([:fun])
+    assert multi.names == %{:fun => true}
     assert [{:fun, {:run, _fun}}] = multi.operations
   end
 
@@ -133,7 +133,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.delete(:comment, changeset)
 
-    assert multi.names == MapSet.new([:comment])
+    assert multi.names == %{:comment => true}
     assert multi.operations == [{:comment, {:changeset, %{changeset | action: :delete}, []}}]
   end
 
@@ -145,7 +145,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.delete(:comment, struct)
 
-    assert multi.names == MapSet.new([:comment])
+    assert multi.names == %{:comment => true}
     assert multi.operations == [{:comment, {:changeset, %{changeset | action: :delete}, []}}]
   end
 
@@ -157,7 +157,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.delete(:fun, fun)
 
-    assert multi.names == MapSet.new([:fun])
+    assert multi.names == %{:fun => true}
     assert [{:fun, {:run, _fun}}] = multi.operations
   end
 
@@ -166,7 +166,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.one(:comment, Comment)
 
-    assert multi.names == MapSet.new([:comment])
+    assert multi.names == %{:comment => true}
     assert [{:comment, {:run, _fun}}] = multi.operations
   end
 
@@ -177,7 +177,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.one(:comment, fun)
 
-    assert multi.names == MapSet.new([:comment])
+    assert multi.names == %{:comment => true}
     assert [{:comment, {:run, _fun}}] = multi.operations
   end
 
@@ -186,7 +186,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.all(:comments, Comment)
 
-    assert multi.names == MapSet.new([:comments])
+    assert multi.names == %{:comments => true}
     assert [{:comments, {:run, _fun}}] = multi.operations
   end
 
@@ -197,7 +197,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.all(:comments, fun)
 
-    assert multi.names == MapSet.new([:comments])
+    assert multi.names == %{:comments => true}
     assert [{:comments, {:run, _fun}}] = multi.operations
   end
 
@@ -206,7 +206,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.exists?(:comment, Comment)
 
-    assert multi.names == MapSet.new([:comment])
+    assert multi.names == %{:comment => true}
     assert [{:comment, {:run, _fun}}] = multi.operations
   end
 
@@ -217,7 +217,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.exists?(:comment, fun)
 
-    assert multi.names == MapSet.new([:comment])
+    assert multi.names == %{:comment => true}
     assert [{:comment, {:run, _fun}}] = multi.operations
   end
 
@@ -226,7 +226,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.error(:oops, :value)
 
-    assert multi.names == MapSet.new([:oops])
+    assert multi.names == %{:oops => true}
     assert multi.operations == [{:oops, {:error, :value}}]
   end
 
@@ -237,7 +237,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.run(:fun, fun)
 
-    assert multi.names == MapSet.new([:fun])
+    assert multi.names == %{:fun => true}
     assert multi.operations == [{:fun, {:run, fun}}]
   end
 
@@ -248,7 +248,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.run({:fun, 3}, fun)
 
-    assert multi.names == MapSet.new([{:fun, 3}])
+    assert multi.names == %{{:fun, 3} => true}
     assert multi.operations == [{{:fun, 3}, {:run, fun}}]
   end
 
@@ -259,7 +259,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.run(~c"myFunction", fun)
 
-    assert multi.names == MapSet.new([~c"myFunction"])
+    assert multi.names == %{~c"myFunction" => true}
     assert multi.operations == [{~c"myFunction", {:run, fun}}]
   end
 
@@ -268,7 +268,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.run(:fun, __MODULE__, :run_ok, [])
 
-    assert multi.names == MapSet.new([:fun])
+    assert multi.names == %{:fun => true}
     assert multi.operations == [{:fun, {:run, {__MODULE__, :run_ok, []}}}]
   end
 
@@ -277,7 +277,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.insert_all(:comments, Comment, [[x: 2]])
 
-    assert multi.names == MapSet.new([:comments])
+    assert multi.names == %{:comments => true}
     assert [{:comments, {:insert_all, Comment, [[x: 2]], []}}] = multi.operations
   end
 
@@ -288,7 +288,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.insert_all(:fun, Comment, fun_entries)
 
-    assert multi.names == MapSet.new([:fun])
+    assert multi.names == %{:fun => true}
     assert [{:fun, {:run, _fun}}] = multi.operations
 
     assert {:ok, changes} = TestRepo.transact(multi)
@@ -302,7 +302,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.update_all(:comments, Comment, set: [x: 2])
 
-    assert multi.names == MapSet.new([:comments])
+    assert multi.names == %{:comments => true}
     assert [{:comments, {:update_all, query, updates, []}}] = multi.operations
     assert updates == [set: [x: 2]]
     assert query == Ecto.Queryable.to_query(Comment)
@@ -315,7 +315,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.update_all(:fun, fun_queryable, [])
 
-    assert multi.names == MapSet.new([:fun])
+    assert multi.names == %{:fun => true}
     assert [{:fun, {:run, _fun}}] = multi.operations
 
     assert {:ok, changes} = TestRepo.transact(multi)
@@ -329,7 +329,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.delete_all(:comments, Comment)
 
-    assert multi.names == MapSet.new([:comments])
+    assert multi.names == %{:comments => true}
     assert [{:comments, {:delete_all, query, []}}] = multi.operations
     assert query == Ecto.Queryable.to_query(Comment)
   end
@@ -341,7 +341,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.delete_all(:fun, fun)
 
-    assert multi.names == MapSet.new([:fun])
+    assert multi.names == %{:fun => true}
     assert [{:fun, {:run, _fun}}] = multi.operations
 
     assert {:ok, changes} = TestRepo.transact(multi)
@@ -357,12 +357,12 @@ defmodule Ecto.MultiTest do
 
     merged = Multi.append(lhs, rhs)
     operations = Keyword.keys(merged.operations)
-    assert merged.names == MapSet.new([:one, :two, :three, :four])
+    assert merged.names == %{:one => true, :two => true, :three => true, :four => true}
     assert operations == [:four, :three, :two, :one]
 
     merged = Multi.prepend(lhs, rhs)
     operations = Keyword.keys(merged.operations)
-    assert merged.names == MapSet.new([:one, :two, :three, :four])
+    assert merged.names == %{:one => true, :two => true, :three => true, :four => true}
     assert operations == [:two, :one, :four, :three]
   end
 
@@ -419,7 +419,7 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.put(name, value)
 
-    assert multi.names == MapSet.new([name])
+    assert multi.names == %{name => true}
     assert multi.operations == [{name, {:put, value}}]
   end
 

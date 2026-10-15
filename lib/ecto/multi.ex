@@ -124,7 +124,7 @@ defmodule Ecto.Multi do
   alias __MODULE__
   alias Ecto.Changeset
 
-  defstruct operations: [], names: MapSet.new()
+  defstruct operations: [], names: %{}
 
   @typedoc """
   Map of changes made so far during the current transaction. For any Multi
@@ -147,7 +147,10 @@ defmodule Ecto.Multi do
            | {:insert_all, schema_or_source, [map | Keyword.t()], Keyword.t()}
   @typep operations :: [{name, operation}]
 
-  @typep names :: MapSet.t()
+  # A plain map is used instead of MapSet, as MapSet's internal :sets
+  # representation is opaque and Dialyzer reports opaqueness violations
+  # when the struct default above gets inlined into callers.
+  @typep names :: %{optional(name) => true}
 
   @typedoc """
   Name of an operation in the Multi. Can be any term, as long as it is unique
@@ -219,9 +222,9 @@ defmodule Ecto.Multi do
     %{names: lhs_names, operations: lhs_ops} = lhs
     %{names: rhs_names, operations: rhs_ops} = rhs
 
-    case MapSet.intersection(lhs_names, rhs_names) |> MapSet.to_list() do
+    case common_names(lhs_names, rhs_names) do
       [] ->
-        %Multi{names: MapSet.union(lhs_names, rhs_names), operations: joiner.(lhs_ops, rhs_ops)}
+        %Multi{names: Map.merge(lhs_names, rhs_names), operations: joiner.(lhs_ops, rhs_ops)}
 
       common ->
         raise ArgumentError, """
@@ -746,10 +749,10 @@ defmodule Ecto.Multi do
   defp add_operation(%Multi{} = multi, name, operation) do
     %{operations: operations, names: names} = multi
 
-    if MapSet.member?(names, name) do
+    if Map.has_key?(names, name) do
       raise "#{Kernel.inspect(name)} is already a member of the Ecto.Multi: \n#{Kernel.inspect(multi)}"
     else
-      %{multi | operations: [{name, operation} | operations], names: MapSet.put(names, name)}
+      %{multi | operations: [{name, operation} | operations], names: Map.put(names, name, true)}
     end
   end
 
@@ -942,16 +945,20 @@ defmodule Ecto.Multi do
   defp apply_run_fun(fun, repo, acc), do: apply(fun, [repo, acc])
 
   defp merge_results(changes, new_changes, names) do
-    new_names = new_changes |> Map.keys() |> MapSet.new()
+    new_names = Map.new(new_changes, fn {name, _} -> {name, true} end)
 
-    case MapSet.intersection(names, new_names) |> MapSet.to_list() do
+    case common_names(names, new_names) do
       [] ->
-        {Map.merge(changes, new_changes), MapSet.union(names, new_names)}
+        {Map.merge(changes, new_changes), Map.merge(names, new_names)}
 
       common ->
         raise "cannot merge Multi; the following operations were found in " <>
                 "both Ecto.Multi: #{Kernel.inspect(common)}"
     end
+  end
+
+  defp common_names(lhs_names, rhs_names) do
+    for {name, true} <- lhs_names, Map.has_key?(rhs_names, name), do: name
   end
 
   defp operation_fun({:update_all, queryable_fun, updates}, opts) do
