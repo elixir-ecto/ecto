@@ -83,18 +83,25 @@ defmodule Ecto.Query.Builder.Filter do
   The callback applied by `build/4` to build the query.
   """
   @spec apply(Ecto.Queryable.t, :where | :having, term) :: Ecto.Query.t
-  def apply(query, _, %{expr: true}) do
-    query
-  end
   def apply(%Ecto.Query{wheres: wheres} = query, :where, expr) do
-    %{query | wheres: wheres ++ [expr]}
+    %{query | wheres: add_filter(wheres, expr)}
   end
   def apply(%Ecto.Query{havings: havings} = query, :having, expr) do
-    %{query | havings: havings ++ [expr]}
+    %{query | havings: add_filter(havings, expr)}
   end
   def apply(query, kind, expr) do
     apply(Ecto.Queryable.to_query(query), kind, expr)
   end
+
+  # A runtime `true` can only be skipped when it is ANDed onto existing
+  # filters. On its own it must be kept, as a later `or_where`/`or_having`
+  # is combined with it, but a filter ANDed onto it can replace it.
+  defp add_filter([_ | _] = exprs, %{expr: true, op: :and}),
+    do: exprs
+  defp add_filter([%Ecto.Query.BooleanExpr{expr: true, params: [], subqueries: []}], %{op: :and} = expr),
+    do: [expr]
+  defp add_filter(exprs, expr),
+    do: exprs ++ [expr]
 
   @doc """
   Builds a filter based on the given arguments.
