@@ -61,7 +61,39 @@ defmodule Ecto.Query.Builder.FilterTest do
   describe "at runtime" do
     test "accepts empty keyword lists" do
       query = where(from(p in "posts"), [p], ^[])
-      assert query.wheres == []
+      assert [%{expr: true, op: :and}] = query.wheres
+
+      query = where(from(p in "posts", where: p.id == 1), [p], ^[])
+      assert [%{expr: {:==, _, _}}] = query.wheres
+    end
+
+    test "keeps interpolated booleans combined with or" do
+      a = false
+      b = true
+      query = from(p in "posts", where: ^a, or_where: ^b)
+      assert [%{expr: false, op: :and}, %{expr: true, op: :or}] = query.wheres
+
+      query = from(p in "posts", where: ^b, or_where: ^a)
+      assert [%{expr: true, op: :and}, %{expr: false, op: :or}] = query.wheres
+
+      query = from(p in "posts", having: ^a, or_having: ^b)
+      assert [%{expr: false, op: :and}, %{expr: true, op: :or}] = query.havings
+
+      query = from(p in "posts", having: ^b, or_having: ^a)
+      assert [%{expr: true, op: :and}, %{expr: false, op: :or}] = query.havings
+    end
+
+    test "drops interpolated true when it is and-ed with other filters" do
+      bool = true
+
+      query = from(p in "posts", where: p.id == 1, where: ^bool)
+      assert [%{expr: {:==, _, _}}] = query.wheres
+
+      query = from(p in "posts", where: ^bool, where: p.id == 1)
+      assert [%{expr: {:==, _, _}, op: :and}] = query.wheres
+
+      query = from(p in "posts", having: ^bool, having: p.id == 1, having: ^bool)
+      assert [%{expr: {:==, _, _}, op: :and}] = query.havings
     end
 
     test "accepts keyword lists" do
