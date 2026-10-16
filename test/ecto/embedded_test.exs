@@ -19,6 +19,7 @@ defmodule Ecto.EmbeddedTest do
       field :name, :string
       embeds_one :profile, Profile, on_replace: :delete
       embeds_one :post, Post
+      embeds_one :virtual_post, Post, virtual: true
       embeds_many :posts, Post, on_replace: :delete
     end
   end
@@ -45,7 +46,7 @@ defmodule Ecto.EmbeddedTest do
 
   test "__schema__" do
     assert Author.__schema__(:embeds) ==
-      [:profile, :post, :posts]
+      [:profile, :post, :virtual_post, :posts]
 
     assert Author.__schema__(:embed, :profile) ==
       %Embedded{field: :profile, cardinality: :one, owner: Author, on_replace: :delete, related: Profile}

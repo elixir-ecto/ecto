@@ -6,6 +6,7 @@ defmodule Ecto.Integration.RepoTest do
 
   alias Ecto.Integration.Post
   alias Ecto.Integration.Order
+  alias Ecto.Integration.Item
   alias Ecto.Integration.User
   alias Ecto.Integration.Comment
   alias Ecto.Integration.Permalink
@@ -1331,8 +1332,15 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "virtual field" do
-    assert %Post{id: id} = TestRepo.insert!(%Post{title: "1"})
+    assert %Post{id: id} = TestRepo.insert!(%Post{title: "1", temp: "special"})
     assert TestRepo.get(Post, id).temp == "temp"
+  end
+
+  test "virtual embed" do
+    assert %Order{id: id, last_seen_item: %Item{reference: "1"}} =
+      TestRepo.insert!(%Order{last_seen_item: %Item{reference: "1"}})
+
+    assert %{last_seen_item: nil} = TestRepo.get(Order, id)
   end
 
   ## Query syntax
