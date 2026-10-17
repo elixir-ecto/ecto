@@ -1168,27 +1168,10 @@ defmodule Ecto.Type do
 
   ## Naive datetime
 
-  defp cast_naive_datetime("-" <> rest) do
-    with {:ok, naive_datetime} <- cast_naive_datetime(rest) do
-      {:ok, %{naive_datetime | year: naive_datetime.year * -1}}
-    end
-  end
-
-  defp cast_naive_datetime(
-         <<year::4-bytes, ?-, month::2-bytes, ?-, day::2-bytes, sep, hour::2-bytes, ?:,
-           minute::2-bytes>>
-       )
-       when sep in [?\s, ?T] do
-    with {:ok, date} <- cast_date(to_i(year), to_i(month), to_i(day)),
-         {:ok, time} <- cast_time(to_i(hour), to_i(minute), 0, nil) do
-      NaiveDateTime.new(date, time)
-    end
-  end
-
   defp cast_naive_datetime(binary) when is_binary(binary) do
     case NaiveDateTime.from_iso8601(binary) do
       {:ok, _} = ok -> ok
-      {:error, _} -> :error
+      {:error, _} -> cast_naive_datetime_without_seconds(binary)
     end
   end
 
@@ -1219,24 +1202,34 @@ defmodule Ecto.Type do
     :error
   end
 
-  ## UTC datetime
+  # The ISO 8601 parsers already handle negative years, so the sign
+  # only needs special handling for datetimes without seconds.
+  defp cast_naive_datetime_without_seconds("-" <> rest) do
+    case cast_naive_datetime_without_seconds(rest) do
+      {:ok, %{year: year} = naive_datetime} when year >= 0 ->
+        {:ok, %{naive_datetime | year: -year}}
 
-  defp cast_utc_datetime("-" <> rest) do
-    with {:ok, utc_datetime} <- cast_utc_datetime(rest) do
-      {:ok, %{utc_datetime | year: utc_datetime.year * -1}}
+      _ ->
+        :error
     end
   end
 
-  defp cast_utc_datetime(
+  defp cast_naive_datetime_without_seconds(
          <<year::4-bytes, ?-, month::2-bytes, ?-, day::2-bytes, sep, hour::2-bytes, ?:,
            minute::2-bytes>>
        )
        when sep in [?\s, ?T] do
     with {:ok, date} <- cast_date(to_i(year), to_i(month), to_i(day)),
          {:ok, time} <- cast_time(to_i(hour), to_i(minute), 0, nil) do
-      DateTime.new(date, time, "Etc/UTC")
+      NaiveDateTime.new(date, time)
     end
   end
+
+  defp cast_naive_datetime_without_seconds(_) do
+    :error
+  end
+
+  ## UTC datetime
 
   defp cast_utc_datetime(binary) when is_binary(binary) do
     case DateTime.from_iso8601(binary) do
@@ -1250,7 +1243,10 @@ defmodule Ecto.Type do
         end
 
       {:error, _} ->
-        :error
+        case cast_naive_datetime_without_seconds(binary) do
+          {:ok, naive_datetime} -> {:ok, DateTime.from_naive!(naive_datetime, "Etc/UTC")}
+          :error -> :error
+        end
     end
   end
 

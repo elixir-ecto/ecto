@@ -812,6 +812,8 @@ defmodule Ecto.TypeTest do
       assert Ecto.Type.cast(:naive_datetime, "-2015-01-23 23:50") == {:ok, datetime_zero}
       assert Ecto.Type.cast(:naive_datetime, "-2015-01-23 23:50:07") == {:ok, datetime}
       assert Ecto.Type.cast(:naive_datetime, "-2015-01-23 23:50:07bad") == :error
+      assert Ecto.Type.cast(:naive_datetime, "--2015-01-23 23:50") == :error
+      assert Ecto.Type.cast(:naive_datetime, "--2015-01-23 23:50:07") == :error
     end
 
     test "dump" do
@@ -1132,6 +1134,19 @@ defmodule Ecto.TypeTest do
                {:ok, ~U[-2015-01-23 23:50:07Z]}
 
       assert Ecto.Type.cast(:utc_datetime, "-2015-01-23 23:50:07bad") == :error
+      assert Ecto.Type.cast(:utc_datetime, "--2015-01-23 23:50") == :error
+      assert Ecto.Type.cast(:utc_datetime, "--2015-01-23 23:50:07") == :error
+    end
+
+    test "cast negative datetime with offset" do
+      assert Ecto.Type.cast(:utc_datetime, "-2015-01-23T23:50:07+01:00") ==
+               {:ok, ~U[-2015-01-23 22:50:07Z]}
+
+      assert Ecto.Type.cast(:utc_datetime, "-2015-12-31T23:50:07-01:00") ==
+               {:ok, ~U[-2014-01-01 00:50:07Z]}
+
+      assert Ecto.Type.cast(:utc_datetime, "-0001-01-01T00:50:07+01:00") ==
+               {:ok, ~U[-0002-12-31 23:50:07Z]}
     end
 
     test "dump" do
