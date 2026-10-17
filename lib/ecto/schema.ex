@@ -1600,9 +1600,8 @@ defmodule Ecto.Schema do
   @doc ~S"""
   Indicates an embedding of a schema.
 
-  The current schema has zero or one records of the other schema embedded
-  inside of it. It uses a field similar to the `:map` type for storage,
-  but allows embeds to have all the things regular schema can.
+  The current schema keeps zero or a single record of the embedded schema
+  directly inside of it.
 
   You must declare your `embeds_one/3` field with type `:map` at the
   database level.
@@ -1782,8 +1781,8 @@ defmodule Ecto.Schema do
   @doc ~S"""
   Indicates an embedding of many schemas.
 
-  The current schema has zero or more records of the other schema embedded
-  inside of it. Embeds have all the things regular schemas have.
+  The current schema keeps zero or more records of the embedded schema
+  directly inside of it.
 
   It is recommended to declare your `embeds_many/3` field with type `:map`
   in your migrations, instead of using `{:array, :map}`. Ecto can work with
@@ -2117,21 +2116,24 @@ defmodule Ecto.Schema do
     if inserted_at do
       opts = if source = timestamps[:inserted_at_source], do: [source: source], else: []
 
-      opts = if writable = timestamps[:inserted_at_writable] do
-        if writable == :never do
-          raise ArgumentError, ":inserted_at_writable option cannot be set to :never as `inserted_at` will never be populated"
+      opts =
+        if writable = timestamps[:inserted_at_writable] do
+          if writable == :never do
+            raise ArgumentError,
+                  ":inserted_at_writable option cannot be set to :never as `inserted_at` will never be populated"
+          end
+
+          Keyword.put(opts, :writable, writable)
+        else
+          opts
         end
 
-        Keyword.put(opts, :writable, writable)
-      else
-        opts
-      end
-
-      opts = if on_writable_violation = timestamps[:inserted_at_on_writable_violation] do
-        Keyword.put(opts, :on_writable_violation, on_writable_violation)
-      else
-        opts
-      end
+      opts =
+        if on_writable_violation = timestamps[:inserted_at_on_writable_violation] do
+          Keyword.put(opts, :on_writable_violation, on_writable_violation)
+        else
+          opts
+        end
 
       Ecto.Schema.__field__(mod, inserted_at, type, opts)
     end
