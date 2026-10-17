@@ -657,6 +657,9 @@ defmodule Ecto.TypeTest do
       assert Ecto.Type.cast(:naive_datetime, "2015-01-23P23:50:07") == :error
       assert Ecto.Type.cast(:naive_datetime, "2015-01-23 23:50.123") == :error
       assert Ecto.Type.cast(:naive_datetime, "2015-01-23 23:50Z") == :error
+      assert Ecto.Type.cast(:naive_datetime, "abcd-01-23 23:50") == :error
+      assert Ecto.Type.cast(:naive_datetime, "2015-01-23 ab:50") == :error
+      assert Ecto.Type.cast(:naive_datetime, "2015-01-23T23:5x") == :error
 
       assert Ecto.Type.cast(:naive_datetime, %{
                "year" => "2015",
@@ -1013,6 +1016,9 @@ defmodule Ecto.TypeTest do
       assert Ecto.Type.cast(:utc_datetime, "2015-01-23P23:50:07") == :error
       assert Ecto.Type.cast(:utc_datetime, "2015-01-23 23:50.123") == :error
       assert Ecto.Type.cast(:utc_datetime, "2015-01-23 23:50Z") == :error
+      assert Ecto.Type.cast(:utc_datetime, "abcd-01-23 23:50") == :error
+      assert Ecto.Type.cast(:utc_datetime, "2015-01-23 ab:50") == :error
+      assert Ecto.Type.cast(:utc_datetime, "2015-01-23T23:5x") == :error
 
       assert Ecto.Type.cast(:utc_datetime, %{
                "year" => "2015",

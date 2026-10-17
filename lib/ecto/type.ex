@@ -1179,9 +1179,9 @@ defmodule Ecto.Type do
            minute::2-bytes>>
        )
        when sep in [?\s, ?T] do
-    case NaiveDateTime.new(to_i(year), to_i(month), to_i(day), to_i(hour), to_i(minute), 0) do
-      {:ok, _} = ok -> ok
-      _ -> :error
+    with {:ok, date} <- cast_date(to_i(year), to_i(month), to_i(day)),
+         {:ok, time} <- cast_time(to_i(hour), to_i(minute), 0, nil) do
+      NaiveDateTime.new(date, time)
     end
   end
 
@@ -1232,9 +1232,9 @@ defmodule Ecto.Type do
            minute::2-bytes>>
        )
        when sep in [?\s, ?T] do
-    case NaiveDateTime.new(to_i(year), to_i(month), to_i(day), to_i(hour), to_i(minute), 0) do
-      {:ok, naive_datetime} -> {:ok, DateTime.from_naive!(naive_datetime, "Etc/UTC")}
-      _ -> :error
+    with {:ok, date} <- cast_date(to_i(year), to_i(month), to_i(day)),
+         {:ok, time} <- cast_time(to_i(hour), to_i(minute), 0, nil) do
+      DateTime.new(date, time, "Etc/UTC")
     end
   end
 
