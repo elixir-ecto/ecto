@@ -127,8 +127,10 @@ defmodule Ecto.Schema do
 
   A field marked with `redact: true` will display a value of `**redacted**`
   when inspected in changes inside a `Ecto.Changeset` and be excluded from
-  inspect on the schema unless the schema module is tagged with
-  the option `@derive_inspect_for_redacted_fields false`.
+  inspect on the schema, unless the schema derives or implements `Inspect`
+  itself or the schema module is tagged with `@derive_inspect_for_redacted_fields false`.
+  A schema that derives `Inspect` itself must exclude redacted fields
+  explicitly, for example with `@derive {Inspect, except: [:password]}`.
 
   A schema module tagged with `@schema_redact :all_except_primary_keys` will
   redact all fields except primary keys.
