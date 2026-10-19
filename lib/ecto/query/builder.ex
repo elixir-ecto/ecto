@@ -52,7 +52,11 @@ defmodule Ecto.Query.Builder do
   which include all primitive types and custom user types. Also
   note custom user types do not show up during compilation time.
   """
-  @type quoted_type :: Ecto.Type.primitive() | {non_neg_integer, atom | Macro.t()}
+  @type quoted_type ::
+          Ecto.Type.primitive()
+          | :atom
+          | {:tuple, [quoted_type]}
+          | {non_neg_integer, atom | Macro.t()}
 
   @typedoc """
   The accumulator during escape.
