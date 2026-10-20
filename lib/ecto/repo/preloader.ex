@@ -151,7 +151,7 @@ defmodule Ecto.Repo.Preloader do
   # Then we execute queries in parallel
   defp maybe_pmap(preloaders, _repo_name, {adapter_meta, opts}) do
     if match?([_, _ | _], preloaders) and not adapter_meta.adapter.checked_out?(adapter_meta) and
-         Keyword.get(opts, :in_parallel, true) do
+         Keyword.get(opts, :in_parallel, true) and System.schedulers_online() > 1 do
       # We pass caller: self() so the ownership pool knows where
       # to fetch the connection from and set the proper timeouts.
       # Note while the ownership pool uses '$callers' from pdict,
