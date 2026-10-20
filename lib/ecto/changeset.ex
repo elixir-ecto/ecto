@@ -289,25 +289,28 @@ defmodule Ecto.Changeset do
         |> Ecto.Changeset.validate_length(...)
 
   Besides the basic types which are mentioned above, such as `:boolean` and `:string`,
-  parameterized types can also be used in schemaless changesets. They implement
-  the `Ecto.ParameterizedType` behaviour and we can create the necessary type info by
-  calling the `init/2` function.
-
-  For example, to use `Ecto.Enum` in a schemaless changeset:
+  embeds and parameterized types can also be used in schemaless changesets.
+  For parameterized types, you can call `Ecto.ParameterizedType.init/2`. For embeds,
+  call `Ecto.Embedded.one/2` or `Ecto.Embedded.many/2` accordingly. Here is an example:
 
       types = %{
         name: :string,
-        role: Ecto.ParameterizedType.init(Ecto.Enum, values: [:reader, :editor, :admin])
+        role: Ecto.ParameterizedType.init(Ecto.Enum, values: [:reader, :editor, :admin]),
+        profile: Ecto.Embedded.one(Profile)
       }
 
-      data  = %{}
-      params = %{name: "Callum", role: "reader"}
+      data = %{profile: nil}
+      params = %{name: "Callum", role: "reader", profile: %{bio: "Hello!"}}
 
       changeset =
         {data, types}
-        |> Ecto.Changeset.cast(params, Map.keys(types))
+        |> Ecto.Changeset.cast(params, [:name, :role])
+        |> Ecto.Changeset.cast_embed(:profile)
         |> Ecto.Changeset.validate_required(...)
         |> Ecto.Changeset.validate_length(...)
+
+  In the example above, `Profile` is an schema that defines a `changeset/2` function.
+  You may instead pass a custom function to the `:with` option of `cast_embed/3`.
 
   Schemaless changesets make Ecto extremely useful to cast, validate and prune data even
   if it is not meant to be persisted to the database.
@@ -1387,6 +1390,7 @@ defmodule Ecto.Changeset do
       end
 
     relation = relation!(:cast, type, key, Map.get(types, key))
+    relation = put_relation_context(relation, data, key)
     on_cast = Keyword.get_lazy(opts, :with, fn -> Relation.on_cast_default(relation) end)
     sort = opts_key_from_params(:sort_param, opts, params)
     drop = opts_key_from_params(:drop_param, opts, params)
@@ -1418,9 +1422,7 @@ defmodule Ecto.Changeset do
         missing_relation(changeset, key, required?, relation, opts)
       end
 
-    update_in(changeset.types[key], fn {type, relation} ->
-      {type, %{relation | on_cast: on_cast}}
-    end)
+    put_in(changeset.types[key], {type, %{relation | on_cast: on_cast}})
   end
 
   defp cast_params(:many, nil, sort, drop) when is_list(sort) or is_list(drop) do
@@ -1516,6 +1518,13 @@ defmodule Ecto.Changeset do
     raise ArgumentError,
           "expected `#{name}` to be an #{type} in `#{op}_#{type}`, got: `#{inspect(schema_type)}`"
   end
+
+  defp put_relation_context(%{field: nil, owner: nil} = relation, data, key) do
+    owner = if is_struct(data), do: data.__struct__, else: nil
+    %{relation | field: key, owner: owner}
+  end
+
+  defp put_relation_context(relation, _data, _key), do: relation
 
   defp force_update(changeset, opts) do
     if Keyword.get(opts, :force_update_on_change, true) do
