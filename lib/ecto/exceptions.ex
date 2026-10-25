@@ -90,7 +90,7 @@ defmodule Ecto.InvalidChangesetError do
   defexception [:action, :changeset]
 
   def message(%{action: action, changeset: changeset}) do
-    changes = extract_changes(changeset)
+    params = Inspect.Ecto.Changeset.redact_params(changeset.params, changeset.data)
     errors = Ecto.Changeset.traverse_errors(changeset, & &1)
 
     """
@@ -100,13 +100,9 @@ defmodule Ecto.InvalidChangesetError do
 
     #{pretty(errors)}
 
-    Applied changes
-
-    #{pretty(changes)}
-
     Params
 
-    #{pretty(changeset.params)}
+    #{pretty(params)}
 
     Changeset
 
@@ -119,24 +115,6 @@ defmodule Ecto.InvalidChangesetError do
     |> String.split("\n")
     |> Enum.map_join("\n", &("    " <> &1))
   end
-
-  defp extract_changes(%Ecto.Changeset{changes: changes}) do
-    Enum.reduce(changes, %{}, fn {key, value}, acc ->
-      case value do
-        %Ecto.Changeset{action: :delete} -> acc
-        _ -> Map.put(acc, key, extract_changes(value))
-      end
-    end)
-  end
-
-  defp extract_changes([%Ecto.Changeset{action: :delete} | tail]),
-    do: extract_changes(tail)
-
-  defp extract_changes([%Ecto.Changeset{} = changeset | tail]),
-    do: [extract_changes(changeset) | extract_changes(tail)]
-
-  defp extract_changes(other),
-    do: other
 end
 
 defmodule Ecto.CastError do

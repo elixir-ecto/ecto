@@ -960,7 +960,7 @@ defmodule Ecto.Changeset do
               value: params,
               message:
                 "expected params to be a map with atoms or string keys, " <>
-                  "got a map with mixed keys: #{inspect(params)}"
+                  "got a map with mixed keys: #{inspect(Map.keys(params))}"
           end
         end
 
@@ -4377,32 +4377,21 @@ end
 defimpl Inspect, for: Ecto.Changeset do
   import Inspect.Algebra
 
-  def inspect(%Ecto.Changeset{data: data} = changeset, opts) do
+  @redacted "**redacted**"
+
+  def inspect(%Ecto.Changeset{} = changeset, opts) do
     # The trailing element is skipped later on
     list =
       for attr <- [:action, :changes, :errors, :data, :valid?, :action] do
         {attr, Map.get(changeset, attr)}
       end
 
-    redacted_fields =
-      case data do
-        %type{} ->
-          if function_exported?(type, :__schema__, 1) do
-            type.__schema__(:redact_fields)
-          else
-            []
-          end
-
-        _ ->
-          []
-      end
-
     container_doc("#Ecto.Changeset<", list, ">", %{limit: 5}, fn
       {:action, action}, _opts ->
         concat("action: ", to_doc(action, opts))
 
-      {:changes, changes}, _opts ->
-        concat("changes: ", changes |> filter(redacted_fields) |> to_doc(opts))
+      {:changes, _changes}, _opts ->
+        concat("changes: ", changeset |> redact_changes() |> to_doc(opts))
 
       {:data, data}, _opts ->
         concat("data: ", to_struct(data, opts))
@@ -4418,13 +4407,59 @@ defimpl Inspect, for: Ecto.Changeset do
   defp to_struct(%{__struct__: struct}, _opts), do: "#" <> Kernel.inspect(struct) <> "<>"
   defp to_struct(other, opts), do: to_doc(other, opts)
 
-  defp filter(changes, redacted_fields) do
-    Enum.reduce(redacted_fields, changes, fn redacted_field, changes ->
-      if Map.has_key?(changes, redacted_field) do
-        Map.put(changes, redacted_field, "**redacted**")
-      else
-        changes
+  ## Redaction
+
+  defp redact_changes(%Ecto.Changeset{changes: changes, data: data}) do
+    redact(changes, redact_fields(data))
+  end
+
+  # Also used by Ecto.InvalidChangesetError. Params are keyed by strings
+  # and may be given to associations and embeds as lists or as maps indexed
+  # by position, so we walk them using the schema information.
+  @doc false
+  def redact_params(params, %schema{}), do: redact_params(params, schema)
+
+  def redact_params(params, schema) when is_map(params) and is_atom(schema) do
+    if schema?(schema) do
+      params = redact(params, Enum.map(schema.__schema__(:redact_fields), &Atom.to_string/1))
+
+      for {field, {tag, %{related: related, cardinality: cardinality}}}
+          when tag in [:assoc, :embed] <- schema.__changeset__(),
+          key = Atom.to_string(field),
+          is_map_key(params, key),
+          reduce: params do
+        params -> Map.update!(params, key, &redact_related_params(&1, cardinality, related))
       end
+    else
+      params
+    end
+  end
+
+  def redact_params(params, _data), do: params
+
+  defp redact_related_params(params, :many, related) when is_list(params),
+    do: Enum.map(params, &redact_params(&1, related))
+
+  defp redact_related_params(params, :many, related) when is_map(params),
+    do: Map.new(params, fn {index, value} -> {index, redact_params(value, related)} end)
+
+  defp redact_related_params(params, :one, related),
+    do: redact_params(params, related)
+
+  defp redact_related_params(params, _cardinality, _related), do: params
+
+  defp redact_fields(%schema{}) do
+    if schema?(schema), do: schema.__schema__(:redact_fields), else: []
+  end
+
+  defp redact_fields(_data), do: []
+
+  defp redact(map, fields) do
+    Enum.reduce(fields, map, fn field, map ->
+      if Map.has_key?(map, field), do: Map.put(map, field, @redacted), else: map
     end)
   end
+
+  defp schema?(module),
+    do: Code.ensure_loaded?(module) and function_exported?(module, :__schema__, 1)
 end

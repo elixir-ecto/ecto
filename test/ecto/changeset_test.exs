@@ -543,6 +543,19 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
+  test "cast/4: does not print param values on mixed keys" do
+    exception =
+      assert_raise Ecto.CastError, fn ->
+        cast(%Post{}, %{"title" => "foo", body: "s3cret"}, ~w())
+      end
+
+    message = Exception.message(exception)
+
+    assert message =~ ~s(got a map with mixed keys: [:body, "title"])
+
+    refute message =~ "s3cret"
+  end
+
   test "cast/4: protects against atom injection" do
     assert_raise ArgumentError, fn ->
       cast(%Post{}, %{}, ~w(surely_never_saw_this_atom_before)a)
@@ -3634,6 +3647,17 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
+  defmodule RedactedParentSchema do
+    use Ecto.Schema
+
+    schema "redacted_parent_schema" do
+      field :api_key, :string, redact: true
+      field :name, :string
+      embeds_one :credential, RedactedEmbeddedSchema
+      embeds_many :credentials, RedactedEmbeddedSchema
+    end
+  end
+
   describe "inspect" do
     test "reveals relevant data" do
       assert inspect(%Ecto.Changeset{}) ==
@@ -3711,6 +3735,93 @@ defmodule Ecto.ChangesetTest do
       assert inspect(changeset) =~ "id"
       refute inspect(changeset) =~ "hunter2"
       assert inspect(changeset) =~ "**redacted**"
+    end
+  end
+
+  describe "Ecto.InvalidChangesetError" do
+    test "redacts fields marked redact: true in changes and params" do
+      changeset =
+        %RedactedSchema{}
+        |> cast(%{"username" => "hunter", "password" => "hunter2"}, [:username, :password])
+        |> validate_length(:username, min: 10)
+
+      exception =
+        assert_raise Ecto.InvalidChangesetError, fn -> apply_action!(changeset, :insert) end
+
+      message = Exception.message(exception)
+
+      assert message =~ "could not perform insert because changeset is invalid"
+      assert message =~ ~s(%{password: "**redacted**", username: "hunter"})
+      assert message =~ ~s(%{"password" => "**redacted**", "username" => "hunter"})
+      refute message =~ "hunter2"
+    end
+
+    test "redacts fields marked redact: true in nested embeds" do
+      params = %{
+        "api_key" => "sk-live-123",
+        "name" => "acme",
+        "credential" => %{"username" => "one", "password" => "one-secret"},
+        "credentials" => [
+          %{"username" => "two", "password" => "two-secret"},
+          %{"username" => "three", "password" => "three-secret"}
+        ]
+      }
+
+      changeset =
+        %RedactedParentSchema{}
+        |> cast(params, [:api_key, :name])
+        |> cast_embed(:credential, with: &cast(&1, &2, [:username, :password]))
+        |> cast_embed(:credentials, with: &cast(&1, &2, [:username, :password]))
+        |> validate_length(:name, min: 10)
+
+      exception =
+        assert_raise Ecto.InvalidChangesetError, fn -> apply_action!(changeset, :insert) end
+
+      message = Exception.message(exception)
+
+      assert message =~ "**redacted**"
+      refute message =~ "sk-live-123"
+      refute message =~ "one-secret"
+      refute message =~ "two-secret"
+      refute message =~ "three-secret"
+      assert message =~ "acme"
+      assert message =~ ~s("username" => "two")
+    end
+
+    test "redacts params of embeds_many given as an indexed map" do
+      params = %{
+        "name" => "acme",
+        "credentials" => %{"0" => %{"username" => "two", "password" => "two-secret"}}
+      }
+
+      changeset =
+        %RedactedParentSchema{}
+        |> cast(params, [:name])
+        |> cast_embed(:credentials, with: &cast(&1, &2, [:username, :password]))
+        |> validate_length(:name, min: 10)
+
+      exception =
+        assert_raise Ecto.InvalidChangesetError, fn -> apply_action!(changeset, :insert) end
+
+      message = Exception.message(exception)
+
+      refute message =~ "two-secret"
+      assert message =~ ~s("username" => "two")
+    end
+
+    test "keeps changes and params for schemaless changesets" do
+      changeset =
+        {%{}, %{title: :string}}
+        |> cast(%{"title" => "hello"}, [:title])
+        |> validate_length(:title, min: 10)
+
+      exception =
+        assert_raise Ecto.InvalidChangesetError, fn -> apply_action!(changeset, :insert) end
+
+      message = Exception.message(exception)
+
+      assert message =~ ~s(%{title: "hello"})
+      assert message =~ ~s(%{"title" => "hello"})
     end
   end
 end
