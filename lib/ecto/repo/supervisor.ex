@@ -205,7 +205,7 @@ defmodule Ecto.Repo.Supervisor do
 
         # Normalize name to atom, ignore via/global names
         name = if is_atom(name), do: name, else: nil
-        cache = Ecto.Query.Planner.new_query_cache(name)
+        cache = Ecto.Query.Planner.new_query_cache(name, opts)
         meta = Map.merge(meta, %{repo: repo, cache: cache})
         child_spec = wrap_child_spec(child, [name, adapter, meta])
         Supervisor.init([child_spec], strategy: :one_for_one, max_restarts: 0)

@@ -7,6 +7,7 @@
   * [Ecto] Allow passing custom loader and dumper functions to `embedded_load/3` and `embedded_dump/2`
   * [Ecto.Changeset] Make `validate_length/3` count codepoints by default, aligning it with how databases typically enforce string length limits
   * [Ecto.Query] Allow assigning column names to fragment sources
+  * [Ecto.Repo] Bound the repository query cache via the `:query_cache_max_size` option, defaulting to 10 000 entries, and document that string field names, dynamic JSON paths and prefixes create one cached query per distinct value
 
 ### Bug fixes
 

@@ -625,7 +625,9 @@ defmodule Ecto.RepoTest do
         TestRepo.exists?(%{query | combinations: [{type, combination}]})
         assert_received {:all, exists_query}
 
-        assert %{from: %{source: %Ecto.SubQuery{query: inner_query}}, combinations: []} = exists_query
+        assert %{from: %{source: %Ecto.SubQuery{query: inner_query}}, combinations: []} =
+                 exists_query
+
         assert %{select: %{expr: 1}, limit: %{expr: 1}, distinct: nil} = exists_query
         assert [{^type, inner_combination}] = inner_query.combinations
         assert inner_query.select.expr != 1
@@ -1178,9 +1180,13 @@ defmodule Ecto.RepoTest do
       ph_key = {:placeholder, :uuid_key}
       entries = [%{bid: ph_key, str: ph_key}]
 
-      assert_raise ArgumentError, ~r/a placeholder key can only be used with columns of the same type/, fn ->
-        TestRepo.insert_all(MySchemaWithBinaryId, entries, placeholders: placeholders)
-      end
+      assert_raise ArgumentError,
+                   ~r/a placeholder key can only be used with columns of the same type/,
+                   fn ->
+                     TestRepo.insert_all(MySchemaWithBinaryId, entries,
+                       placeholders: placeholders
+                     )
+                   end
     end
 
     test "Repo.insert_all raises when placeholder key is used with invalid types" do
@@ -2265,7 +2271,11 @@ defmodule Ecto.RepoTest do
     test "includes conflict target in :replace_all when replace_changed is false" do
       fields = [:map, :array, :z, :yyy, :x, :id]
 
-      TestRepo.insert(%MySchema{id: 1}, on_conflict: :replace_all, conflict_target: [:id], replace_changed: false)
+      TestRepo.insert(%MySchema{id: 1},
+        on_conflict: :replace_all,
+        conflict_target: [:id],
+        replace_changed: false
+      )
 
       assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], [:id]}}}
     end
@@ -2472,6 +2482,16 @@ defmodule Ecto.RepoTest do
       {:ok, pid} = TestRepo.start_link(name: config.test)
       TestRepo = TestRepo.put_dynamic_repo(pid)
       :ok
+    end
+
+    test "configures the query cache size", config do
+      %{cache: cache} = Ecto.Repo.Registry.lookup(config.test)
+      assert [{_, 10_000}] = :ets.lookup(cache, :__query_cache_max_size__)
+
+      name = :"#{config.test}_bounded"
+      {:ok, _pid} = TestRepo.start_link(name: name, query_cache_max_size: 42)
+      %{cache: cache} = Ecto.Repo.Registry.lookup(name)
+      assert [{_, 42}] = :ets.lookup(cache, :__query_cache_max_size__)
     end
 
     test "puts the dynamic repo in pdict" do
@@ -2687,24 +2707,25 @@ defmodule Ecto.RepoTest do
     end
 
     test "update with on_writable_violation: :warn saves changes for writable: :always, ignores changes for writable: :insert/:never, and logs a warning" do
-      log = capture_log(fn ->
-        %{always: 10, never: nil, insert: nil} =
-          %MySchemaWritableWarn{id: 1}
-          |> Ecto.Changeset.change(%{always: 10, never: 11, insert: 12})
-          |> TestRepo.update!()
+      log =
+        capture_log(fn ->
+          %{always: 10, never: nil, insert: nil} =
+            %MySchemaWritableWarn{id: 1}
+            |> Ecto.Changeset.change(%{always: 10, never: 11, insert: 12})
+            |> TestRepo.update!()
 
-        assert_received {:update, %{changes: [always: 10]}}
-      end)
-
-      assert log =~ ~r"""
-      you are attempting to write to the field :insert of #{inspect(__MODULE__.MySchemaWritableWarn)} but
-      the `:writable` option of this field indicates the field should not be written to during an update.
-      """
+          assert_received {:update, %{changes: [always: 10]}}
+        end)
 
       assert log =~ ~r"""
-      you are attempting to write to the field :never of #{inspect(__MODULE__.MySchemaWritableWarn)} but
-      the `:writable` option of this field indicates the field should not be written to during an update.
-      """
+             you are attempting to write to the field :insert of #{inspect(__MODULE__.MySchemaWritableWarn)} but
+             the `:writable` option of this field indicates the field should not be written to during an update.
+             """
+
+      assert log =~ ~r"""
+             you are attempting to write to the field :never of #{inspect(__MODULE__.MySchemaWritableWarn)} but
+             the `:writable` option of this field indicates the field should not be written to during an update.
+             """
     end
 
     test "update with on_writable_violation: :raise saves changes for writable: :always and raises for changes for writable: :insert/:never" do
@@ -2816,40 +2837,42 @@ defmodule Ecto.RepoTest do
     end
 
     test "insert with surfaced changes and on_writable_violation: :warn saves changes for writable: :always/:insert, ignores changes for writable: :never, and logs a warning" do
-      log = capture_log(fn ->
-        # For surfaced changes from the underlying struct, the value in the returned struct is
-        # maintained even though the underlying write was not performed, as opposed to "normal" changes
-        # provided via a changeset.
-        %{always: 10, never: 11, insert: 12} =
-          %MySchemaWritableWarn{id: 1, always: 10, never: 11, insert: 12}
-          |> Ecto.Changeset.change(%{})
-          |> TestRepo.insert!()
+      log =
+        capture_log(fn ->
+          # For surfaced changes from the underlying struct, the value in the returned struct is
+          # maintained even though the underlying write was not performed, as opposed to "normal" changes
+          # provided via a changeset.
+          %{always: 10, never: 11, insert: 12} =
+            %MySchemaWritableWarn{id: 1, always: 10, never: 11, insert: 12}
+            |> Ecto.Changeset.change(%{})
+            |> TestRepo.insert!()
 
-        assert_received {:insert, %{fields: inserted_fields}}
-        assert Enum.sort(inserted_fields) == [always: 10, id: 1, insert: 12]
-      end)
+          assert_received {:insert, %{fields: inserted_fields}}
+          assert Enum.sort(inserted_fields) == [always: 10, id: 1, insert: 12]
+        end)
 
       assert log =~ ~r"""
-      you are attempting to write to the field :never of #{inspect(__MODULE__.MySchemaWritableWarn)} but
-      the `:writable` option of this field indicates the field should not be written to during an insert.
-      """
+             you are attempting to write to the field :never of #{inspect(__MODULE__.MySchemaWritableWarn)} but
+             the `:writable` option of this field indicates the field should not be written to during an insert.
+             """
     end
 
     test "insert with on_writable_violation: :warn saves changes for writable: :always/:insert, ignores changes for writable: :never, and logs a warning" do
-      log = capture_log(fn ->
-        %{always: 10, never: nil, insert: 12} =
-          %MySchemaWritableWarn{id: 1}
-          |> Ecto.Changeset.change(%{always: 10, never: 11, insert: 12})
-          |> TestRepo.insert!()
+      log =
+        capture_log(fn ->
+          %{always: 10, never: nil, insert: 12} =
+            %MySchemaWritableWarn{id: 1}
+            |> Ecto.Changeset.change(%{always: 10, never: 11, insert: 12})
+            |> TestRepo.insert!()
 
-        assert_received {:insert, %{fields: inserted_fields}}
-        assert Enum.sort(inserted_fields) == [always: 10, id: 1, insert: 12]
-      end)
+          assert_received {:insert, %{fields: inserted_fields}}
+          assert Enum.sort(inserted_fields) == [always: 10, id: 1, insert: 12]
+        end)
 
       assert log =~ ~r"""
-      you are attempting to write to the field :never of #{inspect(__MODULE__.MySchemaWritableWarn)} but
-      the `:writable` option of this field indicates the field should not be written to during an insert.
-      """
+             you are attempting to write to the field :never of #{inspect(__MODULE__.MySchemaWritableWarn)} but
+             the `:writable` option of this field indicates the field should not be written to during an insert.
+             """
     end
 
     test "insert with surfaced changes and on_writable_violation: :raise saves changes for writable: :always/:insert and raises for changes for writable: :never" do

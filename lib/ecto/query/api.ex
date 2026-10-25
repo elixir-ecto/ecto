@@ -734,7 +734,10 @@ defmodule Ecto.Query.API do
 
   String names can be particularly useful when your application is dynamically
   generating many schemaless queries at runtime and you want to avoid creating
-  a large number of atoms.
+  a large number of atoms. Note that each different field name will emit a
+  different query, which will be independently prepared and cached. If the
+  name comes from user input, consider restricting it to a known set of values
+  or passing `query_cache: false` to the repository operation.
   """
   def field(source, field), do: doc!([source, field])
 
@@ -878,6 +881,12 @@ defmodule Ecto.Query.API do
 
       source_field = :source_column
       from(post in Post, select: post.meta["author"][field(p, ^source_field)])
+
+  Note that dynamic path elements become part of the query itself rather
+  than query parameters, so each different path will emit a different query,
+  which will be independently prepared and cached. If the path comes from
+  user input, consider restricting it to a known set of values or passing
+  `query_cache: false` to the repository operation.
 
   ## Warning: indexes on PostgreSQL
 

@@ -47,6 +47,18 @@ defmodule Ecto.Repo do
     * `:pool_size` - the size of the pool used by the connection module.
       Defaults to `10`
 
+    * `:query_cache_max_size` - the maximum number of planned queries and
+      adapter prepared statements kept in the repository query cache. The
+      cache is keyed by the shape of the query, so constructs that embed
+      runtime values in the query itself (such as `field/2` with string
+      names, `json_extract_path/2` with interpolated paths, `identifier/1`,
+      `constant/1` or the `:prefix` option) create one cache entry per
+      distinct value. Once the limit is reached, the cache is cleared and
+      queries are prepared again as they are executed. Can be a positive
+      integer or `:infinity`. Defaults to `10_000`. Queries built from
+      user-controlled values should also consider passing `query_cache: false`
+      (see "Shared options" below)
+
     * `:pool_count` - the number of pools to run concurrently,
       increase this option when the pool itself may be under contention.
       When running multiple pools, queries are randomly routed to different

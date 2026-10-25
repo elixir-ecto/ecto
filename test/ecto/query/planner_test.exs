@@ -2566,7 +2566,7 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "normalize: select source on fragment with columns" do
-    query = from f in fragment("select 1", columns: [:x])
+    query = from(f in fragment("select 1", columns: [:x]))
     {_, _, _, select} = normalize_with_params(query)
     assert %{from: {_, {:map, [x: {:value, :any}]}}} = select
   end
@@ -3214,7 +3214,7 @@ defmodule Ecto.Query.PlannerTest do
       {_meta, {:cache, _update, _prepared}, _cast, _dump} =
         Planner.query(query, :all, cache, Ecto.CachingTestAdapter, 0, true)
 
-      assert :ets.info(cache, :size) == 1
+      assert cached_queries(cache) == 1
     end
 
     test "bypasses cache if false", %{cache: cache} do
@@ -3223,7 +3223,63 @@ defmodule Ecto.Query.PlannerTest do
       {_meta1, {:nocache, _prepared}, _cast1, _dump1} =
         Planner.query(query, :all, cache, Ecto.CachingTestAdapter, 0, false)
 
-      assert :ets.info(cache, :size) == 0
+      assert cached_queries(cache) == 0
+    end
+  end
+
+  defp cached_queries(cache) do
+    :ets.select_count(cache, [{{:_, :_, :_, :_}, [], [true]}])
+  end
+
+  describe "query: query_cache_max_size option" do
+    defp query_field(cache, name) do
+      query = from(p in Post, where: field(p, ^name) == ^"hello")
+
+      {_meta, {:cache, _update, _prepared}, _cast, _dump} =
+        Planner.query(query, :all, cache, Ecto.CachingTestAdapter, 0, true)
+
+      :ok
+    end
+
+    test "defaults to a bounded cache" do
+      cache = Planner.new_query_cache(nil)
+      assert [{_, 10_000}] = :ets.lookup(cache, :__query_cache_max_size__)
+    end
+
+    test "raises on invalid values" do
+      assert_raise ArgumentError, ~r":query_cache_max_size must be a positive integer", fn ->
+        Planner.new_query_cache(nil, query_cache_max_size: 0)
+      end
+
+      assert_raise ArgumentError, ~r":query_cache_max_size must be a positive integer", fn ->
+        Planner.new_query_cache(nil, query_cache_max_size: "10")
+      end
+    end
+
+    test "clears the cache once the limit is reached" do
+      cache = Planner.new_query_cache(nil, query_cache_max_size: 3)
+
+      for i <- 1..3, do: query_field(cache, "field#{i}")
+      assert cached_queries(cache) == 3
+
+      # Cached queries are still served from the cache
+      query_field(cache, "field1")
+      assert cached_queries(cache) == 3
+
+      # Inserting past the limit clears the cache first
+      query_field(cache, "field4")
+      assert cached_queries(cache) == 1
+      assert [{_, 3}] = :ets.lookup(cache, :__query_cache_max_size__)
+
+      for i <- 5..6, do: query_field(cache, "field#{i}")
+      assert cached_queries(cache) == 3
+    end
+
+    test "does not bound the cache with :infinity" do
+      cache = Planner.new_query_cache(nil, query_cache_max_size: :infinity)
+
+      for i <- 1..50, do: query_field(cache, "field#{i}")
+      assert cached_queries(cache) == 50
     end
   end
 end

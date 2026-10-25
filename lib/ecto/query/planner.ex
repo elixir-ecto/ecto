@@ -18,6 +18,8 @@ defmodule Ecto.Query.Planner do
   end
 
   @parent_as __MODULE__
+  @default_query_cache_max_size 10_000
+  @query_cache_max_size_key :__query_cache_max_size__
   @aggs ~w(count avg min max sum row_number rank dense_rank percent_rank cume_dist ntile lag lead first_value last_value nth_value)a
 
   @doc """
@@ -122,9 +124,27 @@ defmodule Ecto.Query.Planner do
 
   @doc """
   Define the query cache table.
+
+  ## Options
+
+    * `:query_cache_max_size` - the maximum number of queries kept in
+      the cache. Once the limit is reached, the cache is cleared before
+      the next query is inserted. Can be a positive integer or `:infinity`.
+      Defaults to `#{@default_query_cache_max_size}`.
+
   """
-  def new_query_cache(atom_name) do
-    :ets.new(atom_name || __MODULE__, [:set, :public, read_concurrency: true])
+  def new_query_cache(atom_name, opts \\ []) do
+    max_size = Keyword.get(opts, :query_cache_max_size, @default_query_cache_max_size)
+
+    unless max_size == :infinity or (is_integer(max_size) and max_size > 0) do
+      raise ArgumentError,
+            ":query_cache_max_size must be a positive integer or :infinity, " <>
+              "got: #{inspect(max_size)}"
+    end
+
+    cache = :ets.new(atom_name || __MODULE__, [:set, :public, read_concurrency: true])
+    :ets.insert(cache, {@query_cache_max_size_key, max_size})
+    cache
   end
 
   @doc """
@@ -197,6 +217,8 @@ defmodule Ecto.Query.Planner do
   end
 
   defp cache_insert(cache, key, elem) do
+    maybe_clear_cache(cache)
+
     case :ets.insert_new(cache, elem) do
       true ->
         elem
@@ -204,6 +226,25 @@ defmodule Ecto.Query.Planner do
       false ->
         [elem] = :ets.lookup(cache, key)
         elem
+    end
+  end
+
+  # The cache has no eviction policy, so we bound its size to avoid
+  # unbounded memory growth when runtime values become part of the
+  # query shape (for example, string field names, JSON paths or prefixes).
+  # The size check happens only on inserts, which are cache misses.
+  defp maybe_clear_cache(cache) do
+    case :ets.lookup(cache, @query_cache_max_size_key) do
+      [{_, max_size}] when is_integer(max_size) ->
+        # The size includes the entry holding the max size itself
+        if :ets.info(cache, :size) > max_size do
+          :ets.select_delete(cache, [{{:_, :_, :_, :_}, [], [true]}])
+        end
+
+        :ok
+
+      _ ->
+        :ok
     end
   end
 
@@ -344,7 +385,12 @@ defmodule Ecto.Query.Planner do
        when kind in [:fragment, :values],
        do: {expr, source}
 
-  defp plan_source(_query, %{source: {{:fragment, _, _} = source, schema}, prefix: nil} = expr, _adapter, _cte_names)
+  defp plan_source(
+         _query,
+         %{source: {{:fragment, _, _} = source, schema}, prefix: nil} = expr,
+         _adapter,
+         _cte_names
+       )
        when is_atom(schema) do
     {expr, {source, schema, nil}}
   end
@@ -353,8 +399,14 @@ defmodule Ecto.Query.Planner do
        when kind in [:fragment, :values],
        do: error!(query, expr, "cannot set prefix: #{inspect(prefix)} option for #{kind} sources")
 
-  defp plan_source(query, %{source: {{:fragment, _, _}, _schema}, prefix: prefix} = expr, _adapter, _cte_names),
-       do: error!(query, expr, "cannot set prefix: #{inspect(prefix)} option for fragment sources")
+  defp plan_source(
+         query,
+         %{source: {{:fragment, _, _}, _schema}, prefix: prefix} = expr,
+         _adapter,
+         _cte_names
+       ),
+       do:
+         error!(query, expr, "cannot set prefix: #{inspect(prefix)} option for fragment sources")
 
   defp plan_subquery(subquery, query, prefix, adapter, source?, cte_names) do
     %{query: inner_query} = subquery
@@ -2275,7 +2327,7 @@ defmodule Ecto.Query.Planner do
         schema = if kind == :map, do: nil, else: schema
         {{:source, {source, schema}, prefix || query.prefix, types}, fields}
 
-      {{:ok, {kind, fields}}, {{:fragment, _, _} = source, schema, prefix}}  ->
+      {{:ok, {kind, fields}}, {{:fragment, _, _} = source, schema, prefix}} ->
         {types, fields} = select_dump_for_schema(schema, List.wrap(fields), ix, drop)
         schema = if kind == :map, do: nil, else: schema
         {{:source, {source, schema}, prefix, types}, fields}
@@ -2349,7 +2401,10 @@ defmodule Ecto.Query.Planner do
           nil
 
         {:struct, _} ->
-          error!(query, "it is not possible to return a struct subset of a subquery that does not return a schema struct")   
+          error!(
+            query,
+            "it is not possible to return a struct subset of a subquery that does not return a schema struct"
+          )
       end
 
     types =
@@ -2359,8 +2414,11 @@ defmodule Ecto.Query.Planner do
             {field, type}
 
           :error ->
-            error!(query, "field `#{field}` is not available in the subquery. " <>
-                         "Subquery only returns fields: #{inspect(available_fields)}")
+            error!(
+              query,
+              "field `#{field}` is not available in the subquery. " <>
+                "Subquery only returns fields: #{inspect(available_fields)}"
+            )
         end
       end)
 
@@ -2623,7 +2681,9 @@ defmodule Ecto.Query.Planner do
     input_string = Atom.to_string(input)
 
     schema.__schema__(:fields)
-    |> Enum.map(fn field -> {field, String.jaro_distance(input_string, Atom.to_string(field))} end)
+    |> Enum.map(fn field ->
+      {field, String.jaro_distance(input_string, Atom.to_string(field))}
+    end)
     |> Enum.filter(fn {_field, score} -> score >= 0.77 end)
     |> Enum.sort(&(elem(&1, 0) >= elem(&2, 0)))
     |> Enum.take(5)
