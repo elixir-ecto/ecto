@@ -960,7 +960,7 @@ defmodule Ecto.Changeset do
               value: params,
               message:
                 "expected params to be a map with atoms or string keys, " <>
-                  "got a map with mixed keys: #{inspect(params)}"
+                  "got a map with mixed keys: #{inspect(Map.keys(params))}"
           end
         end
 

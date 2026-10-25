@@ -89,8 +89,11 @@ defmodule Ecto.InvalidChangesetError do
   """
   defexception [:action, :changeset]
 
+  @redacted "**redacted**"
+
   def message(%{action: action, changeset: changeset}) do
     changes = extract_changes(changeset)
+    params = redact_params(changeset.params, changeset.data)
     errors = Ecto.Changeset.traverse_errors(changeset, & &1)
 
     """
@@ -106,7 +109,7 @@ defmodule Ecto.InvalidChangesetError do
 
     Params
 
-    #{pretty(changeset.params)}
+    #{pretty(params)}
 
     Changeset
 
@@ -120,11 +123,14 @@ defmodule Ecto.InvalidChangesetError do
     |> Enum.map_join("\n", &("    " <> &1))
   end
 
-  defp extract_changes(%Ecto.Changeset{changes: changes}) do
+  defp extract_changes(%Ecto.Changeset{changes: changes, data: data}) do
+    redacted_fields = redacted_fields(data)
+
     Enum.reduce(changes, %{}, fn {key, value}, acc ->
-      case value do
-        %Ecto.Changeset{action: :delete} -> acc
-        _ -> Map.put(acc, key, extract_changes(value))
+      cond do
+        match?(%Ecto.Changeset{action: :delete}, value) -> acc
+        key in redacted_fields -> Map.put(acc, key, @redacted)
+        true -> Map.put(acc, key, extract_changes(value))
       end
     end)
   end
@@ -137,6 +143,62 @@ defmodule Ecto.InvalidChangesetError do
 
   defp extract_changes(other),
     do: other
+
+  # Params are keyed by strings, so we map them back to the schema fields
+  # in order to redact the ones marked as `redact: true`, recursing into
+  # the params of associations and embeds.
+  defp redact_params(params, %schema{}) when is_map(params),
+    do: redact_params(params, schema)
+
+  defp redact_params(params, schema) when is_map(params) and is_atom(schema) do
+    if schema?(schema) do
+      redacted_fields = schema.__schema__(:redact_fields)
+      types = schema.__changeset__()
+      fields = Map.new(types, fn {field, _type} -> {Atom.to_string(field), field} end)
+
+      Map.new(params, fn {key, value} ->
+        with {:ok, field} <- Map.fetch(fields, to_string(key)) do
+          cond do
+            field in redacted_fields ->
+              {key, @redacted}
+
+            match?({kind, %{related: _}} when kind in [:assoc, :embed], types[field]) ->
+              {_kind, %{related: related, cardinality: cardinality}} = types[field]
+              {key, redact_relation_params(value, cardinality, related)}
+
+            true ->
+              {key, value}
+          end
+        else
+          :error -> {key, value}
+        end
+      end)
+    else
+      params
+    end
+  end
+
+  defp redact_params(params, _data), do: params
+
+  defp redact_relation_params(params, :one, schema) when is_map(params),
+    do: redact_params(params, schema)
+
+  defp redact_relation_params(params, :many, schema) when is_list(params),
+    do: Enum.map(params, &redact_relation_params(&1, :one, schema))
+
+  defp redact_relation_params(params, :many, schema) when is_map(params),
+    do: Map.new(params, fn {key, value} -> {key, redact_relation_params(value, :one, schema)} end)
+
+  defp redact_relation_params(params, _cardinality, _schema), do: params
+
+  defp redacted_fields(%schema{}) do
+    if schema?(schema), do: schema.__schema__(:redact_fields), else: []
+  end
+
+  defp redacted_fields(_data), do: []
+
+  defp schema?(module),
+    do: Code.ensure_loaded?(module) and function_exported?(module, :__schema__, 1)
 end
 
 defmodule Ecto.CastError do
