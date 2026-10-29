@@ -2574,7 +2574,7 @@ defmodule Ecto.Changeset do
   are required.
 
   If the value of a field is `nil` or matches any of the values
-  configured in `changeset.empty_values` (by default `[]` and `""`),
+  configured in `changeset.empty_values` (by default `""`),
   the changeset is marked as invalid, the field is removed from the
   changeset's changes, and an error is added. An error won't be added
   if the field already has an error.
