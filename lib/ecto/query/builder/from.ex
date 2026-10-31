@@ -103,28 +103,28 @@ defmodule Ecto.Query.Builder.From do
         # dependencies between modules are added
         source = quote(do: unquote(schema).__schema__(:source))
         {:ok, prefix} = prefix || {:ok, quote(do: unquote(schema).__schema__(:prefix))}
-        {query(prefix, {source, schema}, [], as, hints, env.file, env.line), binds, 1}
+        {query(prefix, {source, schema}, [], as, hints, Builder.file(env), env.line), binds, 1}
 
       source when is_binary(source) ->
         {:ok, prefix} = prefix || {:ok, nil}
         # When a binary is used, there is no schema
-        {query(prefix, {source, nil}, [], as, hints, env.file, env.line), binds, 1}
+        {query(prefix, {source, nil}, [], as, hints, Builder.file(env), env.line), binds, 1}
 
       {source, schema} when is_binary(source) and is_atom(schema) ->
         {:ok, prefix} = prefix || {:ok, quote(do: unquote(schema).__schema__(:prefix))}
-        {query(prefix, {source, schema}, [], as, hints, env.file, env.line), binds, 1}
+        {query(prefix, {source, schema}, [], as, hints, Builder.file(env), env.line), binds, 1}
 
       {{:{}, _, [:fragment, _, _]} = fragment, params} ->
         {:ok, prefix} = prefix || {:ok, nil}
-        {query(prefix, fragment, params, as, hints, env.file, env.line), binds, 1}
+        {query(prefix, fragment, params, as, hints, Builder.file(env), env.line), binds, 1}
 
       {{{:{}, _, [:fragment, _, _]} = fragment, params}, schema} when is_atom(schema) ->
         {:ok, prefix} = prefix || {:ok, nil}
-        {query(prefix, {fragment, schema}, params, as, hints, env.file, env.line), binds, 1}
+        {query(prefix, {fragment, schema}, params, as, hints, Builder.file(env), env.line), binds, 1}
 
       {{:{}, _, [:values, _, _]} = values, prelude, params} ->
         {:ok, prefix} = prefix || {:ok, nil}
-        query = query(prefix, values, params, as, hints, env.file, env.line)
+        query = query(prefix, values, params, as, hints, Builder.file(env), env.line)
 
         quoted =
           quote do

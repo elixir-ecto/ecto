@@ -53,7 +53,7 @@ defmodule Ecto.Query.Builder.CTE do
       %Ecto.Query.QueryExpr{
         expr: unquote(expr),
         params: unquote(params),
-        file: unquote(env.file),
+        file: unquote(Builder.file(env)),
         line: unquote(env.line)
       }
     end

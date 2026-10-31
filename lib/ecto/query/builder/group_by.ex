@@ -93,7 +93,7 @@ defmodule Ecto.Query.Builder.GroupBy do
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(query, _binding, {:^, _, [var]}, env) do
     quote do
-      Ecto.Query.Builder.GroupBy.group_by!(unquote(query), unquote(var), unquote(env.file), unquote(env.line))
+      Ecto.Query.Builder.GroupBy.group_by!(unquote(query), unquote(var), unquote(Builder.file(env)), unquote(env.line))
     end
   end
 
@@ -106,7 +106,7 @@ defmodule Ecto.Query.Builder.GroupBy do
                            expr: unquote(expr),
                            params: unquote(params),
                            subqueries: unquote(Enum.reverse(acc.subqueries)),
-                           file: unquote(env.file),
+                           file: unquote(Builder.file(env)),
                            line: unquote(env.line)}
     Builder.apply_query(query, __MODULE__, [group_by], env)
   end

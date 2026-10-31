@@ -58,7 +58,7 @@ defmodule Ecto.Query.Builder.Filter do
   def build(kind, op, query, _binding, {:^, _, [var]}, env) do
     quote do
       Ecto.Query.Builder.Filter.filter!(unquote(kind), unquote(op), unquote(query),
-                                        unquote(var), 0, unquote(env.file), unquote(env.line))
+                                        unquote(var), 0, unquote(Builder.file(env)), unquote(env.line))
     end
   end
 
@@ -74,7 +74,7 @@ defmodule Ecto.Query.Builder.Filter do
                         op: unquote(op),
                         params: unquote(params),
                         subqueries: unquote(subqueries),
-                        file: unquote(env.file),
+                        file: unquote(Builder.file(env)),
                         line: unquote(env.line)}
     Builder.apply_query(query, __MODULE__, [kind, expr], env)
   end

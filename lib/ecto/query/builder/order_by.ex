@@ -239,7 +239,7 @@ defmodule Ecto.Query.Builder.OrderBy do
         unquote(query),
         unquote(var),
         unquote(op),
-        unquote(env.file),
+        unquote(Builder.file(env)),
         unquote(env.line)
       )
     end
@@ -255,7 +255,7 @@ defmodule Ecto.Query.Builder.OrderBy do
               expr: unquote(expr),
               params: unquote(params),
               subqueries: unquote(Enum.reverse(acc.subqueries)),
-              file: unquote(env.file),
+              file: unquote(Builder.file(env)),
               line: unquote(env.line)
             }
 

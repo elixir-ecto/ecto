@@ -233,7 +233,7 @@ defmodule Ecto.Query.Builder.Join do
     join = [
       as: as,
       assoc: join_assoc,
-      file: env.file,
+      file: Builder.file(env),
       line: env.line,
       params: join_params,
       prefix: prefix,
@@ -266,7 +266,7 @@ defmodule Ecto.Query.Builder.Join do
         unquote(var),
         unquote(as),
         unquote(count_bind),
-        unquote(env.file),
+        unquote(Builder.file(env)),
         unquote(env.line)
       )
     end
@@ -291,7 +291,7 @@ defmodule Ecto.Query.Builder.Join do
                 expr: unquote(on_expr),
                 params: unquote(on_params),
                 line: unquote(env.line),
-                file: unquote(env.file)
+                file: unquote(Builder.file(env))
               }
             }
           end

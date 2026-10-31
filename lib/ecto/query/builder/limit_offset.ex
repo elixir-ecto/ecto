@@ -54,7 +54,7 @@ defmodule Ecto.Query.Builder.LimitOffset do
     quote do: %Ecto.Query.LimitExpr{
             expr: unquote(expr),
             params: unquote(params),
-            file: unquote(env.file),
+            file: unquote(Builder.file(env)),
             line: unquote(env.line)
           }
   end
@@ -63,7 +63,7 @@ defmodule Ecto.Query.Builder.LimitOffset do
     quote do: %Ecto.Query.QueryExpr{
             expr: unquote(expr),
             params: unquote(params),
-            file: unquote(env.file),
+            file: unquote(Builder.file(env)),
             line: unquote(env.line)
           }
   end

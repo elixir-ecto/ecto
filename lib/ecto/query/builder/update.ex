@@ -116,7 +116,7 @@ defmodule Ecto.Query.Builder.Update do
 
         update = quote do
           %Ecto.Query.QueryExpr{expr: unquote(compile), params: unquote(params),
-                                file: unquote(env.file), line: unquote(env.line)}
+                                file: unquote(Builder.file(env)), line: unquote(env.line)}
         end
 
         Builder.apply_query(query, __MODULE__, [update], env)
@@ -127,7 +127,7 @@ defmodule Ecto.Query.Builder.Update do
     else
       quote do
         Ecto.Query.Builder.Update.update!(unquote(query), unquote(runtime),
-                                          unquote(env.file), unquote(env.line))
+                                          unquote(Builder.file(env)), unquote(env.line))
       end
     end
   end

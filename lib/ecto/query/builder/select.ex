@@ -310,7 +310,7 @@ defmodule Ecto.Query.Builder.Select do
   def build(kind, query, _binding, {:^, _, [var]}, env) do
     quote do
       Ecto.Query.Builder.Select.select!(unquote(kind), unquote(query), unquote(var),
-                                        unquote(env.file), unquote(env.line))
+                                        unquote(Builder.file(env)), unquote(env.line))
     end
   end
 
@@ -324,7 +324,7 @@ defmodule Ecto.Query.Builder.Select do
     select = quote do: %Ecto.Query.SelectExpr{
                          expr: unquote(expr),
                          params: unquote(params),
-                         file: unquote(env.file),
+                         file: unquote(Builder.file(env)),
                          line: unquote(env.line),
                          take: unquote(take),
                          subqueries: unquote(acc.subqueries),

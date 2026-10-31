@@ -34,6 +34,20 @@ defmodule Ecto.QueryTest do
   end
 
   describe "query building" do
+    test "stores the file relative to the current directory" do
+      file = Path.relative_to_cwd(__ENV__.file)
+      assert Path.type(file) == :relative
+
+      query = from p in "posts", where: p.id == 1, select: p.id, order_by: p.id
+      assert query.from.file == file
+      assert hd(query.wheres).file == file
+      assert query.select.file == file
+      assert hd(query.order_bys).file == file
+
+      query = select("posts", [p], p.id)
+      assert query.select.file == file
+    end
+
     test "allows macros" do
       test_data = "test"
       query = from(p in "posts") |> where([q], Macros.macro_equal(q.title, ^test_data))

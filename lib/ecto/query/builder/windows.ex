@@ -123,7 +123,7 @@ defmodule Ecto.Query.Builder.Windows do
         Ecto.Query.Builder.Windows.runtime!(
           unquote(query),
           unquote(runtime),
-          unquote(env.file),
+          unquote(Builder.file(env)),
           unquote(env.line)
         )
       end
@@ -149,7 +149,7 @@ defmodule Ecto.Query.Builder.Windows do
          expr: unquote(compile_acc),
          params: unquote(params),
          subqueries: unquote(Enum.reverse(acc.subqueries)),
-         file: unquote(env.file),
+         file: unquote(Builder.file(env)),
          line: unquote(env.line)
        }
      end}
