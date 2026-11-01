@@ -70,15 +70,6 @@ defmodule Ecto.Query.Builder do
         }
 
   @doc """
-  Smart escapes a query expression and extracts interpolated values in
-  a map.
-
-  Everything that is a query expression will be escaped, interpolated
-  expressions (`^foo`) will be moved to a map unescaped and replaced
-  with `^index` in the query where index is a number indexing into the
-  map.
-  """
-  @doc """
   Returns the file of the given environment to store in query expressions.
 
   It is relative to the current working directory when inside it, like the
@@ -87,6 +78,15 @@ defmodule Ecto.Query.Builder do
   """
   def file(%Macro.Env{file: file}), do: Path.relative_to_cwd(file)
 
+  @doc """
+  Smart escapes a query expression and extracts interpolated values in
+  a map.
+
+  Everything that is a query expression will be escaped, interpolated
+  expressions (`^foo`) will be moved to a map unescaped and replaced
+  with `^index` in the query where index is a number indexing into the
+  map.
+  """
   @spec escape(
           Macro.t(),
           quoted_type | {:in, quoted_type} | {:out, quoted_type} | {:splice, quoted_type},
