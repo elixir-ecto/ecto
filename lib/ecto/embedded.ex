@@ -145,8 +145,7 @@ defmodule Ecto.Embedded do
   # prepare callbacks, in which case a transaction is required.
   #
   # It must mirror the traversal done by prepare/4 below,
-  # including surfacing embeds (but not other fields, which
-  # are not traversed) from the data on insert.
+  # including the embeds surfaced from the data on insert.
   @doc false
   def prepare?(changeset, embeds, repo_action) do
     %{changes: changes, types: types} = changeset
@@ -172,11 +171,42 @@ defmodule Ecto.Embedded do
 
   defp to_struct_prepare?(%Changeset{}, :delete, _embed), do: false
 
-  defp to_struct_prepare?(%Changeset{data: data} = changeset, action, %{related: schema}) do
+  defp to_struct_prepare?(%Changeset{} = changeset, action, %{related: schema}) do
+    %{data: data, changes: changes} = changeset
     embeds = schema.__schema__(:embeds)
-    changeset = maybe_surface_changes(changeset, data, embeds, action)
-    prepare?(changeset, embeds, action)
+    surfaces_data? = action == :insert
+
+    prepare?(changeset, embeds, action) or
+      (surfaces_data? and data_prepare?(data, schema, embeds, changes))
   end
+
+  # On insert, to_struct/4 surfaces the embeds left in the data. Only a changeset
+  # stored there can have prepare callbacks, so we look for those directly
+  # instead of building a changeset for every embed.
+  defp data_prepare?(data, schema, embeds, changes) do
+    Enum.any?(embeds, fn name ->
+      not is_map_key(changes, name) and
+        data_value_prepare?(Map.get(data, name), schema.__schema__(:embed, name))
+    end)
+  end
+
+  defp data_value_prepare?(nil, _embed), do: false
+
+  defp data_value_prepare?(values, embed) when is_list(values) do
+    Enum.any?(values, &data_value_prepare?(&1, embed))
+  end
+
+  defp data_value_prepare?(%Changeset{action: action} = changeset, embed) do
+    surfaced_changeset = %{changeset | action: action || :insert}
+    prepare_each?(embed, surfaced_changeset, :insert)
+  end
+
+  defp data_value_prepare?(%{__struct__: schema} = struct, %{related: schema}) do
+    no_changes = %{}
+    data_prepare?(struct, schema, schema.__schema__(:embeds), no_changes)
+  end
+
+  defp data_value_prepare?(_unknown_value, _embed), do: true
 
   # Callback invoked by repository to prepare embeds.
   #
