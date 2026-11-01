@@ -22,7 +22,7 @@ defmodule Ecto.Query.Builder.Dynamic do
                                 {unquote(expr), unquote(params), unquote(Enum.reverse(acc.subqueries)), unquote(aliases)}
                               end,
                               binding: unquote(Macro.escape(binding)),
-                              file: unquote(env.file),
+                              file: unquote(Builder.file(env)),
                               line: unquote(env.line)}
     end
   end

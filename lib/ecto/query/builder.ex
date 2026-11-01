@@ -70,6 +70,15 @@ defmodule Ecto.Query.Builder do
         }
 
   @doc """
+  Returns the file of the given environment to store in query expressions.
+
+  It is relative to the current working directory when inside it, like the
+  paths in Elixir's stacktraces and diagnostics, so copies of a project that
+  reuse its build (such as git worktrees) report their own files.
+  """
+  def file(%Macro.Env{file: file}), do: Path.relative_to_cwd(file)
+
+  @doc """
   Smart escapes a query expression and extracts interpolated values in
   a map.
 
@@ -1630,7 +1639,7 @@ defmodule Ecto.Query.Builder do
 
   For example, take into account the `Builder.OrderBy`:
 
-      select = %Ecto.Query.QueryExpr{expr: expr, file: env.file, line: env.line}
+      select = %Ecto.Query.QueryExpr{expr: expr, file: file(env), line: env.line}
       Builder.apply_query(query, __MODULE__, [order_by], env)
 
   `expr` is already an escaped expression and we must not escape
