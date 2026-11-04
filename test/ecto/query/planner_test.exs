@@ -648,6 +648,52 @@ defmodule Ecto.Query.PlannerTest do
     assert key == :nocache
   end
 
+  test "plan: join cache includes prefixes from interpolated queries" do
+    keys =
+      for prefix <- ["a", "b"] do
+        lines = from(l in "lines", prefix: ^prefix)
+        {_, _, _, key} = plan(from(p in Post, join: l in ^lines, on: true))
+        key
+      end
+
+    assert Enum.uniq(keys) == keys
+
+    keys =
+      for prefix <- ["a", "b"] do
+        {_, _, _, key} =
+          plan(from(p in Post, join: l in ^from(l in "lines"), on: true, prefix: ^prefix))
+
+        key
+      end
+
+    assert Enum.uniq(keys) == keys
+
+    keys =
+      for prefix <- ["a", "b"] do
+        lines = from(l in "lines") |> Map.put(:prefix, prefix)
+        {_, _, _, key} = plan(from(p in Post, join: l in ^lines, on: true))
+        key
+      end
+
+    assert Enum.uniq(keys) == keys
+  end
+
+  test "plan: keeps hints from interpolated join queries" do
+    lines = from(l in "lines", hints: ["inner"])
+
+    {query, _, _, key} = plan(from(p in Post, join: l in ^lines, on: true))
+    assert [%{hints: ["inner"]}] = query.joins
+    assert [:all, {:join, [{:inner, _, _, ["inner"]}]} | _] = key
+
+    {query, _, _, _} = plan(from(p in Post, join: l in ^lines, hints: ["outer"], on: true))
+    assert [%{hints: ["outer"]}] = query.joins
+
+    {query, _, _, _} =
+      plan(from(p in Post, join: l in ^from(l in "lines"), hints: ["outer"], on: true))
+
+    assert [%{hints: ["outer"]}] = query.joins
+  end
+
   test "plan: normalizes prefixes" do
     # No schema prefix in from
     {query, _, _, _} = from(Comment, select: 1) |> plan()
