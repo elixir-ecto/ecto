@@ -1,5 +1,14 @@
 # Changelog for v3.x
 
+## v3.14.3 (2026-11-04)
+
+### Bug fixes
+
+  * [Ecto.Query] Include the prefix of queries given to `join` in the query cache key
+  * [Ecto.Query] Keep hints of queries given to `join`, as well as the hints given to the join itself
+  * [Ecto.Query] Do not cache queries with interpolated JSON paths, `splice/1`, and `constant/1`, as each distinct value would create a new query cache entry (CVE-2026-118391)
+  * [Ecto.Query] Keep interpolated true filters that a later `or_where` depends on
+
 ## v3.14.2 (2026-08-14)
 
 ### Enhancements
