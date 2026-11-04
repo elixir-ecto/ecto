@@ -648,6 +648,60 @@ defmodule Ecto.Query.PlannerTest do
     assert key == :nocache
   end
 
+  test "plan: interpolated json paths are uncacheable" do
+    key = "author"
+    path = ["author", "name"]
+
+    for query <- [
+          from(p in Post, where: json_extract_path(p.meta, [^key, 0]) == ^"value"),
+          from(p in Post, where: json_extract_path(p.meta, ^path) == ^"value"),
+          from(p in Post, where: p.meta[^key] == ^"value"),
+          from(p in Post, where: ^dynamic([p], p.meta[^key] == ^"value"))
+        ] do
+      {_query, ["value"], ["value"], key} = plan(query)
+      assert key == :nocache
+    end
+
+    {_query, [], [], key} = plan(from(p in Post, select: p.meta["author"]))
+    assert key != :nocache
+  end
+
+  test "plan: interpolated constants are uncacheable" do
+    query =
+      from(p in Post,
+        where: p.id in fragment("(?,?)", ^1, splice([constant(^2), ^3])),
+        select: fragment("?", constant(^"hi")),
+        limit: fragment("?", constant(^10))
+      )
+
+    {_query, [1, 3], [1, 3], key} = plan(query)
+    assert key == :nocache
+
+    {query, [1, 3], [1, 3], _} = normalize_with_params(query)
+
+    assert {:in, _, [_, {:fragment, _, parts}]} = hd(query.wheres).expr
+
+    assert [
+             raw: "(",
+             expr: {:^, [], [0]},
+             raw: ",",
+             expr: 2,
+             raw: ",",
+             expr: {:^, [], [1]},
+             raw: ")"
+           ] = parts
+
+    assert {:fragment, _, [raw: "", expr: "hi", raw: ""]} = query.select.expr
+    assert {:fragment, _, [raw: "", expr: 10, raw: ""]} = query.limit.expr
+  end
+
+  test "plan: spliced lists are uncacheable" do
+    ids = [1, 2, 3]
+    query = from(p in Post, where: fragment("? IN (?)", p.id, splice(^ids)))
+    {_query, [1, 2, 3], [1, 2, 3], key} = plan(query)
+    assert key == :nocache
+  end
+
   test "plan: join cache includes prefixes from interpolated queries" do
     keys =
       for prefix <- ["a", "b"] do
@@ -1941,6 +1995,24 @@ defmodule Ecto.Query.PlannerTest do
                      select: json_extract_path(p.metas, ^Process.get(:unused, "id"))
                    )
                  end
+  end
+
+  test "normalize: inlines interpolated json paths" do
+    key = "author"
+    path = ["author", "name"]
+
+    {query, [1, "value"], [1, "value"], _} =
+      from(p in "posts",
+        where: p.id == ^1 and json_extract_path(p.meta, [^key, 0]) == ^"value",
+        select: json_extract_path(p.meta, ^path)
+      )
+      |> normalize_with_params()
+
+    assert {:and, [], [{:==, [], [_, {:^, [], [0]}]}, {:==, [], [json, {:^, [], [1]}]}]} =
+             hd(query.wheres).expr
+
+    assert {:json_extract_path, [], [_, ["author", 0]]} = json
+    assert {:json_extract_path, [], [_, ["author", "name"]]} = query.select.expr
   end
 
   test "normalize: json_extract_path with field having custom source" do

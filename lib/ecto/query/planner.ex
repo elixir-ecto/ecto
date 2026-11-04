@@ -1066,10 +1066,16 @@ defmodule Ecto.Query.Planner do
         %Ecto.SubQuery{params: subparams, cache: cache} = Enum.fetch!(expr.subqueries, i)
         {Enum.reverse(subparams, acc), cacheable? and cache != :nocache}
 
+      # JSON paths and constants are inlined in the query, so they are not sent
+      # to the adapter and they cannot be cached, as each value generates a
+      # different query.
+      {_value, :inline}, {acc, _cacheable?} ->
+        {acc, false}
+
       {v, type}, {acc, cacheable?} ->
         case cast_param(kind, query, expr, v, type, adapter) do
           {cast_v, {:in, dump_v}} -> {split_variadic_params(cast_v, dump_v, acc), false}
-          {cast_v, {:splice, dump_v}} -> {split_variadic_params(cast_v, dump_v, acc), cacheable?}
+          {cast_v, {:splice, dump_v}} -> {split_variadic_params(cast_v, dump_v, acc), false}
           cast_v_and_dump_v -> {[cast_v_and_dump_v | acc], cacheable?}
         end
     end)
@@ -1684,12 +1690,18 @@ defmodule Ecto.Query.Planner do
     {ix, ix_expr, ix_query} = get_ix!(left, kind, query)
 
     type = type!(kind, ix_query, expr, ix, field)
+    path = inline_json_path(path, expr)
     validate_json_path!(path, field, type)
 
     field_source = kind |> get_source!(ix_query, ix) |> field_source(field)
 
     json_field = {{:., dot_meta, [ix_expr, field_source]}, expr_meta, []}
     {{:json_extract_path, meta, [json_field, path]}, acc}
+  end
+
+  defp prewalk({:constant, _, [{:^, _, [ix]}]}, _kind, _query, expr, acc, _adapter) do
+    {value, :inline} = Enum.fetch!(expr.params, ix)
+    {value, acc}
   end
 
   defp prewalk({:selected_as, [], [name]}, _kind, query, _expr, acc, _adapter) do
@@ -1749,6 +1761,22 @@ defmodule Ecto.Query.Planner do
 
   defp prewalk(other, _kind, _query, _expr, acc, _adapter) do
     {other, acc}
+  end
+
+  defp inline_json_path({:^, _, [ix]}, expr) do
+    {path, :inline} = Enum.fetch!(expr.params, ix)
+    path
+  end
+
+  defp inline_json_path(path, expr) do
+    Enum.map(path, fn
+      {:^, _, [ix]} ->
+        {element, :inline} = Enum.fetch!(expr.params, ix)
+        element
+
+      element ->
+        element
+    end)
   end
 
   defp selected_as!(select_aliases, name) do

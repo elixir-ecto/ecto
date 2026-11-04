@@ -424,8 +424,9 @@ defmodule Ecto.Query.API do
 
   > #### Query caching {: .warning}
   >
-  > Because identifiers and constants are made part of the query, each different
-  > value will generate a separate query, with its own cache.
+  > Because identifiers are made part of the query, each different value will
+  > generate a separate query, with its own cache. Queries with interpolated
+  > constants are not cached.
 
   ## Splicing
 
@@ -511,8 +512,8 @@ defmodule Ecto.Query.API do
   generate a query such as `SELECT p0.title FROM "posts" AS p0 LIMIT 1`
   as opposed to `SELECT p0.title FROM "posts" AS p0 LIMIT $1`.
 
-  Note that each different value of `limit` will emit a different query,
-  which will be independently prepared and cached.
+  Note that each different value of `limit` will emit a different query.
+  For this reason, queries with interpolated constants are not cached.
   """
   def constant(value), do: doc!([value])
 
@@ -527,6 +528,9 @@ defmodule Ecto.Query.API do
   The example above will be transformed at runtime into the following
 
       from p in Post, where: fragment("? in (?,?,?)", p.id, ^1, ^2, ^3)
+
+  Since lists of different lengths emit different queries, queries with
+  interpolated splices are not cached.
 
   You may also splice compile-time lists. This allows you to combine query parameters
   with literals and constructs like query bindings
@@ -841,6 +845,10 @@ defmodule Ecto.Query.API do
 
       source_field = :source_column
       from(post in Post, select: post.meta["author"][field(p, ^source_field)])
+
+  Interpolated path elements are inlined into the query, so each path
+  emits a different query. For this reason, queries with interpolated
+  paths are not cached.
 
   ## Warning: indexes on PostgreSQL
 
