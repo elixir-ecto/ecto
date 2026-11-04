@@ -308,7 +308,7 @@ defmodule Ecto.Query.Builder do
   def escape({:json_extract_path, _, [field, path]}, type, params_acc, vars, env) do
     validate_json_field!(field)
 
-    path = escape_json_path(path, vars)
+    {path, params_acc} = escape_json_path(path, params_acc, vars)
     {field, params_acc} = escape(field, type, params_acc, vars, env)
     {{:{}, [], [:json_extract_path, [], [field, path]]}, params_acc}
   end
@@ -819,8 +819,10 @@ defmodule Ecto.Query.Builder do
   defp escape_fragment({:constant, _meta, [expr]}, params_acc, _vars, _env) do
     case expr do
       {:^, _, [expr]} ->
+        {params, acc, compile_merge?} = params_acc
         checked = quote do: Ecto.Query.Builder.constant!(unquote(expr))
-        {checked, params_acc}
+        escaped = {:{}, [], [:constant, [], [{:{}, [], [:^, [], [length(params)]]}]]}
+        {escaped, {[{checked, :inline} | params], acc, compile_merge?}}
 
       _ ->
         error!(
@@ -1280,41 +1282,46 @@ defmodule Ecto.Query.Builder do
     )
   end
 
-  defp escape_json_path(path, vars) when is_list(path) do
-    Enum.map(path, &quoted_json_path_element!(&1, vars))
+  # Interpolated JSON paths are stored as parameters of type :inline,
+  # so they are not part of the query cache key. The planner inlines
+  # them into the path and does not send them to the adapter.
+  defp escape_json_path(path, params_acc, vars) when is_list(path) do
+    Enum.map_reduce(path, params_acc, &quoted_json_path_element!(&1, &2, vars))
   end
 
-  defp escape_json_path({:^, _, [path]}, _vars) do
-    quote do
-      path = Ecto.Query.Builder.json_path!(unquote(path))
-      Enum.map(path, &Ecto.Query.Builder.json_path_element!/1)
-    end
+  defp escape_json_path({:^, _, [path]}, {params, acc}, _vars) do
+    expr = {:{}, [], [:^, [], [length(params)]]}
+    path = quote do: Ecto.Query.Builder.json_path!(unquote(path))
+    {expr, {[{path, :inline} | params], acc}}
   end
 
-  defp escape_json_path(other, _vars) do
+  defp escape_json_path(other, _params_acc, _vars) do
     error!(
       "expected JSON path to be a literal list or interpolated value, got: `#{Macro.to_string(other)}`"
     )
   end
 
-  defp quoted_json_path_element!({:^, _, [expr]}, _vars),
-    do: quote(do: Ecto.Query.Builder.json_path_element!(unquote(expr)))
-
-  defp quoted_json_path_element!(binary, _vars) when is_binary(binary),
-    do: binary
-
-  defp quoted_json_path_element!(integer, _vars) when is_integer(integer),
-    do: integer
-
-  defp quoted_json_path_element!({{:., _, [callee, field]}, _, []}, vars) do
-    escape_field!(callee, field, vars)
+  defp quoted_json_path_element!({:^, _, [expr]}, {params, acc}, _vars) do
+    expr_ix = {:{}, [], [:^, [], [length(params)]]}
+    element = quote do: Ecto.Query.Builder.json_path_element!(unquote(expr))
+    {expr_ix, {[{element, :inline} | params], acc}}
   end
 
-  defp quoted_json_path_element!({:field, _, [callee, field]}, vars) do
-    escape_field!(callee, field, vars)
+  defp quoted_json_path_element!(binary, params_acc, _vars) when is_binary(binary),
+    do: {binary, params_acc}
+
+  defp quoted_json_path_element!(integer, params_acc, _vars) when is_integer(integer),
+    do: {integer, params_acc}
+
+  defp quoted_json_path_element!({{:., _, [callee, field]}, _, []}, params_acc, vars) do
+    {escape_field!(callee, field, vars), params_acc}
   end
 
-  defp quoted_json_path_element!(other, _vars),
+  defp quoted_json_path_element!({:field, _, [callee, field]}, params_acc, vars) do
+    {escape_field!(callee, field, vars), params_acc}
+  end
+
+  defp quoted_json_path_element!(other, _params_acc, _vars),
     do:
       error!(
         "expected JSON path to contain literal strings, literal integers, fields, or interpolated values, got: " <>
@@ -1337,7 +1344,7 @@ defmodule Ecto.Query.Builder do
   Called by escaper at runtime to verify that path is a list
   """
   def json_path!(path) when is_list(path),
-    do: path
+    do: Enum.map(path, &json_path_element!/1)
 
   def json_path!(path),
     do: error!("expected `path` to be a list in json_extract_path/2, got: `#{inspect(path)}`")

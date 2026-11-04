@@ -333,6 +333,12 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   # Jason
+  defp postwalk({:json_extract_path, meta, [expr, {:^, _, [path]}]}, names, part)
+       when is_list(path) do
+    path = Enum.map(path, &{:^, [], [&1]})
+    postwalk({:json_extract_path, meta, [expr, path]}, names, part)
+  end
+
   defp postwalk({:json_extract_path, _, [expr, path]}, _names, _part) do
     Enum.reduce(path, expr, fn element, acc ->
       {{:., [], [Access, :get]}, [], [acc, element]}

@@ -1119,8 +1119,10 @@ defmodule Ecto.QueryTest do
 
       assert {:fragment, _, select_parts} = query.select.expr
       assert {:fragment, _, limit_parts} = query.limit.expr
-      assert [raw: "", expr: "hi", raw: ""] = select_parts
-      assert [raw: "", expr: 1, raw: ""] = limit_parts
+      assert [raw: "", expr: {:constant, [], [{:^, [], [0]}]}, raw: ""] = select_parts
+      assert [raw: "", expr: {:constant, [], [{:^, [], [0]}]}, raw: ""] = limit_parts
+      assert [{"hi", :inline}] = query.select.params
+      assert [{1, :inline}] = query.limit.params
 
       msg = "constant(^value) expects `value` to be a string or a number, got `%{}`"
 
@@ -1191,11 +1193,13 @@ defmodule Ecto.QueryTest do
                raw: ",",
                expr: 2,
                raw: ",",
-               expr: 3,
+               expr: {:constant, [], [{:^, [], [1]}]},
                raw: ",",
-               expr: {:^, _, [1]},
+               expr: {:^, _, [2]},
                raw: ")"
              ] = parts
+
+      assert [{1, :any}, {3, :inline}, {5, :any}] = hd(query.wheres).params
     end
 
     test "supports compile-time list splicing with nested splicing" do

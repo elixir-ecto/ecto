@@ -336,6 +336,9 @@ defmodule Ecto.Query.InspectTest do
     assert i(from(x in Post, where: fragment(title: [foo: ^value]))) ==
              ~s{from p0 in Inspect.Post, where: fragment(title: [foo: ^"foobar"])}
 
+    assert i(from(x in Post, where: fragment("? COLLATE ?", x.id, constant(^value)))) ==
+             ~s{from p0 in Inspect.Post, where: fragment("? COLLATE ?", p0.id, constant(^"foobar"))}
+
     assert i(from(x in fragment("SELECT ? as title", ^value))) ==
              ~s{from f0 in fragment("SELECT ? as title", ^"foobar")}
 
@@ -357,6 +360,16 @@ defmodule Ecto.Query.InspectTest do
 
     assert i(from(x in Post, select: x.meta["author"]["name"])) ==
              ~s{from p0 in Inspect.Post, select: p0.meta[\"author\"][\"name\"]}
+
+    key = "author"
+
+    assert i(from(x in Post, select: x.meta[^key]["name"])) ==
+             ~s{from p0 in Inspect.Post, select: p0.meta[^\"author\"][\"name\"]}
+
+    path = ["author", "name"]
+
+    assert i(from(x in Post, select: json_extract_path(x.meta, ^path))) ==
+             ~s{from p0 in Inspect.Post, select: p0.meta[^\"author\"][^\"name\"]}
   end
 
   test "inspect all" do
