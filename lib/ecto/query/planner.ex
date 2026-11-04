@@ -344,7 +344,12 @@ defmodule Ecto.Query.Planner do
        when kind in [:fragment, :values],
        do: {expr, source}
 
-  defp plan_source(_query, %{source: {{:fragment, _, _} = source, schema}, prefix: nil} = expr, _adapter, _cte_names)
+  defp plan_source(
+         _query,
+         %{source: {{:fragment, _, _} = source, schema}, prefix: nil} = expr,
+         _adapter,
+         _cte_names
+       )
        when is_atom(schema) do
     {expr, {source, schema, nil}}
   end
@@ -353,8 +358,14 @@ defmodule Ecto.Query.Planner do
        when kind in [:fragment, :values],
        do: error!(query, expr, "cannot set prefix: #{inspect(prefix)} option for #{kind} sources")
 
-  defp plan_source(query, %{source: {{:fragment, _, _}, _schema}, prefix: prefix} = expr, _adapter, _cte_names),
-       do: error!(query, expr, "cannot set prefix: #{inspect(prefix)} option for fragment sources")
+  defp plan_source(
+         query,
+         %{source: {{:fragment, _, _}, _schema}, prefix: prefix} = expr,
+         _adapter,
+         _cte_names
+       ),
+       do:
+         error!(query, expr, "cannot set prefix: #{inspect(prefix)} option for fragment sources")
 
   defp plan_subquery(subquery, query, prefix, adapter, source?, cte_names) do
     %{query: inner_query} = subquery
@@ -1735,22 +1746,6 @@ defmodule Ecto.Query.Planner do
     {{:json_extract_path, meta, [json_field, path]}, acc}
   end
 
-  defp inline_json_path({:^, _, [ix]}, expr) do
-    {path, :inline} = Enum.fetch!(expr.params, ix)
-    path
-  end
-
-  defp inline_json_path(path, expr) do
-    Enum.map(path, fn
-      {:^, _, [ix]} ->
-        {element, :inline} = Enum.fetch!(expr.params, ix)
-        element
-
-      element ->
-        element
-    end)
-  end
-
   defp prewalk({:constant, _, [{:^, _, [ix]}]}, _kind, _query, expr, acc, _adapter) do
     {value, :inline} = Enum.fetch!(expr.params, ix)
     {value, acc}
@@ -1813,6 +1808,22 @@ defmodule Ecto.Query.Planner do
 
   defp prewalk(other, _kind, _query, _expr, acc, _adapter) do
     {other, acc}
+  end
+
+  defp inline_json_path({:^, _, [ix]}, expr) do
+    {path, :inline} = Enum.fetch!(expr.params, ix)
+    path
+  end
+
+  defp inline_json_path(path, expr) do
+    Enum.map(path, fn
+      {:^, _, [ix]} ->
+        {element, :inline} = Enum.fetch!(expr.params, ix)
+        element
+
+      element ->
+        element
+    end)
   end
 
   defp selected_as!(select_aliases, name) do
@@ -2318,7 +2329,7 @@ defmodule Ecto.Query.Planner do
         schema = if kind == :map, do: nil, else: schema
         {{:source, {source, schema}, prefix || query.prefix, types}, fields}
 
-      {{:ok, {kind, fields}}, {{:fragment, _, _} = source, schema, prefix}}  ->
+      {{:ok, {kind, fields}}, {{:fragment, _, _} = source, schema, prefix}} ->
         {types, fields} = select_dump_for_schema(schema, List.wrap(fields), ix, drop)
         schema = if kind == :map, do: nil, else: schema
         {{:source, {source, schema}, prefix, types}, fields}
@@ -2392,7 +2403,10 @@ defmodule Ecto.Query.Planner do
           nil
 
         {:struct, _} ->
-          error!(query, "it is not possible to return a struct subset of a subquery that does not return a schema struct")   
+          error!(
+            query,
+            "it is not possible to return a struct subset of a subquery that does not return a schema struct"
+          )
       end
 
     types =
@@ -2402,8 +2416,11 @@ defmodule Ecto.Query.Planner do
             {field, type}
 
           :error ->
-            error!(query, "field `#{field}` is not available in the subquery. " <>
-                         "Subquery only returns fields: #{inspect(available_fields)}")
+            error!(
+              query,
+              "field `#{field}` is not available in the subquery. " <>
+                "Subquery only returns fields: #{inspect(available_fields)}"
+            )
         end
       end)
 
@@ -2666,7 +2683,9 @@ defmodule Ecto.Query.Planner do
     input_string = Atom.to_string(input)
 
     schema.__schema__(:fields)
-    |> Enum.map(fn field -> {field, String.jaro_distance(input_string, Atom.to_string(field))} end)
+    |> Enum.map(fn field ->
+      {field, String.jaro_distance(input_string, Atom.to_string(field))}
+    end)
     |> Enum.filter(fn {_field, score} -> score >= 0.77 end)
     |> Enum.sort(&(elem(&1, 0) >= elem(&2, 0)))
     |> Enum.take(5)
