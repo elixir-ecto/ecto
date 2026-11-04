@@ -690,6 +690,52 @@ defmodule Ecto.Query.PlannerTest do
     refute first_key == second_key
   end
 
+  test "plan: join cache includes prefixes from interpolated queries" do
+    keys =
+      for prefix <- ["a", "b"] do
+        lines = from(l in "lines", prefix: ^prefix)
+        {_, _, _, key} = plan(from(p in Post, join: l in ^lines, on: true))
+        key
+      end
+
+    assert Enum.uniq(keys) == keys
+
+    keys =
+      for prefix <- ["a", "b"] do
+        {_, _, _, key} =
+          plan(from(p in Post, join: l in ^from(l in "lines"), on: true, prefix: ^prefix))
+
+        key
+      end
+
+    assert Enum.uniq(keys) == keys
+
+    keys =
+      for prefix <- ["a", "b"] do
+        lines = from(l in "lines") |> Map.put(:prefix, prefix)
+        {_, _, _, key} = plan(from(p in Post, join: l in ^lines, on: true))
+        key
+      end
+
+    assert Enum.uniq(keys) == keys
+  end
+
+  test "plan: keeps hints from interpolated join queries" do
+    lines = from(l in "lines", hints: ["inner"])
+
+    {query, _, _, key} = plan(from(p in Post, join: l in ^lines, on: true))
+    assert [%{hints: ["inner"]}] = query.joins
+    assert [:all, {:join, [{:inner, _, _, ["inner"]}]} | _] = key
+
+    {query, _, _, _} = plan(from(p in Post, join: l in ^lines, hints: ["outer"], on: true))
+    assert [%{hints: ["outer"]}] = query.joins
+
+    {query, _, _, _} =
+      plan(from(p in Post, join: l in ^from(l in "lines"), hints: ["outer"], on: true))
+
+    assert [%{hints: ["outer"]}] = query.joins
+  end
+
   test "plan: merges subqueries from interpolated join wheres" do
     first_subquery = from(s in "first_subposts", where: s.id == ^1, select: s.id)
     second_subquery = from(s in "second_subposts", where: s.id == ^2, select: s.id)

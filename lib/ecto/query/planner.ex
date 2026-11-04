@@ -672,8 +672,13 @@ defmodule Ecto.Query.Planner do
 
   defp plan_joins(
          [
-           %JoinExpr{source: %Ecto.Query{} = join_query, qual: qual, on: on, prefix: prefix} =
-             join
+           %JoinExpr{
+             source: %Ecto.Query{} = join_query,
+             qual: qual,
+             on: on,
+             prefix: prefix,
+             hints: hints
+           } = join
            | t
          ],
          query,
@@ -702,6 +707,16 @@ defmodule Ecto.Query.Planner do
         from = rewrite_prefix(join_query.from, prefix)
         {from, source} = plan_source(join_query, from, adapter, cte_names)
         [join] = attach_on(query_to_joins(qual, from.source, join_query, counter), on)
+
+        # The join hints have precedence over the hints in the query being joined
+        join = %{join | hints: if(hints != [], do: hints, else: from.hints)}
+
+        # Store the planned prefix in the join, as it is part of the cache key
+        join =
+          case source do
+            {source, _schema, prefix} when is_binary(source) -> %{join | prefix: prefix}
+            _ -> join
+          end
 
         plan_joins(
           t,
