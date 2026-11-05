@@ -33,7 +33,7 @@ defmodule Ecto.EncryptedTest do
         key = :crypto.strong_rand_bytes(:crypto.cipher_info(cipher).key_length)
         keys = [%{tag: "tag", cipher: cipher, key: key}]
         ciphertext = Ecto.Encrypted.encrypt(keys, "secret")
-        assert <<3, "tag", _::binary>> = ciphertext
+        assert <<1, 3, "tag", _::binary>> = ciphertext
         assert Ecto.Encrypted.decrypt(keys, ciphertext) == {:ok, "secret"}
       end
     end
@@ -42,7 +42,7 @@ defmodule Ecto.EncryptedTest do
       %{key: key} = @v1
       ciphertext = Ecto.Encrypted.encrypt([@v1], "secret")
 
-      assert <<2, "v1", salt::binary-12, iv::binary-12, encrypted::binary-6, tag::binary-16>> =
+      assert <<1, 2, "v1", salt::binary-12, iv::binary-12, encrypted::binary-6, tag::binary-16>> =
                ciphertext
 
       <<value_key::binary-32>> = :crypto.mac(:hmac, :sha256, key, "Ecto.Encrypted" <> salt)
@@ -52,7 +52,7 @@ defmodule Ecto.EncryptedTest do
                value_key,
                iv,
                encrypted,
-               <<2, "v1">>,
+               <<1, 2, "v1">>,
                tag,
                false
              ) == "secret"
@@ -62,7 +62,7 @@ defmodule Ecto.EncryptedTest do
       keys = [%{tag: "v1", cipher: :aes_128_gcm, key: :binary.copy(<<1>>, 16)}]
       ciphertext = Ecto.Encrypted.encrypt(keys, "secret")
 
-      assert <<2, "v1", salt::binary-12, iv::binary-12, encrypted::binary-6, tag::binary-16>> =
+      assert <<1, 2, "v1", salt::binary-12, iv::binary-12, encrypted::binary-6, tag::binary-16>> =
                ciphertext
 
       <<value_key::binary-16, _::binary>> =
@@ -73,7 +73,7 @@ defmodule Ecto.EncryptedTest do
                value_key,
                iv,
                encrypted,
-               <<2, "v1">>,
+               <<1, 2, "v1">>,
                tag,
                false
              ) == "secret"
@@ -86,9 +86,14 @@ defmodule Ecto.EncryptedTest do
     test "decrypts with any key and encrypts with the first" do
       old = Ecto.Encrypted.encrypt([@v1], "secret")
       new = Ecto.Encrypted.encrypt([@v2, @v1], "secret")
-      assert <<2, "v2", _::binary>> = new
+      assert <<1, 2, "v2", _::binary>> = new
       assert Ecto.Encrypted.decrypt([@v2, @v1], old) == {:ok, "secret"}
       assert Ecto.Encrypted.decrypt([@v2, @v1], new) == {:ok, "secret"}
+    end
+
+    test "fails on unknown versions" do
+      <<1, rest::binary>> = Ecto.Encrypted.encrypt([@v1], "secret")
+      assert Ecto.Encrypted.decrypt([@v1], <<2, rest::binary>>) == :error
     end
 
     test "fails on unknown tags" do
@@ -97,8 +102,8 @@ defmodule Ecto.EncryptedTest do
     end
 
     test "fails when the tag is changed" do
-      <<2, "v1", rest::binary>> = Ecto.Encrypted.encrypt([@v1], "secret")
-      assert Ecto.Encrypted.decrypt([%{@v1 | tag: "v3"}], <<2, "v3", rest::binary>>) == :error
+      <<1, 2, "v1", rest::binary>> = Ecto.Encrypted.encrypt([@v1], "secret")
+      assert Ecto.Encrypted.decrypt([%{@v1 | tag: "v3"}], <<1, 2, "v3", rest::binary>>) == :error
     end
 
     test "fails on tampered or malformed data" do
@@ -107,7 +112,7 @@ defmodule Ecto.EncryptedTest do
       <<head::binary-size(^size), last>> = ciphertext
       assert Ecto.Encrypted.decrypt([@v1], head <> <<Bitwise.bxor(last, 1)>>) == :error
       assert Ecto.Encrypted.decrypt([@v1], head) == :error
-      assert Ecto.Encrypted.decrypt([@v1], <<2, "v1", 0>>) == :error
+      assert Ecto.Encrypted.decrypt([@v1], <<1, 2, "v1", 0>>) == :error
       assert Ecto.Encrypted.decrypt([@v1], <<>>) == :error
       assert Ecto.Encrypted.decrypt([@v1], <<9, "v1">>) == :error
     end
@@ -115,7 +120,7 @@ defmodule Ecto.EncryptedTest do
 
   describe "key validation" do
     @secret :binary.copy("s", 16)
-    @ciphertext <<2, "v1", 0::size(28)-unit(8)>>
+    @ciphertext <<1, 2, "v1", 0::size(40)-unit(8)>>
 
     test "raises on invalid keys without leaking them" do
       for {keys, message} <- [

@@ -28,6 +28,7 @@ defmodule Ecto.HMACTest do
     for {key, message} <- [
           {secret, "to be a map"},
           {%{algorithm: :unknown, key: @key}, "unknown algorithm :unknown"},
+          {%{algorithm: :shake128, key: @key}, "fixed output size"},
           {%{algorithm: :sha256, key: secret}, "at least 32 bytes"}
         ] do
       error = assert_raise ArgumentError, fn -> Ecto.HMAC.hash(key, "value") end

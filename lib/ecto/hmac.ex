@@ -193,6 +193,13 @@ defmodule Ecto.HMAC do
           raise ArgumentError, "unknown algorithm #{inspect(algorithm)} for Ecto.HMAC key"
       end
 
+    # Extendable-output functions, such as :shake128, have no fixed size
+    if size == 0 do
+      raise ArgumentError,
+            "unsupported algorithm #{inspect(algorithm)} for Ecto.HMAC key, " <>
+              "the algorithm must have a fixed output size"
+    end
+
     # RFC 2104 recommends keys of at least the size of the hash output
     if byte_size(key) < size do
       raise ArgumentError,

@@ -189,6 +189,7 @@ defmodule Ecto.Encrypted do
   """
   @callback decode(binary) :: {:ok, term} | :error
 
+  @version 1
   @auth_tag_size 16
   @salt_size 12
 
@@ -249,17 +250,18 @@ defmodule Ecto.Encrypted do
   truncated to the cipher's key length, where `salt` is 12 random bytes.
   The result has the format:
 
-      <<byte_size(tag)::8, tag::binary, salt::binary-12, iv::binary,
+      <<1, byte_size(tag)::8, tag::binary, salt::binary-12, iv::binary,
         ciphertext::binary, auth_tag::binary-16>>
 
-  The tag and its size are authenticated as additional data.
+  where `1` is the version of the format. The version, the tag, and its
+  size are authenticated as additional data.
 
   Raises `ArgumentError` if the first key is invalid.
   """
   @spec encrypt([key, ...], binary) :: binary
   def encrypt([key | _], plaintext) when is_binary(plaintext) do
     {tag, cipher, key, key_length, iv_length} = validate_key!(key)
-    aad = <<byte_size(tag), tag::binary>>
+    aad = <<@version, byte_size(tag), tag::binary>>
 
     <<salt::binary-size(@salt_size), iv::binary>> =
       :crypto.strong_rand_bytes(@salt_size + iv_length)
@@ -282,7 +284,7 @@ defmodule Ecto.Encrypted do
   """
   @spec decrypt([key, ...], binary) :: {:ok, binary} | :error
   def decrypt([_ | _] = keys, binary) when is_binary(binary) do
-    with <<size, tag::binary-size(size), rest::binary>> <- binary,
+    with <<@version, size, tag::binary-size(size), rest::binary>> <- binary,
          %{} = key <- Enum.find(keys, &match?(%{tag: ^tag}, &1)),
          {^tag, cipher, key, key_length, iv_length} = validate_key!(key),
          ciphertext_size = byte_size(rest) - @salt_size - iv_length - @auth_tag_size,
@@ -290,7 +292,7 @@ defmodule Ecto.Encrypted do
          <<salt::binary-size(@salt_size), iv::binary-size(^iv_length),
            ciphertext::binary-size(^ciphertext_size), auth_tag::binary-size(@auth_tag_size)>> <-
            rest,
-         aad = binary_part(binary, 0, size + 1),
+         aad = binary_part(binary, 0, size + 2),
          value_key = derive_key(key, salt, key_length),
          plaintext when is_binary(plaintext) <-
            :crypto.crypto_one_time_aead(cipher, value_key, iv, ciphertext, aad, auth_tag, false) do
