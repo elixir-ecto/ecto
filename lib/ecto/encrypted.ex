@@ -121,26 +121,30 @@ defmodule Ecto.Encrypted do
   values by implementing the `c:encode/1` and `c:decode/1` callbacks,
   plus the `c:Ecto.Type.cast/1` callback to cast external input:
 
-      defmodule MyApp.EncryptedTerm do
+      defmodule MyApp.EncryptedMap do
         use Ecto.Encrypted
 
         @impl true
         defdelegate keys, to: MyApp.Encrypted
 
         @impl true
-        def cast(value), do: {:ok, value}
+        def cast(value) when is_map(value), do: {:ok, value}
+        def cast(_value), do: :error
 
         @impl true
-        def encode(value), do: {:ok, :erlang.term_to_binary(value)}
+        def encode(value), do: {:ok, JSON.encode!(value)}
 
         @impl true
-        def decode(binary), do: {:ok, :erlang.binary_to_term(binary, [:safe])}
+        def decode(binary) do
+          case JSON.decode(binary) do
+            {:ok, value} -> {:ok, value}
+            {:error, _} -> :error
+          end
+        end
       end
 
-  Decoding only happens after the data has been decrypted and
-  authenticated, so the input to `c:decode/1` can be trusted as long
-  as the keys are secret. However, keep in mind that `:erlang.term_to_binary/1`
-  means only Erlang/Elixir applications will be able to read the data.
+  The example above uses the `JSON` module from Elixir v1.18+. As with
+  the `:map` type, keys are returned as strings after loading.
 
   ## Limitations
 
