@@ -37,14 +37,18 @@ defmodule Ecto.HMACTest do
   end
 
   test "prunes keys from the stacktrace on crypto errors" do
-    # Extendable-output functions, such as :shake128, cannot be used with HMAC
-    try do
-      Ecto.HMAC.hash(%{algorithm: :shake128, key: @key}, "value")
-      flunk("expected Ecto.HMAC.hash/2 to raise")
-    rescue
-      ErlangError ->
-        refute inspect(__STACKTRACE__) =~ inspect(@key)
-    end
+    # Extendable-output functions, such as :shake128, cannot be used with HMAC.
+    # Depending on the OTP version, they fail in :crypto.hash_info/1 or :crypto.mac/4
+    error =
+      try do
+        Ecto.HMAC.hash(%{algorithm: :shake128, key: @key}, "value")
+      rescue
+        e -> {e, __STACKTRACE__}
+      end
+
+    assert {exception, stacktrace} = error
+    assert is_exception(exception)
+    refute inspect(stacktrace) =~ inspect(@key)
   end
 
   test "dumps deterministically and loads as is" do
