@@ -146,6 +146,32 @@ defmodule Ecto.Encrypted do
   The example above uses the `JSON` module from Elixir v1.18+. As with
   the `:map` type, keys are returned as strings after loading.
 
+  ### Padding
+
+  Encryption hides the contents of a value but not its length: the
+  encrypted value grows with the original one. For fields with few
+  possible values, such as `"yes"` and `"no"`, the length alone may
+  reveal the value.
+
+  You can hide the length by padding values in `c:encode/1`, so all
+  values are rounded up to the same size or to multiples of a given
+  size. Padding is encrypted along with the value and removed in
+  `c:decode/1`. Since JSON ignores trailing whitespace, padding JSON
+  only requires changing `c:encode/1` in the example above:
+
+      @impl true
+      def encode(value) do
+        json = JSON.encode!(value)
+        padding = rem(64 - rem(byte_size(json), 64), 64)
+        {:ok, json <> :binary.copy(" ", padding)}
+      end
+
+  For other formats, make sure the padding can always be told apart
+  from the value. For example, add a `0x80` byte followed by zeros,
+  and remove everything from the last `0x80` byte onwards when decoding.
+  If you add padding to a field with existing data, `c:decode/1` must
+  also handle values written without padding.
+
   ## Limitations
 
   Each value is encrypted with a random nonce, so encrypting the same
