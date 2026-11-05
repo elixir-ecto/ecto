@@ -85,7 +85,9 @@ defmodule Ecto.MixProject do
         # Mix.Ecto,
 
         Types: [
+          Ecto.Encrypted,
           Ecto.Enum,
+          Ecto.HMAC,
           Ecto.ParameterizedType,
           Ecto.Type,
           Ecto.UUID
