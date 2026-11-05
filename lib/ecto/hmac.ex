@@ -197,8 +197,9 @@ defmodule Ecto.HMAC do
           raise ArgumentError, "unknown algorithm #{inspect(algorithm)} for Ecto.HMAC key"
       end
 
-    # Extendable-output functions, such as :shake128, have no fixed size
-    if size == 0 do
+    # Extendable-output functions, such as :shake128, have no fixed size,
+    # although some OpenSSL versions report their default output size
+    if size == 0 or algorithm in [:shake128, :shake256] do
       raise ArgumentError,
             "unsupported algorithm #{inspect(algorithm)} for Ecto.HMAC key, " <>
               "the algorithm must have a fixed output size"
