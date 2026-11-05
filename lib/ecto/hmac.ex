@@ -197,14 +197,6 @@ defmodule Ecto.HMAC do
           raise ArgumentError, "unknown algorithm #{inspect(algorithm)} for Ecto.HMAC key"
       end
 
-    # Extendable-output functions, such as :shake128, have no fixed size,
-    # although some OpenSSL versions report their default output size
-    if size == 0 or algorithm in [:shake128, :shake256] do
-      raise ArgumentError,
-            "unsupported algorithm #{inspect(algorithm)} for Ecto.HMAC key, " <>
-              "the algorithm must have a fixed output size"
-    end
-
     # RFC 2104 recommends keys of at least the size of the hash output
     if byte_size(key) < size do
       raise ArgumentError,
@@ -212,7 +204,17 @@ defmodule Ecto.HMAC do
               "for #{inspect(algorithm)}, got: #{byte_size(key)} bytes"
     end
 
-    :crypto.mac(:hmac, algorithm, key, ["Ecto.HMAC", binary])
+    try do
+      :crypto.mac(:hmac, algorithm, key, ["Ecto.HMAC", binary])
+    rescue
+      # Extendable-output functions, such as :shake128, have no fixed size
+      # and cannot be used with HMAC. We rescue instead of checking the size
+      # upfront because OpenSSL versions differ in the size they report
+      ErlangError ->
+        raise ArgumentError,
+              "unsupported algorithm #{inspect(algorithm)} for Ecto.HMAC key, " <>
+                "the algorithm must have a fixed output size"
+    end
   end
 
   # Error messages must never include the key itself
