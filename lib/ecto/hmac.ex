@@ -180,6 +180,10 @@ defmodule Ecto.HMAC do
   @doc """
   Returns the HMAC of `binary` with the given algorithm and key.
 
+  The result is `HMAC(algorithm, key, "Ecto.HMAC" <> binary)`. The prefix
+  ensures the result never matches HMACs computed elsewhere with the same
+  key, such as the keys derived by `Ecto.Encrypted`.
+
   Raises `ArgumentError` if `key` is invalid.
   """
   @spec hash(key, binary) :: binary
@@ -207,7 +211,7 @@ defmodule Ecto.HMAC do
               "for #{inspect(algorithm)}, got: #{byte_size(key)} bytes"
     end
 
-    :crypto.mac(:hmac, algorithm, key, binary)
+    :crypto.mac(:hmac, algorithm, key, ["Ecto.HMAC", binary])
   end
 
   # Error messages must never include the key itself

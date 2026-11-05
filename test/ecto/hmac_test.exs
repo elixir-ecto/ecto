@@ -17,7 +17,7 @@ defmodule Ecto.HMACTest do
 
   test "hash/2" do
     assert Ecto.HMAC.hash(%{algorithm: :sha256, key: @key}, "value") ==
-             :crypto.mac(:hmac, :sha256, @key, "value")
+             :crypto.mac(:hmac, :sha256, @key, "Ecto.HMACvalue")
 
     assert Lookup.hash("value") == Ecto.HMAC.hash(%{algorithm: :sha256, key: @key}, "value")
   end
