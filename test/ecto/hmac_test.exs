@@ -28,12 +28,22 @@ defmodule Ecto.HMACTest do
     for {key, message} <- [
           {secret, "to be a map"},
           {%{algorithm: :unknown, key: @key}, "unknown algorithm :unknown"},
-          {%{algorithm: :shake128, key: @key}, "fixed output size"},
           {%{algorithm: :sha256, key: secret}, "at least 32 bytes"}
         ] do
       error = assert_raise ArgumentError, fn -> Ecto.HMAC.hash(key, "value") end
       assert error.message =~ message
       refute error.message =~ secret
+    end
+  end
+
+  test "prunes keys from the stacktrace on crypto errors" do
+    # Extendable-output functions, such as :shake128, cannot be used with HMAC
+    try do
+      Ecto.HMAC.hash(%{algorithm: :shake128, key: @key}, "value")
+      flunk("expected Ecto.HMAC.hash/2 to raise")
+    rescue
+      ErlangError ->
+        refute inspect(__STACKTRACE__) =~ inspect(@key)
     end
   end
 

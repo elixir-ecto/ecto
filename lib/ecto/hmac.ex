@@ -204,17 +204,9 @@ defmodule Ecto.HMAC do
               "for #{inspect(algorithm)}, got: #{byte_size(key)} bytes"
     end
 
-    try do
-      :crypto.mac(:hmac, algorithm, key, ["Ecto.HMAC", binary])
-    rescue
-      # Extendable-output functions, such as :shake128, have no fixed size
-      # and cannot be used with HMAC. We rescue instead of checking the size
-      # upfront because OpenSSL versions differ in the size they report
-      ErlangError ->
-        raise ArgumentError,
-              "unsupported algorithm #{inspect(algorithm)} for Ecto.HMAC key, " <>
-                "the algorithm must have a fixed output size"
-    end
+    :crypto.mac(:hmac, algorithm, key, ["Ecto.HMAC", binary])
+  rescue
+    e -> reraise e, prune_args_from_stacktrace(__STACKTRACE__)
   end
 
   # Error messages must never include the key itself
@@ -224,4 +216,11 @@ defmodule Ecto.HMAC do
   end
 
   def hash(_key, _binary), do: raise(ArgumentError, "expected value to hash to be a binary")
+
+  # Removes the arguments from the stacktrace so keys do not leak
+  # on errors raised by :crypto. Only the top frame has arguments.
+  defp prune_args_from_stacktrace([{mod, fun, [_ | _] = args, info} | rest]),
+    do: [{mod, fun, length(args), info} | rest]
+
+  defp prune_args_from_stacktrace(stacktrace), do: stacktrace
 end

@@ -298,6 +298,8 @@ defmodule Ecto.Encrypted do
       :crypto.crypto_one_time_aead(cipher, value_key, iv, plaintext, aad, @auth_tag_size, true)
 
     aad <> salt <> iv <> ciphertext <> auth_tag
+  rescue
+    e -> reraise e, prune_args_from_stacktrace(__STACKTRACE__)
   end
 
   def encrypt(_keys, plaintext), do: raise_invalid_args!(plaintext, "plaintext")
@@ -326,6 +328,8 @@ defmodule Ecto.Encrypted do
     else
       _ -> :error
     end
+  rescue
+    e -> reraise e, prune_args_from_stacktrace(__STACKTRACE__)
   end
 
   def decrypt(_keys, binary), do: raise_invalid_args!(binary, "ciphertext")
@@ -385,4 +389,11 @@ defmodule Ecto.Encrypted do
           "expected each Ecto.Encrypted key to be a map with :tag (a binary of 1 to 255 bytes), " <>
             ":cipher (an atom), and :key (a binary)"
   end
+
+  # Removes the arguments from the stacktrace so keys do not leak
+  # on errors raised by :crypto. Only the top frame has arguments.
+  defp prune_args_from_stacktrace([{mod, fun, [_ | _] = args, info} | rest]),
+    do: [{mod, fun, length(args), info} | rest]
+
+  defp prune_args_from_stacktrace(stacktrace), do: stacktrace
 end
