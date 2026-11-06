@@ -8,7 +8,7 @@ defmodule Ecto.MixProject do
     [
       app: :ecto,
       version: @version,
-      elixir: "~> 1.14",
+      elixir: "~> 1.15",
       deps: deps(),
       consolidate_protocols: Mix.env() != :test,
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -85,7 +85,9 @@ defmodule Ecto.MixProject do
         # Mix.Ecto,
 
         Types: [
+          Ecto.Encrypted,
           Ecto.Enum,
+          Ecto.HMAC,
           Ecto.ParameterizedType,
           Ecto.Type,
           Ecto.UUID
