@@ -98,6 +98,10 @@ defmodule Ecto.Changeset.EmbeddedTest do
     end
   end
 
+  defmodule SchemalessAuthor do
+    defstruct profile: nil, posts: []
+  end
+
   defmodule Nested do
     use Ecto.Schema
     import Ecto.Changeset
@@ -177,6 +181,70 @@ defmodule Ecto.Changeset.EmbeddedTest do
     schema
     |> Changeset.cast(params, ~w())
     |> Changeset.cast_embed(embed, opts)
+  end
+
+  describe "schemaless embeds" do
+    test "casts embeds_one" do
+      types = %{profile: Embedded.one(Profile)}
+
+      changeset =
+        {%SchemalessAuthor{}, types}
+        |> Changeset.cast(%{"profile" => %{"name" => "michal"}}, [])
+        |> Changeset.cast_embed(:profile)
+
+      assert %{profile: profile} = changeset.changes
+      assert profile.data == %Profile{}
+      assert profile.changes == %{name: "michal"}
+      assert profile.action == :insert
+      assert changeset.valid?
+
+      assert {:ok, %SchemalessAuthor{profile: %Profile{name: "michal"}}} =
+               Changeset.apply_action(changeset, :insert)
+
+      assert {:embed, %Embedded{cardinality: :one, field: :profile, owner: SchemalessAuthor}} =
+               changeset.types.profile
+    end
+
+    test "casts embeds_many and preserves nested errors" do
+      types = %{posts: Embedded.many(Post, on_replace: :delete)}
+
+      changeset =
+        {%{posts: []}, types}
+        |> Changeset.cast(
+          %{"posts" => [%{"title" => "valid"}, %{"title" => "no"}]},
+          []
+        )
+        |> Changeset.cast_embed(:posts)
+
+      assert [valid, invalid] = changeset.changes.posts
+      assert valid.changes == %{title: "valid"}
+
+      assert invalid.errors == [
+               title:
+                 {"should be at least %{count} character(s)",
+                  [count: 3, validation: :length, kind: :min, type: :string]}
+             ]
+
+      refute changeset.valid?
+
+      assert {:embed,
+              %Embedded{
+                cardinality: :many,
+                field: :posts,
+                owner: nil,
+                on_replace: :delete
+              }} = changeset.types.posts
+
+      changeset =
+        {%SchemalessAuthor{posts: [%Post{title: "before"}]}, types}
+        |> Changeset.cast(%{"posts" => [%{"title" => "after"}]}, [])
+        |> Changeset.cast_embed(:posts)
+
+      assert [%Changeset{action: :update}] = changeset.changes.posts
+
+      assert {:ok, %SchemalessAuthor{posts: [%Post{title: "after"}]}} =
+               Changeset.apply_action(changeset, :update)
+    end
   end
 
   ## Cast embeds one
