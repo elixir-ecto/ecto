@@ -6,7 +6,7 @@ defmodule Ecto.Repo.Queryable do
   alias Ecto.Query.Planner
   alias Ecto.Query.SelectExpr
 
-  import Ecto.Query.Planner, only: [attach_prefix: 2]
+  import Ecto.Query.Planner, only: [attach_prefix: 2, attach_comments: 2]
 
   require Ecto.Query
 
@@ -37,9 +37,9 @@ defmodule Ecto.Repo.Queryable do
       |> Ecto.Query.Planner.ensure_select(true)
 
     {query, opts} = repo.prepare_query(:stream, query, opts)
-    query = attach_prefix(query, opts)
+    query = query |> attach_prefix(opts) |> attach_comments(opts)
 
-    query_cache? = Keyword.get(opts, :query_cache, true)
+    query_cache? = query_cache?(opts)
 
     {query_meta, prepared, cast_params, dump_params} =
       Planner.query(query, :all, cache, adapter, 0, query_cache?)
@@ -215,13 +215,17 @@ defmodule Ecto.Repo.Queryable do
 
   ## Helpers
 
+  defp query_cache?(opts) do
+    Keyword.get_lazy(opts, :query_cache, fn -> Keyword.get(opts, :comments, []) == [] end)
+  end
+
   defp execute(operation, name, query, {adapter_meta, opts} = tuplet) do
     %{adapter: adapter, cache: cache, repo: repo} = adapter_meta
 
     {query, opts} = repo.prepare_query(operation, query, opts)
-    query = attach_prefix(query, opts)
+    query = query |> attach_prefix(opts) |> attach_comments(opts)
 
-    query_cache? = Keyword.get(opts, :query_cache, true)
+    query_cache? = query_cache?(opts)
 
     {query_meta, prepared, cast_params, dump_params} =
       Planner.query(query, operation, cache, adapter, 0, query_cache?)

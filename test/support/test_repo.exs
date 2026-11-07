@@ -188,17 +188,24 @@ defmodule Ecto.CachingTestAdapter do
   # Return :cache to trigger default caching in the planner
   def prepare(operation, query), do: {:cache, {operation, query}}
 
-  def execute(_adapter_meta, _query_meta, {_cache_status, {:all, _query}}, _dump_params, _opts) do
-    []
-  end
+  def execute(_adapter_meta, _query_meta, prepared, _dump_params, _opts) do
+    send(self(), {:cache_status, elem(prepared, 0)})
 
-  def execute(_adapter_meta, _query_meta, {_cache_status, {_operation, _query}}, _dump_params, _opts) do
-    {1, nil}
+    case elem(prepared, tuple_size(prepared) - 1) do
+      {:all, _query} -> {0, []}
+      {_operation, _query} -> {1, nil}
+    end
   end
 
   def stream(_adapter_meta, _query_meta, _prepared, _dump_params, _opts) do
     []
   end
+end
+
+Application.put_env(:ecto, Ecto.CachingTestRepo, [])
+
+defmodule Ecto.CachingTestRepo do
+  use Ecto.Repo, otp_app: :ecto, adapter: Ecto.CachingTestAdapter
 end
 
 Application.put_env(:ecto, Ecto.TestRepo, user: "invalid")
@@ -214,3 +221,4 @@ defmodule Ecto.TestRepo do
 end
 
 Ecto.TestRepo.start_link()
+Ecto.CachingTestRepo.start_link()
