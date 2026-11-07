@@ -141,6 +141,73 @@ defmodule Ecto.Embedded do
 
   ## End of parameterized API
 
+  # Callback invoked by repository to check if any embed has
+  # prepare callbacks, in which case a transaction is required.
+  #
+  # It must mirror the traversal done by prepare/4 below,
+  # including the embeds surfaced from the data on insert.
+  @doc false
+  def prepare?(changeset, embeds, repo_action) do
+    %{changes: changes, types: types} = changeset
+
+    Enum.any?(Map.take(changes, embeds), fn {name, value} ->
+      {:embed, embed} = Map.fetch!(types, name)
+      value |> List.wrap() |> Enum.any?(&prepare_each?(embed, &1, repo_action))
+    end)
+  end
+
+  defp prepare_each?(_embed, %Changeset{prepare: [_ | _]}, _repo_action), do: true
+
+  defp prepare_each?(embed, %Changeset{} = changeset, repo_action) do
+    action = normalize_action(changeset.action, repo_action, embed)
+    to_struct_prepare?(changeset, action, embed)
+  end
+
+  defp to_struct_prepare?(%Changeset{valid?: false}, _action, _embed), do: false
+
+  defp to_struct_prepare?(%Changeset{data: %{__struct__: actual}}, _action, %{related: expected})
+       when actual != expected,
+       do: false
+
+  defp to_struct_prepare?(%Changeset{}, :delete, _embed), do: false
+
+  defp to_struct_prepare?(%Changeset{} = changeset, action, %{related: schema}) do
+    %{data: data, changes: changes} = changeset
+    embeds = schema.__schema__(:embeds)
+    surfaces_data? = action == :insert
+
+    prepare?(changeset, embeds, action) or
+      (surfaces_data? and data_prepare?(data, schema, embeds, changes))
+  end
+
+  # On insert, to_struct/4 surfaces the embeds left in the data. Only a changeset
+  # stored there can have prepare callbacks, so we look for those directly
+  # instead of building a changeset for every embed.
+  defp data_prepare?(data, schema, embeds, changes) do
+    Enum.any?(embeds, fn name ->
+      not is_map_key(changes, name) and
+        data_value_prepare?(Map.get(data, name), schema.__schema__(:embed, name))
+    end)
+  end
+
+  defp data_value_prepare?(nil, _embed), do: false
+
+  defp data_value_prepare?(values, embed) when is_list(values) do
+    Enum.any?(values, &data_value_prepare?(&1, embed))
+  end
+
+  defp data_value_prepare?(%Changeset{action: action} = changeset, embed) do
+    surfaced_changeset = %{changeset | action: action || :insert}
+    prepare_each?(embed, surfaced_changeset, :insert)
+  end
+
+  defp data_value_prepare?(%{__struct__: schema} = struct, %{related: schema}) do
+    no_changes = %{}
+    data_prepare?(struct, schema, schema.__schema__(:embeds), no_changes)
+  end
+
+  defp data_value_prepare?(_unknown_value, _embed), do: true
+
   # Callback invoked by repository to prepare embeds.
   #
   # It replaces the changesets for embeds inside changes
@@ -206,7 +273,7 @@ defmodule Ecto.Embedded do
   defp to_struct(%Changeset{data: data} = changeset, action, %{related: schema}, adapter) do
     %{data: struct, changes: changes} =
       changeset =
-      maybe_surface_changes(changeset, data, schema, action)
+      maybe_surface_changes(changeset, data, schema.__schema__(:fields), action)
 
     embeds = prepare(changeset, schema.__schema__(:embeds), adapter, action)
 
@@ -217,11 +284,11 @@ defmodule Ecto.Embedded do
     |> apply_embeds(struct)
   end
 
-  defp maybe_surface_changes(changeset, data, schema, :insert) do
-    Relation.surface_changes(changeset, data, schema.__schema__(:fields))
+  defp maybe_surface_changes(changeset, data, fields, :insert) do
+    Relation.surface_changes(changeset, data, fields)
   end
 
-  defp maybe_surface_changes(changeset, _data, _schema, _action) do
+  defp maybe_surface_changes(changeset, _data, _fields, _action) do
     changeset
   end
 

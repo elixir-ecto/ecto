@@ -759,7 +759,7 @@ defmodule Ecto.Repo.Schema do
       |> add_read_after_writes(schema)
       |> fields_to_sources(dumper)
 
-    wrap_in_transaction(adapter, adapter_meta, opts, assocs != [], prepare, fn ->
+    wrap_in_transaction(adapter, adapter_meta, opts, fn -> assocs != [] end, prepare, fn ->
       changeset = run_prepare(changeset, prepare)
 
       if changeset.valid? do
@@ -1342,15 +1342,20 @@ defmodule Ecto.Repo.Schema do
 
   defp wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fun) do
     %{changes: changes} = changeset
-    changed = &Map.has_key?(changes, &1)
-    relations_changed? = Enum.any?(assocs, changed) or Enum.any?(embeds, changed)
+
+    # Computed lazily as it walks the whole embed tree
+    relations_changed? = fn ->
+      Enum.any?(assocs, &Map.has_key?(changes, &1)) or
+        Ecto.Embedded.prepare?(changeset, embeds, changeset.action)
+    end
+
     wrap_in_transaction(adapter, adapter_meta, opts, relations_changed?, prepare, fun)
   end
 
   defp wrap_in_transaction(adapter, adapter_meta, opts, relations_changed?, prepare, fun) do
-    if (relations_changed? or prepare != []) and
-         function_exported?(adapter, :transaction, 3) and
-         not adapter.in_transaction?(adapter_meta) do
+    if function_exported?(adapter, :transaction, 3) and
+         not adapter.in_transaction?(adapter_meta) and
+         (prepare != [] or relations_changed?.()) do
       adapter.transaction(adapter_meta, opts, fn ->
         case fun.() do
           {:ok, struct} -> struct

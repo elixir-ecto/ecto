@@ -42,6 +42,23 @@ defmodule Ecto.Repo.EmbeddedTest do
     end
   end
 
+  defmodule DeepEmbed do
+    use Ecto.Schema
+
+    embedded_schema do
+      embeds_one :embed, MyEmbed
+      embeds_many :embeds, MyEmbed
+    end
+  end
+
+  defmodule DeepSchema do
+    use Ecto.Schema
+
+    schema "deep_schema" do
+      embeds_one :deep_embed, DeepEmbed
+    end
+  end
+
   @uuid "30313233-3435-4637-9839-616263646566"
 
   ## insert
@@ -185,6 +202,174 @@ defmodule Ecto.Repo.EmbeddedTest do
 
     assert_raise ArgumentError, ~r/cannot autogenerate `:id` primary keys/, fn ->
       TestRepo.insert!(schema)
+    end
+  end
+
+  ## transactions
+
+  defp embed_changeset_with_prepare(embed) do
+    embed
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.prepare_changes(fn changeset ->
+      send(self(), {:prepared_in_transaction?, changeset.repo.in_transaction?()})
+      changeset
+    end)
+  end
+
+  test "does not run transaction for embeds without prepare callbacks" do
+    TestRepo.insert!(%MySchema{embed: %MyEmbed{x: "xyz"}, embeds: [%MyEmbed{x: "xyz"}]})
+    refute_received {:transaction, _, _}
+
+    TestRepo.insert!(%MySchema{embed: %MyEmbed{x: "xyz", sub_embed: %SubEmbed{y: "xyz"}}})
+    refute_received {:transaction, _, _}
+
+    embed =
+      %MyEmbed{x: "xyz"}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:sub_embed, %SubEmbed{y: "xyz"})
+
+    changeset =
+      %MySchema{id: 1, embed: %MyEmbed{x: "xyz", id: @uuid}}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:embed, embed)
+      |> Ecto.Changeset.put_embed(:embeds, [%MyEmbed{x: "abc"}])
+
+    TestRepo.update!(changeset)
+    refute_received {:transaction, _, _}
+  end
+
+  test "runs embed prepare callbacks in transaction" do
+    changeset =
+      %MySchema{}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:embed, embed_changeset_with_prepare(%MyEmbed{x: "xyz"}))
+
+    TestRepo.insert!(changeset)
+    assert_received {:transaction, _, _}
+    assert_received {:prepared_in_transaction?, true}
+
+    changeset =
+      %MySchema{id: 1}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:embed, embed_changeset_with_prepare(%MyEmbed{x: "xyz"}))
+
+    TestRepo.update!(changeset)
+    assert_received {:transaction, _, _}
+    assert_received {:prepared_in_transaction?, true}
+
+    changeset =
+      %MySchema{}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:embeds, [
+        %MyEmbed{x: "abc"},
+        embed_changeset_with_prepare(%MyEmbed{x: "xyz"})
+      ])
+
+    TestRepo.insert!(changeset)
+    assert_received {:transaction, _, _}
+    assert_received {:prepared_in_transaction?, true}
+  end
+
+  test "runs nested embed prepare callbacks in transaction" do
+    embed =
+      %MyEmbed{x: "xyz"}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:sub_embed, embed_changeset_with_prepare(%SubEmbed{y: "xyz"}))
+
+    changeset =
+      %MySchema{}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:embed, embed)
+
+    TestRepo.insert!(changeset)
+    assert_received {:transaction, _, _}
+    assert_received {:prepared_in_transaction?, true}
+  end
+
+  test "runs embed prepare callbacks surfaced from struct data in transaction" do
+    sub_embed = embed_changeset_with_prepare(%SubEmbed{y: "xyz"})
+
+    changeset =
+      %MySchema{}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:embed, %MyEmbed{x: "xyz", sub_embed: sub_embed})
+
+    TestRepo.insert!(changeset)
+    assert_received {:transaction, _, _}
+    assert_received {:prepared_in_transaction?, true}
+
+    TestRepo.insert!(%MySchema{embeds: [%MyEmbed{x: "xyz", sub_embed: sub_embed}]})
+    assert_received {:transaction, _, _}
+    assert_received {:prepared_in_transaction?, true}
+
+    changeset =
+      %MySchema{id: 1}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:embed, %MyEmbed{x: "xyz", sub_embed: sub_embed})
+
+    TestRepo.update!(changeset)
+    assert_received {:transaction, _, _}
+    assert_received {:prepared_in_transaction?, true}
+  end
+
+  test "runs embed prepare callbacks surfaced from a map in struct data in transaction" do
+    sub_embed = embed_changeset_with_prepare(%SubEmbed{y: "xyz"})
+    deep_embed = %DeepEmbed{embed: %{x: "xyz", sub_embed: sub_embed}}
+
+    TestRepo.insert!(%DeepSchema{deep_embed: deep_embed})
+    assert_received {:transaction, _, _}
+    assert_received {:prepared_in_transaction?, true}
+  end
+
+  test "runs embed prepare callbacks surfaced from a struct in struct data in transaction" do
+    sub_embed = embed_changeset_with_prepare(%SubEmbed{y: "xyz"})
+    deep_embed = %DeepEmbed{embed: %MyEmbed{x: "xyz", sub_embed: sub_embed}}
+
+    TestRepo.insert!(%DeepSchema{deep_embed: deep_embed})
+    assert_received {:transaction, _, _}
+    assert_received {:prepared_in_transaction?, true}
+  end
+
+  test "runs embed prepare callbacks surfaced from a list in struct data in transaction" do
+    embed_with_prepare = embed_changeset_with_prepare(%MyEmbed{x: "xyz"})
+    deep_embed = %DeepEmbed{embeds: [%MyEmbed{x: "abc"}, embed_with_prepare]}
+
+    TestRepo.insert!(%DeepSchema{deep_embed: deep_embed})
+    assert_received {:transaction, _, _}
+    assert_received {:prepared_in_transaction?, true}
+  end
+
+  test "runs embed prepare callbacks surfaced from a changeset without action in struct data in transaction" do
+    sub_embed = embed_changeset_with_prepare(%SubEmbed{y: "xyz"})
+    embed_without_action = Ecto.Changeset.change(%MyEmbed{x: "xyz", sub_embed: sub_embed})
+    deep_embed = %DeepEmbed{embed: embed_without_action}
+
+    TestRepo.insert!(%DeepSchema{deep_embed: deep_embed})
+    assert_received {:transaction, _, _}
+    assert_received {:prepared_in_transaction?, true}
+  end
+
+  test "does not run embed prepare callbacks in struct data overridden by changes" do
+    overridden_embed = embed_changeset_with_prepare(%MyEmbed{x: "xyz"})
+    deep_embed = Ecto.Changeset.change(%DeepEmbed{embed: overridden_embed})
+    deep_embed = %{deep_embed | changes: %{embed: nil}}
+
+    %DeepSchema{}
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.put_embed(:deep_embed, deep_embed)
+    |> TestRepo.insert!()
+
+    refute_received {:transaction, _, _}
+    refute_received {:prepared_in_transaction?, _}
+  end
+
+  test "raises on embed changesets for another struct" do
+    changeset = Ecto.Changeset.change(%MySchema{})
+    embed = %Ecto.Changeset{data: %URI{}, valid?: true}
+    changeset = %{changeset | changes: %{embed: embed}}
+
+    assert_raise ArgumentError, ~r/expected changeset for embedded schema/, fn ->
+      TestRepo.insert!(changeset)
     end
   end
 
