@@ -32,6 +32,13 @@ defmodule Ecto.HMAC do
 
   Both columns must be binary ones. In migrations, use `:binary`.
 
+  The hashed field holds the original value until the struct is saved.
+  After that, and when loaded from the database, it holds the HMAC.
+
+  Remember to pass `redact: true` to the field. Otherwise the
+  original value may show up when inspecting the struct, which
+  includes logs and error reports.
+
   Both fields must be kept in sync in your changesets:
 
       def changeset(user, attrs) do
@@ -51,9 +58,6 @@ defmodule Ecto.HMAC do
   they are dumped, which includes query parameters:
 
       Repo.get_by(User, email_lookup: "jose@example.com")
-
-  The hashed field holds the original value until the struct is saved.
-  After that, and when loaded from the database, it holds the HMAC.
 
   ## Key
 
@@ -96,8 +100,8 @@ defmodule Ecto.HMAC do
   ## Normalization
 
   You may want lookups to ignore certain differences, such as case in
-  emails. To do so, implement `c:encode/1`, which returns the binary
-  to be hashed:
+  emails. You cannot use sql functions on already hashed data, so implement
+  `c:encode/1`, which normalizes the binary before hashing:
 
       @impl true
       def encode(email) when is_binary(email), do: {:ok, String.downcase(email)}
