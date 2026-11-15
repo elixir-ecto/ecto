@@ -2809,7 +2809,7 @@ defmodule Ecto.Query do
 
   Preload also allows functions to be given. If the function has an arity of 1,
   it receives only the IDs of the parent association. If it has an arity of 2, it
-  receives the IDS of the parent association as the first argument and the association
+  receives the IDs of the parent association as the first argument and the association
   metadata as the second argument. Both functions must return the associated data.
   Ecto then will map this data and sort it by the relationship key:
 
