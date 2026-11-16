@@ -7,7 +7,7 @@ defmodule Ecto.Repo.Assoc do
   Transforms a result set based on query assocs, loading
   the associations onto their parent schema.
   """
-  @spec query([list], list, tuple, (list -> list)) :: [Ecto.Schema.t]
+  @spec query([list], list, tuple, (list -> list)) :: [list]
   def query(rows, assocs, sources, fun)
 
   def query([], _assocs, _sources, _fun), do: []

@@ -35,7 +35,8 @@ defmodule Ecto.MixProject do
       {:telemetry, "~> 0.4 or ~> 1.0"},
       {:decimal, "~> 3.0"},
       {:jason, "~> 1.0", optional: true},
-      {:ex_doc, "~> 0.38", only: :docs}
+      {:ex_doc, "~> 0.38", only: :docs},
+      {:prisma, "~> 0.2.4", only: [:dev, :test], runtime: false}
     ]
   end
 

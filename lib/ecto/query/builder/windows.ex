@@ -113,7 +113,7 @@ defmodule Ecto.Query.Builder.Windows do
       |> Enum.split_with(&elem(&1, 2) == [])
 
     compile = Enum.map(compile, &build_compile_window(&1, env))
-    runtime = Enum.map(runtime, &build_runtime_window(&1, env))
+    runtime = Enum.map(runtime, &build_runtime_window/1)
     query = Builder.apply_query(query, __MODULE__, [compile], env)
 
     if runtime == [] do
@@ -155,7 +155,7 @@ defmodule Ecto.Query.Builder.Windows do
      end}
   end
 
-  defp build_runtime_window({name, compile_acc, runtime_acc, params, acc}, _env) do
+  defp build_runtime_window({name, compile_acc, runtime_acc, params, acc}) do
     {:{}, [], [name, Enum.reverse(compile_acc), runtime_acc, Enum.reverse(params), {:%{}, [], Enum.sort(Map.to_list(acc))}]}
   end
 

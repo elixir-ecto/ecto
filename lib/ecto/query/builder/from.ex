@@ -77,7 +77,7 @@ defmodule Ecto.Query.Builder.From do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t(), Macro.Env.t(), atom, {:ok, Ecto.Schema.prefix | nil} | nil, hints) ::
+  @spec build(Macro.t(), Macro.Env.t(), atom | Macro.t(), {:ok, Ecto.Schema.prefix | nil} | nil, hints) ::
           {Macro.t(), Keyword.t(), non_neg_integer | nil}
   def build(query, env, as, prefix, hints) do
     hints = Enum.map(hints, &hint!(&1))

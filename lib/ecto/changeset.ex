@@ -2194,8 +2194,8 @@ defmodule Ecto.Changeset do
 
   """
   @spec put_assoc(t(d), atom, term, Keyword.t()) :: t(d) when d: var
-  def put_assoc(%Changeset{} = changeset, name, value, opts \\ []) do
-    put_relation(:assoc, changeset, name, value, opts)
+  def put_assoc(%Changeset{} = changeset, name, value, _opts \\ []) do
+    put_relation(:assoc, changeset, name, value)
   end
 
   @doc """
@@ -2216,11 +2216,11 @@ defmodule Ecto.Changeset do
   currently supported by `put_embed/4`.
   """
   @spec put_embed(t(d), atom, term, Keyword.t()) :: t(d) when d: var
-  def put_embed(%Changeset{} = changeset, name, value, opts \\ []) do
-    put_relation(:embed, changeset, name, value, opts)
+  def put_embed(%Changeset{} = changeset, name, value, _opts \\ []) do
+    put_relation(:embed, changeset, name, value)
   end
 
-  defp put_relation(tag, changeset, name, value, _opts) do
+  defp put_relation(tag, changeset, name, value) do
     %{data: data, types: types, changes: changes, errors: errors, valid?: valid?} = changeset
     relation = relation!(:put, tag, name, Map.get(types, name))
 
