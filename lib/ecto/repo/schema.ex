@@ -13,10 +13,9 @@ defmodule Ecto.Repo.Schema do
   @doc """
   Implementation for `Ecto.Repo.insert_all/3`.
   """
-  def insert_all(repo, name, schema, rows, tuplet) when is_atom(schema) do
+  def insert_all(repo, _name, schema, rows, tuplet) when is_atom(schema) do
     do_insert_all(
       repo,
-      name,
       schema,
       schema.__schema__(:prefix),
       schema.__schema__(:source),
@@ -25,15 +24,15 @@ defmodule Ecto.Repo.Schema do
     )
   end
 
-  def insert_all(repo, name, table, rows, tuplet) when is_binary(table) do
-    do_insert_all(repo, name, nil, nil, table, rows, tuplet)
+  def insert_all(repo, _name, table, rows, tuplet) when is_binary(table) do
+    do_insert_all(repo, nil, nil, table, rows, tuplet)
   end
 
-  def insert_all(repo, name, {source, schema}, rows, tuplet) when is_atom(schema) do
-    do_insert_all(repo, name, schema, schema.__schema__(:prefix), source, rows, tuplet)
+  def insert_all(repo, _name, {source, schema}, rows, tuplet) when is_atom(schema) do
+    do_insert_all(repo, schema, schema.__schema__(:prefix), source, rows, tuplet)
   end
 
-  defp do_insert_all(_repo, _name, _schema, _prefix, _source, [], {_adapter_meta, opts}) do
+  defp do_insert_all(_repo, _schema, _prefix, _source, [], {_adapter_meta, opts}) do
     if opts[:returning] do
       {0, []}
     else
@@ -41,7 +40,7 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp do_insert_all(repo, _name, schema, prefix, source, rows_or_query, {adapter_meta, opts}) do
+  defp do_insert_all(repo, schema, prefix, source, rows_or_query, {adapter_meta, opts}) do
     %{adapter: adapter} = adapter_meta
     autogen_id = schema && schema.__schema__(:autogenerate_id)
     dumper = schema && schema.__schema__(:dump)
@@ -465,15 +464,15 @@ defmodule Ecto.Repo.Schema do
   @doc """
   Implementation for `Ecto.Repo.insert/2`.
   """
-  def insert(repo, name, %Changeset{} = changeset, tuplet) do
-    do_insert(repo, name, changeset, tuplet)
+  def insert(repo, _name, %Changeset{} = changeset, tuplet) do
+    do_insert(repo, changeset, tuplet)
   end
 
-  def insert(repo, name, %{__struct__: _} = struct, tuplet) do
-    do_insert(repo, name, Ecto.Changeset.change(struct), tuplet)
+  def insert(repo, _name, %{__struct__: _} = struct, tuplet) do
+    do_insert(repo, Ecto.Changeset.change(struct), tuplet)
   end
 
-  defp do_insert(repo, _name, %Changeset{valid?: true} = changeset, {adapter_meta, opts} = tuplet) do
+  defp do_insert(repo, %Changeset{valid?: true} = changeset, {adapter_meta, opts} = tuplet) do
     %{adapter: adapter} = adapter_meta
     %{prepare: prepare, repo_opts: repo_opts} = changeset
     opts = Keyword.merge(repo_opts, opts)
@@ -566,7 +565,7 @@ defmodule Ecto.Repo.Schema do
     end)
   end
 
-  defp do_insert(repo, _name, %Changeset{valid?: false} = changeset, tuplet) do
+  defp do_insert(repo, %Changeset{valid?: false} = changeset, tuplet) do
     {:error, put_repo_and_action(changeset, :insert, repo, tuplet)}
   end
 
@@ -590,8 +589,8 @@ defmodule Ecto.Repo.Schema do
   @doc """
   Implementation for `Ecto.Repo.update/2`.
   """
-  def update(repo, name, %Changeset{} = changeset, tuplet) do
-    do_update(repo, name, changeset, tuplet)
+  def update(repo, _name, %Changeset{} = changeset, tuplet) do
+    do_update(repo, changeset, tuplet)
   end
 
   def update(_repo, _name, %{__struct__: _}, _tuplet) do
@@ -601,7 +600,7 @@ defmodule Ecto.Repo.Schema do
             "an Ecto.Changeset must be given instead"
   end
 
-  defp do_update(repo, _name, %Changeset{valid?: true} = changeset, {adapter_meta, opts} = tuplet) do
+  defp do_update(repo, %Changeset{valid?: true} = changeset, {adapter_meta, opts} = tuplet) do
     %{adapter: adapter} = adapter_meta
     %{prepare: prepare, repo_opts: repo_opts} = changeset
     opts = Keyword.merge(repo_opts, opts)
@@ -686,7 +685,7 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp do_update(repo, _name, %Changeset{valid?: false} = changeset, tuplet) do
+  defp do_update(repo, %Changeset{valid?: false} = changeset, tuplet) do
     {:error, put_repo_and_action(changeset, :update, repo, tuplet)}
   end
 

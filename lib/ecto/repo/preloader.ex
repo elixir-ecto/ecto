@@ -97,7 +97,7 @@ defmodule Ecto.Repo.Preloader do
       {fetched_assocs, to_fetch_queries} =
         prepare_queries(structs, module, assocs, prefix, repo_name, tuplet)
 
-      fetched_queries = maybe_pmap(to_fetch_queries, repo_name, tuplet)
+      fetched_queries = maybe_pmap(to_fetch_queries, tuplet)
       assocs = preload_assocs(fetched_assocs, fetched_queries, repo_name, query_assocs, tuplet)
 
       for struct <- structs do
@@ -149,7 +149,7 @@ defmodule Ecto.Repo.Preloader do
   end
 
   # Then we execute queries in parallel
-  defp maybe_pmap(preloaders, _repo_name, {adapter_meta, opts}) do
+  defp maybe_pmap(preloaders, {adapter_meta, opts}) do
     if match?([_, _ | _], preloaders) and not adapter_meta.adapter.checked_out?(adapter_meta) and
          Keyword.get(opts, :in_parallel, true) and System.schedulers_online() > 1 do
       # We pass caller: self() so the ownership pool knows where

@@ -152,7 +152,7 @@ defmodule Ecto.Query.Builder.Join do
           Macro.t(),
           Macro.t(),
           Macro.t(),
-          atom,
+          atom | Macro.t(),
           nil | {:ok, Ecto.Schema.prefix()},
           nil | String.t() | [String.t()],
           Macro.Env.t()

@@ -901,8 +901,8 @@ defmodule Ecto.Multi do
     {acc, names}
   end
 
-  defp apply_operation({name, operation}, repo, wrap, return, {acc, names}) do
-    case apply_operation(operation, acc, {wrap, return}, repo) do
+  defp apply_operation({name, operation}, repo, _wrap, return, {acc, names}) do
+    case apply_operation(operation, acc, repo) do
       {:ok, value} ->
         {Map.put(acc, name, value), names}
 
@@ -914,25 +914,25 @@ defmodule Ecto.Multi do
     end
   end
 
-  defp apply_operation({:changeset, changeset, opts}, _acc, _apply_args, repo),
+  defp apply_operation({:changeset, changeset, opts}, _acc, repo),
     do: apply(repo, changeset.action, [changeset, opts])
 
-  defp apply_operation({:run, run}, acc, _apply_args, repo),
+  defp apply_operation({:run, run}, acc, repo),
     do: apply_run_fun(run, repo, acc)
 
-  defp apply_operation({:error, value}, _acc, _apply_args, _repo),
+  defp apply_operation({:error, value}, _acc, _repo),
     do: {:error, value}
 
-  defp apply_operation({:insert_all, source, entries, opts}, _acc, _apply_args, repo),
+  defp apply_operation({:insert_all, source, entries, opts}, _acc, repo),
     do: {:ok, repo.insert_all(source, entries, opts)}
 
-  defp apply_operation({:update_all, query, updates, opts}, _acc, _apply_args, repo),
+  defp apply_operation({:update_all, query, updates, opts}, _acc, repo),
     do: {:ok, repo.update_all(query, updates, opts)}
 
-  defp apply_operation({:delete_all, query, opts}, _acc, _apply_args, repo),
+  defp apply_operation({:delete_all, query, opts}, _acc, repo),
     do: {:ok, repo.delete_all(query, opts)}
 
-  defp apply_operation({:put, value}, _acc, _apply_args, _repo),
+  defp apply_operation({:put, value}, _acc, _repo),
     do: {:ok, value}
 
   defp apply_merge_fun({mod, fun, args}, acc), do: apply(mod, fun, [acc | args])
