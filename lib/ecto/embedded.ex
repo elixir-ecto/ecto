@@ -241,7 +241,16 @@ defmodule Ecto.Embedded do
   end
 
   defp apply_embeds(changes, struct) do
-    struct(struct, changes)
+    :maps.fold(
+      fn key, value, struct ->
+        case struct do
+          %{^key => _} -> %{struct | key => value}
+          %{} -> struct
+        end
+      end,
+      struct,
+      changes
+    )
   end
 
   defp normalize_action(:replace, _, %{on_replace: :delete}), do: :delete
