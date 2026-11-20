@@ -712,6 +712,17 @@ defmodule Ecto.Repo do
           )
         end
 
+        def count_by(queryable, clauses, opts \\ []) when is_list(opts) do
+          repo = get_dynamic_repo()
+
+          Ecto.Repo.Queryable.count_by(
+            repo,
+            queryable,
+            clauses,
+            Ecto.Repo.Supervisor.tuplet(repo, prepare_opts(:all, opts))
+          )
+        end
+
         def exists?(queryable, opts \\ []) do
           validate_query_opts!(opts, :exists?)
 
@@ -967,6 +978,7 @@ defmodule Ecto.Repo do
                       aggregate: 3,
                       aggregate: 4,
                       count: 2,
+                      count_by: 3,
                       exists?: 2,
                       one: 2,
                       one!: 2,
@@ -1227,6 +1239,27 @@ defmodule Ecto.Repo do
   """
   @doc group: "Query API"
   @callback count(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) :: non_neg_integer()
+
+  @doc """
+  Returns the number of entries matching the given `queryable` and `clauses`.
+
+  This is a convenience function equivalent to
+  `Repo.aggregate(where(queryable, ^clauses), :count)`. See also `c:count/2`, `c:aggregate/3`,
+  and `c:aggregate/4`.
+
+  ## Examples
+
+      Repo.count_by(Post, is_draft: true)
+
+      query = from Post, where: [author_id: 1]
+      Repo.count_by(query, is_draft: true)
+  """
+  @doc group: "Query API"
+  @callback count_by(
+              queryable :: Ecto.Queryable.t(),
+              clauses :: Keyword.t() | map,
+              opts :: Keyword.t()
+            ) :: non_neg_integer()
 
   @doc """
   Checks if there exists an entry that matches the given queryable.
