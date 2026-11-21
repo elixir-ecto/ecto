@@ -97,6 +97,40 @@ defmodule Ecto.Repo.EmbeddedTest do
     assert changeset.errors == [embed: {"is invalid", type: :map}]
   end
 
+  test "raises on changesets in embeds from struct on insert" do
+    message = ~r/expected :embed in Ecto.Repo.EmbeddedTest.MySchema to contain structs, got a changeset/
+
+    assert_raise ArgumentError, message, fn ->
+      TestRepo.insert!(%MySchema{embed: Ecto.Changeset.change(%MyEmbed{x: "xyz"})})
+    end
+
+    message = ~r/expected :embeds in Ecto.Repo.EmbeddedTest.MySchema to contain structs, got a changeset/
+
+    assert_raise ArgumentError, message, fn ->
+      TestRepo.insert!(%MySchema{embeds: [Ecto.Changeset.change(%MyEmbed{x: "xyz"})]})
+    end
+
+    message = ~r/expected :sub_embed in Ecto.Repo.EmbeddedTest.MyEmbed to contain structs, got a changeset/
+    sub_embed = Ecto.Changeset.change(%SubEmbed{y: "xyz"})
+
+    assert_raise ArgumentError, message, fn ->
+      TestRepo.insert!(%MySchema{embed: %MyEmbed{x: "xyz", sub_embed: sub_embed}})
+    end
+
+    assert_raise ArgumentError, message, fn ->
+      %MySchema{}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:embed, %MyEmbed{x: "xyz", sub_embed: sub_embed})
+      |> TestRepo.insert!()
+    end
+
+    message = ~r/expected :embed in Ecto.Repo.EmbeddedTest.MySchema to contain structs, got a changeset/
+
+    assert_raise ArgumentError, message, fn ->
+      TestRepo.insert!(%MySchema{embed: %{x: "xyz", sub_embed: sub_embed}})
+    end
+  end
+
   test "returns untouched changeset on constraint mismatch on insert" do
     changeset =
       put_in(%MySchema{}.__meta__.context, {:invalid, [unique: "my_schema_foo_index"]})

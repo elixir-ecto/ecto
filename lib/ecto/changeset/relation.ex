@@ -630,6 +630,7 @@ defmodule Ecto.Changeset.Relation do
             # in Ecto.Changeset but we need to do it in a way where we have
             # control over the current value.
             value = not_loaded_to_empty(Map.get(struct, field))
+            assert_no_changeset_in_data!(value, struct, field)
             empty = empty(embed_or_assoc)
 
             case change(embed_or_assoc, value, empty) do
@@ -658,6 +659,24 @@ defmodule Ecto.Changeset.Relation do
       _ -> %{changeset | errors: errors ++ changeset.errors, valid?: false, changes: changes}
     end
   end
+
+  defp assert_no_changeset_in_data!(values, struct, field) when is_list(values) do
+    Enum.each(values, &assert_no_changeset_in_data!(&1, struct, field))
+  end
+
+  defp assert_no_changeset_in_data!(%Changeset{}, %{__struct__: schema}, field) do
+    raise ArgumentError,
+          "expected #{inspect(field)} in #{inspect(schema)} to contain structs, got a changeset. " <>
+            "Changesets for associations and embeds must be given as changes, " <>
+            "for example via Ecto.Changeset.put_assoc/4 or Ecto.Changeset.put_embed/4"
+  end
+
+  # Structs are checked once they are surfaced, so we only traverse plain maps
+  defp assert_no_changeset_in_data!(%{} = map, struct, field) when not is_struct(map) do
+    Enum.each(map, fn {_key, value} -> assert_no_changeset_in_data!(value, struct, field) end)
+  end
+
+  defp assert_no_changeset_in_data!(_value, _struct, _field), do: :ok
 
   defp not_loaded_to_empty(%NotLoaded{__cardinality__: cardinality}),
     do: cardinality_to_empty(cardinality)

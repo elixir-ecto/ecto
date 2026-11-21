@@ -161,6 +161,20 @@ defmodule Ecto.Repo.HasAssocTest do
     assert changeset.errors == [assoc: {"is invalid", type: :map}]
   end
 
+  test "raises on changesets in assocs from struct on insert" do
+    message = ~r/expected :assoc in Ecto.Repo.HasAssocTest.MySchema to contain structs, got a changeset/
+
+    assert_raise ArgumentError, message, fn ->
+      TestRepo.insert!(%MySchema{assoc: Ecto.Changeset.change(%MyAssoc{x: "xyz"})})
+    end
+
+    message = ~r/expected :assocs in Ecto.Repo.HasAssocTest.MySchema to contain structs, got a changeset/
+
+    assert_raise ArgumentError, message, fn ->
+      TestRepo.insert!(%MySchema{assocs: [Ecto.Changeset.change(%MyAssoc{x: "xyz"})]})
+    end
+  end
+
   test "raises on action mismatch on insert" do
     changeset =
       %MySchema{}
