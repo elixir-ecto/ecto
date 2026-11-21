@@ -701,6 +701,49 @@ defmodule Ecto.Repo do
           )
         end
 
+        def aggregate_by(queryable, aggregate, clauses, opts \\ [])
+
+        def aggregate_by(queryable, aggregate, field, clauses)
+            when aggregate in @aggregates and is_atom(field) do
+          repo = get_dynamic_repo()
+
+          Ecto.Repo.Queryable.aggregate_by(
+            repo,
+            queryable,
+            aggregate,
+            field,
+            clauses,
+            Ecto.Repo.Supervisor.tuplet(repo, prepare_opts(:all, []))
+          )
+        end
+
+        def aggregate_by(queryable, aggregate, clauses, opts)
+            when aggregate in [:count] and is_list(opts) do
+          repo = get_dynamic_repo()
+
+          Ecto.Repo.Queryable.aggregate_by(
+            repo,
+            queryable,
+            aggregate,
+            clauses,
+            Ecto.Repo.Supervisor.tuplet(repo, prepare_opts(:all, opts))
+          )
+        end
+
+        def aggregate_by(queryable, aggregate, field, clauses, opts)
+            when aggregate in @aggregates and is_atom(field) and is_list(opts) do
+          repo = get_dynamic_repo()
+
+          Ecto.Repo.Queryable.aggregate_by(
+            repo,
+            queryable,
+            aggregate,
+            field,
+            clauses,
+            Ecto.Repo.Supervisor.tuplet(repo, prepare_opts(:all, opts))
+          )
+        end
+
         def exists?(queryable, opts \\ []) do
           validate_query_opts!(opts, :exists?)
 
@@ -955,6 +998,8 @@ defmodule Ecto.Repo do
                       reload!: 2,
                       aggregate: 3,
                       aggregate: 4,
+                      aggregate_by: 4,
+                      aggregate_by: 5,
                       exists?: 2,
                       one: 2,
                       one!: 2,
@@ -1145,6 +1190,8 @@ defmodule Ecto.Repo do
 
   The aggregation will fail if any `group_by` field is set.
 
+  See also `c:aggregate_by/4`.
+
   ## Options
 
     * `:prefix` - The prefix to run the query on (such as the schema path
@@ -1177,7 +1224,7 @@ defmodule Ecto.Repo do
   @doc """
   Calculate the given `aggregate` over the given `field`.
 
-  See `c:aggregate/3` for general considerations and options.
+  See also `c:aggregate/3` and `c:aggregate_by/5`.
 
   ## Examples
 
@@ -1197,6 +1244,49 @@ defmodule Ecto.Repo do
               queryable :: Ecto.Queryable.t(),
               aggregate :: :avg | :count | :max | :min | :sum,
               field :: atom,
+              opts :: Keyword.t()
+            ) :: term | nil
+
+  @doc """
+  Calculate the given `aggregate` for the entries matching the given `clauses`.
+
+  See also `c:aggregate/3` and `c:aggregate_by/5`.
+
+  ## Examples
+
+      Repo.aggregate_by(Post, :count, is_draft: true)
+
+      Repo.aggregate_by(Post, :count, [is_draft: true], prefix: "private")
+  """
+  @doc group: "Query API"
+  @callback aggregate_by(
+              queryable :: Ecto.Queryable.t(),
+              aggregate :: :count,
+              clauses :: Keyword.t() | map,
+              opts :: Keyword.t()
+            ) :: term | nil
+
+  @doc """
+  Calculate the given `aggregate` over the given `field` for the entries
+  matching the given `clauses`.
+
+  See also `c:aggregate/4` and `c:aggregate_by/4`.
+
+  ## Examples
+
+      Repo.aggregate_by(Post, :sum, :visits, author_id: 1)
+
+      Repo.aggregate_by(Post, :sum, :visits, [author_id: 1], prefix: "private")
+
+      query = from Post, limit: 10
+      Repo.aggregate_by(query, :avg, :visits, author_id: 1)
+  """
+  @doc group: "Query API"
+  @callback aggregate_by(
+              queryable :: Ecto.Queryable.t(),
+              aggregate :: :avg | :count | :max | :min | :sum,
+              field :: atom,
+              clauses :: Keyword.t() | map,
               opts :: Keyword.t()
             ) :: term | nil
 
