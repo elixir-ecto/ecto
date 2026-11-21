@@ -861,19 +861,15 @@ defmodule Ecto.Integration.RepoTest do
 
   test "aggregate_by" do
     assert TestRepo.aggregate_by(Post, :count, title: "a") == 0
-    TestRepo.insert!(%Post{title: "a", visits: 10})
-    TestRepo.insert!(%Post{title: "a", visits: 12})
-    TestRepo.insert!(%Post{title: "b", visits: 14})
+    TestRepo.insert!(%Post{title: "a"})
+    TestRepo.insert!(%Post{title: "a"})
+    TestRepo.insert!(%Post{title: "b"})
 
     assert TestRepo.aggregate_by(Post, :count, title: "a") == 2
     assert TestRepo.aggregate_by(Post, :count, %{title: "b"}) == 1
-    assert TestRepo.aggregate_by(Post, :max, :visits, title: "a") == 12
-    assert TestRepo.aggregate_by(Post, :min, :visits, title: "a") == 10
-    assert TestRepo.aggregate_by(Post, :count, :visits, title: "a") == 2
-    assert to_string(TestRepo.aggregate_by(Post, :sum, :visits, title: "a")) == "22"
 
-    query = from Post, order_by: [asc: :visits], limit: 1
-    assert TestRepo.aggregate_by(query, :max, :visits, title: "a") == 10
+    query = from Post, limit: 1
+    assert TestRepo.aggregate_by(query, :count, title: "a") == 1
   end
 
   @tag :insert_cell_wise_defaults
