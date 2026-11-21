@@ -141,6 +141,22 @@ defmodule Ecto.Repo do
       in the cache and no cache update function will not be passed to the adapter. Note that
       this doesn't necessarily disable the database cache, it only affects Ecto's internal
       cache of normalized queries and adapter prepared statements. Defaults to `true`.
+    * `:comments` - A keyword list of `[pre: string, post: string]` entries embedded into the
+      generated statement as `/* ... */` SQL comments to identify the query in database logs and
+      monitoring tools. `:pre` comments are rendered before the statement (e.g.
+      `/* import_users */ INSERT ...`) so they survive truncation of long statements in logs;
+      `:post` comments are rendered after it. Strings are embedded verbatim and therefore cannot
+      contain `/*`, `*/`, or null bytes, nor start with `!`, `+`, or `M!`. Because this option takes runtime values, passing it
+      disables caching for that call, making dynamic comments (such as per-request ids) safe by
+      default: query operations (`all`/`update_all`/`delete_all`) skip Ecto's query cache, and
+      schema operations (`insert`/`update`/`delete`/`insert_all`) make SQL adapters skip their
+      default prepared statement caching. If your comments are static, you can keep
+      caching by passing `query_cache: true` (query operations) or an explicit `:cache_statement`
+      (schema operations on SQL adapters). Comments given as query expressions via
+      `Ecto.Query.pre_comment/2` and `Ecto.Query.post_comment/2` must be compile-time literals
+      and remain cached as usual. This option only applies to operations that build the statement
+      for you — raw SQL functions such as `Ecto.Adapters.SQL.query/4` (`Repo.query/4`) ignore it,
+      as you control the statement text there.
 
   ## Adapter-Specific Errors
 
