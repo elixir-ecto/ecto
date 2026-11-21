@@ -5,12 +5,17 @@
 ### Enhancements
 
   * [Ecto] Allow passing custom loader and dumper functions to `embedded_load/3` and `embedded_dump/2`
+  * [Ecto.Changeset] Keep the data type in the typespecs of changeset functions
   * [Ecto.Changeset] Make `validate_length/3` count codepoints by default, aligning it with how databases typically enforce string length limits
   * [Ecto.Query] Allow assigning column names to fragment sources via the `:columns` option, so they can be referenced elsewhere in the query without hard-coding them in the fragment string:
 
         from f in fragment("generate_series(?, ?)", ^1, ^10, columns: [:x]),
           where: f.x > 5,
           select: f.x
+
+  * [Ecto.Encrypted] Add `Ecto.Encrypted`, a type that encrypts values with AEAD ciphers from Erlang's `:crypto` before writing them to the database
+  * [Ecto.HMAC] Add `Ecto.HMAC`, a type that stores the HMAC of a value, allowing encrypted values to be looked up
+  * [Ecto.Repo] Skip the implicit transaction on insert and update when changed embeds have no `prepare_changes` callbacks
 
 ### Bug fixes
 
@@ -21,6 +26,7 @@
   * [Ecto.Repo] Fix `exists?/2` semantics for queries with combinations such as `union`, `intersect`, and `except`
   * [Ecto.Repo] Map fields from source queries in `insert_all/3` through the destination schema, respecting column names and writable settings
   * [Ecto.Repo] Only spawn tasks in the preloader if machine has more than one core
+  * [Ecto.Repo] Raise on insert when an association or embed field of a struct holds a changeset. Changesets must be given via `put_assoc/4` or `put_embed/4` instead
   * [Ecto.Type] Make DateTime handling in cast consistent with Elixir's standard library
 
 ## v3.14.3 (2026-11-04)
@@ -29,7 +35,7 @@
 
   * [Ecto.Query] Include the prefix of queries given to `join` in the query cache key
   * [Ecto.Query] Keep hints of queries given to `join`, as well as the hints given to the join itself
-  * [Ecto.Query] Do not cache queries with interpolated JSON paths, `splice/1`, and `constant/1`, as each distinct value would create a new query cache entry
+  * [Ecto.Query] Do not cache queries with interpolated JSON paths, `splice/1`, and `constant/1`, as each distinct value would create a new query cache entry (CVE-2026-118391)
   * [Ecto.Query] Keep interpolated true filters that a later `or_where` depends on
 
 ## v3.14.2 (2026-08-14)
