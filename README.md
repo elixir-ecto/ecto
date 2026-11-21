@@ -176,21 +176,15 @@ Note that `mix test` does not run the tests in the `integration_test` folder. To
     $ mix deps.get
     $ ECTO_PATH=../ecto mix test.all
 
-### Running containerized tests
+The integration tests expect PostgreSQL, MySQL, and MSSQL to be running locally. You can start them with Docker:
 
-It is also possible to run the integration tests under a containerized environment using [earthly](https://earthly.dev/get-earthly):
+    $ docker run --name pg -d -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres postgres:11.11
+    $ docker run --name mysql -d -p 3306:3306 -e MYSQL_ROOT_PASSWORD=root mysql:5.7
+    $ docker run --name mssql -d -p 1433:1433 -e ACCEPT_EULA=Y -e 'MSSQL_SA_PASSWORD=some!Password' mcr.microsoft.com/mssql/server:2019-latest
 
-    $ earthly -P +all
+And then point the tests to them:
 
-You can also use this to interactively debug any failing integration tests using:
-
-    $ earthly -P -i --build-arg ELIXIR_BASE=1.8.2-erlang-21.3.8.21-alpine-3.13.1 +integration-test
-
-Then once you enter the containerized shell, you can inspect the underlying databases with the respective commands:
-
-    PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres ecto_test
-    MYSQL_PASSWORD=root mysql -h 127.0.0.1 -uroot -proot ecto_test
-    sqlcmd -U sa -P 'some!Password'
+    $ PG_URL=postgres:postgres@127.0.0.1 MYSQL_URL=root:root@127.0.0.1 MSSQL_URL='sa:some!Password@127.0.0.1' ECTO_PATH=../ecto mix test.all
 
 ## Logo
 

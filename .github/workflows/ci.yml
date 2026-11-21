@@ -66,15 +66,86 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       FORCE_COLOR: 1
+      ELIXIR_ASSERT_TIMEOUT: 10000
+      ECTO_PATH: ${{ github.workspace }}/ecto
+      PG_URL: postgres:postgres@127.0.0.1
+      MYSQL_URL: root:root@127.0.0.1
+      MSSQL_URL: sa:some!Password@127.0.0.1
     strategy:
       fail-fast: false
       matrix:
-        elixirbase:
-          - "1.17.3-erlang-27.1-alpine-3.17.9"
-          - "1.17.3-erlang-25.0.4-alpine-3.17.9"
-          - "1.15.6-erlang-24.3.4.9-alpine-3.20.9"
+        include:
+          - elixir: "1.17.3"
+            otp: "27.2"
+          - elixir: "1.17.3"
+            otp: "25.0.4"
+          - elixir: "1.15.8"
+            otp: "24.3.4.17"
+
+    services:
+      postgres:
+        image: postgres:11.11
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping --host=127.0.0.1 --protocol=TCP --silent"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2019-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: some!Password
+        ports:
+          - 1433:1433
+
     steps:
-      - uses: earthly/actions-setup@v1
-      - uses: actions/checkout@v7
-      - name: ecto integration-test under ${{matrix.elixirbase}}
-        run: earthly -P --ci --build-arg ELIXIR_BASE=${{matrix.elixirbase}} +integration-test
+      - name: Checkout ecto
+        uses: actions/checkout@v7
+        with:
+          path: ecto
+      - name: Checkout ecto_sql
+        uses: actions/checkout@v7
+        with:
+          repository: elixir-ecto/ecto_sql
+          path: ecto_sql
+      - name: Install Elixir and Erlang
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+      - name: Install dependencies
+        working-directory: ecto_sql
+        run: mix deps.get
+      - name: Wait for mssql
+        run: |
+          for i in $(seq 1 60); do
+            for sqlcmd in /opt/mssql-tools18/bin/sqlcmd /opt/mssql-tools/bin/sqlcmd; do
+              if docker exec ${{ job.services.mssql.id }} $sqlcmd -C -S localhost -U sa -P 'some!Password' -Q "SELECT 1" >/dev/null 2>&1; then
+                exit 0
+              fi
+            done
+            echo "waiting for mssql"
+            sleep 2
+          done
+          echo "timed out waiting for mssql"
+          exit 1
+      - name: Run integration tests
+        working-directory: ecto_sql
+        run: mix test.all
