@@ -378,11 +378,10 @@ defmodule Ecto.Integration.RepoTest do
     post = & %Post{} |> Ecto.Changeset.change(uuid: &1) |> Ecto.Changeset.unique_constraint(:uuid)
 
     {:error, changeset} =
-      TestRepo.insert %User{
-        comments: [%Comment{}],
-        permalink: %Permalink{},
-        posts: [post.(uuid), post.(uuid), post.(Ecto.UUID.generate())]
-      }
+      %User{comments: [%Comment{}], permalink: %Permalink{}}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_assoc(:posts, [post.(uuid), post.(uuid), post.(Ecto.UUID.generate())])
+      |> TestRepo.insert()
 
     [_, p2, _] = changeset.changes.posts
     assert p2.errors == [uuid: {"has already been taken", [constraint: :unique, constraint_name: "posts_uuid_index"]}]
