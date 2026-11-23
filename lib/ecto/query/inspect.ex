@@ -4,7 +4,8 @@ import Kernel, except: [to_string: 1]
 alias Ecto.Query.{BooleanExpr, DynamicExpr, JoinExpr, WithExpr, LimitExpr}
 
 defimpl Inspect, for: Ecto.Query.DynamicExpr do
-  def inspect(%DynamicExpr{binding: binding} = dynamic, opts) do
+  def inspect(%DynamicExpr{fun: fun, binding: binding} = dynamic, opts)
+      when is_function(fun, 1) and is_list(binding) do
     binding =
       Enum.map(binding, fn
         {{:^, _, [as]}, bind} when is_atom(as) -> {as, bind}
@@ -70,7 +71,7 @@ defimpl Inspect, for: Ecto.Query do
 
             concat([
               "|> with_cte(\"" <> name <> "\", materialized: ",
-              inspect(cte_opts[:materialized]),
+              inspect(Map.get(cte_opts, :materialized)),
               ", as: ",
               cte,
               ")"
@@ -101,7 +102,22 @@ defimpl Inspect, for: Ecto.Query do
     Macro.to_string({:fragment, [], unmerge_fragments(parts, "", [])})
   end
 
-  defp to_list(query) do
+  defp to_list(
+         %{
+           joins: joins,
+           wheres: wheres,
+           group_bys: group_bys,
+           havings: havings,
+           order_bys: order_bys,
+           updates: updates,
+           windows: windows,
+           combinations: combinations,
+           assocs: assocs
+         } = query
+       )
+       when is_list(joins) and is_list(wheres) and is_list(group_bys) and is_list(havings) and
+              is_list(order_bys) and is_list(updates) and is_list(windows) and
+              is_list(combinations) and is_list(assocs) do
     names =
       query
       |> collect_sources()
@@ -178,7 +194,9 @@ defimpl Inspect, for: Ecto.Query do
   defp joins(joins, names) do
     joins
     |> Enum.with_index()
-    |> Enum.flat_map(fn {expr, ix} -> join(expr, elem(names, expr.ix || ix + 1), names) end)
+    |> Enum.flat_map(fn {%JoinExpr{ix: expr_ix} = expr, ix} ->
+      join(expr, elem(names, expr_ix || ix + 1), names)
+    end)
   end
 
   defp join(%JoinExpr{qual: qual, assoc: {ix, right}, on: on} = join, name, names) do
@@ -200,7 +218,7 @@ defimpl Inspect, for: Ecto.Query do
   defp assocs([], _names), do: []
   defp assocs(assocs, names), do: [preload: expr(assocs(assocs), names, %{})]
 
-  defp assocs(assocs) do
+  defp assocs(assocs) when is_list(assocs) do
     Enum.map(assocs, fn
       {field, {idx, []}} ->
         {field, {:&, [], [idx]}}
@@ -215,7 +233,7 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   defp window({name, %{expr: definition} = part}, names) do
-    {:windows, "[#{name}: " <> expr(definition, names, part) <> "]"}
+    {:windows, "[" <> Atom.to_string(name) <> ": " <> expr(definition, names, part) <> "]"}
   end
 
   defp combinations(combinations) do
@@ -307,7 +325,7 @@ defimpl Inspect, for: Ecto.Query do
   # Interpolated known value
   defp postwalk({:^, _, [ix]}, _, %{params: params}) do
     value =
-      case Enum.at(params || [], ix) do
+      case is_list(params) and Enum.at(params, ix) do
         # Wrap the head in a block so it is not treated as a charlist
         {[head | tail], _type} -> [{:__block__, [], [head]} | tail]
         {value, _type} -> value
@@ -328,7 +346,7 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   # Subqueries
-  defp postwalk({:subquery, i}, _names, %{subqueries: subqueries}) do
+  defp postwalk({:subquery, i}, _names, %{subqueries: subqueries}) when is_list(subqueries) do
     {:subquery, [], [Enum.fetch!(subqueries, i).query]}
   end
 
@@ -339,7 +357,7 @@ defimpl Inspect, for: Ecto.Query do
     postwalk({:json_extract_path, meta, [expr, path]}, names, part)
   end
 
-  defp postwalk({:json_extract_path, _, [expr, path]}, _names, _part) do
+  defp postwalk({:json_extract_path, _, [expr, path]}, _names, _part) when is_list(path) do
     Enum.reduce(path, expr, fn element, acc ->
       {{:., [], [Access, :get]}, [], [acc, element]}
     end)
@@ -399,7 +417,7 @@ defimpl Inspect, for: Ecto.Query do
     [from_sources(source) | join_sources(joins)]
   end
 
-  defp from_sources(%Ecto.SubQuery{query: query}), do: from_sources(query.from.source)
+  defp from_sources(%Ecto.SubQuery{query: %{from: %{source: source}}}), do: from_sources(source)
   defp from_sources({source, schema}), do: schema || source
   defp from_sources(nil), do: "query"
   defp from_sources({:fragment, _, _}), do: "fragment"
@@ -407,7 +425,7 @@ defimpl Inspect, for: Ecto.Query do
 
   defp join_sources(joins) do
     joins
-    |> Enum.sort_by(& &1.ix)
+    |> Enum.sort_by(fn %JoinExpr{ix: ix} -> ix end)
     |> Enum.map(fn
       %JoinExpr{assoc: {_var, assoc}} ->
         assoc
@@ -415,8 +433,8 @@ defimpl Inspect, for: Ecto.Query do
       %JoinExpr{source: {:fragment, _, _}} ->
         "fragment"
 
-      %JoinExpr{source: %Ecto.Query{from: from}} ->
-        from_sources(from.source)
+      %JoinExpr{source: %Ecto.Query{from: %{source: source}}} ->
+        from_sources(source)
 
       %JoinExpr{source: source} ->
         from_sources(source)
@@ -426,7 +444,7 @@ defimpl Inspect, for: Ecto.Query do
   defp generate_letters(sources) do
     Enum.map(sources, fn source ->
       source
-      |> Kernel.to_string()
+      |> source_to_string()
       |> normalize_source()
       |> String.first()
       |> String.downcase()
@@ -438,7 +456,10 @@ defimpl Inspect, for: Ecto.Query do
     names
   end
 
-  defp binding(names, pos) do
+  defp source_to_string(source) when is_atom(source), do: Atom.to_string(source)
+  defp source_to_string(source) when is_binary(source), do: source
+
+  defp binding(names, pos) when is_integer(pos) do
     try do
       {elem(names, pos), [], nil}
     rescue
