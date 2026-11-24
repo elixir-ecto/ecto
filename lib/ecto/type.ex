@@ -933,6 +933,13 @@ defmodule Ecto.Type do
 
   if Code.ensure_loaded?(Duration) do
     defp cast_duration(%Duration{} = term), do: {:ok, term}
+
+    defp cast_duration(binary) when is_binary(binary) do
+      case Duration.from_iso8601(binary) do
+        {:ok, _} = ok -> ok
+        {:error, _} -> :error
+      end
+    end
   end
 
   defp cast_duration(_), do: :error

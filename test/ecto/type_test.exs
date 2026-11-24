@@ -632,6 +632,43 @@ defmodule Ecto.TypeTest do
     end
   end
 
+  if Code.ensure_loaded?(Duration) do
+    describe "duration" do
+      test "cast from Duration" do
+        duration = Duration.new!(hour: 1, minute: 30)
+        assert Ecto.Type.cast(:duration, duration) == {:ok, duration}
+      end
+
+      test "cast from ISO 8601 string" do
+        assert Ecto.Type.cast(:duration, "PT1H30M") ==
+                 {:ok, Duration.new!(hour: 1, minute: 30)}
+
+        assert Ecto.Type.cast(:duration, "P1Y2M3W4DT5H6M7.008S") ==
+                 {:ok,
+                  Duration.new!(
+                    year: 1,
+                    month: 2,
+                    week: 3,
+                    day: 4,
+                    hour: 5,
+                    minute: 6,
+                    second: 7,
+                    microsecond: {8000, 3}
+                  )}
+      end
+
+      test "cast from invalid string" do
+        assert Ecto.Type.cast(:duration, "1 hour") == :error
+        assert Ecto.Type.cast(:duration, "") == :error
+      end
+
+      test "cast from other value" do
+        assert Ecto.Type.cast(:duration, 3600) == :error
+        assert Ecto.Type.cast(:duration, %{"hour" => 1}) == :error
+      end
+    end
+  end
+
   @datetime ~N[2015-01-23 23:50:07]
   @datetime_zero ~N[2015-01-23 23:50:00]
   @datetime_zero_usec ~N[2015-01-23 23:50:00.000000]
