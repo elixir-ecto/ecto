@@ -138,6 +138,10 @@ defmodule Ecto.Repo.Queryable do
     one!(name, query_for_aggregate(queryable, aggregate, field), opts)
   end
 
+  def aggregate_by(name, queryable, aggregate, clauses, opts) do
+    aggregate(name, query_for_get_by(queryable, clauses), aggregate, opts)
+  end
+
   def exists?(name, queryable, opts) do
     queryable =
       Query.exclude(queryable, :preload)
