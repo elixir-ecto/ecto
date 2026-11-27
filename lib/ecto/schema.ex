@@ -135,6 +135,9 @@ defmodule Ecto.Schema do
   A schema module tagged with `@schema_redact :all_except_primary_keys` will
   redact all fields except primary keys.
 
+  Redaction applies only to inspection: if a redacted field's value is used
+  as a query parameter, it can still appear in SQL query logs.
+
   ## Schema attributes
 
   Supported attributes for configuring the defined schema. They must
